@@ -1,31 +1,38 @@
-﻿using Samhallsinformation.Models; // Importera din nya mapp
+using Samhallsinformation.Ingestors;
 
-Console.WriteLine("--- Sprint 1: Verifiering av CanonicalEvent ---");
+Console.WriteLine("=== Samhällsinformation - Sprint 2: RSS Ingestor ===");
+Console.WriteLine();
 
-// 1. Skapa en testkälla (Polisen) enligt din modell
-var polisen = new Source
+using var httpClient = new HttpClient();
+var ingestor = new PolisenRssIngestor(httpClient);
+
+Console.WriteLine($"Hämtar händelser från: {ingestor.Source.Name} ({ingestor.Source.ShortName})");
+Console.WriteLine($"Källtyp: {ingestor.Source.Type}");
+Console.WriteLine();
+
+try
 {
-    Id = 1,
-    Name = "Polisen",
-    ShortName = "polisen.se",
-    Type = SourceType.RSS,
-    IsActive = true
-};
+    var events = await ingestor.FetchEventsAsync();
 
-// 2. Skapa ett test-event baserat på din Master-modell
-var incident = new CanonicalEvent
+    Console.WriteLine($"Antal händelser hämtade: {events.Count}");
+    Console.WriteLine(new string('-', 60));
+
+    foreach (var evt in events)
+    {
+        Console.WriteLine($"  Titel:     {evt.Title}");
+        Console.WriteLine($"  Geografi:  {evt.Geography ?? "(nationell)"}");
+        Console.WriteLine($"  Nationell: {evt.IsNational}");
+        Console.WriteLine($"  Allvar:    {evt.Severity}");
+        Console.WriteLine($"  Datum:     {evt.PublishedAt:yyyy-MM-dd HH:mm}");
+        Console.WriteLine($"  Länk:      {evt.Url}");
+        Console.WriteLine(new string('-', 60));
+    }
+}
+catch (HttpRequestException ex)
 {
-    SourceId = polisen.Id,
-    Title = "Inbrott i lägenhet, Malmö",
-    Content = "Ett larm inkom klockan 02:00...",
-    PublishedAt = DateTime.Now,
-    Geography = "Malmö",
-    Url = "https://polisen.se/aktuellt/handelser/...",
-    Severity = "Bra att veta" // Din fallback enligt punkt 7
-};
+    Console.WriteLine($"Kunde inte hämta data: {ex.Message}");
+}
 
-Console.WriteLine($"Källa: {polisen.Name}");
-Console.WriteLine($"Händelse mappad: {incident.Title} i {incident.Geography}");
-
-Console.WriteLine("\nTryck på valfri tangent för att avsluta...");
+Console.WriteLine();
+Console.WriteLine("Tryck på valfri tangent för att avsluta...");
 Console.ReadKey();
