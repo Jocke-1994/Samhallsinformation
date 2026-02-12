@@ -36,12 +36,12 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - [x] Skapa grundläggande mappstruktur och C#-klasser.
 - [x] Verifiera att testdata kan mappas korrekt till modellen.
 
-### Sprint 2: Ingestor (Pågående)
+### Sprint 2: Ingestor (Avslutad)
 
-- [ ] Fetch events from Polisen RSS (#4)
-- [ ] Parse RSS feed into CanonicalEvent (#5)
-- [ ] Handle missing metadata with fallbacks (#6)
-- [ ] Support multiple source types (#7)
+- [x] Fetch events from Polisen RSS (#4)
+- [x] Parse RSS feed into CanonicalEvent (#5)
+- [x] Handle missing metadata with fallbacks (#6)
+- [x] Support multiple source types (#7)
 
 ### Sprint 3: Storage & API (Backlog)
 
@@ -59,7 +59,25 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
-### Session 2 — 2026-02-12 (Current)
+### Session 3 — 2026-02-12 (Current)
+**What was done:**
+- Sprint 2 completed: RSS ingestor for Polisen
+- Created `IIngestor` interface for pluggable source types (#7)
+- Implemented `PolisenRssIngestor` — fetches and parses live RSS into `CanonicalEvent` (#4, #5)
+- Created `MetadataFallbacks` helper with geography/severity fallback logic (#6)
+- Added `System.ServiceModel.Syndication` NuGet package for RSS parsing
+- Updated `Program.cs` to fetch and display 200 live police events
+- Geography extracted from title (last comma-segment), severity defaults to "Bra att veta"
+- Merged PRs #17 (Sprint 2) and #18 (CLAUDE.md)
+
+**Next session:**
+- Start Sprint 3: Storage & API
+- Persist events to database (#9)
+- Expose events via REST API (#10)
+
+---
+
+### Session 2 — 2026-02-12
 **What was done:**
 - Created CLAUDE.md with full project overview
 - Set up GitHub Project Board ("Samhällsinformation Roadmap") linked to the repo
@@ -68,11 +86,6 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - Added all issues to the project board with correct statuses
 - Configured 9 board columns: Brainstorming, Backlog, Features, Todo, In Progress, In Review, Testing, Blocked, Done
 - Sprint 1 issues closed (already completed), Sprint 2 set to Todo, Sprint 3–4 set to Backlog
-
-**Next session:**
-- Start Sprint 2: Implement RSS ingestor for Polisen (#4 + #5)
-- Add fallback logic for missing metadata (#6)
-- Design pluggable source type architecture (#7)
 
 ---
 
