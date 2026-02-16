@@ -15,4 +15,5 @@ public class CanonicalEvent
     public string? Geography { get; set; }
     public string Severity { get; set; } = "Bra att veta"; // Punkt 7 fallback
     public bool IsNational { get; set; }
+    public DateTime IngestedAt { get; set; } = DateTime.UtcNow;
 }

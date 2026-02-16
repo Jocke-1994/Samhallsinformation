@@ -15,9 +15,9 @@ Dessa principer utgör systemets kärna och bryts aldrig:
 
 Projektet är byggt med en modern .NET-stack och följer en iterativ sprint-filosofi:
 
-* **Backend:** ASP.NET Core / Console Worker.
+* **Backend:** ASP.NET Core Web API med bakgrundstjänst för datainsamling.
 * **Datamodell:** En gemensam intern struktur (`CanonicalEvent`) för att standardisera metadata från olika källor.
-* **Databas:** Relationell databas (t.ex. PostgreSQL) för att hantera användarinställningar och händelselogg.
+* **Databas:** SQLite lokalt (planerad migrering till PostgreSQL vid publicering) via Entity Framework Core.
 * **UI/UX:** Modern, "clean" design med stöd för mörkt/ljust tema.
 
 ## Informationsomfång & Metadata
@@ -43,12 +43,12 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - [x] Handle missing metadata with fallbacks (#6)
 - [x] Support multiple source types (#7)
 
-### Sprint 3: Storage & API (Backlog)
+### Sprint 3: Storage & API (Avslutad)
 
-- [ ] Persist events to database (#9)
-- [ ] Expose events via REST API (#10)
-- [ ] Deduplicate incoming events (#11)
-- [ ] Store and manage user notification preferences (#12)
+- [x] Persist events to database (#9)
+- [x] Expose events via REST API (#10)
+- [x] Deduplicate incoming events (#11)
+- [x] Store and manage user notification preferences (#12)
 
 ### Sprint 4: Notifications & UI (Backlog)
 
@@ -59,7 +59,30 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
-### Session 3 — 2026-02-12 (Current)
+### Session 4 — 2026-02-16 (Current)
+**What was done:**
+- Sprint 3 completed: Storage & API
+- Converted project from Console app to ASP.NET Core Web API
+- Added Entity Framework Core with SQLite provider
+- Created `AppDbContext` with `Events`, `Sources`, and `UserPreferences` tables
+- Indexed `ExternalId`, `Geography`, `PublishedAt` for performance
+- Created `IngestorBackgroundService` — runs every 5 min, fetches events, deduplicates by `ExternalId` (#9, #11)
+- Created `EventsController` — `GET /api/events` with filtering (geography, source, date, national, pagination) and `GET /api/events/{id}` (#10)
+- Created `SourcesController` — `GET /api/sources`
+- Created `PreferencesController` — full CRUD for user notification preferences (#12)
+- Created `UserPreference` model with geography/source/severity filters
+- Added `IngestedAt` timestamp to `CanonicalEvent`
+- Added `.gitignore` for SQLite database files
+- Verified: 200 live Polisen events fetched, deduplicated, and queryable via API
+
+**Next session:**
+- Start Sprint 4: Notifications & UI
+- Send notifications based on user preferences (#13)
+- View events on a clean web UI (#15)
+
+---
+
+### Session 3 — 2026-02-12
 **What was done:**
 - Sprint 2 completed: RSS ingestor for Polisen
 - Created `IIngestor` interface for pluggable source types (#7)
@@ -69,11 +92,6 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - Updated `Program.cs` to fetch and display 200 live police events
 - Geography extracted from title (last comma-segment), severity defaults to "Bra att veta"
 - Merged PRs #17 (Sprint 2) and #18 (CLAUDE.md)
-
-**Next session:**
-- Start Sprint 3: Storage & API
-- Persist events to database (#9)
-- Expose events via REST API (#10)
 
 ---
 
