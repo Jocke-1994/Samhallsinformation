@@ -1,38 +1,26 @@
+using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Data;
 using Samhallsinformation.Ingestors;
+using Samhallsinformation.Services;
 
-Console.WriteLine("=== Samhällsinformation - Sprint 2: RSS Ingestor ===");
-Console.WriteLine();
+var builder = WebApplication.CreateBuilder(args);
 
-using var httpClient = new HttpClient();
-var ingestor = new PolisenRssIngestor(httpClient);
+// Database
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite("Data Source=samhallsinformation.db"));
 
-Console.WriteLine($"Hämtar händelser från: {ingestor.Source.Name} ({ingestor.Source.ShortName})");
-Console.WriteLine($"Källtyp: {ingestor.Source.Type}");
-Console.WriteLine();
+// HTTP client for ingestors
+builder.Services.AddHttpClient<PolisenRssIngestor>();
+builder.Services.AddScoped<IIngestor, PolisenRssIngestor>();
 
-try
-{
-    var events = await ingestor.FetchEventsAsync();
+// Background service
+builder.Services.AddHostedService<IngestorBackgroundService>();
 
-    Console.WriteLine($"Antal händelser hämtade: {events.Count}");
-    Console.WriteLine(new string('-', 60));
+// Controllers
+builder.Services.AddControllers();
 
-    foreach (var evt in events)
-    {
-        Console.WriteLine($"  Titel:     {evt.Title}");
-        Console.WriteLine($"  Geografi:  {evt.Geography ?? "(nationell)"}");
-        Console.WriteLine($"  Nationell: {evt.IsNational}");
-        Console.WriteLine($"  Allvar:    {evt.Severity}");
-        Console.WriteLine($"  Datum:     {evt.PublishedAt:yyyy-MM-dd HH:mm}");
-        Console.WriteLine($"  Länk:      {evt.Url}");
-        Console.WriteLine(new string('-', 60));
-    }
-}
-catch (HttpRequestException ex)
-{
-    Console.WriteLine($"Kunde inte hämta data: {ex.Message}");
-}
+var app = builder.Build();
 
-Console.WriteLine();
-Console.WriteLine("Tryck på valfri tangent för att avsluta...");
-Console.ReadKey();
+app.MapControllers();
+
+app.Run();
