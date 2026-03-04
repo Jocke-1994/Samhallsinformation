@@ -21,6 +21,20 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
+// Seed: spara källorna från alla ingestors i databasen om de inte redan finns
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var ingestor = scope.ServiceProvider.GetRequiredService<IIngestor>();
+    var source = ingestor.Source;
+
+    if (!db.Sources.Any(s => s.Id == source.Id))
+    {
+        db.Sources.Add(source);
+        await db.SaveChangesAsync();
+    }
+}
+
 app.MapControllers();
 
 app.Run();
