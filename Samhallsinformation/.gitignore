@@ -1,3 +1,6 @@
 *.db
 *.db-shm
 *.db-wal
+
+# Claude-specifika filer
+.claude/
