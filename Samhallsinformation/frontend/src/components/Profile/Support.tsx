@@ -144,7 +144,7 @@ function StatCard({ label, value, color }: { label: string; value: number; color
   )
 }
 
-function SortIcon({ field, active, dir }: { field: string; active: boolean; dir: SortDir }) {
+function SortIcon({ field: _field, active, dir }: { field: string; active: boolean; dir: SortDir }) {
   if (!active) return <span className="ml-1 text-slate-300">↕</span>
   return <span className="ml-1 text-violet-600">{dir === 'asc' ? '↑' : '↓'}</span>
 }
