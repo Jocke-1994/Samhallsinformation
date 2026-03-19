@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 
 interface Props {
   smsNummer: string
@@ -19,6 +20,14 @@ export default function GlobalaInstallningar({ smsNummer }: Props) {
   const [mail, setMail] = useState(true)
   const [sms, setSms] = useState(false)
   const [saved, setSaved] = useState(false)
+  const location = useLocation()
+  const [highlighted, setHighlighted] = useState(location.state?.highlightId === 'globala-installningar')
+
+  useEffect(() => {
+    if (!highlighted) return
+    const timer = setTimeout(() => setHighlighted(false), 4200)
+    return () => clearTimeout(timer)
+  }, [highlighted])
 
   function handleSave() {
     setSaved(true)
@@ -26,7 +35,7 @@ export default function GlobalaInstallningar({ smsNummer }: Props) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div id="globala-installningar" className={`bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden ${highlighted ? 'card-highlight' : ''}`}>
       <div className="px-6 pt-6 pb-5 bg-gradient-to-br from-blue-50 to-white border-b border-slate-100">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-xl shrink-0">⚙️</div>
