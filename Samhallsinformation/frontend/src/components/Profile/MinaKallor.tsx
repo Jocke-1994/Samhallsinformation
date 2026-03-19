@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 
 interface MockSource {
   id: number
@@ -48,6 +49,14 @@ export default function MinaKallor() {
   const [sparSelected, setSparSelected] = useState<Set<number>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const location = useLocation()
+  const [highlightId, setHighlightId] = useState<string | null>(location.state?.highlightId ?? null)
+
+  useEffect(() => {
+    if (!highlightId) return
+    const timer = setTimeout(() => setHighlightId(null), 4200)
+    return () => clearTimeout(timer)
+  }, [highlightId])
 
   const activeSources = ALL_SOURCES.filter(s => activeIds.has(s.id))
   const sparSuggestions = ALL_SOURCES.filter(s => SPAR_SUGGESTED_IDS.includes(s.id) && !activeIds.has(s.id))
@@ -194,7 +203,7 @@ export default function MinaKallor() {
       </div>
 
       {/* Aktiva källor */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div id="aktiva-kallor" className={`bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden ${highlightId === 'aktiva-kallor' ? 'card-highlight' : ''}`}>
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Aktiva källor</h2>

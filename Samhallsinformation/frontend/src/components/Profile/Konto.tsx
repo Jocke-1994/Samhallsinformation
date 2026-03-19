@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 
 interface FormField {
   value: string
@@ -25,6 +26,14 @@ export default function Konto() {
   const [losenordSaved, setLosenordSaved] = useState(false)
   const [losenordError, setLosenordError] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const location = useLocation()
+  const [highlightId, setHighlightId] = useState<string | null>(location.state?.highlightId ?? null)
+
+  useEffect(() => {
+    if (!highlightId) return
+    const timer = setTimeout(() => setHighlightId(null), 4200)
+    return () => clearTimeout(timer)
+  }, [highlightId])
 
   function update<T extends FormField>(setter: React.Dispatch<React.SetStateAction<T>>, value: string) {
     setter(prev => ({ ...prev, value, saved: false, error: '' }))
@@ -206,7 +215,7 @@ export default function Konto() {
       </div>
 
       {/* Datahantering */}
-      <div className="bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden">
+      <div id="datahantering" className={`bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden ${highlightId === 'datahantering' ? 'card-highlight' : ''}`}>
         <div className="px-6 pt-6 pb-5 border-b border-red-100 bg-gradient-to-br from-red-50 to-white">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-xl shrink-0">🗑️</div>
