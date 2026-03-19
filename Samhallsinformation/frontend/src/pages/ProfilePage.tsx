@@ -1,4 +1,5 @@
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import Sidebar from '../components/Sidebar/Sidebar'
 import { type ProfileSection } from '../components/Profile/ProfileNav'
 import MinaKallor from '../components/Profile/MinaKallor'
@@ -6,6 +7,9 @@ import Konto from '../components/Profile/Konto'
 import Notifieringar from '../components/Profile/Notifieringar'
 import Uppdateringar from '../components/Profile/Uppdateringar'
 import Support from '../components/Profile/Support'
+import { fetchSources } from '../api/sources'
+import { useUnreadSourceIds } from '../hooks/useUnreadSourceIds'
+import type { Source } from '../types'
 
 const VALID_SECTIONS: ProfileSection[] = ['mina-kallor', 'notifieringar', 'konto', 'uppdateringar', 'support']
 
@@ -67,7 +71,75 @@ const NAV_CARDS: {
   },
 ]
 
+function UnreadSourcesSection({ onSelectSource }: { onSelectSource: (id: number) => void }) {
+  const { data: sources = [] } = useQuery<Source[]>({
+    queryKey: ['sources'],
+    queryFn: fetchSources,
+  })
+
+  const unreadSourceIds = useUnreadSourceIds(sources)
+
+  const unreadSources = sources.filter(s => unreadSourceIds.has(s.id))
+
+  if (unreadSources.length === 0) return null
+
+  const regional = unreadSources.filter(s => s.scope === 'regional')
+  const national = unreadSources.filter(s => s.scope === 'nationell')
+
+  return (
+    <div className="mt-12">
+      <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-5">Nytt sedan sist</h2>
+
+      {regional.length > 0 && (
+        <div className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
+            Regionalt för dig
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {regional.map(source => (
+              <button
+                key={source.id}
+                onClick={() => onSelectSource(source.id)}
+                className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 text-sm font-medium text-slate-800 hover:text-violet-700"
+              >
+                <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
+                {source.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {national.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
+            Nationellt
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {national.map(source => (
+              <button
+                key={source.id}
+                onClick={() => onSelectSource(source.id)}
+                className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 text-sm font-medium text-slate-800 hover:text-violet-700"
+              >
+                <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                {source.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSection) => void }) {
+  const navigate = useNavigate()
+
+  function handleSelectSource(sourceId: number) {
+    navigate('/', { state: { sourceId } })
+  }
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-4xl mx-auto px-10 py-14">
@@ -94,6 +166,8 @@ function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSection) => void })
             </button>
           ))}
         </div>
+
+        <UnreadSourcesSection onSelectSource={handleSelectSource} />
       </div>
     </div>
   )
