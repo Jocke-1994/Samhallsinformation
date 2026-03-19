@@ -221,20 +221,21 @@ function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSection) => void })
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="w-full text-center pt-16 pb-10 px-10">
-        <h1 className="text-8xl font-bold text-slate-900 tracking-tight">Min profil</h1>
-        <div className="mt-8 flex justify-center">
-          <div className="relative w-full max-w-md">
-            <div className="flex items-center">
-              <span className="text-slate-400 text-xl shrink-0">🔍</span>
-              <input
-                type="text"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Sök inställningar..."
-                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all"
-              />
-            </div>
+      <div className="flex flex-col items-center pt-16 px-10">
+
+        {/* Rubrik + sökfält i samma bredd */}
+        <div className="flex flex-col items-stretch">
+          <h1 className="text-8xl font-bold text-slate-900 tracking-tight text-center">Min profil</h1>
+          <div className="relative mt-6">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">🔍</span>
+            <input
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Sök inställningar..."
+              style={{ paddingLeft: '3rem' }}
+              className="w-full pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all"
+            />
             {query.trim().length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-2 z-50">
                 <SearchResults query={query} onSelect={s => { setQuery(''); onSelect(s) }} />
@@ -242,29 +243,30 @@ function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSection) => void })
             )}
           </div>
         </div>
-      </div>
 
-      <div className="flex justify-center px-10 pb-16" style={{ paddingTop: '128px' }}>
-        <div className="grid grid-cols-3 gap-6 w-full max-w-3xl">
-          {NAV_CARDS.map(card => (
-            <button
-              key={card.id}
-              onClick={() => onSelect(card.id)}
-              className={`group text-center bg-gradient-to-br ${card.gradient} border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center`}
-            >
-              <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-3xl mb-5 ${card.iconColor}`}>
-                {card.icon}
-              </div>
-              <p className="text-base font-semibold text-slate-900 mb-2">{card.label}</p>
-              <p className="text-sm text-slate-500 leading-snug">{card.description}</p>
-              <p className="mt-5 text-xs font-medium text-slate-400 group-hover:text-violet-600 transition-colors">
-                Öppna →
-              </p>
-            </button>
-          ))}
+        {/* Inställningskort */}
+        <div className="w-full max-w-3xl pb-16" style={{ marginTop: '128px' }}>
+          <div className="grid grid-cols-3 gap-6">
+            {NAV_CARDS.map(card => (
+              <button
+                key={card.id}
+                onClick={() => onSelect(card.id)}
+                className={`group text-center bg-gradient-to-br ${card.gradient} border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center`}
+              >
+                <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-3xl mb-5 ${card.iconColor}`}>
+                  {card.icon}
+                </div>
+                <p className="text-base font-semibold text-slate-900 mb-2">{card.label}</p>
+                <p className="text-sm text-slate-500 leading-snug">{card.description}</p>
+                <p className="mt-5 text-xs font-medium text-slate-400 group-hover:text-violet-600 transition-colors">
+                  Öppna →
+                </p>
+              </button>
+            ))}
+          </div>
+          <UnreadSourcesSection onSelectSource={handleSelectSource} />
         </div>
 
-        <UnreadSourcesSection onSelectSource={handleSelectSource} />
       </div>
     </div>
   )
