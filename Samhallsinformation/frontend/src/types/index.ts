@@ -4,6 +4,7 @@ export interface Source {
   shortName: string
   baseUrl: string
   isActive: boolean
+  scope: 'nationell' | 'regional'
 }
 
 export interface CanonicalEvent {
