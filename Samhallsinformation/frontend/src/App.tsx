@@ -1,34 +1,19 @@
 import { useState, useCallback } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import Sidebar from './components/Sidebar/Sidebar'
 import NewsFeed from './components/NewsFeed/NewsFeed'
 import ProfilePage from './pages/ProfilePage'
 import { fetchSources } from './api/sources'
+import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 
 import type { Source } from './types'
 
-function useUnreadSourceIds(sources: Source[], readTrigger: number): Set<number> {
-  // Returnerar set av sourceId:n som har minst en oläst nyhet
-  // readTrigger används för att tvinga omräkning när något markeras läst
-  void readTrigger
-  const stored = localStorage.getItem('si_read_events')
-  const readIds: Set<string> = stored ? new Set(JSON.parse(stored)) : new Set()
-  return new Set(
-    sources
-      .filter(s => s.isActive)
-      .filter(s => {
-        const cached = sessionStorage.getItem(`si_events_${s.id}`)
-        if (!cached) return false
-        const events: { id: string }[] = JSON.parse(cached)
-        return events.some(e => !readIds.has(e.id))
-      })
-      .map(s => s.id)
-  )
-}
-
 function HomePage() {
-  const [selectedSourceId, setSelectedSourceId] = useState<number | null>(null)
+  const location = useLocation()
+  const [selectedSourceId, setSelectedSourceId] = useState<number | null>(
+    (location.state as { sourceId?: number } | null)?.sourceId ?? null
+  )
   const [readTrigger, setReadTrigger] = useState(0)
 
   const { data: sources = [] } = useQuery<Source[]>({
