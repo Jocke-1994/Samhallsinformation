@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import Sidebar from './components/Sidebar/Sidebar'
 import NewsFeed from './components/NewsFeed/NewsFeed'
+import ProfilePage from './pages/ProfilePage'
 import { fetchSources } from './api/sources'
 
 import type { Source } from './types'
@@ -44,7 +45,7 @@ function HomePage() {
   }, [])
 
   return (
-    <div className="flex h-screen bg-neutral-950">
+    <div className="flex h-screen bg-slate-50">
       <Sidebar
         selectedSourceId={selectedSourceId}
         onSelectSource={setSelectedSourceId}
@@ -55,21 +56,6 @@ function HomePage() {
           source={selectedSource}
           onReadStatusChange={handleReadStatusChange}
         />
-      </main>
-    </div>
-  )
-}
-
-function ProfilePage() {
-  return (
-    <div className="flex h-screen bg-neutral-950">
-      <Sidebar
-        selectedSourceId={null}
-        onSelectSource={() => {}}
-        unreadSourceIds={new Set()}
-      />
-      <main className="flex-1 flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Profil (kommer snart)</h1>
       </main>
     </div>
   )

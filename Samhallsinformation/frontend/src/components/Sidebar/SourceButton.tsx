@@ -10,17 +10,15 @@ export default function SourceButton({ label, active, hasUnread, onClick }: Prop
     <button
       onClick={onClick}
       className={`
-        w-full text-left px-3 py-2 rounded text-sm transition-colors relative
+        w-full text-left px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 flex items-center justify-between
         ${active
-          ? 'bg-neutral-700 text-white font-medium'
-          : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'}
+          ? 'bg-violet-100 text-violet-700 font-semibold'
+          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}
       `}
     >
-      <span>{label}</span>
+      <span className="truncate">{label}</span>
       {hasUnread && (
-        <span className="ml-2 text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded-full">
-          New
-        </span>
+        <span className="ml-2 shrink-0 w-2 h-2 rounded-full bg-violet-500" />
       )}
     </button>
   )
