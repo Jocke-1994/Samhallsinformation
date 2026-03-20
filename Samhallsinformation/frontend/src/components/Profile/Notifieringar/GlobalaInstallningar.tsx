@@ -1,19 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import Toggle from '../../common/Toggle'
 
 interface Props {
   smsNummer: string
-}
-
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      onClick={() => onChange(!on)}
-      className={`relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${on ? 'bg-violet-600' : 'bg-slate-200'}`}
-    >
-      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
-    </button>
-  )
 }
 
 export default function GlobalaInstallningar({ smsNummer }: Props) {
