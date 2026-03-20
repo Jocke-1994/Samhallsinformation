@@ -1,34 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { ProfileSection } from './ProfileNav'
-
-interface ChangeEntry {
-  type: 'nytt' | 'förbättrat' | 'fixat'
-  text: string
-  summary: string
-  section?: ProfileSection
-  linkText?: string
-  highlightId?: string
-}
-
-interface Release {
-  version: string
-  date: string
-  changes: ChangeEntry[]
-}
-
-interface KändBugg {
-  text: string
-  allvar: 'låg' | 'medel' | 'hög'
-  workaround?: string
-  status?: string
-}
-
-interface KommandeVersion {
-  version: string
-  description: string
-  plannedDate: string
-}
+import type { ChangeEntry, Release, KändBugg, KommandeVersion } from '../../types'
 
 const RELEASES: Release[] = [
   {

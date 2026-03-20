@@ -1,17 +1,6 @@
 import { useState } from 'react'
-
-type Frekvens = 'direkt' | 'daglig' | 'veckovis'
-
-interface SourceSettings {
-  mail: boolean
-  sms: boolean
-  frekvens: Frekvens
-}
-
-interface Source {
-  id: number
-  name: string
-}
+import SourceGroup from './SourceGroup'
+import { type Source, type SourceSettings } from './SourceRow'
 
 const STADER = ['Göteborg', 'Stockholm', 'Malmö', 'Uppsala']
 const LAN = ['Västra Götaland', 'Stockholms län', 'Skåne', 'Uppsala län']
@@ -39,87 +28,6 @@ const LAN_SOURCES: Record<string, Source[]> = {
 
 const DEFAULT: SourceSettings = { mail: true, sms: false, frekvens: 'direkt' }
 const ALL: Source[] = [...NATIONAL_SOURCES, ...Object.values(STAD_SOURCES).flat(), ...Object.values(LAN_SOURCES).flat()]
-
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      onClick={() => onChange(!on)}
-      className={`relative w-8 h-4 rounded-full transition-colors duration-200 focus:outline-none shrink-0 ${on ? 'bg-violet-600' : 'bg-slate-200'}`}
-    >
-      <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform duration-200 ${on ? 'translate-x-4' : 'translate-x-0.5'}`} />
-    </button>
-  )
-}
-
-function SourceRow({ source, settings, onChange }: {
-  source: Source
-  settings: SourceSettings
-  onChange: (s: SourceSettings) => void
-}) {
-  return (
-    <div className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors group">
-      <p className="text-sm font-medium text-slate-800 min-w-[160px]">{source.name}</p>
-      <div className="flex items-center gap-5">
-        <div className="flex items-center gap-2">
-          <Toggle on={settings.mail} onChange={v => onChange({ ...settings, mail: v })} />
-          <span className="text-xs text-slate-400 w-7">Mail</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Toggle on={settings.sms} onChange={v => onChange({ ...settings, sms: v })} />
-          <span className="text-xs text-slate-400 w-7">SMS</span>
-        </div>
-        <select
-          value={settings.frekvens}
-          onChange={e => onChange({ ...settings, frekvens: e.target.value as Frekvens })}
-          className="bg-slate-100 text-slate-600 text-xs px-2.5 py-1.5 rounded-lg border-0 focus:outline-none focus:ring-1 focus:ring-violet-400 cursor-pointer"
-        >
-          <option value="direkt">Direkt</option>
-          <option value="daglig">Daglig</option>
-          <option value="veckovis">Veckovis</option>
-        </select>
-      </div>
-    </div>
-  )
-}
-
-function SourceGroup({ label, sources, settings, onChangeSingle, onBulkSelect, undoSnapshot, onUndo }: {
-  label: string
-  sources: Source[]
-  settings: Record<number, SourceSettings>
-  onChangeSingle: (id: number, s: SourceSettings) => void
-  onBulkSelect: () => void
-  undoSnapshot: Record<number, SourceSettings> | null
-  onUndo: () => void
-}) {
-  const allSelected = sources.every(s => settings[s.id]?.mail && settings[s.id]?.sms)
-
-  return (
-    <div>
-      <div className="flex items-center gap-3 px-5 py-2.5 bg-slate-50 border-b border-slate-100">
-        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{label}</p>
-        <button
-          onClick={onBulkSelect}
-          className="text-xs font-medium text-violet-600 hover:text-violet-500 transition-colors"
-        >
-          {allSelected ? 'Avmarkera alla' : 'Välj alla'}
-        </button>
-        {undoSnapshot && (
-          <button onClick={onUndo} className="text-xs text-slate-400 hover:text-slate-700 transition-colors">
-            ↩ Ångra
-          </button>
-        )}
-      </div>
-      {sources.map(source => (
-        <SourceRow
-          key={source.id}
-          source={source}
-          settings={settings[source.id] ?? DEFAULT}
-          onChange={s => onChangeSingle(source.id, s)}
-        />
-      ))}
-    </div>
-  )
-}
 
 export default function KallorLista() {
   const [selectedStad, setSelectedStad] = useState('')
