@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { KallTyp, Kalla } from '../../../types'
-import { DOT, RUBRIK, TYPNAMN, nyhetFarg, fmt, groupBy } from './kallorUtils'
+import { RUBRIK, TYPNAMN, nyhetFarg, fmt, groupBy } from './kallorUtils'
 
 function KallaRad({ k, onRemove }: { k: Kalla; onRemove: (id: number) => void }) {
   return (
