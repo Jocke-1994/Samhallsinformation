@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import ObligatoriskaKallor from './ObligatoriskaKallor'
 import Mottagare from './Mottagare'
-import KallorLista from './KallorLista'
 import StorEj from './StorEj'
 import Leveranslage from './Leveranslage'
 import NotisHistorik from './NotisHistorik'
@@ -43,13 +42,12 @@ export default function Notifieringar() {
 
       {/* Övre rad: två kort sida vid sida */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ObligatoriskaKallor />
+        <ObligatoriskaKallor data={mottagare} />
         <Mottagare data={mottagare} onChange={setMottagare} getNextId={getNextId} />
       </div>
 
-      {/* Andra rad: tre kort */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <KallorLista />
+      {/* Andra rad: två kort */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <StorEj />
         <Leveranslage data={mottagare} />
       </div>
