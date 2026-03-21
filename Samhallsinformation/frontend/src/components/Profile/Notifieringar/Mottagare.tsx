@@ -141,23 +141,11 @@ export default function Mottagare() {
               {i > 0 && <div className="border-t border-slate-100 mb-6" />}
 
               {/* Sektionsrubrik */}
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 mb-3">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{sek.label}</p>
-                <div className="flex items-center gap-2.5">
-                  <span className={`text-xs font-semibold tabular-nums ${atMax ? 'text-red-400' : 'text-slate-400'}`}>
-                    {mottagare.length}/{MAX}
-                  </span>
-                  <button
-                    onClick={() => { if (!atMax && !form.open) openForm(sek.key) }}
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
-                      atMax || form.open
-                        ? 'text-slate-300 cursor-default'
-                        : 'text-violet-600 hover:text-violet-800 hover:bg-violet-50'
-                    }`}
-                  >
-                    + Lägg till
-                  </button>
-                </div>
+                <span className={`text-xs font-semibold tabular-nums ${atMax ? 'text-red-400' : 'text-slate-400'}`}>
+                  {mottagare.length}/{MAX}
+                </span>
               </div>
 
               {/* Rader */}
@@ -248,12 +236,23 @@ export default function Mottagare() {
                 )}
               </div>
 
-              {/* Max-varning */}
-              {atMax && (
-                <p className="text-xs text-slate-400 mt-2">
-                  Max {MAX} mottagare per kanal — ta bort en för att lägga till fler.
-                </p>
-              )}
+              {/* Lägg till + max-varning */}
+              <div className="mt-3">
+                {atMax ? (
+                  <p className="text-xs text-slate-300">
+                    Max {MAX} mottagare per kanal — ta bort en för att lägga till fler.
+                  </p>
+                ) : (
+                  !form.open && (
+                    <button
+                      onClick={() => openForm(sek.key)}
+                      className="text-xs font-semibold text-violet-600 hover:text-violet-800 hover:bg-violet-50 px-2.5 py-1 rounded-lg transition-colors"
+                    >
+                      + Lägg till
+                    </button>
+                  )
+                )}
+              </div>
             </div>
           )
         })}
