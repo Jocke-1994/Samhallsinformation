@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import Sidebar from './components/Sidebar/Sidebar'
 import NewsFeed from './components/NewsFeed/NewsFeed'
 import ProfilePage from './pages/ProfilePage'
+import AdminPage from './pages/AdminPage'
 import { fetchSources } from './api/sources'
 import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 
@@ -51,6 +52,9 @@ export default function App() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/profil" element={<ProfilePage />} />
+      {import.meta.env.VITE_ADMIN_ENABLED === 'true' && (
+        <Route path="/admin" element={<AdminPage />} />
+      )}
     </Routes>
   )
 }
