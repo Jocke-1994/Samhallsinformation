@@ -1,6 +1,7 @@
 import ObligatoriskaKallor from './ObligatoriskaKallor'
 import Mottagare from './Mottagare'
 import KallorLista from './KallorLista'
+import StorEj from './StorEj'
 import NotisHistorik from './NotisHistorik'
 
 export default function Notifieringar() {
@@ -13,8 +14,11 @@ export default function Notifieringar() {
         <Mottagare />
       </div>
 
-      {/* Källista */}
-      <KallorLista />
+      {/* Andra rad: två kort sida vid sida */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <KallorLista />
+        <StorEj />
+      </div>
 
       {/* Notifieringshistorik */}
       <NotisHistorik />
