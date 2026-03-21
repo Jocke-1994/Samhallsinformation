@@ -155,9 +155,9 @@ export default function Mottagare() {
                 )}
 
                 {mottagare.map(m => (
-                  <div key={m.id} className="flex items-center gap-3 group py-0.5">
+                  <div key={m.id} className="flex items-center gap-2 group py-0.5">
                     <span className="text-base shrink-0">{sek.ikon}</span>
-                    <span className="text-sm text-slate-700 font-medium truncate w-40 shrink-0">{m.kontakt}</span>
+                    <span className="text-sm text-slate-700 font-medium shrink-0">{m.kontakt}</span>
 
                     {/* Smeknamn — klick för att redigera */}
                     {isEditing(sek.key, m.id) ? (
@@ -176,7 +176,7 @@ export default function Mottagare() {
                     ) : (
                       <button
                         onClick={() => startEdit(sek.key, m.id, m.smeknamn)}
-                        className="text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg px-2 py-1 transition-colors truncate max-w-[7rem] text-left"
+                        className="text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg px-2 py-1 transition-colors text-left"
                         title="Klicka för att redigera smeknamn"
                       >
                         {m.smeknamn || <span className="italic text-slate-300">Smeknamn</span>}
@@ -237,7 +237,7 @@ export default function Mottagare() {
               </div>
 
               {/* Lägg till + max-varning */}
-              <div className="mt-3">
+              <div className="mt-3 text-center">
                 {atMax ? (
                   <p className="text-xs text-slate-300">
                     Max {MAX} mottagare per kanal — ta bort en för att lägga till fler.
