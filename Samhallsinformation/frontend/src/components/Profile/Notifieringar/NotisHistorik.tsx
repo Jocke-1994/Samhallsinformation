@@ -80,7 +80,7 @@ export default function NotisHistorik() {
           >
             {f.label}
             {f.key !== 'alla' && (
-              <span className="ml-1.5 text-slate-300 font-normal tabular-nums">
+              <span className="ml-3 text-slate-400 font-semibold tabular-nums">
                 {MOCK.filter(n => n.kanal === f.key).length}
               </span>
             )}
