@@ -71,50 +71,45 @@ export default function NotisHistorik() {
         </div>
       </div>
 
-      {/* Filterflikar */}
-      <div className="px-6 pt-4 pb-0 flex items-end justify-between border-b border-slate-100">
+      {/* Kanalflikar */}
+      <div className="px-6 pt-4 pb-0 flex gap-1 border-b border-slate-100">
+        {FLIKAR.map(f => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={`flex-1 py-1.5 text-xs font-semibold transition-colors border-b-2 -mb-px ${
+              filter === f.key
+                ? 'text-violet-600 border-violet-500 bg-violet-50'
+                : 'text-slate-400 border-transparent hover:text-slate-600'
+            }`}
+          >
+            <span className="flex items-center justify-center gap-3">
+              <span>{f.label}</span>
+              {f.key !== 'alla' && (
+                <span className="text-slate-400 font-semibold tabular-nums">
+                  {MOCK.filter(n => n.kanal === f.key).length}
+                </span>
+              )}
+            </span>
+          </button>
+        ))}
+      </div>
 
-        {/* Kanal */}
-        <div className="flex gap-1">
-          {FLIKAR.map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`min-w-[5rem] py-1.5 text-xs font-semibold rounded-t-lg transition-colors border-b-2 -mb-px ${
-                filter === f.key
-                  ? 'text-violet-600 border-violet-500 bg-violet-50'
-                  : 'text-slate-400 border-transparent hover:text-slate-600'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <span>{f.label}</span>
-                {f.key !== 'alla' && (
-                  <span className="text-slate-400 font-semibold tabular-nums">
-                    {MOCK.filter(n => n.kanal === f.key).length}
-                  </span>
-                )}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* Mottagare */}
-        <div className="flex gap-1">
-          {MOTTAGARE.map(m => (
-            <button
-              key={m}
-              onClick={() => setMottagare(m)}
-              className={`min-w-[4rem] py-1.5 text-xs font-semibold rounded-t-lg transition-colors border-b-2 -mb-px ${
-                mottagare === m
-                  ? 'text-violet-600 border-violet-500 bg-violet-50'
-                  : 'text-slate-400 border-transparent hover:text-slate-600'
-              }`}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-
+      {/* Mottagarflikar */}
+      <div className="px-6 flex gap-1 border-b border-slate-100">
+        {MOTTAGARE.map(m => (
+          <button
+            key={m}
+            onClick={() => setMottagare(m)}
+            className={`flex-1 py-1.5 text-xs font-semibold transition-colors border-b-2 -mb-px ${
+              mottagare === m
+                ? 'text-violet-600 border-violet-500 bg-violet-50'
+                : 'text-slate-400 border-transparent hover:text-slate-600'
+            }`}
+          >
+            {m}
+          </button>
+        ))}
       </div>
 
       {/* Lista */}
