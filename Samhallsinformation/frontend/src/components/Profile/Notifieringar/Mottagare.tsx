@@ -130,7 +130,7 @@ export default function Mottagare() {
         </div>
       </div>
 
-      <div className="px-6 py-5 flex flex-col gap-6">
+      <div className="px-6 py-5 flex flex-col">
         {SEKTIONER.map((sek, i) => {
           const mottagare = data[sek.key]
           const atMax     = mottagare.length >= MAX
@@ -253,6 +253,7 @@ export default function Mottagare() {
                   )
                 )}
               </div>
+
             </div>
           )
         })}
