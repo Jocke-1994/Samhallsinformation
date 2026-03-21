@@ -109,7 +109,7 @@ export default function NotisHistorik() {
                 <div className="w-px h-8 bg-slate-100 shrink-0" />
 
                 {/* Kanal + mottagare */}
-                <div className="shrink-0 w-28">
+                <div className="shrink-0 w-44">
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm">{KANAL_IKON[n.kanal]}</span>
                     <span className="text-xs font-medium text-slate-600">{n.mottagare}</span>
