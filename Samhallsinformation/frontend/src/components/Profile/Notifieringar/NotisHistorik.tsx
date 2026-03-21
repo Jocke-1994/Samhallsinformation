@@ -78,12 +78,14 @@ export default function NotisHistorik() {
                 : 'text-slate-400 border-transparent hover:text-slate-600'
             }`}
           >
-            {f.label}
-            {f.key !== 'alla' && (
-              <span className="ml-3 text-slate-400 font-semibold tabular-nums">
-                {MOCK.filter(n => n.kanal === f.key).length}
-              </span>
-            )}
+            <span className="flex items-center gap-3">
+              <span>{f.label}</span>
+              {f.key !== 'alla' && (
+                <span className="text-slate-400 font-semibold tabular-nums">
+                  {MOCK.filter(n => n.kanal === f.key).length}
+                </span>
+              )}
+            </span>
           </button>
         ))}
       </div>
