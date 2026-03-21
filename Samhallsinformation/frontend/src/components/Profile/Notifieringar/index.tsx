@@ -1,6 +1,7 @@
 import ObligatoriskaKallor from './ObligatoriskaKallor'
 import Mottagare from './Mottagare'
 import KallorLista from './KallorLista'
+import NotisHistorik from './NotisHistorik'
 
 export default function Notifieringar() {
   return (
@@ -14,6 +15,9 @@ export default function Notifieringar() {
 
       {/* Källista */}
       <KallorLista />
+
+      {/* Notifieringshistorik */}
+      <NotisHistorik />
 
     </div>
   )
