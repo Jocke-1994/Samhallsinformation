@@ -63,7 +63,7 @@ export default function RekommenderadeKallorKort({ activeIds, onAdd }: { activeI
       <div className="divide-y divide-slate-100">
         {visade.map(k => (
           <div key={k.id}>
-            <div className="flex items-center justify-between px-6 py-3.5 hover:bg-slate-50 transition-colors gap-4">
+            <div className="flex items-center justify-between px-6 py-5 hover:bg-slate-50 transition-colors gap-4">
               <button
                 onClick={() => setExpanded(expanded === k.id ? null : k.id)}
                 className="flex items-center gap-2.5 min-w-0 text-left flex-1"
@@ -74,7 +74,7 @@ export default function RekommenderadeKallorKort({ activeIds, onAdd }: { activeI
               </button>
               <button
                 onClick={() => { onAdd([k.id]); setExpanded(null) }}
-                className="shrink-0 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg transition-colors"
+                className="shrink-0 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 + Lägg till
               </button>
