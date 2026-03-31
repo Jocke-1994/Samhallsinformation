@@ -9,12 +9,19 @@ interface Leverans {
   smeknamn:  string
 }
 
+interface KanalInnehall {
+  epost?: { amne: string; brödtext: string }
+  sms?:   { text: string }
+  push?:  { titel: string; text: string }
+}
+
 interface Notis {
   id:         number
   tid:        string
   kalla:      string
   rubrik:     string
   leveranser: Leverans[]
+  innehall?:  KanalInnehall
 }
 
 const KANAL_IKON:  Record<Kanal, string> = { epost: '📧', sms: '📱', push: '🔔' }
@@ -40,10 +47,29 @@ const MOCK: Notis[] = [
       { kanal: 'push',  kontakt: 'iPad',               smeknamn: ''       },
       { kanal: 'push',  kontakt: 'MacBook',            smeknamn: ''       },
     ],
+    innehall: {
+      epost: {
+        amne: 'Notis från Polisen: Trafikolycka på E6 vid Göteborg',
+        brödtext: 'En trafikolycka har inträffat på E6 vid Göteborg. Räddningstjänst och polis är på plats. Trafiken påverkas i sydgående riktning. Undvik området om möjligt.\n\nKälla: Polisen\nPublicerad: 2026-03-21 08:14\n\nLäs mer på polisen.se',
+      },
+      sms: {
+        text: 'Notis från Polisen: Trafikolycka på E6 vid Göteborg. Trafiken störs i sydgående riktning. Undvik området. Läs mer: polisen.se',
+      },
+      push: {
+        titel: 'Polisen — Trafikolycka',
+        text: 'Trafikolycka på E6 vid Göteborg. Trafiken störs i sydgående riktning.',
+      },
+    },
   },
   {
     id: 2, tid: '2026-03-20 19:02', kalla: 'SMHI', rubrik: 'Klass 1-varning för snö i Norrland',
     leveranser: [{ kanal: 'epost', kontakt: 'din@epost.se', smeknamn: 'Mig' }],
+    innehall: {
+      epost: {
+        amne: 'Notis från SMHI: Klass 1-varning för snö i Norrland',
+        brödtext: 'SMHI utfärdar klass 1-varning för snö i Norrland. Snöfall om 10–20 cm väntas under kvällen och natten. Besvärliga körförhållanden kan uppstå.\n\nKälla: SMHI\nPublicerad: 2026-03-20 19:02\n\nLäs mer på smhi.se',
+      },
+    },
   },
   {
     id: 3, tid: '2026-03-20 12:30', kalla: 'MSB', rubrik: 'Viktigt meddelande till allmänheten',
@@ -51,14 +77,34 @@ const MOCK: Notis[] = [
       { kanal: 'push', kontakt: 'iPhone', smeknamn: '' },
       { kanal: 'sms',  kontakt: '073-XXX XX XX', smeknamn: 'Mamma' },
     ],
+    innehall: {
+      sms: {
+        text: 'MSB: Viktigt meddelande till allmänheten. Följ myndigheternas instruktioner och håll dig uppdaterad via msb.se och SVT.',
+      },
+      push: {
+        titel: 'MSB — Viktigt meddelande',
+        text: 'Viktigt meddelande till allmänheten. Följ myndigheternas instruktioner.',
+      },
+    },
   },
   {
     id: 4, tid: '2026-03-20 09:45', kalla: 'Trafikverket', rubrik: 'Planerat vägarbete på riksväg 40',
     leveranser: [{ kanal: 'epost', kontakt: 'din@epost.se', smeknamn: 'Mig' }],
+    innehall: {
+      epost: {
+        amne: 'Notis från Trafikverket: Planerat vägarbete på riksväg 40',
+        brödtext: 'Trafikverket informerar om planerat vägarbete på riksväg 40 mellan Borås och Göteborg. Arbetet pågår under veckodagarna 07:00–17:00. Hastigheten sänks till 50 km/h förbi arbetsplatsen.\n\nKälla: Trafikverket\nPublicerad: 2026-03-20 09:45\n\nLäs mer på trafikverket.se',
+      },
+    },
   },
   {
     id: 5, tid: '2026-03-19 16:20', kalla: 'Polisen', rubrik: 'Inbrott rapporterat i Majorna',
     leveranser: [{ kanal: 'sms', kontakt: '076-XXX XX XX', smeknamn: 'Mormor' }],
+    innehall: {
+      sms: {
+        text: 'Notis från Polisen: Inbrott rapporterat i Majorna, Göteborg. Säkra ditt hem och kontakta polisen om du har information. polisen.se',
+      },
+    },
   },
   {
     id: 6, tid: '2026-03-19 11:05', kalla: 'SMHI', rubrik: 'Gult vädervarning — hård vind',
@@ -66,6 +112,16 @@ const MOCK: Notis[] = [
       { kanal: 'epost', kontakt: 'din@epost.se', smeknamn: 'Mig' },
       { kanal: 'push',  kontakt: 'iPhone',        smeknamn: ''    },
     ],
+    innehall: {
+      epost: {
+        amne: 'Notis från SMHI: Gult vädervarning — hård vind',
+        brödtext: 'SMHI utfärdar gul varning för hård vind längs västkusten. Vindbyar på upp till 21 m/s väntas under eftermiddagen och kvällen. Säkra lösa föremål utomhus.\n\nKälla: SMHI\nPublicerad: 2026-03-19 11:05\n\nLäs mer på smhi.se',
+      },
+      push: {
+        titel: 'SMHI — Gul varning',
+        text: 'Hård vind längs västkusten. Vindbyar upp till 21 m/s under eftermiddagen.',
+      },
+    },
   },
   {
     id: 7, tid: '2026-03-18 14:10', kalla: 'Polisen', rubrik: 'Demonstration i centrala Göteborg',
@@ -157,6 +213,117 @@ const MOCK: Notis[] = [
   },
 ]
 
+interface ModalData {
+  notis:  Notis
+  kanal:  Kanal
+}
+
+function KanalModal({ data, onClose }: { data: ModalData; onClose: () => void }) {
+  const { notis, kanal } = data
+  const innehall = notis.innehall
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <span className="text-base">{KANAL_IKON[kanal]}</span>
+            <span className="text-sm font-semibold text-slate-700">{KANAL_NAMN[kanal]}</span>
+            <span className="text-slate-300 mx-1">·</span>
+            <span className="text-xs text-slate-400">{notis.tid}</span>
+          </div>
+          <button onClick={onClose} className="text-slate-300 hover:text-slate-600 transition-colors text-lg leading-none">✕</button>
+        </div>
+
+        {/* Innehåll per kanal */}
+        {kanal === 'epost' && innehall?.epost ? (
+          <div className="p-5">
+            {/* E-post preview */}
+            <div className="rounded-xl border border-slate-200 overflow-hidden">
+              <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex flex-col gap-1.5">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-semibold text-slate-400 w-12 shrink-0">Från</span>
+                  <span className="text-xs text-slate-600">noreply@samhallsinformation.se</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-semibold text-slate-400 w-12 shrink-0">Till</span>
+                  <span className="text-xs text-slate-600">
+                    {notis.leveranser.filter(l => l.kanal === 'epost').map((l, i) => (
+                      <span key={i}>{i > 0 && ', '}{l.smeknamn ? `${l.smeknamn} <${l.kontakt}>` : l.kontakt}</span>
+                    ))}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-semibold text-slate-400 w-12 shrink-0">Ämne</span>
+                  <span className="text-xs font-medium text-slate-800">{innehall.epost.amne}</span>
+                </div>
+              </div>
+              <div className="px-4 py-4">
+                <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{innehall.epost.brödtext}</p>
+              </div>
+            </div>
+          </div>
+        ) : kanal === 'sms' && innehall?.sms ? (
+          <div className="p-5">
+            {/* SMS preview */}
+            <div className="flex flex-col gap-1 mb-3">
+              <p className="text-xs text-slate-400 text-center">Skickades till</p>
+              <p className="text-xs text-slate-500 text-center font-medium">
+                {notis.leveranser.filter(l => l.kanal === 'sms').map((l, i) => (
+                  <span key={i}>{i > 0 && ' · '}{l.smeknamn || l.kontakt}</span>
+                ))}
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <div className="bg-green-500 text-white text-sm rounded-2xl rounded-br-sm px-4 py-3 max-w-xs leading-relaxed shadow-sm">
+                {innehall.sms.text}
+              </div>
+            </div>
+            <p className="text-xs text-slate-300 text-right mt-1.5">Levererat {notis.tid}</p>
+          </div>
+        ) : kanal === 'push' && innehall?.push ? (
+          <div className="p-5">
+            <div className="flex flex-col gap-1 mb-3">
+              <p className="text-xs text-slate-400 text-center">Skickades till</p>
+              <p className="text-xs text-slate-500 text-center font-medium">
+                {notis.leveranser.filter(l => l.kanal === 'push').map((l, i) => (
+                  <span key={i}>{i > 0 && ' · '}{l.smeknamn || l.kontakt}</span>
+                ))}
+              </p>
+            </div>
+            {/* Push-notis mockup */}
+            <div className="bg-slate-100 rounded-2xl p-4 flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center text-white text-sm font-bold shrink-0">SI</div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-900">{innehall.push.titel}</p>
+                <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">{innehall.push.text}</p>
+                <p className="text-xs text-slate-400 mt-1.5">Samhällsinformation · {notis.tid}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="px-5 py-8 text-center">
+            <p className="text-sm text-slate-400">Inget förhandsgranskningsinnehåll tillgängligt</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 const FLIKAR: { key: Filter; label: string }[] = [
   { key: 'alla',  label: 'Alla'   },
   { key: 'epost', label: 'E-post' },
@@ -178,6 +345,7 @@ export default function NotisHistorik() {
   const [valda,          setValda]          = useState<string[]>([])
   const [dropdownOpen,   setDropdownOpen]   = useState(false)
   const [sida,           setSida]           = useState(1)
+  const [modal,          setModal]          = useState<ModalData | null>(null)
   const dropdownRef                         = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -217,6 +385,7 @@ export default function NotisHistorik() {
   }
 
   return (
+    <>
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
 
       {/* Header */}
@@ -359,17 +528,29 @@ export default function NotisHistorik() {
 
                     {/* Kanaler med mottagare */}
                     <div className="flex flex-col gap-1">
-                      {perKanal.map(g => (
-                        <div key={g.kanal} className="flex items-center gap-1.5 text-xs text-slate-500">
-                          <span>{KANAL_IKON[g.kanal]}</span>
-                          <span className="font-medium text-slate-400 shrink-0">{KANAL_NAMN[g.kanal]}</span>
-                          <span className="text-slate-600">
-                            {g.leveranser.map((l, i) => (
-                              <span key={i}>{i > 0 && ' · '}{l.smeknamn || l.kontakt}</span>
-                            ))}
-                          </span>
-                        </div>
-                      ))}
+                      {perKanal.map(g => {
+                        const harInnehall = !!n.innehall?.[g.kanal]
+                        return (
+                          <div key={g.kanal} className="flex items-center gap-1.5 text-xs text-slate-500">
+                            <span>{KANAL_IKON[g.kanal]}</span>
+                            {harInnehall ? (
+                              <button
+                                onClick={() => setModal({ notis: n, kanal: g.kanal })}
+                                className="font-medium text-violet-500 hover:text-violet-700 hover:underline shrink-0 transition-colors"
+                              >
+                                {KANAL_NAMN[g.kanal]}
+                              </button>
+                            ) : (
+                              <span className="font-medium text-slate-400 shrink-0">{KANAL_NAMN[g.kanal]}</span>
+                            )}
+                            <span className="text-slate-600">
+                              {g.leveranser.map((l, i) => (
+                                <span key={i}>{i > 0 && ' · '}{l.smeknamn || l.kontakt}</span>
+                              ))}
+                            </span>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
 
@@ -417,5 +598,8 @@ export default function NotisHistorik() {
       </div>
 
     </div>
+
+    {modal && <KanalModal data={modal} onClose={() => setModal(null)} />}
+    </>
   )
 }
