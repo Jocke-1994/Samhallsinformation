@@ -35,7 +35,7 @@ function KallaRad({ k, onRemove }: { k: Kalla; onRemove: (id: number) => void })
   )
 }
 
-function Kolumn({ typ, sources, children }: { typ: KallTyp; sources: Kalla[]; children: ReactNode }) {
+function Kolumn({ typ, children }: { typ: KallTyp; sources?: Kalla[]; children: ReactNode }) {
   return (
     <div className="flex flex-col">
       <div className="pb-2.5 mb-1 border-b border-slate-100">
