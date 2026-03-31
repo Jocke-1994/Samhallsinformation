@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import type { Tjanst, PlaneratUnderhall, NastaSteg } from '../../../types'
 
 const TJANSTER: Tjanst[] = [
@@ -58,6 +59,20 @@ const PLANERAT_UNDERHALL: PlaneratUnderhall[] = [
     start: '2026-03-19 10:00',
     beraknatSlut: '2026-03-24 00:00',
     beskrivning: 'Källan svarar inte. En ersättande källa aktiveras automatiskt vid återgång.',
+  },
+  {
+    namn: 'Länsstyrelsen Västra Götaland',
+    typ: 'Extern källa',
+    start: '2026-03-15 09:00',
+    beraknatSlut: '2026-03-28 00:00',
+    beskrivning: 'Källan genomgår planerat underhåll. Nyheter från Länsstyrelsen Västra Götaland kan vara inaktuella under perioden.',
+  },
+  {
+    namn: 'MSB',
+    typ: 'Extern källa',
+    start: '2026-03-13 16:00',
+    beraknatSlut: '2026-03-30 00:00',
+    beskrivning: 'MSB genomgår teknisk migrering. Källan är temporärt otillgänglig och återaktiveras automatiskt när migreringen är klar.',
   },
 ]
 
@@ -119,8 +134,20 @@ function InfoPanel({ paverkan, nastaSteg, kanalPaverkan, beraknatIDrift }: {
 
 export default function SystemstatusKort() {
   const [expandedTjanst, setExpandedTjanst] = useState<string | null>(null)
-  const [expandedKalla, setExpandedKalla] = useState<string | null>(null)
+  const [expandedKalla,  setExpandedKalla]  = useState<string | null>(null)
+  const [highlighted,    setHighlighted]    = useState<string | null>(null)
+  const location   = useLocation()
+  const highlightRef = useRef<HTMLDivElement>(null)
   const getPingDelay = () => `-${performance.now() % 1000}ms`
+
+  useEffect(() => {
+    const namn = location.state?.highlightNamn
+    if (!namn) return
+    setHighlighted(namn)
+    setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
+    const t = setTimeout(() => setHighlighted(null), 4200)
+    return () => clearTimeout(t)
+  }, [location.state?.highlightNamn])
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden self-start">
@@ -230,7 +257,11 @@ export default function SystemstatusKort() {
         ) : (
           <div className="flex flex-col divide-y divide-slate-100">
             {PLANERAT_UNDERHALL.map(u => (
-              <div key={u.namn} className="px-6 py-4 flex flex-col gap-1.5">
+              <div
+                key={u.namn}
+                ref={highlighted === u.namn ? highlightRef : null}
+                className={`px-6 py-4 flex flex-col gap-1.5 transition-colors duration-300 ${highlighted === u.namn ? 'bg-amber-50' : ''}`}
+              >
                 <div className="flex items-center">
                   <span className="text-sm font-semibold text-slate-800">{u.namn}</span>
                 </div>
