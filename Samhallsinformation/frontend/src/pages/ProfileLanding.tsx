@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { type ProfileSection } from '../types'
@@ -133,6 +133,55 @@ function SearchResults({ query, onSelect }: { query: string; onSelect: (s: Profi
   )
 }
 
+function BetatestareModal({ onClose, onAnmal }: { onClose: () => void; onAnmal: () => void }) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="bg-gradient-to-br from-violet-600 to-violet-800 px-6 py-6 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold text-violet-300 uppercase tracking-widest mb-1">Öppen betaperiod</p>
+            <h2 className="text-xl font-bold text-white">Vi söker betatestare</h2>
+          </div>
+          <button onClick={onClose} className="text-violet-300 hover:text-white transition-colors text-lg leading-none mt-0.5">✕</button>
+        </div>
+        <div className="px-6 py-5 flex flex-col gap-4">
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Samhällsinformation är under aktiv utveckling och vi letar efter personer som vill hjälpa oss forma produkten.
+          </p>
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Som betatestare får du tidig tillgång till nya funktioner och möjlighet att påverka vad vi bygger härnäst. Vi är tacksamma för all feedback — stor som liten.
+          </p>
+          <div className="bg-violet-50 border border-violet-100 rounded-xl px-4 py-3">
+            <p className="text-xs text-violet-700 font-medium leading-relaxed">
+              Anmälan sker via vår support — beskriv kort varför du vill testa och vilken typ av feedback du kan bidra med.
+            </p>
+          </div>
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={onAnmal}
+              className="flex-1 px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              Anmäl mig
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-colors"
+            >
+              Avbryt
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function UnreadSourcesSection({ onSelectSource }: { onSelectSource: (id: number) => void }) {
   const { data: sources = [] } = useQuery<Source[]>({
     queryKey: ['sources'],
@@ -198,9 +247,15 @@ function UnreadSourcesSection({ onSelectSource }: { onSelectSource: (id: number)
 export default function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSection) => void }) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
+  const [modalOpen, setModalOpen] = useState(false)
 
   function handleSelectSource(sourceId: number) {
     navigate('/', { state: { sourceId } })
+  }
+
+  function handleAnmal() {
+    setModalOpen(false)
+    onSelect('support')
   }
 
   return (
@@ -228,8 +283,25 @@ export default function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSect
           </div>
         </div>
 
+        {/* Betatestare-banner */}
+        <div className="w-full max-w-3xl mt-8">
+          <button
+            onClick={() => setModalOpen(true)}
+            className="w-full flex items-center justify-between gap-4 bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 text-white rounded-2xl px-6 py-4 shadow-md hover:shadow-lg transition-all duration-200 text-left"
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-2xl shrink-0">🧪</span>
+              <div>
+                <p className="text-sm font-bold">Vi söker betatestare</p>
+                <p className="text-xs text-violet-200 mt-0.5">Hjälp oss forma produkten — klicka för att läsa mer</p>
+              </div>
+            </div>
+            <span className="text-violet-300 shrink-0">→</span>
+          </button>
+        </div>
+
         {/* Inställningskort */}
-        <div className="w-full max-w-3xl pb-16" style={{ marginTop: '128px' }}>
+        <div className="w-full max-w-3xl pb-16" style={{ marginTop: '48px' }}>
           <div className="grid grid-cols-3 gap-6">
             {NAV_CARDS.map(card => (
               <button
@@ -252,6 +324,7 @@ export default function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSect
         </div>
 
       </div>
+      {modalOpen && <BetatestareModal onClose={() => setModalOpen(false)} onAnmal={handleAnmal} />}
     </div>
   )
 }
