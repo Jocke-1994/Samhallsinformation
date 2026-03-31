@@ -49,7 +49,7 @@ export default function ProfilePage() {
                 {SECTION_LABELS[section]}
               </h1>
             </div>
-            <div className="px-10 py-8">
+            <div className="px-12 py-10">
               <div className="max-w-5xl mx-auto">
                 {section === 'mina-kallor' && <MinaKallor />}
                 {section === 'notifieringar' && <Notifieringar />}
