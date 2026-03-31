@@ -148,27 +148,29 @@ export default function Mottagare({
                     <span className="text-base shrink-0">{sek.ikon}</span>
                     <span className="text-sm text-slate-700 font-medium shrink-0">{m.kontakt}</span>
 
-                    {isEditing(sek.key, m.id) ? (
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          ref={inputRef}
-                          type="text"
-                          value={editing!.value}
-                          onChange={e => setEditing(prev => prev ? { ...prev, value: e.target.value } : null)}
-                          onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') cancelEdit() }}
-                          className="text-xs bg-white border border-violet-300 rounded-lg px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-violet-400"
-                        />
-                        <button onClick={commitEdit} className="text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors">Spara</button>
-                        <button onClick={cancelEdit} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">✕</button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => startEdit(sek.key, m.id, m.smeknamn)}
-                        className="text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg px-2 py-1 transition-colors text-left"
-                        title="Klicka för att redigera smeknamn"
-                      >
-                        {m.smeknamn || <span className="italic text-slate-300">Smeknamn</span>}
-                      </button>
+                    {!sek.noAdd && (
+                      isEditing(sek.key, m.id) ? (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            ref={inputRef}
+                            type="text"
+                            value={editing!.value}
+                            onChange={e => setEditing(prev => prev ? { ...prev, value: e.target.value } : null)}
+                            onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') cancelEdit() }}
+                            className="text-xs bg-white border border-violet-300 rounded-lg px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                          />
+                          <button onClick={commitEdit} className="text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors">Spara</button>
+                          <button onClick={cancelEdit} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">✕</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEdit(sek.key, m.id, m.smeknamn)}
+                          className="text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg px-2 py-1 transition-colors text-left"
+                          title="Klicka för att redigera smeknamn"
+                        >
+                          {m.smeknamn || <span className="italic text-slate-300">Smeknamn</span>}
+                        </button>
+                      )
                     )}
 
                     <div className="flex-1" />
@@ -179,12 +181,14 @@ export default function Mottagare({
 
                     <Toggle on={m.aktiv} onChange={() => toggleAktiv(sek.key, m.id)} />
 
-                    <button
-                      onClick={() => remove(sek.key, m.id)}
-                      className="opacity-0 group-hover:opacity-100 ml-2 shrink-0 px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-all"
-                    >
-                      - Ta bort
-                    </button>
+                    {!sek.noAdd && (
+                      <button
+                        onClick={() => remove(sek.key, m.id)}
+                        className="opacity-0 group-hover:opacity-100 ml-2 shrink-0 px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-all"
+                      >
+                        - Ta bort
+                      </button>
+                    )}
                   </div>
                 ))}
 
