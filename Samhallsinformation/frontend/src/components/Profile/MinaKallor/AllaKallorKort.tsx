@@ -4,15 +4,19 @@ import { KALLOR, DOT, TYPNAMN, arNy } from './kallorUtils'
 
 export default function AllaKallorKort({ activeIds, onAdd }: { activeIds: Set<number>; onAdd: (ids: number[]) => void }) {
   const [aktivFlik, setAktivFlik] = useState<AllaFlik>('Alla')
+  const [query,     setQuery]     = useState('')
 
   const nya    = KALLOR.filter(arNy)
   const FLIKAR: AllaFlik[] = ['Alla', 'Nya', 'Nationell', 'Regional', 'Kommunal']
 
-  function visade() {
+  function basLista() {
     if (aktivFlik === 'Alla') return KALLOR
     if (aktivFlik === 'Nya')  return nya
     return KALLOR.filter(k => k.typ === aktivFlik)
   }
+
+  const trimmed = query.trim().toLowerCase()
+  const visade  = trimmed ? basLista().filter(k => k.namn.toLowerCase().includes(trimmed)) : basLista()
 
   function flikCount(f: AllaFlik) {
     if (f === 'Alla') return KALLOR.length
@@ -29,7 +33,7 @@ export default function AllaKallorKort({ activeIds, onAdd }: { activeIds: Set<nu
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col max-h-[523px]">
       <div style={{ padding: '1.5rem 2.5rem 1.25rem' }} className="border-b border-slate-100">
         <div className="flex items-center justify-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xl shrink-0">🏛️</div>
@@ -47,7 +51,7 @@ export default function AllaKallorKort({ activeIds, onAdd }: { activeIds: Set<nu
           return (
             <button
               key={f}
-              onClick={() => setAktivFlik(f)}
+              onClick={() => { setAktivFlik(f); setQuery('') }}
               className={`flex-1 py-3 text-xs font-semibold transition-colors ${
                 isActive ? activeStyles[f] : 'bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100'
               }`}
@@ -59,8 +63,20 @@ export default function AllaKallorKort({ activeIds, onAdd }: { activeIds: Set<nu
         })}
       </div>
 
-      <div className="divide-y divide-slate-100">
-        {visade().map(k => {
+      <div className="px-4 py-3 border-b border-slate-100">
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Sök källa..."
+          className="w-full bg-slate-50 text-slate-900 text-sm px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-violet-400 focus:bg-white placeholder-slate-400 transition-colors"
+        />
+      </div>
+
+      <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+        {visade.length === 0 ? (
+          <p className="px-6 py-6 text-sm text-slate-400 text-center">Ingen källa hittades.</p>
+        ) : visade.map(k => {
           const active = activeIds.has(k.id)
           return (
             <div key={k.id} className={`flex items-center justify-between px-6 py-3 gap-4 transition-colors ${active ? '' : 'hover:bg-slate-50'}`}>

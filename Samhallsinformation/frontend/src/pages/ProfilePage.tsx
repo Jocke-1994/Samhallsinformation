@@ -50,7 +50,7 @@ export default function ProfilePage() {
               </h1>
             </div>
             <div className="px-12 py-10">
-              <div className="max-w-5xl mx-auto">
+              <div className="max-w-7xl mx-auto">
                 {section === 'mina-kallor' && <MinaKallor />}
                 {section === 'notifieringar' && <Notifieringar />}
                 {section === 'konto' && <Konto />}

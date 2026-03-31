@@ -8,8 +8,6 @@ export default function RekommenderadeKallorKort({ activeIds, onAdd }: { activeI
 
   const rekommenderade = KALLOR.filter(k => ORSAK[k.id] && !activeIds.has(k.id))
 
-  if (rekommenderade.length === 0) return null
-
   const FLIKAR: RekFlik[] = ['Alla', 'Nationell', 'Regional', 'Kommunal']
   const visade = aktivFlik === 'Alla' ? rekommenderade : rekommenderade.filter(k => k.typ === aktivFlik)
 
@@ -23,7 +21,7 @@ export default function RekommenderadeKallorKort({ activeIds, onAdd }: { activeI
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[523px]">
       <div style={{ padding: '1.5rem 2.5rem 1.25rem' }} className="border-b border-slate-100">
         <div className="flex items-center justify-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-xl shrink-0">⭐</div>
@@ -60,7 +58,16 @@ export default function RekommenderadeKallorKort({ activeIds, onAdd }: { activeI
         })}
       </div>
 
-      <div className="divide-y divide-slate-100">
+      {rekommenderade.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-3xl mb-3">✅</p>
+            <p className="text-sm font-medium text-slate-700">Inga fler rekommendationer</p>
+            <p className="text-xs text-slate-400 mt-1">Du har redan lagt till alla källor vi kan föreslå</p>
+          </div>
+        </div>
+      ) : (
+      <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
         {visade.map(k => (
           <div key={k.id}>
             <div className="flex items-center justify-between px-6 py-5 hover:bg-slate-50 transition-colors gap-4">
@@ -87,6 +94,7 @@ export default function RekommenderadeKallorKort({ activeIds, onAdd }: { activeI
           </div>
         ))}
       </div>
+      )}
     </div>
   )
 }
