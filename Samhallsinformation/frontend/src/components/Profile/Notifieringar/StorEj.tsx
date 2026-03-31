@@ -201,7 +201,7 @@ function SchemaForm({
         <button
           onClick={() => { if (form.mottagareIds.length > 0) onSave(form) }}
           disabled={form.mottagareIds.length === 0}
-          className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-1.5 rounded-lg transition-colors"
+          className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
         >
           {saveLabel}
         </button>
@@ -276,7 +276,7 @@ function TillfälligForm({
         <button
           onClick={() => { if (form.datum && form.mottagareIds.length > 0 && form.kallor.length > 0) onSave(form) }}
           disabled={!form.datum || form.mottagareIds.length === 0 || form.kallor.length === 0}
-          className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-1.5 rounded-lg transition-colors"
+          className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
         >
           {saveLabel}
         </button>
@@ -389,7 +389,7 @@ export default function StorEj() {
             {!visaSchemaForm && (
               <button
                 onClick={() => setVisaSchemaForm(true)}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2.5 py-1 rounded-lg transition-colors"
+                className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg transition-colors"
               >
                 + Lägg till
               </button>
@@ -428,8 +428,8 @@ export default function StorEj() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5">
-                    <button onClick={() => { setEditSchemaId(s.id); setVisaSchemaForm(false) }} className="text-xs text-indigo-500 hover:text-indigo-700 transition-colors">Ändra</button>
-                    <button onClick={() => removeSchema(s.id)} className="text-xs text-red-400 hover:text-red-600 transition-colors">Ta bort</button>
+                    <button onClick={() => { setEditSchemaId(s.id); setVisaSchemaForm(false) }} className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors">Ändra</button>
+                    <button onClick={() => removeSchema(s.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-colors">- Ta bort</button>
                   </div>
                 </div>
               )
@@ -481,7 +481,7 @@ export default function StorEj() {
             {!visaTillfForm && (
               <button
                 onClick={() => setVisaTillfForm(true)}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2.5 py-1 rounded-lg transition-colors"
+                className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg transition-colors"
               >
                 + Lägg till
               </button>
@@ -513,8 +513,8 @@ export default function StorEj() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5">
-                    <button onClick={() => { setEditTillfId(r.id); setVisaTillfForm(false) }} className="text-xs text-indigo-500 hover:text-indigo-700 transition-colors">Ändra</button>
-                    <button onClick={() => removeTillfällig(r.id)} className="text-xs text-red-400 hover:text-red-600 transition-colors">Ta bort</button>
+                    <button onClick={() => { setEditTillfId(r.id); setVisaTillfForm(false) }} className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors">Ändra</button>
+                    <button onClick={() => removeTillfällig(r.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-colors">- Ta bort</button>
                   </div>
                 </div>
               )
