@@ -48,6 +48,7 @@ export interface Kalla {
   ort?:            string
   senasteNyhet:    string
   deprecated?:     boolean
+  deprecatedAnledning?: string
   url:             string
   tillagdISystem:  string
 }

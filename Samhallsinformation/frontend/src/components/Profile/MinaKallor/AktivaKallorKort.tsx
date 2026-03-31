@@ -1,20 +1,36 @@
 import { useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { KallTyp, Kalla } from '../../../types'
 import { RUBRIK, TYPNAMN, nyhetFarg, fmt, groupBy } from './kallorUtils'
 
 function KallaRad({ k, onRemove }: { k: Kalla; onRemove: (id: number) => void }) {
+  const navigate = useNavigate()
+
+  function gaTillSystemstatus() {
+    navigate('?section=support', { state: { highlightNamn: k.deprecatedAnledning } })
+  }
+
   return (
-    <div className={`flex items-start justify-between py-2 group ${k.deprecated ? 'opacity-40' : ''}`}>
+    <div className="flex items-center justify-between py-2 group">
       <div className="min-w-0">
         <a href={k.url} target="_blank" rel="noreferrer" className="text-sm font-medium text-slate-800 hover:text-violet-600 hover:underline leading-snug transition-colors">{k.namn}</a>
-        <p className={`text-xs mt-0.5 ${k.deprecated ? 'text-slate-400' : nyhetFarg(k.senasteNyhet)}`}>
-          Senaste nyhet: {fmt(k.senasteNyhet)}
-        </p>
+        {k.deprecated ? (
+          <button
+            onClick={gaTillSystemstatus}
+            className="flex items-center gap-1 text-xs mt-0.5 text-amber-500 hover:text-amber-700 transition-colors"
+          >
+            ⚠️ Planerat underhåll — se systemstatus
+          </button>
+        ) : (
+          <p className={`text-xs mt-0.5 whitespace-nowrap ${nyhetFarg(k.senasteNyhet)}`}>
+            Senaste nyhet: {fmt(k.senasteNyhet)}
+          </p>
+        )}
       </div>
       <button
         onClick={() => onRemove(k.id)}
-        className="opacity-0 group-hover:opacity-100 text-xs font-semibold text-red-400 hover:text-red-600 transition-all ml-2 shrink-0 mt-0.5"
-      >Ta bort</button>
+        className="opacity-0 group-hover:opacity-100 ml-3 shrink-0 px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-all"
+      >- Ta bort</button>
     </div>
   )
 }
@@ -30,6 +46,7 @@ function Kolumn({ typ, sources, children }: { typ: KallTyp; sources: Kalla[]; ch
     <div className="flex flex-col">
       <div className={`flex items-center justify-between pb-2.5 mb-1 border-b border-slate-100`}>
         <p className={`text-xs font-bold uppercase tracking-wider ${RUBRIK[typ]}`}>{TYPNAMN[typ]}</p>
+        {/* DISABLED: källstatistik (totalt, grön/orange/röd/grå) — aktivera vid behov
         <div className="flex items-center gap-2 text-xs font-semibold">
           {([
             { value: sources.length, color: 'text-slate-900',  label: 'Totalt antal aktiva källor' },
@@ -48,6 +65,7 @@ function Kolumn({ typ, sources, children }: { typ: KallTyp; sources: Kalla[]; ch
             </div>
           ))}
         </div>
+        */}
       </div>
       {children}
     </div>
@@ -69,7 +87,7 @@ export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highl
   return (
     <div
       id="aktiva-kallor"
-      className={`bg-white rounded-2xl border border-slate-200 shadow-sm ${highlightId === 'aktiva-kallor' ? 'card-highlight' : ''}`}
+      className={`bg-white rounded-2xl border border-slate-200 shadow-sm h-[523px] flex flex-col ${highlightId === 'aktiva-kallor' ? 'card-highlight' : ''}`}
     >
       <div style={{ padding: '1.5rem 2.5rem 1.25rem' }} className="border-b border-slate-100">
         <div className="flex items-center justify-center gap-3">
@@ -85,10 +103,10 @@ export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highl
         <div className="px-6 py-12 text-center">
           <p className="text-3xl mb-3">📭</p>
           <p className="text-sm font-medium text-slate-700">Inga aktiva källor</p>
-          <p className="text-xs text-slate-400 mt-1">Lägg till källor via kortet ovan</p>
+          <p className="text-xs text-slate-400 mt-1">Lägg till källor via kortet till vänster</p>
         </div>
       ) : (
-        <div className="px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-6 py-5">
           <div className="grid grid-cols-3 gap-8">
             <Kolumn typ="Nationell" sources={nationella}>
               {nationella.length === 0
