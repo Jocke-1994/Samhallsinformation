@@ -34,10 +34,10 @@ export default function FaqKort() {
           const count = kat === 'alla' ? FAQ_ITEMS.length : FAQ_ITEMS.filter(i => i.kategori === kat).length
           const isActive = aktivKategori === kat
           const activeStyles: Record<string, string> = {
-            'alla':          'bg-violet-600 text-white',
-            'Notifieringar': 'bg-blue-500 text-white',
-            'Mina källor':   'bg-violet-500 text-white',
-            'Konto':         'bg-indigo-500 text-white',
+            'alla':          'bg-slate-800 text-white',
+            'Notifieringar': 'bg-violet-500 text-white',
+            'Mina källor':   'bg-blue-500 text-white',
+            'Konto':         'bg-amber-400 text-white',
             'Uppdateringar': 'bg-emerald-500 text-white',
           }
           return (
