@@ -36,12 +36,6 @@ function KallaRad({ k, onRemove }: { k: Kalla; onRemove: (id: number) => void })
 }
 
 function Kolumn({ typ, sources, children }: { typ: KallTyp; sources: Kalla[]; children: ReactNode }) {
-  const active  = sources.filter(k => !k.deprecated)
-  const gron    = active.filter(k => nyhetFarg(k.senasteNyhet) === 'text-green-600').length
-  const orange  = active.filter(k => nyhetFarg(k.senasteNyhet) === 'text-orange-500').length
-  const rod     = active.filter(k => nyhetFarg(k.senasteNyhet) === 'text-red-500').length
-  const gra     = sources.filter(k => k.deprecated).length
-
   return (
     <div className="flex flex-col">
       <div className={`flex items-center justify-between pb-2.5 mb-1 border-b border-slate-100`}>
