@@ -38,28 +38,8 @@ function KallaRad({ k, onRemove }: { k: Kalla; onRemove: (id: number) => void })
 function Kolumn({ typ, sources, children }: { typ: KallTyp; sources: Kalla[]; children: ReactNode }) {
   return (
     <div className="flex flex-col">
-      <div className={`flex items-center justify-between pb-2.5 mb-1 border-b border-slate-100`}>
+      <div className="pb-2.5 mb-1 border-b border-slate-100">
         <p className={`text-xs font-bold uppercase tracking-wider ${RUBRIK[typ]}`}>{TYPNAMN[typ]}</p>
-        {/* DISABLED: källstatistik (totalt, grön/orange/röd/grå) — aktivera vid behov
-        <div className="flex items-center gap-2 text-xs font-semibold">
-          {([
-            { value: sources.length, color: 'text-slate-900',  label: 'Totalt antal aktiva källor' },
-            { value: gron,           color: 'text-green-600',  label: 'Uppdaterade senaste 24 timmarna' },
-            { value: orange,         color: 'text-orange-500', label: 'Uppdaterade de senaste 7 dagarna' },
-            { value: rod,            color: 'text-red-500',    label: 'Inte uppdaterade på mer än 7 dagar' },
-            ...(gra > 0 ? [{ value: gra, color: 'text-slate-400', label: 'Källor planerade att tas bort' }] : []),
-          ] as { value: number; color: string; label: string }[]).map(({ value, color, label }) => (
-            <div key={label} className="relative group/tip cursor-default">
-              <span className={color}>{value}</span>
-              <div className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden group-hover/tip:block z-50">
-                <div className="bg-slate-800 text-white text-xs rounded-lg px-2.5 py-1.5 whitespace-nowrap shadow-lg">
-                  {label}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        */}
       </div>
       {children}
     </div>
