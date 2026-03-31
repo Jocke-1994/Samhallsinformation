@@ -89,7 +89,7 @@ const KATEGORIER = [
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-8 flex flex-col items-center gap-2">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-10 flex flex-col items-center gap-2">
       <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">{label}</p>
       <p className={`text-4xl font-bold ${color}`}>{value}</p>
     </div>
@@ -136,11 +136,11 @@ function ArendeRad({
         </td>
         <td className="pl-4 pr-8 py-4 font-mono text-xs text-slate-400">{arende.id}</td>
         <td className="px-4 py-4">
-          <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full mb-1 inline-block">{arende.kategori}</span>
+          <span className="text-xs font-medium text-slate-400 bg-slate-100 px-3 py-1 rounded-full mb-1 inline-block">{arende.kategori}</span>
           <p className="text-slate-700 font-medium">{arende.amne}</p>
         </td>
         <td className="px-4 py-4">
-          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[arende.status]}`}>
+          <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${STATUS_STYLES[arende.status]}`}>
             {arende.status}
           </span>
         </td>
@@ -304,7 +304,7 @@ export default function ArendehanteringKort() {
   return (
     <>
       {/* Statistik */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-6">
         <StatCard label="Alla ärenden"              value={totalt}   color="text-slate-900" />
         <StatCard label="Öppna ärenden"            value={oppna}    color="text-blue-600"  />
         <StatCard label="Ärenden under behandling" value={underBeh} color="text-amber-600" />
@@ -312,7 +312,7 @@ export default function ArendehanteringKort() {
       </div>
 
       {/* Skicka ärende + Ärendetabell */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-6">
 
       {/* Skicka nytt ärende */}
       <div className="col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden self-start">
