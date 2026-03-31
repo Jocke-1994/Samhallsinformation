@@ -150,7 +150,7 @@ export default function Uppdateringar() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-xl shrink-0">🔭</div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">På gång</h2>
+              <h2 className="text-lg font-bold text-slate-900">Påväg</h2>
               <p className="text-sm text-slate-500 mt-0.5">Nästa planerade version</p>
             </div>
           </div>
