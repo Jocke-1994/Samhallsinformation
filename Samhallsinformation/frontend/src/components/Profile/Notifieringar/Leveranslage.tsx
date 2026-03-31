@@ -351,9 +351,9 @@ export default function Leveranslage({ data }: { data: AllData }) {
                                         </span>
                                         <button
                                           onClick={e => { e.stopPropagation(); removeUndantag(m.id, u.id) }}
-                                          className="opacity-0 group-hover:opacity-100 text-xs text-red-400 hover:text-red-600 transition-all ml-1 shrink-0"
+                                          className="opacity-0 group-hover:opacity-100 ml-1 shrink-0 px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-all"
                                         >
-                                          Ta bort
+                                          - Ta bort
                                         </button>
                                         <span className={`text-slate-400 text-xs transition-transform shrink-0 ${uÖppen ? 'rotate-180' : ''}`}>▾</span>
                                       </button>
@@ -397,7 +397,7 @@ export default function Leveranslage({ data }: { data: AllData }) {
                                       />
                                     )}
                                     <div className="flex gap-2 mt-1">
-                                      <button onClick={() => savePending(m.id)} className="text-xs font-semibold text-white bg-teal-600 hover:bg-teal-500 px-3 py-1 rounded-lg transition-colors">Spara</button>
+                                      <button onClick={() => savePending(m.id)} className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg transition-colors">Spara</button>
                                       <button onClick={() => cancelPending(m.id)} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">Avbryt</button>
                                     </div>
                                   </div>
@@ -407,7 +407,7 @@ export default function Leveranslage({ data }: { data: AllData }) {
 
                             <div className="flex items-center gap-3">
                               {ledigaKällor.length > 0 && !pend && (
-                                <button onClick={() => openPending(m.id, ledigaKällor)} className="text-xs font-semibold text-teal-600 hover:text-teal-800 hover:bg-teal-50 px-2 py-0.5 rounded-lg transition-colors">
+                                <button onClick={() => openPending(m.id, ledigaKällor)} className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg transition-colors">
                                   + Källundantag
                                 </button>
                               )}
