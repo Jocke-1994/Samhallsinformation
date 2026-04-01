@@ -85,6 +85,7 @@ const KATEGORIER = [
   'GDPR & uppgifter',
   'Konto',
   'Tekniskt fel',
+  'Önskemål',
   ...(BETA.aktiv ? ['Testare'] : []),
   'Annat',
 ]
@@ -379,15 +380,15 @@ export default function ArendehanteringKort() {
       </div>
 
       {/* Ärendetabell */}
-      <div className="col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 text-center">
+      <div className="col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col max-h-[640px]">
+        <div className="px-6 py-4 border-b border-slate-200 text-center shrink-0">
           <h2 className="text-xl font-semibold text-slate-900">Mina ärenden</h2>
           <p className="text-sm text-slate-400 mt-0.5">Klicka på ett ärende för att se historik och svara</p>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-auto flex-1">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-left">
+              <tr className="bg-slate-50 border-b border-slate-200 text-left sticky top-0 z-10">
                 <th className="pl-4 w-10" />
                 <th className={`pl-4 pr-8 w-32 ${thClass}`}>Ärende-ID</th>
                 <th className={`px-4 ${thClass}`}>Ämne</th>
