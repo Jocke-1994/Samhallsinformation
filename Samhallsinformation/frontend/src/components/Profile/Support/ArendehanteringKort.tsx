@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Arende, ArendeStatus } from '../../../types'
+import { BETA } from '../../../betaConfig'
 
 type SortField = 'status' | 'skapat' | 'uppdaterat' | null
 type SortDir = 'asc' | 'desc'
@@ -84,6 +85,7 @@ const KATEGORIER = [
   'GDPR & uppgifter',
   'Konto',
   'Tekniskt fel',
+  ...(BETA.aktiv ? ['Testare'] : []),
   'Annat',
 ]
 
@@ -330,7 +332,14 @@ export default function ArendehanteringKort() {
             <label className="text-sm font-medium text-slate-700">Kategori</label>
             <select
               value={kategori}
-              onChange={e => { setKategori(e.target.value); setSkickat(false); setError('') }}
+              onChange={e => {
+                const val = e.target.value
+                setKategori(val)
+                setSkickat(false)
+                setError('')
+                if (val === 'Testare' && BETA.mall) setMeddelande(BETA.mall)
+                else if (val !== 'Testare') setMeddelande('')
+              }}
               className="bg-white text-slate-900 text-sm px-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-violet-500"
             >
               <option value="">Välj kategori...</option>
