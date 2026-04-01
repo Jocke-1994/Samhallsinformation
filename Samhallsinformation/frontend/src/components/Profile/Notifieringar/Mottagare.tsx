@@ -84,10 +84,6 @@ export default function Mottagare({
     if (editing?.key === key && editing?.id === id) setEditing(null)
   }
 
-  function openForm(key: SektionKey) {
-    setForms(prev => ({ ...prev, [key]: { kontakt: '', smeknamn: '', open: true } }))
-  }
-
   function closeForm(key: SektionKey) {
     setForms(prev => ({ ...prev, [key]: { ...prev[key], open: false } }))
   }
@@ -122,7 +118,6 @@ export default function Mottagare({
       <div className="px-6 py-5 flex flex-col">
         {SEKTIONER.map((sek, i) => {
           const mottagare = data[sek.key]
-          const atMax     = mottagare.length >= MAX
           const form      = forms[sek.key]
 
           return (
@@ -131,11 +126,6 @@ export default function Mottagare({
 
               <div className="flex items-center gap-2 mb-3">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{sek.label}</p>
-                {!sek.noAdd && (
-                  <span className={`text-xs font-semibold tabular-nums ${atMax ? 'text-red-400' : 'text-slate-400'}`}>
-                    {mottagare.length}/{MAX}
-                  </span>
-                )}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -217,17 +207,6 @@ export default function Mottagare({
                 )}
               </div>
 
-              <div className="mt-3 text-center">
-                {atMax ? (
-                  <p className="text-xs text-slate-300">Max {MAX} mottagare per kanal — ta bort en för att lägga till fler.</p>
-                ) : (
-                  !form.open && !sek.noAdd && (
-                    <button onClick={() => openForm(sek.key)} className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg transition-colors">
-                      + Lägg till
-                    </button>
-                  )
-                )}
-              </div>
             </div>
           )
         })}
