@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { makeField, type FormField } from './kontoTypes'
 import KontoInfo from './KontoInfo'
 import SparSamtycke from './SparSamtycke'
+import ThemeKort from './ThemeKort'
 import LösenordByte from './LösenordByte'
 import Datahantering from './Datahantering'
 
@@ -59,6 +60,8 @@ export default function Konto() {
         onSaveTelefon={() => save(setTelefon, () => telefon.value.trim() ? '' : 'Ange ett telefonnummer.')}
         onRemoveTelefon={() => setTelefon(makeField(''))}
       />
+
+      <ThemeKort />
 
       <SparSamtycke />
 
