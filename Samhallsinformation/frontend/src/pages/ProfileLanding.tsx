@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BETA } from '../betaConfig'
 import { useQuery } from '@tanstack/react-query'
 import { type ProfileSection } from '../types'
 import { fetchSources } from '../api/sources'
@@ -154,12 +155,18 @@ function BetatestareModal({ onClose, onAnmal }: { onClose: () => void; onAnmal: 
           <p className="text-sm text-slate-600 leading-relaxed">
             Samhällsinformation är under aktiv utveckling och vi letar efter personer som vill hjälpa oss forma produkten.
           </p>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Som betatestare får du tidig tillgång till nya funktioner och möjlighet att påverka vad vi bygger härnäst. Vi är tacksamma för all feedback — stor som liten.
-          </p>
+          {BETA.sokesFor && (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Vi söker testare för</p>
+              <p className="text-sm font-semibold text-slate-800">{BETA.sokesFor}</p>
+            </div>
+          )}
+          {BETA.beskrivning && (
+            <p className="text-sm text-slate-600 leading-relaxed">{BETA.beskrivning}</p>
+          )}
           <div className="bg-violet-50 border border-violet-100 rounded-xl px-4 py-3">
             <p className="text-xs text-violet-700 font-medium leading-relaxed">
-              Anmälan sker via vår support — beskriv kort varför du vill testa och vilken typ av feedback du kan bidra med.
+              Anmälan sker via vår support — välj kategorin <span className="font-bold">Testare</span> och fyll i formuläret.
             </p>
           </div>
           <div className="flex gap-3 pt-1">
@@ -284,10 +291,10 @@ export default function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSect
         </div>
 
         {/* Betatestare-banner */}
-        <div className="w-full max-w-3xl mt-8">
+        {BETA.aktiv && <div className="w-full max-w-3xl mt-8">
           <button
             onClick={() => setModalOpen(true)}
-            className="w-full flex items-center justify-between gap-4 bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 text-white rounded-2xl px-6 py-4 shadow-md hover:shadow-lg transition-all duration-200 text-left"
+            className="banner-pulse w-full flex items-center justify-between gap-4 bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 text-white rounded-2xl px-6 py-4 shadow-md hover:shadow-lg transition-all duration-200 text-left"
           >
             <div className="flex items-center gap-4">
               <span className="text-2xl shrink-0">🧪</span>
@@ -298,7 +305,7 @@ export default function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSect
             </div>
             <span className="text-violet-300 shrink-0">→</span>
           </button>
-        </div>
+        </div>}
 
         {/* Inställningskort */}
         <div className="w-full max-w-3xl pb-16" style={{ marginTop: '48px' }}>
