@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { fetchSources } from '../../api/sources'
 import SourceButton from './SourceButton'
 import type { Source } from '../../types'
+import { useAuth } from '../../context/AuthContext'
 
 interface Props {
   selectedSourceId: number | null
@@ -29,6 +30,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export default function Sidebar({ selectedSourceId, onSelectSource, unreadSourceIds }: Props) {
   const navigate = useNavigate()
   const location = useLocation()
+  const { isLoggedIn, logout } = useAuth()
 
   const { data: sources = [] } = useQuery<Source[]>({
     queryKey: ['sources'],
@@ -106,13 +108,23 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
           `}
         >
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
-            JO
+            {isLoggedIn ? 'JO' : '?'}
           </div>
           <div className="text-left min-w-0">
             <p className="text-sm font-semibold text-slate-900 truncate">Min profil</p>
-            <p className="text-xs text-slate-400 truncate">Inställningar &amp; konto</p>
+            <p className="text-xs text-slate-400 truncate">
+              {isLoggedIn ? 'Inställningar & konto' : 'Logga in för att fortsätta'}
+            </p>
           </div>
         </button>
+        {isLoggedIn && (
+          <button
+            onClick={() => { logout(); navigate('/') }}
+            className="w-full text-left px-3 py-1.5 text-xs text-slate-400 hover:text-red-500 transition-colors mt-0.5"
+          >
+            Logga ut
+          </button>
+        )}
       </div>
 
     </nav>
