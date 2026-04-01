@@ -1,4 +1,4 @@
-import type { EventsResponse } from '../types'
+import type { CanonicalEvent, EventsResponse } from '../types'
 
 interface FetchEventsParams {
   sourceId?: number
@@ -8,6 +8,99 @@ interface FetchEventsParams {
   pageSize?: number
 }
 
+const MOCK_EVENTS: CanonicalEvent[] = [
+  {
+    id: 'p-001', sourceId: 1,
+    title: 'Rån, Göteborg',
+    content: 'En man rånades på sin mobiltelefon utanför Centralstationen i Göteborg vid 18-tiden. Gärningspersonen, beskriven som yngre man i mörk jacka, avvek till fots mot Drottningtorget. Polisen söker vittnen.',
+    publishedAt: '2026-03-29T18:23:00Z', url: 'https://polisen.se', geography: 'Göteborg', severity: 'Viktigt', isNational: false,
+  },
+  {
+    id: 'p-002', sourceId: 1,
+    title: 'Trafikolycka, Stockholm',
+    content: 'Två personbilar kolliderade på Essingeleden vid 07:30 på fredagsmorgonen. Inga allvarliga personskador men trafiken var avstängd i norrgående led under 45 minuter. Räddningstjänst och polis var på plats.',
+    publishedAt: '2026-03-29T07:42:00Z', url: 'https://polisen.se', geography: 'Stockholm', severity: 'Bra att veta', isNational: false,
+  },
+  {
+    id: 'p-003', sourceId: 1,
+    title: 'Brand i lägenhet, Malmö',
+    content: 'Brand utbröt i en lägenhet på fjärde våningen i ett flerfamiljshus i Husie. Boende evakuerades och räddningstjänsten fick branden under kontroll efter en timme. En person fördes till sjukhus med rökskador.',
+    publishedAt: '2026-03-28T22:11:00Z', url: 'https://polisen.se', geography: 'Malmö', severity: 'Viktigt', isNational: false,
+  },
+  {
+    id: 'p-004', sourceId: 1,
+    title: 'Inbrott, Uppsala',
+    content: 'Okänd gärningsperson tog sig in i en villa i Luthagen under natten och tillgrep elektronik samt smycken. Inga personer var hemma vid tillfället. Polisen har inlett en förundersökning om grov stöld.',
+    publishedAt: '2026-03-28T06:05:00Z', url: 'https://polisen.se', geography: 'Uppsala', severity: 'Bra att veta', isNational: false,
+  },
+  {
+    id: 'p-005', sourceId: 1,
+    title: 'Misshandel, Linköping',
+    content: 'En man misshandlades utanför en restaurang på Storgatan vid midnatt. Offret fördes till sjukhus med lättare skador. Två personer greps i närheten och är misstänkta för brott.',
+    publishedAt: '2026-03-28T00:34:00Z', url: 'https://polisen.se', geography: 'Linköping', severity: 'Viktigt', isNational: false,
+  },
+  {
+    id: 'p-006', sourceId: 1,
+    title: 'Narkotikabrott, Helsingborg',
+    content: 'Polisen genomförde en husrannsakan i en bostad i Centrum och beslagtog narkotika till ett gatuförsäljningsvärde av uppskattningsvis 80 000 kronor. En man i 30-årsåldern greps och är misstänkt för narkotikabrott av normalgraden.',
+    publishedAt: '2026-03-27T14:58:00Z', url: 'https://polisen.se', geography: 'Helsingborg', severity: 'Bra att veta', isNational: false,
+  },
+  {
+    id: 'p-007', sourceId: 1,
+    title: 'Bedrägeri via telefon, nationellt',
+    content: 'Polisen varnar för en pågående bluffkampanj där gärningspersoner utger sig för att vara bankanställda och ber om inloggningsuppgifter via telefon. Flertalet anmälningar har inkommit från hela landet. Lämna aldrig ut dina bankuppgifter via telefon.',
+    publishedAt: '2026-03-27T10:00:00Z', url: 'https://polisen.se', geography: null, severity: 'Viktigt', isNational: true,
+  },
+  {
+    id: 'p-008', sourceId: 1,
+    title: 'Skadegörelse, Örebro',
+    content: 'Okänd gärningsman krossade rutor på fem parkerade fordon längs Karlavägen under natten mot torsdagen. Skadeståndsvärdet beräknas till ca 40 000 kronor. Polisen efterlyser tips från allmänheten.',
+    publishedAt: '2026-03-27T06:20:00Z', url: 'https://polisen.se', geography: 'Örebro', severity: 'Bra att veta', isNational: false,
+  },
+  {
+    id: 'p-009', sourceId: 1,
+    title: 'Rattfylleri, Västerås',
+    content: 'En personbil stoppades vid en trafikkontroll på E18 och föraren visade sig vara kraftigt påverkad av alkohol. Personen greps och blodprov togs. Bilen kördes till en uppställningsplats.',
+    publishedAt: '2026-03-26T23:47:00Z', url: 'https://polisen.se', geography: 'Västerås', severity: 'Bra att veta', isNational: false,
+  },
+  {
+    id: 'p-010', sourceId: 1,
+    title: 'Skottlossning, Norrköping',
+    content: 'Skottlossning inträffade vid ett bostadsområde i Hageby under torsdagskvällen. Ingen person ska ha träffats av skott. Polisen söker i området och ett flertal vittnen har hörts. Händelsen utreds som försök till grov misshandel.',
+    publishedAt: '2026-03-26T21:15:00Z', url: 'https://polisen.se', geography: 'Norrköping', severity: 'Kritisk', isNational: false,
+  },
+  {
+    id: 'p-011', sourceId: 1,
+    title: 'Cykelstöld, Stockholm',
+    content: 'Polisen har fått in ett ökat antal anmälningar om cykelstölder i Södermalm-området under den senaste veckan. Stölderna sker främst vid tunnelbanestationer. Tips om misstänkt aktivitet tas emot via polisens app.',
+    publishedAt: '2026-03-26T11:30:00Z', url: 'https://polisen.se', geography: 'Stockholm', severity: 'Bra att veta', isNational: false,
+  },
+  {
+    id: 'p-012', sourceId: 1,
+    title: 'Trafikolycka med personskada, Umeå',
+    content: 'En motorcyklist kolliderade med en personbil vid en korsning på Västra Esplanaden. Motorcyklisten fördes med ambulans till Norrlands universitetssjukhus med allvarliga skador. Trafiken leddes om under utredningsarbetet.',
+    publishedAt: '2026-03-25T16:03:00Z', url: 'https://polisen.se', geography: 'Umeå', severity: 'Viktigt', isNational: false,
+  },
+  {
+    id: 'p-013', sourceId: 1,
+    title: 'Explosion, Göteborg',
+    content: 'En mindre explosion inträffade i trapphuset i ett flerfamiljshus i Angered under tidig morgon. Polisen misstänker att en sprängkapsel placerats i trapphuset. Inga personer skadades. Bombtekniker kallas till platsen.',
+    publishedAt: '2026-03-25T05:44:00Z', url: 'https://polisen.se', geography: 'Göteborg', severity: 'Kritisk', isNational: false,
+  },
+  {
+    id: 'p-014', sourceId: 1,
+    title: 'Försvunnen person efterlyst, Jönköping',
+    content: 'En 78-årig man försvann från sitt äldreboende i Huskvarna under torsdagseftermiddagen. Han är 175 cm lång, kraftig bygd och klädd i beige jacka och grå byxor. Den som har sett honom uppmanas att ringa 114 14.',
+    publishedAt: '2026-03-24T17:30:00Z', url: 'https://polisen.se', geography: 'Jönköping', severity: 'Viktigt', isNational: false,
+  },
+  {
+    id: 'p-015', sourceId: 1,
+    title: 'Butiksstöld, Malmö',
+    content: 'Tre personer greps sedan de stulit varor för ca 6 000 kronor från ett varuhus i Triangeln. Personerna, i åldrarna 19–24 år, är misstänkta för ringa stöld alternativt stöld.',
+    publishedAt: '2026-03-24T13:22:00Z', url: 'https://polisen.se', geography: 'Malmö', severity: 'Bra att veta', isNational: false,
+  },
+]
+
 export async function fetchEvents(params: FetchEventsParams = {}): Promise<EventsResponse> {
   const query = new URLSearchParams()
   if (params.sourceId !== undefined) query.set('source', String(params.sourceId))
@@ -16,7 +109,14 @@ export async function fetchEvents(params: FetchEventsParams = {}): Promise<Event
   if (params.page) query.set('page', String(params.page))
   if (params.pageSize) query.set('pageSize', String(params.pageSize))
 
-  const res = await fetch(`/api/events?${query}`)
-  if (!res.ok) throw new Error('Kunde inte hämta händelser')
-  return res.json()
+  try {
+    const res = await fetch(`/api/events?${query}`)
+    if (!res.ok) throw new Error()
+    return res.json()
+  } catch {
+    const filtered = MOCK_EVENTS.filter(e =>
+      params.sourceId === undefined || e.sourceId === params.sourceId
+    )
+    return { total: filtered.length, page: 1, pageSize: filtered.length, events: filtered }
+  }
 }

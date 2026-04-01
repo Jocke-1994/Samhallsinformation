@@ -2,7 +2,6 @@ import { useState, useRef } from 'react'
 import Toggle from '../../common/Toggle'
 import type { AllData, SektionKey } from './index'
 
-const MAX = 5
 
 interface SektionDef {
   key:              SektionKey
