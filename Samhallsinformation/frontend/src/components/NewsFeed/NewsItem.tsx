@@ -5,7 +5,6 @@ import { markAsRead } from '../../services/readState'
 interface Props {
   event: CanonicalEvent
   isRead: boolean
-  onMarkRead: (id: string) => void
 }
 
 const SEVERITY_CONFIG = {
@@ -20,7 +19,7 @@ function formatDate(iso: string): string {
   })
 }
 
-export default function NewsItem({ event, isRead, onMarkRead }: Props) {
+export default function NewsItem({ event, isRead }: Props) {
   const [expanded, setExpanded] = useState(false)
   const cfg = SEVERITY_CONFIG[event.severity]
 

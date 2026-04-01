@@ -146,7 +146,7 @@ export default function NewsFeed({ source, onReadStatusChange }: Props) {
         ) : (
           <>
             {unread.map(event => (
-              <NewsItem key={event.id} event={event} isRead={false} onMarkRead={handleMarkRead} />
+              <NewsItem key={event.id} event={event} isRead={false} />
             ))}
 
             {unread.length > 0 && read.length > 0 && (
@@ -158,7 +158,7 @@ export default function NewsFeed({ source, onReadStatusChange }: Props) {
             )}
 
             {read.map(event => (
-              <NewsItem key={event.id} event={event} isRead={true} onMarkRead={handleMarkRead} />
+              <NewsItem key={event.id} event={event} isRead={true} />
             ))}
           </>
         )}
