@@ -1,6 +1,8 @@
 import { useSearchParams } from 'react-router-dom'
 import Sidebar from '../components/Sidebar/Sidebar'
 import { type ProfileSection } from '../types'
+import { useAuth } from '../context/AuthContext'
+import GästProfil from './GästProfil'
 import MinaKallor from '../components/Profile/MinaKallor'
 import Konto from '../components/Profile/Konto'
 import Notifieringar from '../components/Profile/Notifieringar'
@@ -19,6 +21,7 @@ const SECTION_LABELS: Record<ProfileSection, string> = {
 }
 
 export default function ProfilePage() {
+  const { isLoggedIn } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const sectionParam = searchParams.get('section')
   const section = VALID_SECTIONS.includes(sectionParam as ProfileSection)
@@ -28,6 +31,15 @@ export default function ProfilePage() {
   function setSection(s: ProfileSection | null) {
     if (s === null) setSearchParams({})
     else setSearchParams({ section: s })
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div className="flex h-screen bg-slate-50">
+        <Sidebar selectedSourceId={null} onSelectSource={() => {}} unreadSourceIds={new Set()} />
+        <GästProfil />
+      </div>
+    )
   }
 
   return (
