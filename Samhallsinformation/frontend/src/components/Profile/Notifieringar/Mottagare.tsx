@@ -84,10 +84,6 @@ export default function Mottagare({
     if (editing?.key === key && editing?.id === id) setEditing(null)
   }
 
-  function openForm(key: SektionKey) {
-    setForms(prev => ({ ...prev, [key]: { kontakt: '', smeknamn: '', open: true } }))
-  }
-
   function closeForm(key: SektionKey) {
     setForms(prev => ({ ...prev, [key]: { ...prev[key], open: false } }))
   }
@@ -122,7 +118,6 @@ export default function Mottagare({
       <div className="px-6 py-5 flex flex-col">
         {SEKTIONER.map((sek, i) => {
           const mottagare = data[sek.key]
-          const atMax     = mottagare.length >= MAX
           const form      = forms[sek.key]
 
           return (
