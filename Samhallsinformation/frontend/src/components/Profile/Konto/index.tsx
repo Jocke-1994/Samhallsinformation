@@ -5,6 +5,7 @@ import KontoInfo from './KontoInfo'
 import SparSamtycke from './SparSamtycke'
 import ThemeKort from './ThemeKort'
 import AppNotiserKort from './AppNotiserKort'
+import AktivitetsloggKort from './AktivitetsloggKort'
 import LösenordByte from './LösenordByte'
 import Datahantering from './Datahantering'
 
@@ -65,6 +66,8 @@ export default function Konto() {
       <ThemeKort />
 
       <AppNotiserKort />
+
+      <AktivitetsloggKort />
 
       <SparSamtycke />
 
