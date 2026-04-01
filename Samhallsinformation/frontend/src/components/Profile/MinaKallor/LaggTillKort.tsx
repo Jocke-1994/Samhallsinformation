@@ -1,10 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import type { SparFilter, Kalla } from '../../../types'
 import { KALLOR, SPAR_FORSLAG, groupBy } from './kallorUtils'
 import SparModal from './SparModal'
 import SokRad from './SokRad'
 
+const SPAR_KEY = 'spar_samtycke'
+
 export default function LaggTillKort({ activeIds, onAdd }: { activeIds: Set<number>; onAdd: (ids: number[]) => void }) {
+  const [, setSearchParams] = useSearchParams()
+  const [sparSamtycke] = useState(() => localStorage.getItem(SPAR_KEY) === 'true')
   const [sparLoading,  setSparLoading]  = useState<SparFilter | null>(null)
   const [sparErrors,   setSparErrors]   = useState<Partial<Record<SparFilter, string>>>({})
   const [sparModal,    setSparModal]    = useState<{ nationella: Kalla[]; regionala: Kalla[] } | null>(null)
@@ -82,30 +87,46 @@ export default function LaggTillKort({ activeIds, onAdd }: { activeIds: Set<numb
           {/* ── Automatisk hämtning ── */}
           <div className="flex flex-col gap-3">
             <p className="text-sm font-semibold text-slate-700">Automatisk hämtning</p>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Hämtar källor baserat på din folkbokföringsadress. Välj vilken typ av källor du vill hämta.
-            </p>
-            <div className="flex flex-col gap-2">
-              {FILTER_KNAPPAR.map(f => (
-                <div key={f} className="flex flex-col gap-1">
-                  <button
-                    onClick={() => handleSpar(f)}
-                    disabled={sparLoading !== null}
-                    className="w-full px-4 py-2 bg-violet-50 hover:bg-violet-100 disabled:opacity-50 text-violet-700 text-sm font-semibold rounded-xl border border-violet-100 transition-all flex items-center justify-center gap-1.5"
-                  >
-                    {sparLoading === f ? (
-                      <>
-                        <span className="w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
-                        Hämtar...
-                      </>
-                    ) : f}
-                  </button>
-                  {sparErrors[f] && (
-                    <p className="text-xs text-red-500">{sparErrors[f]}</p>
-                  )}
+            {sparSamtycke ? (
+              <>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Hämtar källor baserat på din folkbokföringsadress. Välj vilken typ av källor du vill hämta.
+                </p>
+                <div className="flex flex-col gap-2">
+                  {FILTER_KNAPPAR.map(f => (
+                    <div key={f} className="flex flex-col gap-1">
+                      <button
+                        onClick={() => handleSpar(f)}
+                        disabled={sparLoading !== null}
+                        className="w-full px-4 py-2 bg-violet-50 hover:bg-violet-100 disabled:opacity-50 text-violet-700 text-sm font-semibold rounded-xl border border-violet-100 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        {sparLoading === f ? (
+                          <>
+                            <span className="w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+                            Hämtar...
+                          </>
+                        ) : f}
+                      </button>
+                      {sparErrors[f] && (
+                        <p className="text-xs text-red-500">{sparErrors[f]}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <div className="flex flex-col gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Aktivera SPAR-hämtning under Konto för att automatiskt hämta källor baserat på din folkbokföringsadress.
+                </p>
+                <button
+                  onClick={() => setSearchParams({ section: 'konto' })}
+                  className="self-start px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-xl transition-colors"
+                >
+                  Gå till Konto →
+                </button>
+              </div>
+            )}
           </div>
 
           {/* ── Divider ── */}
