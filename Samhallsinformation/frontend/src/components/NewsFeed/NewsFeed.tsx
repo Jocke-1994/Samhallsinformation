@@ -37,11 +37,6 @@ export default function NewsFeed({ source, onReadStatusChange }: Props) {
     }
   }, [data])
 
-  function handleMarkRead(id: string) {
-    setReadMap(prev => ({ ...prev, [id]: true }))
-    if (source) onReadStatusChange(source.id)
-  }
-
   function handleMarkAllRead() {
     const ids = events.map(e => e.id)
     markAllAsRead(ids)
