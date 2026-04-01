@@ -7,6 +7,7 @@ import ThemeKort from './ThemeKort'
 import AppNotiserKort from './AppNotiserKort'
 import AktivitetsloggKort from './AktivitetsloggKort'
 import SessionerKort from './SessionerKort'
+import TvafaktorKort from './TvafaktorKort'
 import LösenordByte from './LösenordByte'
 import Datahantering from './Datahantering'
 
@@ -71,6 +72,8 @@ export default function Konto() {
       <AktivitetsloggKort />
 
       <SessionerKort />
+
+      <TvafaktorKort harTelefon={telefon.saved && !!telefon.value} />
 
       <SparSamtycke />
 
