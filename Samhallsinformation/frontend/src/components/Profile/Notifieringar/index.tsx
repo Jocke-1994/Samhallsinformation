@@ -17,15 +17,9 @@ export interface MottagareKontakt {
 export type AllData = Record<SektionKey, MottagareKontakt[]>
 
 const INITIAL_DATA: AllData = {
-  epost: [
-    { id: 1, kontakt: 'din@epost.se',  smeknamn: 'Mig',   aktiv: true },
-    { id: 2, kontakt: 'mamma@mail.se', smeknamn: 'Mamma', aktiv: true },
-  ],
-  sms:  [
-    { id: 3, kontakt: '073-XXX XX XX', smeknamn: 'Mig',   aktiv: true },
-    { id: 4, kontakt: '070-XXX XX XX', smeknamn: 'Mamma', aktiv: false },
-  ],
-  push: [
+  epost: [],
+  sms:   [],
+  push:  [
     { id: 5, kontakt: 'iPhone', smeknamn: '', aktiv: true },
   ],
 }
