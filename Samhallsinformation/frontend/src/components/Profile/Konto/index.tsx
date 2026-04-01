@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { makeField, type FormField } from './kontoTypes'
 import KontoInfo from './KontoInfo'
+import SparSamtycke from './SparSamtycke'
 import LösenordByte from './LösenordByte'
 import Datahantering from './Datahantering'
 
@@ -53,6 +54,8 @@ export default function Konto() {
         onSaveNamn={() => save(setNamn, () => namn.value.trim() ? '' : 'Ange ett namn.')}
         onSaveEpost={() => save(setEpost, () => epost.value.includes('@') ? '' : 'Ange en giltig e-postadress.')}
       />
+
+      <SparSamtycke />
 
       <LösenordByte />
 
