@@ -35,7 +35,7 @@ export default function Konto() {
   }
 
   return (
-    <div className="flex flex-col gap-6 mt-6 max-w-xl mx-auto w-full">
+    <div className="flex flex-col gap-6 mt-6">
 
       {/* Avatar + namn-banner */}
       <div className="bg-gradient-to-br from-violet-600 to-violet-800 rounded-2xl px-8 py-8 flex items-center gap-6 shadow-md">
@@ -52,38 +52,42 @@ export default function Konto() {
         </div>
       </div>
 
-      <KontoInfo
-        namn={namn}
-        epost={epost}
-        telefon={telefon}
-        onUpdateNamn={value => update(setNamn, value)}
-        onUpdateEpost={value => update(setEpost, value)}
-        onUpdateTelefon={value => update(setTelefon, value)}
-        onSaveNamn={() => save(setNamn, () => namn.value.trim() ? '' : 'Ange ett namn.')}
-        onSaveEpost={() => save(setEpost, () => epost.value.includes('@') ? '' : 'Ange en giltig e-postadress.')}
-        onSaveTelefon={() => save(setTelefon, () => telefon.value.trim() ? '' : 'Ange ett telefonnummer.')}
-        onRemoveTelefon={() => setTelefon(makeField(''))}
-      />
+      {/* Tvåkolumns grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
-      <ThemeKort />
+        {/* Vänster kolumn */}
+        <div className="flex flex-col gap-6">
+          <KontoInfo
+            namn={namn}
+            epost={epost}
+            telefon={telefon}
+            onUpdateNamn={value => update(setNamn, value)}
+            onUpdateEpost={value => update(setEpost, value)}
+            onUpdateTelefon={value => update(setTelefon, value)}
+            onSaveNamn={() => save(setNamn, () => namn.value.trim() ? '' : 'Ange ett namn.')}
+            onSaveEpost={() => save(setEpost, () => epost.value.includes('@') ? '' : 'Ange en giltig e-postadress.')}
+            onSaveTelefon={() => save(setTelefon, () => telefon.value.trim() ? '' : 'Ange ett telefonnummer.')}
+            onRemoveTelefon={() => setTelefon(makeField(''))}
+          />
+          <LösenordByte />
+          <TvafaktorKort harTelefon={telefon.saved && !!telefon.value} />
+          <SparSamtycke />
+        </div>
 
-      <AppNotiserKort />
+        {/* Höger kolumn */}
+        <div className="flex flex-col gap-6">
+          <ThemeKort />
+          <AppNotiserKort />
+          <SessionerKort />
+          <AktivitetsloggKort />
+          <Datahantering
+            highlightId={highlightId}
+            namnValue={namn.value}
+            epostValue={epost.value}
+          />
+        </div>
 
-      <AktivitetsloggKort />
-
-      <SessionerKort />
-
-      <TvafaktorKort harTelefon={telefon.saved && !!telefon.value} />
-
-      <SparSamtycke />
-
-      <LösenordByte />
-
-      <Datahantering
-        highlightId={highlightId}
-        namnValue={namn.value}
-        epostValue={epost.value}
-      />
+      </div>
 
     </div>
   )
