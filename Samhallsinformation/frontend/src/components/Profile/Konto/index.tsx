@@ -4,6 +4,7 @@ import { makeField, type FormField } from './kontoTypes'
 import KontoInfo from './KontoInfo'
 import SparSamtycke from './SparSamtycke'
 import ThemeKort from './ThemeKort'
+import AppNotiserKort from './AppNotiserKort'
 import LösenordByte from './LösenordByte'
 import Datahantering from './Datahantering'
 
@@ -62,6 +63,8 @@ export default function Konto() {
       />
 
       <ThemeKort />
+
+      <AppNotiserKort />
 
       <SparSamtycke />
 
