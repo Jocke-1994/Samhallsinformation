@@ -9,6 +9,7 @@ import Datahantering from './Datahantering'
 export default function Konto() {
   const [namn, setNamn] = useState<FormField>(makeField(''))
   const [epost, setEpost] = useState<FormField>(makeField(''))
+  const [telefon, setTelefon] = useState<FormField>(makeField(''))
   const location = useLocation()
   const [highlightId, setHighlightId] = useState<string | null>(location.state?.highlightId ?? null)
 
@@ -49,10 +50,14 @@ export default function Konto() {
       <KontoInfo
         namn={namn}
         epost={epost}
+        telefon={telefon}
         onUpdateNamn={value => update(setNamn, value)}
         onUpdateEpost={value => update(setEpost, value)}
+        onUpdateTelefon={value => update(setTelefon, value)}
         onSaveNamn={() => save(setNamn, () => namn.value.trim() ? '' : 'Ange ett namn.')}
         onSaveEpost={() => save(setEpost, () => epost.value.includes('@') ? '' : 'Ange en giltig e-postadress.')}
+        onSaveTelefon={() => save(setTelefon, () => telefon.value.trim() ? '' : 'Ange ett telefonnummer.')}
+        onRemoveTelefon={() => setTelefon(makeField(''))}
       />
 
       <SparSamtycke />
