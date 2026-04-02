@@ -15,7 +15,8 @@ export async function fetchSources(): Promise<Source[]> {
   try {
     const res = await fetch('/api/sources')
     if (!res.ok) throw new Error()
-    return res.json()
+    const data: Source[] = await res.json()
+    return data.length > 0 ? data : MOCK_SOURCES
   } catch {
     return MOCK_SOURCES
   }
