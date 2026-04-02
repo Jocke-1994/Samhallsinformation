@@ -11,14 +11,19 @@ interface Tjänst {
   senast:      string
 }
 
+type FärskhetStatus = 'OK' | 'Försenad' | 'Kritisk'
+
 interface KällKontroll {
-  id:      number
-  namn:    string
-  url:     string
-  hälsa:   Hälsa
-  aktiv:   boolean
-  mock:    boolean
-  senast:  string
+  id:              number
+  namn:            string
+  url:             string
+  hälsa:           Hälsa
+  aktiv:           boolean
+  mock:            boolean
+  senast:          string
+  senastArtikel:   string   // tidsstämpel för senaste inlästa artikel
+  förväntadFrekvens: string // t.ex. "< 2 h"
+  färskhetStatus:  FärskhetStatus
 }
 
 interface Felrad {
@@ -36,14 +41,14 @@ const INITIAL_TJÄNSTER: Tjänst[] = [
 ]
 
 const INITIAL_KÄLLOR: KällKontroll[] = [
-  { id: 1, namn: 'Polisen',         url: 'https://polisen.se/aktuellt/rss',           hälsa: 'OK',      aktiv: true,  mock: false, senast: '10:50' },
-  { id: 2, namn: 'SMHI',            url: 'https://smhi.se/vader/varningar/rss',        hälsa: 'Varning', aktiv: true,  mock: false, senast: '10:50' },
-  { id: 3, namn: 'MSB',             url: 'https://msb.se/sv/om-msb/nyheter/rss',       hälsa: 'OK',      aktiv: true,  mock: false, senast: '10:50' },
-  { id: 4, namn: 'Trafikverket',    url: 'https://api.trafikinfo.trafikverket.se',      hälsa: 'Nere',    aktiv: true,  mock: true,  senast: '10:50' },
-  { id: 5, namn: 'Krisinformation', url: 'https://krisinformation.se/rss',             hälsa: 'OK',      aktiv: true,  mock: false, senast: '10:50' },
-  { id: 6, namn: 'Gbg Stad',        url: 'https://goteborg.se/rss',                   hälsa: 'OK',      aktiv: false, mock: false, senast: '10:50' },
-  { id: 7, namn: 'Lst VGR',         url: 'https://lansstyrelsen.se/vgr/rss',           hälsa: 'OK',      aktiv: false, mock: false, senast: '10:50' },
-  { id: 8, namn: 'VGR',             url: 'https://vgregion.se/rss',                   hälsa: 'OK',      aktiv: false, mock: false, senast: '10:50' },
+  { id: 1, namn: 'Polisen',         url: 'https://polisen.se/aktuellt/rss',           hälsa: 'OK',      aktiv: true,  mock: false, senast: '10:50', senastArtikel: '14:23',  förväntadFrekvens: '< 2 h',  färskhetStatus: 'Kritisk'  },
+  { id: 2, namn: 'SMHI',            url: 'https://smhi.se/vader/varningar/rss',        hälsa: 'Varning', aktiv: true,  mock: false, senast: '10:50', senastArtikel: '10:11',  förväntadFrekvens: '< 6 h',  färskhetStatus: 'OK'       },
+  { id: 3, namn: 'MSB',             url: 'https://msb.se/sv/om-msb/nyheter/rss',       hälsa: 'OK',      aktiv: true,  mock: false, senast: '10:50', senastArtikel: '09:45',  förväntadFrekvens: '< 12 h', färskhetStatus: 'OK'       },
+  { id: 4, namn: 'Trafikverket',    url: 'https://api.trafikinfo.trafikverket.se',      hälsa: 'Nere',    aktiv: true,  mock: true,  senast: '10:50', senastArtikel: '09:15',  förväntadFrekvens: '< 2 h',  färskhetStatus: 'Försenad' },
+  { id: 5, namn: 'Krisinformation', url: 'https://krisinformation.se/rss',             hälsa: 'OK',      aktiv: true,  mock: false, senast: '10:50', senastArtikel: '08:30',  förväntadFrekvens: '< 24 h', färskhetStatus: 'OK'       },
+  { id: 6, namn: 'Gbg Stad',        url: 'https://goteborg.se/rss',                   hälsa: 'OK',      aktiv: false, mock: false, senast: '10:50', senastArtikel: '—',       förväntadFrekvens: '< 24 h', färskhetStatus: 'OK'       },
+  { id: 7, namn: 'Lst VGR',         url: 'https://lansstyrelsen.se/vgr/rss',           hälsa: 'OK',      aktiv: false, mock: false, senast: '10:50', senastArtikel: '—',       förväntadFrekvens: '< 24 h', färskhetStatus: 'OK'       },
+  { id: 8, namn: 'VGR',             url: 'https://vgregion.se/rss',                   hälsa: 'OK',      aktiv: false, mock: false, senast: '10:50', senastArtikel: '—',       förväntadFrekvens: '< 24 h', färskhetStatus: 'OK'       },
 ]
 
 const FELLOGGAR: Felrad[] = [
@@ -53,6 +58,12 @@ const FELLOGGAR: Felrad[] = [
   { tid: '08:02:03', tjänst: 'Backend-API',   nivå: 'Fel',     meddelande: 'Oväntad exception i EventsController.GetById — NullReferenceException' },
   { tid: '07:00:00', tjänst: 'Ingestor',      nivå: 'Info',    meddelande: 'Schemalagd insamling slutförd — 847 händelser inlästa, 12 dubbletter ignorerade' },
 ]
+
+const FÄRSKHET_CLS: Record<FärskhetStatus, string> = {
+  'OK':       'text-green-600',
+  'Försenad': 'text-amber-600',
+  'Kritisk':  'text-red-600 font-semibold',
+}
 
 const HÄLSA_CLS: Record<Hälsa, { pill: string; dot: string }> = {
   'OK':              { pill: 'bg-green-100 text-green-700 border border-green-200',  dot: 'bg-green-500' },
@@ -208,6 +219,18 @@ export default function Felsökning() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-800">{k.namn}</p>
                     <p className="text-xs text-slate-400 truncate">{k.url}</p>
+                  </div>
+
+                  {/* Datafärskhets */}
+                  <div className="text-right shrink-0 w-40">
+                    <p className="text-xs text-slate-400">Senaste artikel</p>
+                    <p className={`text-xs ${FÄRSKHET_CLS[k.färskhetStatus]}`}>
+                      {k.senastArtikel === '—' ? '—' : `kl ${k.senastArtikel}`}
+                      {k.färskhetStatus !== 'OK' && k.senastArtikel !== '—' && (
+                        <span className="ml-1">⚠</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-slate-300">förväntat {k.förväntadFrekvens}</p>
                   </div>
 
                   {/* Mock-toggle */}
