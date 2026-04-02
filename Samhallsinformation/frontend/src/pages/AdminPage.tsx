@@ -3,6 +3,7 @@ import AdminSidebar, { type AdminSection } from '../components/Admin/AdminSideba
 import Oversikt from '../components/Admin/Oversikt'
 import Kallhantering from '../components/Admin/Kallhantering'
 import Felsökning from '../components/Admin/Felsökning'
+import Anvandare from '../components/Admin/Anvandare'
 
 const SECTION_LABELS: Record<AdminSection, string> = {
   'oversikt':       'Översikt',
@@ -38,11 +39,12 @@ export default function AdminPage() {
         <div className="flex-1 overflow-y-auto" style={{ padding: '2rem 3rem' }}>
           <div style={{ maxWidth: '1100px' }}>
 
-            {section === 'oversikt'   && <Oversikt onNavigate={setSection} />}
-            {section === 'kallor'    && <Kallhantering />}
-            {section === 'felsökning' && <Felsökning />}
+            {section === 'oversikt'    && <Oversikt onNavigate={setSection} />}
+            {section === 'kallor'      && <Kallhantering />}
+            {section === 'felsökning'  && <Felsökning />}
+            {section === 'anvandare'   && <Anvandare />}
 
-            {section !== 'oversikt' && section !== 'kallor' && section !== 'felsökning' && (
+            {section !== 'oversikt' && section !== 'kallor' && section !== 'felsökning' && section !== 'anvandare' && (
               <div className="flex flex-col items-center justify-center py-32 text-center">
                 <p className="text-4xl mb-4">🚧</p>
                 <p className="text-lg font-semibold text-slate-700">{SECTION_LABELS[section]}</p>
