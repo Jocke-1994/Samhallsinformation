@@ -65,7 +65,7 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Senaste händelser */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 lg:row-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <h3 className="text-base font-semibold text-slate-900">Senaste händelser</h3>
             <p className="text-xs text-slate-400 mt-0.5">Aktivitet i systemet de senaste 24 timmarna</p>
@@ -85,6 +85,54 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
               className="text-xs font-medium text-violet-600 hover:text-violet-800 transition-colors"
             >
               Visa hela aktivitetsloggen →
+            </button>
+          </div>
+        </div>
+
+        {/* Kommande kontroller */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h3 className="text-base font-semibold text-slate-900">Kommande kontroller</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Närmast i tid</p>
+          </div>
+          <div className="divide-y divide-slate-50">
+            <div className="flex items-center justify-between px-6 py-3">
+              <div>
+                <p className="text-sm font-medium text-slate-700">Ingestor</p>
+                <p className="text-xs text-slate-400">Alla aktiva källor</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-mono text-slate-700">19:10</p>
+                <p className="text-xs text-slate-400">om 4 min</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between px-6 py-3">
+              <div>
+                <p className="text-sm font-medium text-amber-600">Event-drivet</p>
+                <p className="text-xs text-slate-400">Polisen, Trafikverket</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-mono text-slate-700">19:07</p>
+                <p className="text-xs text-amber-500">2 i kö</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between px-6 py-3">
+              <div>
+                <p className="text-sm font-medium text-slate-700">Fullständigt flödestest</p>
+                <p className="text-xs text-slate-400">Alla aktiva källor</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-mono text-slate-700">04:00</p>
+                <p className="text-xs text-slate-400">om 8 h 53 min</p>
+              </div>
+            </div>
+          </div>
+          <div className="px-6 py-3 border-t border-slate-100">
+            <button
+              onClick={() => onNavigate('felsökning')}
+              className="text-xs font-medium text-violet-600 hover:text-violet-800 transition-colors"
+            >
+              Visa alla kontroller →
             </button>
           </div>
         </div>

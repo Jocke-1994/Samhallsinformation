@@ -51,6 +51,65 @@ const INITIAL_KÄLLOR: KällKontroll[] = [
   { id: 8, namn: 'VGR',             url: 'https://vgregion.se/rss',                   hälsa: 'OK',      aktiv: false, mock: false, senast: '10:50', senastArtikel: '—',       förväntadFrekvens: '< 24 h', färskhetStatus: 'OK'       },
 ]
 
+type KontrollTyp = 'Ingestor' | 'Fullständigt flödestest' | 'Event-drivet'
+type KontrollStatus = 'Schemalagd' | 'Köad' | 'Pågår'
+
+interface KommandeKontroll {
+  id:      number
+  typ:     KontrollTyp
+  källa?:  string
+  tid:     string
+  om:      string
+  status:  KontrollStatus
+}
+
+const KOMMANDE: KommandeKontroll[] = [
+  { id: 1, typ: 'Ingestor',               tid: '19:10', om: 'om 4 min',  status: 'Schemalagd' },
+  { id: 2, typ: 'Event-drivet',           källa: 'Polisen',      tid: '19:07', om: 'om 1 min',  status: 'Köad'       },
+  { id: 3, typ: 'Event-drivet',           källa: 'Trafikverket', tid: '19:09', om: 'om 3 min',  status: 'Köad'       },
+  { id: 4, typ: 'Fullständigt flödestest',                       tid: '04:00', om: 'om 8 h 53 min', status: 'Schemalagd' },
+]
+
+const TYP_CLS: Record<KontrollTyp, string> = {
+  'Ingestor':               'bg-violet-100 text-violet-700 border border-violet-200',
+  'Fullständigt flödestest':'bg-sky-100 text-sky-700 border border-sky-200',
+  'Event-drivet':           'bg-amber-100 text-amber-700 border border-amber-200',
+}
+
+const STATUS_CLS: Record<KontrollStatus, string> = {
+  'Schemalagd': 'text-slate-400',
+  'Köad':       'text-amber-600 font-medium',
+  'Pågår':      'text-violet-600 font-medium',
+}
+
+function KommandeKontroller() {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-slate-100">
+        <h3 className="text-base font-semibold text-slate-900">Kommande kontroller</h3>
+        <p className="text-xs text-slate-400 mt-0.5">Schemalagda och köade körningar</p>
+      </div>
+      <div className="divide-y divide-slate-50">
+        {KOMMANDE.map(k => (
+          <div key={k.id} className="flex items-center gap-4 px-6 py-3">
+            <div className="w-20 shrink-0 text-right">
+              <p className="text-sm font-mono text-slate-700">{k.tid}</p>
+              <p className="text-xs text-slate-400">{k.om}</p>
+            </div>
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border shrink-0 ${TYP_CLS[k.typ]}`}>
+              {k.typ}
+            </span>
+            <p className="flex-1 text-sm text-slate-600">
+              {k.källa ?? 'Alla aktiva källor'}
+            </p>
+            <span className={`text-xs shrink-0 ${STATUS_CLS[k.status]}`}>{k.status}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 const FELLOGGAR: Felrad[] = [
   { tid: '10:30:11', tjänst: 'Notifieringar', nivå: 'Varning', meddelande: 'SMS-utskick till +46701234567 fick inget svar — retry 1/3' },
   { tid: '09:15:44', tjänst: 'Ingestor',      nivå: 'Varning', meddelande: 'Trafikverket svarade inte inom 10 s — källa markerad som Nere' },
@@ -285,6 +344,9 @@ export default function Felsökning() {
           })}
         </div>
       </div>
+
+      {/* Kommande kontroller */}
+      <KommandeKontroller />
 
       {/* Felloggar */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
