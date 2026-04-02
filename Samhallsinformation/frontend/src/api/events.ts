@@ -101,7 +101,16 @@ const MOCK_EVENTS: CanonicalEvent[] = [
   },
 ]
 
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
+
 export async function fetchEvents(params: FetchEventsParams = {}): Promise<EventsResponse> {
+  if (USE_MOCK) {
+    const filtered = MOCK_EVENTS.filter(e =>
+      params.sourceId === undefined || e.sourceId === params.sourceId
+    )
+    return { total: filtered.length, page: 1, pageSize: filtered.length, events: filtered }
+  }
+
   const query = new URLSearchParams()
   if (params.sourceId !== undefined) query.set('source', String(params.sourceId))
   if (params.geography) query.set('geography', params.geography)
@@ -109,14 +118,7 @@ export async function fetchEvents(params: FetchEventsParams = {}): Promise<Event
   if (params.page) query.set('page', String(params.page))
   if (params.pageSize) query.set('pageSize', String(params.pageSize))
 
-  try {
-    const res = await fetch(`/api/events?${query}`)
-    if (!res.ok) throw new Error()
-    return res.json()
-  } catch {
-    const filtered = MOCK_EVENTS.filter(e =>
-      params.sourceId === undefined || e.sourceId === params.sourceId
-    )
-    return { total: filtered.length, page: 1, pageSize: filtered.length, events: filtered }
-  }
+  const res = await fetch(`/api/events?${query}`)
+  if (!res.ok) throw new Error(`fetchEvents: ${res.status}`)
+  return res.json()
 }

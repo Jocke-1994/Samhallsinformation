@@ -11,13 +11,11 @@ const MOCK_SOURCES: Source[] = [
   { id: 8,  name: 'Västra Götalandsregionen',     shortName: 'VGR',              baseUrl: 'https://vgregion.se',             isActive: true, scope: 'regional'  },
 ]
 
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
+
 export async function fetchSources(): Promise<Source[]> {
-  try {
-    const res = await fetch('/api/sources')
-    if (!res.ok) throw new Error()
-    const data: Source[] = await res.json()
-    return data.length > 0 ? data : MOCK_SOURCES
-  } catch {
-    return MOCK_SOURCES
-  }
+  if (USE_MOCK) return MOCK_SOURCES
+  const res = await fetch('/api/sources')
+  if (!res.ok) throw new Error(`fetchSources: ${res.status}`)
+  return res.json()
 }
