@@ -386,7 +386,6 @@ export default function Felsökning() {
           {källor.map(k => {
             const cls = HÄLSA_CLS[k.hälsa]
             const pågår = testar === k.id
-            const resultat = testResultat[k.id]
             return (
               <div key={k.id} className="px-6 py-4 flex flex-col gap-2">
                 <div className="flex items-center gap-4">
