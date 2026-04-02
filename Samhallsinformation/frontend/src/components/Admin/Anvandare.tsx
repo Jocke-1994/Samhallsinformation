@@ -3,15 +3,17 @@ import { useState } from 'react'
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd'
 type DetaljFlik = 'oversikt' | 'notishistorik' | 'aktivitet'
+type RollÄndringTyp = 'ersätt' | 'lägg-till'
 
 interface Användare {
-  id:          number
-  namn:        string
-  epost:       string
-  roller:      Roll[]
-  status:      Status
-  registrerad: string
-  senastAktiv: string
+  id:           number
+  namn:         string
+  epost:        string
+  roller:       Roll[]
+  status:       Status
+  registrerad:  string
+  senastAktiv:  string
+  avstängtTill?: string
 }
 
 interface NotisRad {
@@ -27,7 +29,7 @@ interface AktivitetRad {
   händelse: string
 }
 
-const MOCK_ANVÄNDARE: Användare[] = [
+const INITIAL_ANVÄNDARE: Användare[] = [
   { id: 1,  namn: 'Joakim Rehn',     epost: 'joakim@example.com',    roller: ['Admin', 'Support', 'Användare'], status: 'Aktiv',    registrerad: '2026-01-15', senastAktiv: 'Idag 10:42' },
   { id: 2,  namn: 'Anna Svensson',   epost: 'anna.svensson@mail.se', roller: ['Support', 'Användare'],          status: 'Aktiv',    registrerad: '2026-02-03', senastAktiv: 'Idag 09:15' },
   { id: 3,  namn: 'Erik Lindqvist',  epost: 'erik.l@gmail.com',      roller: ['Betatestare', 'Användare'],      status: 'Aktiv',    registrerad: '2026-03-10', senastAktiv: 'Igår 18:30' },
@@ -36,39 +38,50 @@ const MOCK_ANVÄNDARE: Användare[] = [
   { id: 6,  namn: 'Sofia Nilsson',   epost: 'sofia.n@gmail.com',     roller: ['Betatestare', 'Användare'],      status: 'Aktiv',    registrerad: '2026-03-20', senastAktiv: 'Idag 08:50' },
   { id: 7,  namn: 'Johan Karlsson',  epost: 'johan.k@company.se',    roller: ['Användare'],                     status: 'Inaktiv',  registrerad: '2026-03-22', senastAktiv: '2026-03-25' },
   { id: 8,  namn: 'Karin Andersson', epost: 'karin.a@mail.se',       roller: ['Användare'],                     status: 'Aktiv',    registrerad: '2026-03-25', senastAktiv: 'Idag 11:20' },
-  { id: 9,  namn: 'Magnus Bergström',epost: 'magnus.b@gmail.com',    roller: ['Betatestare', 'Användare'],      status: 'Avstängd', registrerad: '2026-03-26', senastAktiv: '2026-03-28' },
+  { id: 9,  namn: 'Magnus Bergström',epost: 'magnus.b@gmail.com',    roller: ['Betatestare', 'Användare'],      status: 'Avstängd', registrerad: '2026-03-26', senastAktiv: '2026-03-28', avstängtTill: '2026-04-09' },
   { id: 10, namn: 'Lena Holm',       epost: 'lena.h@outlook.com',    roller: ['Användare'],                     status: 'Aktiv',    registrerad: '2026-03-28', senastAktiv: 'Igår 21:10' },
 ]
 
 const MOCK_NOTISER: Record<number, NotisRad[]> = {
   3: [
-    { tid: '2026-04-02 10:30', kanal: 'E-post', källa: 'Polisen', rubrik: 'Skottlossning, Norrköping',                    status: 'Levererad'  },
-    { tid: '2026-04-01 18:15', kanal: 'SMS',    källa: 'Polisen', rubrik: 'Explosion, Göteborg',                          status: 'Levererad'  },
-    { tid: '2026-04-01 09:00', kanal: 'E-post', källa: 'SMHI',    rubrik: 'Klass 2-varning: hård vind, Västra Götaland',  status: 'Levererad'  },
-    { tid: '2026-03-30 14:42', kanal: 'SMS',    källa: 'Polisen', rubrik: 'Bedrägeri via telefon, nationellt',             status: 'Misslyckad' },
-    { tid: '2026-03-29 08:00', kanal: 'E-post', källa: 'MSB',     rubrik: 'Krisberedskapsinfo: övning Västkust',           status: 'Levererad'  },
+    { tid: '2026-04-02 10:30', kanal: 'E-post', källa: 'Polisen', rubrik: 'Skottlossning, Norrköping',                   status: 'Levererad'  },
+    { tid: '2026-04-01 18:15', kanal: 'SMS',    källa: 'Polisen', rubrik: 'Explosion, Göteborg',                         status: 'Levererad'  },
+    { tid: '2026-04-01 09:00', kanal: 'E-post', källa: 'SMHI',    rubrik: 'Klass 2-varning: hård vind, Västra Götaland', status: 'Levererad'  },
+    { tid: '2026-03-30 14:42', kanal: 'SMS',    källa: 'Polisen', rubrik: 'Bedrägeri via telefon, nationellt',            status: 'Misslyckad' },
+    { tid: '2026-03-29 08:00', kanal: 'E-post', källa: 'MSB',     rubrik: 'Krisberedskapsinfo: övning Västkust',          status: 'Levererad'  },
   ],
   6: [
-    { tid: '2026-04-02 11:00', kanal: 'E-post', källa: 'Polisen', rubrik: 'Rån, Göteborg',              status: 'Levererad' },
-    { tid: '2026-04-01 22:30', kanal: 'SMS',    källa: 'Polisen', rubrik: 'Brand i lägenhet, Malmö',    status: 'Väntande'  },
+    { tid: '2026-04-02 11:00', kanal: 'E-post', källa: 'Polisen', rubrik: 'Rån, Göteborg',           status: 'Levererad' },
+    { tid: '2026-04-01 22:30', kanal: 'SMS',    källa: 'Polisen', rubrik: 'Brand i lägenhet, Malmö', status: 'Väntande'  },
   ],
 }
 
 const MOCK_AKTIVITET: Record<number, AktivitetRad[]> = {
   3: [
-    { tid: 'Idag 10:42',  händelse: 'Loggade in'                            },
-    { tid: 'Idag 10:43',  händelse: 'Öppnade Polisen-källan'                },
-    { tid: 'Igår 18:30',  händelse: 'Loggade in'                            },
-    { tid: 'Igår 18:31',  händelse: 'Uppdaterade notifieringsinställningar' },
-    { tid: '2026-03-30',  händelse: 'Registrerade e-postadress'             },
-    { tid: '2026-03-10',  händelse: 'Skapade konto'                         },
+    { tid: 'Idag 10:42', händelse: 'Loggade in'                            },
+    { tid: 'Idag 10:43', händelse: 'Öppnade Polisen-källan'                },
+    { tid: 'Igår 18:30', händelse: 'Loggade in'                            },
+    { tid: 'Igår 18:31', händelse: 'Uppdaterade notifieringsinställningar' },
+    { tid: '2026-03-30', händelse: 'Registrerade e-postadress'             },
+    { tid: '2026-03-10', händelse: 'Skapade konto'                         },
   ],
   6: [
-    { tid: 'Idag 08:50',  händelse: 'Loggade in'                            },
-    { tid: 'Igår 20:10',  händelse: 'Läste 4 artiklar från Polisen'         },
-    { tid: '2026-03-20',  händelse: 'Skapade konto'                         },
+    { tid: 'Idag 08:50', händelse: 'Loggade in'                  },
+    { tid: 'Igår 20:10', händelse: 'Läste 4 artiklar från Polisen'},
+    { tid: '2026-03-20', händelse: 'Skapade konto'               },
   ],
 }
+
+const ALLA_ROLLER_LIST: Roll[] = ['Admin', 'Support', 'Betatestare', 'Användare']
+
+const TIDSGRÄNSER: { label: string; dagar: number | null }[] = [
+  { label: '1 dag',       dagar: 1    },
+  { label: '3 dagar',     dagar: 3    },
+  { label: '1 vecka',     dagar: 7    },
+  { label: '2 veckor',    dagar: 14   },
+  { label: '1 månad',     dagar: 30   },
+  { label: 'Tills vidare',dagar: null },
+]
 
 const ROLL_CLS: Record<Roll, string> = {
   'Admin':       'bg-red-100 text-red-700 border border-red-200',
@@ -100,22 +113,178 @@ const KANAL_CLS: Record<NotisRad['kanal'], string> = {
   'SMS':    'bg-sky-100 text-sky-700',
 }
 
-const ALLA_ROLLER: Array<Roll | 'Alla'> = ['Alla', 'Admin', 'Support', 'Betatestare', 'Användare']
+const ALLA_ROLLER_FILTER: Array<Roll | 'Alla'> = ['Alla', 'Admin', 'Support', 'Betatestare', 'Användare']
 const ALLA_STATUSAR: Array<Status | 'Alla'> = ['Alla', 'Aktiv', 'Inaktiv', 'Avstängd']
 
 function initialer(namn: string) {
   return namn.split(' ').map(n => n[0]).join('').slice(0, 2)
 }
 
+function addDagar(dagar: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + dagar)
+  return d.toISOString().split('T')[0]
+}
+
+// --- Modaler ---
+
+function RollModal({ antal, onSpara, onStäng }: {
+  antal: number
+  onSpara: (roller: Roll[], typ: RollÄndringTyp) => void
+  onStäng: () => void
+}) {
+  const [valda, setValda] = useState<Roll[]>(['Användare'])
+  const [typ, setTyp] = useState<RollÄndringTyp>('ersätt')
+
+  function toggleRoll(r: Roll) {
+    setValda(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="bg-gradient-to-br from-violet-600 to-violet-800 px-6 py-5 flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-white">Ändra roller</h2>
+            <p className="text-violet-200 text-sm mt-0.5">{antal} användare markerade</p>
+          </div>
+          <button onClick={onStäng} className="text-violet-300 hover:text-white transition-colors">✕</button>
+        </div>
+        <div className="px-6 py-5 flex flex-col gap-4">
+          <div className="flex gap-2">
+            {(['ersätt', 'lägg-till'] as RollÄndringTyp[]).map(t => (
+              <button key={t} onClick={() => setTyp(t)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  typ === t ? 'bg-violet-100 text-violet-700 border-violet-200' : 'text-slate-500 border-slate-200 hover:bg-slate-50'
+                }`}>
+                {t === 'ersätt' ? 'Ersätt roller' : 'Lägg till roller'}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2">
+            {ALLA_ROLLER_LIST.map(r => (
+              <label key={r} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 cursor-pointer">
+                <input type="checkbox" checked={valda.includes(r)} onChange={() => toggleRoll(r)}
+                  className="rounded border-slate-300 text-violet-600 focus:ring-violet-400" />
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${ROLL_CLS[r]}`}>{r}</span>
+              </label>
+            ))}
+          </div>
+          <button
+            onClick={() => { if (valda.length > 0) onSpara(valda, typ) }}
+            disabled={valda.length === 0}
+            className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+          >
+            Applicera
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StängAvModal({ antal, onSpara, onStäng }: {
+  antal: number
+  onSpara: (till: string | null) => void
+  onStäng: () => void
+}) {
+  const [vald, setVald] = useState<number>(7)
+
+  const valtAlternativ = TIDSGRÄNSER.find(t => t.dagar === vald) ?? TIDSGRÄNSER[2]
+  const slutdatum = vald !== null ? addDagar(vald) : null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="bg-gradient-to-br from-amber-500 to-amber-700 px-6 py-5 flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-white">Stäng av konto</h2>
+            <p className="text-amber-100 text-sm mt-0.5">{antal} användare markerade</p>
+          </div>
+          <button onClick={onStäng} className="text-amber-200 hover:text-white transition-colors">✕</button>
+        </div>
+        <div className="px-6 py-5 flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-2">
+            {TIDSGRÄNSER.map(t => (
+              <button key={t.label} onClick={() => setVald(t.dagar ?? -1)}
+                className={`py-2 rounded-xl text-sm font-medium border transition-colors ${
+                  (t.dagar === vald || (t.dagar === null && vald === -1))
+                    ? 'bg-amber-100 text-amber-700 border-amber-200'
+                    : 'text-slate-500 border-slate-200 hover:bg-slate-50'
+                }`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {slutdatum && (
+            <p className="text-xs text-slate-500 bg-slate-50 rounded-xl px-4 py-3">
+              Kontot aktiveras automatiskt igen <span className="font-semibold text-slate-700">{slutdatum}</span>
+            </p>
+          )}
+          {vald === -1 && (
+            <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-4 py-3">
+              Kontot förblir avstängt tills en admin aktiverar det manuellt.
+            </p>
+          )}
+          <button
+            onClick={() => onSpara(slutdatum)}
+            className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold rounded-xl transition-colors"
+          >
+            Stäng av
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RaderaModal({ antal, namn, onBekräfta, onStäng }: {
+  antal: number
+  namn?: string
+  onBekräfta: () => void
+  onStäng: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="bg-gradient-to-br from-red-600 to-red-800 px-6 py-5 flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-white">Radera konto</h2>
+            <p className="text-red-200 text-sm mt-0.5">{namn ?? `${antal} användare markerade`}</p>
+          </div>
+          <button onClick={onStäng} className="text-red-300 hover:text-white transition-colors">✕</button>
+        </div>
+        <div className="px-6 py-5 flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            All användardata raderas permanent i enlighet med GDPR artikel 17. Åtgärden kan inte ångras.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={onStäng} className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+              Avbryt
+            </button>
+            <button onClick={onBekräfta} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-xl transition-colors">
+              Radera permanent
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// --- Huvudkomponent ---
+
 export default function Anvandare() {
+  const [användare, setAnvändare]       = useState<Användare[]>(INITIAL_ANVÄNDARE)
   const [rollFilter, setRollFilter]     = useState<Roll | 'Alla'>('Alla')
   const [statusFilter, setStatusFilter] = useState<Status | 'Alla'>('Alla')
   const [sökning, setSökning]           = useState('')
   const [vald, setVald]                 = useState<Användare | null>(null)
   const [detaljFlik, setDetaljFlik]     = useState<DetaljFlik>('oversikt')
   const [markerade, setMarkerade]       = useState<Set<number>>(new Set())
+  const [modal, setModal]               = useState<'roller' | 'stäng-av' | 'radera' | null>(null)
 
-  const filtrerade = MOCK_ANVÄNDARE.filter(u => {
+  const filtrerade = användare.filter(u => {
     if (rollFilter !== 'Alla' && !u.roller.includes(rollFilter)) return false
     if (statusFilter !== 'Alla' && u.status !== statusFilter) return false
     if (sökning && !u.namn.toLowerCase().includes(sökning.toLowerCase()) &&
@@ -144,17 +313,80 @@ export default function Anvandare() {
     setDetaljFlik('oversikt')
   }
 
+  function applicerapRoller(roller: Roll[], typ: RollÄndringTyp) {
+    setAnvändare(prev => prev.map(u => {
+      if (!markerade.has(u.id)) return u
+      const nyaRoller = typ === 'ersätt' ? roller : Array.from(new Set([...u.roller, ...roller]))
+      return { ...u, roller: nyaRoller }
+    }))
+    setMarkerade(new Set())
+    setModal(null)
+  }
+
+  function stängAv(till: string | null) {
+    setAnvändare(prev => prev.map(u => {
+      if (!markerade.has(u.id)) return u
+      return { ...u, status: 'Avstängd', avstängtTill: till ?? undefined }
+    }))
+    if (vald && markerade.has(vald.id)) {
+      setVald(prev => prev ? { ...prev, status: 'Avstängd', avstängtTill: till ?? undefined } : null)
+    }
+    setMarkerade(new Set())
+    setModal(null)
+  }
+
+  function raderaMarkerade() {
+    setAnvändare(prev => prev.filter(u => !markerade.has(u.id)))
+    if (vald && markerade.has(vald.id)) setVald(null)
+    setMarkerade(new Set())
+    setModal(null)
+  }
+
+  function stängAvEnkild(u: Användare, till: string | null) {
+    setAnvändare(prev => prev.map(x =>
+      x.id === u.id ? { ...x, status: 'Avstängd', avstängtTill: till ?? undefined } : x
+    ))
+    setVald(prev => prev?.id === u.id ? { ...prev, status: 'Avstängd', avstängtTill: till ?? undefined } : prev)
+    setModal(null)
+  }
+
+  const [enkildStängAv, setEnkildStängAv] = useState<Användare | null>(null)
+  const [enkildRadera, setEnkildRadera]   = useState<Användare | null>(null)
+
   const antal = {
-    totalt:      MOCK_ANVÄNDARE.length,
-    aktiva:      MOCK_ANVÄNDARE.filter(u => u.status === 'Aktiv').length,
-    betatestare: MOCK_ANVÄNDARE.filter(u => u.roller.includes('Betatestare')).length,
-    avstängda:   MOCK_ANVÄNDARE.filter(u => u.status === 'Avstängd').length,
+    totalt:      användare.length,
+    aktiva:      användare.filter(u => u.status === 'Aktiv').length,
+    betatestare: användare.filter(u => u.roller.includes('Betatestare')).length,
+    avstängda:   användare.filter(u => u.status === 'Avstängd').length,
   }
 
   const allaMarkerade = filtrerade.length > 0 && markerade.size === filtrerade.length
 
   return (
     <div className="flex flex-col gap-6">
+
+      {/* Modaler — bulk */}
+      {modal === 'roller' && (
+        <RollModal antal={markerade.size} onSpara={applicerapRoller} onStäng={() => setModal(null)} />
+      )}
+      {modal === 'stäng-av' && (
+        <StängAvModal antal={markerade.size} onSpara={stängAv} onStäng={() => setModal(null)} />
+      )}
+      {modal === 'radera' && (
+        <RaderaModal antal={markerade.size} onBekräfta={raderaMarkerade} onStäng={() => setModal(null)} />
+      )}
+
+      {/* Modaler — enskild */}
+      {enkildStängAv && (
+        <StängAvModal antal={1} onSpara={till => { stängAvEnkild(enkildStängAv, till); setEnkildStängAv(null) }} onStäng={() => setEnkildStängAv(null)} />
+      )}
+      {enkildRadera && (
+        <RaderaModal antal={1} namn={enkildRadera.namn} onBekräfta={() => {
+          setAnvändare(prev => prev.filter(u => u.id !== enkildRadera.id))
+          if (vald?.id === enkildRadera.id) setVald(null)
+          setEnkildRadera(null)
+        }} onStäng={() => setEnkildRadera(null)} />
+      )}
 
       {/* Statistik */}
       <div className="grid grid-cols-4 gap-4">
@@ -173,30 +405,24 @@ export default function Anvandare() {
 
       {/* Tabell */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-
-        {/* Toolbar */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 flex-wrap min-h-[60px]">
           {markerade.size > 0 ? (
             <>
               <span className="text-sm font-medium text-violet-700">{markerade.size} markerade</span>
               <div className="flex gap-2 ml-auto">
-                <button className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">Ändra roller</button>
-                <button className="text-xs font-medium px-3 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors">Stäng av</button>
-                <button className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Radera</button>
+                <button onClick={() => setModal('roller')} className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">Ändra roller</button>
+                <button onClick={() => setModal('stäng-av')} className="text-xs font-medium px-3 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors">Stäng av</button>
+                <button onClick={() => setModal('radera')} className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Radera</button>
                 <button onClick={() => setMarkerade(new Set())} className="text-xs font-medium px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">✕ Avmarkera</button>
               </div>
             </>
           ) : (
             <>
-              <input
-                type="text"
-                placeholder="Sök namn, e-post eller ID..."
-                value={sökning}
+              <input type="text" placeholder="Sök namn, e-post eller ID..." value={sökning}
                 onChange={e => setSökning(e.target.value)}
-                className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 w-60"
-              />
+                className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 w-60" />
               <div className="flex gap-1 ml-auto">
-                {ALLA_ROLLER.map(r => (
+                {ALLA_ROLLER_FILTER.map(r => (
                   <button key={r} onClick={() => setRollFilter(r)}
                     className={`text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${rollFilter === r ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:bg-slate-100'}`}>
                     {r}
@@ -222,7 +448,7 @@ export default function Anvandare() {
                 <input type="checkbox" checked={allaMarkerade} onChange={toggleAllaMarkerade}
                   className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer" />
               </th>
-              <th className="text-left px-2 py-3 font-medium w-8">ID</th>
+              <th className="text-left px-2 py-3 font-medium w-10">ID</th>
               <th className="text-left px-4 py-3 font-medium">Användare</th>
               <th className="text-left px-4 py-3 font-medium">Roller</th>
               <th className="text-left px-4 py-3 font-medium">Status</th>
@@ -261,9 +487,14 @@ export default function Anvandare() {
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[u.status]}`} />
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_CLS[u.status]}`}>{u.status}</span>
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[u.status]}`} />
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_CLS[u.status]}`}>{u.status}</span>
+                    </div>
+                    {u.avstängtTill && (
+                      <p className="text-xs text-slate-400 pl-4">till {u.avstängtTill}</p>
+                    )}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-slate-500">{u.registrerad}</td>
@@ -289,7 +520,6 @@ export default function Anvandare() {
       {/* Detaljpanel */}
       {vald && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700">
@@ -316,9 +546,7 @@ export default function Anvandare() {
             ] as { id: DetaljFlik; label: string }[]).map(f => (
               <button key={f.id} onClick={() => setDetaljFlik(f.id)}
                 className={`text-sm font-medium px-4 py-3 border-b-2 transition-colors ${
-                  detaljFlik === f.id
-                    ? 'border-violet-600 text-violet-700'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                  detaljFlik === f.id ? 'border-violet-600 text-violet-700' : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}>
                 {f.label}
               </button>
@@ -336,23 +564,41 @@ export default function Anvandare() {
                     ))}
                   </div>
                 </div>
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Status</p>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_CLS[vald.status]}`}>{vald.status}</span>
+                    {vald.avstängtTill && (
+                      <span className="text-xs text-slate-400">— aktiveras automatiskt {vald.avstängtTill}</span>
+                    )}
+                  </div>
+                </div>
                 {[
-                  { label: 'Status',       värde: <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_CLS[vald.status]}`}>{vald.status}</span> },
-                  { label: 'Registrerad',  värde: <p className="text-sm text-slate-700">{vald.registrerad}</p> },
-                  { label: 'Senast aktiv', värde: <p className="text-sm text-slate-700">{vald.senastAktiv}</p> },
+                  { label: 'Registrerad',  värde: vald.registrerad },
+                  { label: 'Senast aktiv', värde: vald.senastAktiv },
                 ].map(r => (
                   <div key={r.label}>
                     <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">{r.label}</p>
-                    {r.värde}
+                    <p className="text-sm text-slate-700">{r.värde}</p>
                   </div>
                 ))}
               </div>
               <div className="flex flex-col gap-3">
                 <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">Åtgärder</p>
-                <button className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">Ändra roller</button>
-                <button className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">Skicka lösenordsåterställning</button>
-                <button className="text-left px-4 py-2.5 rounded-xl border border-amber-200 text-sm text-amber-700 hover:bg-amber-50 transition-colors">Stäng av konto tillfälligt</button>
-                <button className="text-left px-4 py-2.5 rounded-xl border border-red-200 text-sm text-red-600 hover:bg-red-50 transition-colors">Radera konto (GDPR)</button>
+                <button className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
+                  Ändra roller
+                </button>
+                <button className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
+                  Skicka lösenordsåterställning
+                </button>
+                <button onClick={() => setEnkildStängAv(vald)}
+                  className="text-left px-4 py-2.5 rounded-xl border border-amber-200 text-sm text-amber-700 hover:bg-amber-50 transition-colors">
+                  Stäng av konto tillfälligt
+                </button>
+                <button onClick={() => setEnkildRadera(vald)}
+                  className="text-left px-4 py-2.5 rounded-xl border border-red-200 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                  Radera konto (GDPR)
+                </button>
               </div>
             </div>
           )}
@@ -376,14 +622,10 @@ export default function Anvandare() {
                     {MOCK_NOTISER[vald.id].map((n, i) => (
                       <tr key={i} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-3 text-xs text-slate-400 font-mono whitespace-nowrap">{n.tid}</td>
-                        <td className="px-4 py-3">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${KANAL_CLS[n.kanal]}`}>{n.kanal}</span>
-                        </td>
+                        <td className="px-4 py-3"><span className={`text-xs font-medium px-2 py-0.5 rounded-full ${KANAL_CLS[n.kanal]}`}>{n.kanal}</span></td>
                         <td className="px-4 py-3 text-sm text-slate-600">{n.källa}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{n.rubrik}</td>
-                        <td className="px-4 py-3">
-                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${NOTIS_STATUS_CLS[n.status]}`}>{n.status}</span>
-                        </td>
+                        <td className="px-4 py-3"><span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${NOTIS_STATUS_CLS[n.status]}`}>{n.status}</span></td>
                       </tr>
                     ))}
                   </tbody>
@@ -406,10 +648,8 @@ export default function Anvandare() {
               )}
             </div>
           )}
-
         </div>
       )}
-
     </div>
   )
 }
