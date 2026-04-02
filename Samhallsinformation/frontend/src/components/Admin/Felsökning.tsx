@@ -51,29 +51,36 @@ const INITIAL_KÄLLOR: KällKontroll[] = [
   { id: 8, namn: 'VGR',             url: 'https://vgregion.se/rss',                   hälsa: 'OK',      aktiv: false, mock: false, senast: '10:50', senastArtikel: '—',       förväntadFrekvens: '< 24 h', färskhetStatus: 'OK'       },
 ]
 
-type KontrollTyp = 'Ingestor' | 'Fullständigt flödestest' | 'Event-drivet'
+type KontrollTyp = 'Ingestor' | 'Fullständigt flödestest' | 'Event-drivet' | 'Intern'
+type KontrollKategori = 'Källa' | 'Intern'
 type KontrollStatus = 'Schemalagd' | 'Köad' | 'Pågår'
 
 interface KommandeKontroll {
-  id:      number
-  typ:     KontrollTyp
-  källa?:  string
-  tid:     string
-  om:      string
-  status:  KontrollStatus
+  id:          number
+  typ:         KontrollTyp
+  kategori:    KontrollKategori
+  beskrivning: string
+  tid:         string
+  om:          string
+  status:      KontrollStatus
 }
 
 const KOMMANDE: KommandeKontroll[] = [
-  { id: 1, typ: 'Ingestor',               tid: '19:10', om: 'om 4 min',  status: 'Schemalagd' },
-  { id: 2, typ: 'Event-drivet',           källa: 'Polisen',      tid: '19:07', om: 'om 1 min',  status: 'Köad'       },
-  { id: 3, typ: 'Event-drivet',           källa: 'Trafikverket', tid: '19:09', om: 'om 3 min',  status: 'Köad'       },
-  { id: 4, typ: 'Fullständigt flödestest',                       tid: '04:00', om: 'om 8 h 53 min', status: 'Schemalagd' },
+  { id: 1, typ: 'Event-drivet',            kategori: 'Källa',  beskrivning: 'Polisen — datafärskhetslarm',          tid: '19:07', om: 'om 1 min',      status: 'Köad'       },
+  { id: 2, typ: 'Intern',                  kategori: 'Intern', beskrivning: 'Retry-kö — misslyckade operationer',    tid: '19:08', om: 'om 2 min',      status: 'Schemalagd' },
+  { id: 3, typ: 'Event-drivet',            kategori: 'Källa',  beskrivning: 'Trafikverket — datafärskhetslarm',      tid: '19:09', om: 'om 3 min',      status: 'Köad'       },
+  { id: 4, typ: 'Ingestor',               kategori: 'Källa',  beskrivning: 'Alla aktiva källor',                    tid: '19:10', om: 'om 4 min',      status: 'Schemalagd' },
+  { id: 5, typ: 'Intern',                  kategori: 'Intern', beskrivning: 'Notis-verifiering — utskickskontroll',  tid: '19:16', om: 'om 10 min',     status: 'Schemalagd' },
+  { id: 6, typ: 'Fullständigt flödestest', kategori: 'Källa',  beskrivning: 'Alla aktiva källor',                    tid: '04:00', om: 'om 8 h 53 min', status: 'Schemalagd' },
+  { id: 7, typ: 'Intern',                  kategori: 'Intern', beskrivning: 'Sessionsrensning',                      tid: '04:00', om: 'om 8 h 53 min', status: 'Schemalagd' },
+  { id: 8, typ: 'Intern',                  kategori: 'Intern', beskrivning: 'Databaskontroll — integritetskoll',     tid: '04:05', om: 'om 8 h 58 min', status: 'Schemalagd' },
 ]
 
 const TYP_CLS: Record<KontrollTyp, string> = {
   'Ingestor':               'bg-violet-100 text-violet-700 border border-violet-200',
   'Fullständigt flödestest':'bg-sky-100 text-sky-700 border border-sky-200',
   'Event-drivet':           'bg-amber-100 text-amber-700 border border-amber-200',
+  'Intern':                 'bg-slate-100 text-slate-600 border border-slate-200',
 }
 
 const STATUS_CLS: Record<KontrollStatus, string> = {
@@ -82,26 +89,47 @@ const STATUS_CLS: Record<KontrollStatus, string> = {
   'Pågår':      'text-violet-600 font-medium',
 }
 
+const KATEGORI_FILTER: KontrollKategori[] = ['Källa', 'Intern']
+
 function KommandeKontroller() {
+  const [filter, setFilter] = useState<KontrollKategori | 'Alla'>('Alla')
+
+  const visade = filter === 'Alla' ? KOMMANDE : KOMMANDE.filter(k => k.kategori === filter)
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-100">
-        <h3 className="text-base font-semibold text-slate-900">Kommande kontroller</h3>
-        <p className="text-xs text-slate-400 mt-0.5">Schemalagda och köade körningar</p>
+      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-slate-900">Kommande kontroller</h3>
+          <p className="text-xs text-slate-400 mt-0.5">Schemalagda och köade körningar</p>
+        </div>
+        <div className="flex gap-1">
+          {(['Alla', ...KATEGORI_FILTER] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                filter === f
+                  ? 'bg-violet-100 text-violet-700'
+                  : 'text-slate-500 hover:bg-slate-100'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="divide-y divide-slate-50">
-        {KOMMANDE.map(k => (
+        {visade.map(k => (
           <div key={k.id} className="flex items-center gap-4 px-6 py-3">
-            <div className="w-20 shrink-0 text-right">
+            <div className="w-24 shrink-0 text-right">
               <p className="text-sm font-mono text-slate-700">{k.tid}</p>
               <p className="text-xs text-slate-400">{k.om}</p>
             </div>
             <span className={`text-xs font-medium px-2.5 py-1 rounded-full border shrink-0 ${TYP_CLS[k.typ]}`}>
               {k.typ}
             </span>
-            <p className="flex-1 text-sm text-slate-600">
-              {k.källa ?? 'Alla aktiva källor'}
-            </p>
+            <p className="flex-1 text-sm text-slate-600">{k.beskrivning}</p>
             <span className={`text-xs shrink-0 ${STATUS_CLS[k.status]}`}>{k.status}</span>
           </div>
         ))}
