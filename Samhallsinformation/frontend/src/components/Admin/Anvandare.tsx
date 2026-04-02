@@ -2,18 +2,22 @@ import { useState } from 'react'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd'
-type DetaljFlik = 'oversikt' | 'notishistorik' | 'aktivitet'
+type DetaljFlik = 'oversikt' | 'notishistorik' | 'aktivitet' | 'notifinstallningar'
 type RollÄndringTyp = 'ersätt' | 'lägg-till'
+type Inloggningsmetod = 'E-post' | 'Google' | 'BankID'
 
 interface Användare {
-  id:           number
-  namn:         string
-  epost:        string
-  roller:       Roll[]
-  status:       Status
-  registrerad:  string
-  senastAktiv:  string
-  avstängtTill?: string
+  id:                number
+  namn:              string
+  epost:             string
+  telefon?:          string
+  roller:            Roll[]
+  status:            Status
+  registrerad:       string
+  senastAktiv:       string
+  avstängtTill?:     string
+  epostVerifierad:   boolean
+  inloggningsmetod:  Inloggningsmetod
 }
 
 interface NotisRad {
@@ -29,17 +33,25 @@ interface AktivitetRad {
   händelse: string
 }
 
+interface NotifKälla {
+  källNamn:   string
+  aktiv:      boolean
+  kanaler:    Array<'E-post' | 'SMS'>
+  geografier: string[]
+  kategorier: string[]
+}
+
 const INITIAL_ANVÄNDARE: Användare[] = [
-  { id: 1,  namn: 'Joakim Rehn',     epost: 'joakim@example.com',    roller: ['Admin', 'Support', 'Användare'], status: 'Aktiv',    registrerad: '2026-01-15', senastAktiv: 'Idag 10:42' },
-  { id: 2,  namn: 'Anna Svensson',   epost: 'anna.svensson@mail.se', roller: ['Support', 'Användare'],          status: 'Aktiv',    registrerad: '2026-02-03', senastAktiv: 'Idag 09:15' },
-  { id: 3,  namn: 'Erik Lindqvist',  epost: 'erik.l@gmail.com',      roller: ['Betatestare', 'Användare'],      status: 'Aktiv',    registrerad: '2026-03-10', senastAktiv: 'Igår 18:30' },
-  { id: 4,  namn: 'Maria Johansson', epost: 'maria.j@outlook.com',   roller: ['Betatestare', 'Användare'],      status: 'Aktiv',    registrerad: '2026-03-12', senastAktiv: 'Igår 14:05' },
-  { id: 5,  namn: 'Lars Petersson',  epost: 'lars.p@hotmail.com',    roller: ['Användare'],                     status: 'Aktiv',    registrerad: '2026-03-18', senastAktiv: '2026-03-30' },
-  { id: 6,  namn: 'Sofia Nilsson',   epost: 'sofia.n@gmail.com',     roller: ['Betatestare', 'Användare'],      status: 'Aktiv',    registrerad: '2026-03-20', senastAktiv: 'Idag 08:50' },
-  { id: 7,  namn: 'Johan Karlsson',  epost: 'johan.k@company.se',    roller: ['Användare'],                     status: 'Inaktiv',  registrerad: '2026-03-22', senastAktiv: '2026-03-25' },
-  { id: 8,  namn: 'Karin Andersson', epost: 'karin.a@mail.se',       roller: ['Användare'],                     status: 'Aktiv',    registrerad: '2026-03-25', senastAktiv: 'Idag 11:20' },
-  { id: 9,  namn: 'Magnus Bergström',epost: 'magnus.b@gmail.com',    roller: ['Betatestare', 'Användare'],      status: 'Avstängd', registrerad: '2026-03-26', senastAktiv: '2026-03-28', avstängtTill: '2026-04-09' },
-  { id: 10, namn: 'Lena Holm',       epost: 'lena.h@outlook.com',    roller: ['Användare'],                     status: 'Aktiv',    registrerad: '2026-03-28', senastAktiv: 'Igår 21:10' },
+  { id: 1,  namn: 'Joakim Rehn',      epost: 'joakim@example.com',    telefon: '+46 70 123 45 67', roller: ['Admin', 'Support', 'Användare'], status: 'Aktiv',    registrerad: '2026-01-15', senastAktiv: 'Idag 10:42',   epostVerifierad: true,  inloggningsmetod: 'E-post'  },
+  { id: 2,  namn: 'Anna Svensson',    epost: 'anna.svensson@mail.se', telefon: '+46 73 234 56 78', roller: ['Support', 'Användare'],          status: 'Aktiv',    registrerad: '2026-02-03', senastAktiv: 'Idag 09:15',   epostVerifierad: true,  inloggningsmetod: 'Google'  },
+  { id: 3,  namn: 'Erik Lindqvist',   epost: 'erik.l@gmail.com',      telefon: '+46 76 345 67 89', roller: ['Betatestare', 'Användare'],      status: 'Aktiv',    registrerad: '2026-03-10', senastAktiv: 'Igår 18:30',   epostVerifierad: true,  inloggningsmetod: 'Google'  },
+  { id: 4,  namn: 'Maria Johansson',  epost: 'maria.j@outlook.com',                                roller: ['Betatestare', 'Användare'],      status: 'Aktiv',    registrerad: '2026-03-12', senastAktiv: 'Igår 14:05',   epostVerifierad: true,  inloggningsmetod: 'E-post'  },
+  { id: 5,  namn: 'Lars Petersson',   epost: 'lars.p@hotmail.com',                                 roller: ['Användare'],                     status: 'Aktiv',    registrerad: '2026-03-18', senastAktiv: '2026-03-30',   epostVerifierad: false, inloggningsmetod: 'E-post'  },
+  { id: 6,  namn: 'Sofia Nilsson',    epost: 'sofia.n@gmail.com',     telefon: '+46 72 456 78 90', roller: ['Betatestare', 'Användare'],      status: 'Aktiv',    registrerad: '2026-03-20', senastAktiv: 'Idag 08:50',   epostVerifierad: true,  inloggningsmetod: 'Google'  },
+  { id: 7,  namn: 'Johan Karlsson',   epost: 'johan.k@company.se',                                 roller: ['Användare'],                     status: 'Inaktiv',  registrerad: '2026-03-22', senastAktiv: '2026-03-25',   epostVerifierad: false, inloggningsmetod: 'E-post'  },
+  { id: 8,  namn: 'Karin Andersson',  epost: 'karin.a@mail.se',       telefon: '+46 70 567 89 01', roller: ['Användare'],                     status: 'Aktiv',    registrerad: '2026-03-25', senastAktiv: 'Idag 11:20',   epostVerifierad: true,  inloggningsmetod: 'BankID'  },
+  { id: 9,  namn: 'Magnus Bergström', epost: 'magnus.b@gmail.com',                                 roller: ['Betatestare', 'Användare'],      status: 'Avstängd', registrerad: '2026-03-26', senastAktiv: '2026-03-28',   epostVerifierad: true,  inloggningsmetod: 'E-post', avstängtTill: '2026-04-09' },
+  { id: 10, namn: 'Lena Holm',        epost: 'lena.h@outlook.com',    telefon: '+46 73 678 90 12', roller: ['Användare'],                     status: 'Aktiv',    registrerad: '2026-03-28', senastAktiv: 'Igår 21:10',   epostVerifierad: true,  inloggningsmetod: 'BankID'  },
 ]
 
 const MOCK_NOTISER: Record<number, NotisRad[]> = {
@@ -58,29 +70,53 @@ const MOCK_NOTISER: Record<number, NotisRad[]> = {
 
 const MOCK_AKTIVITET: Record<number, AktivitetRad[]> = {
   3: [
-    { tid: 'Idag 10:42', händelse: 'Loggade in'                            },
-    { tid: 'Idag 10:43', händelse: 'Öppnade Polisen-källan'                },
-    { tid: 'Igår 18:30', händelse: 'Loggade in'                            },
-    { tid: 'Igår 18:31', händelse: 'Uppdaterade notifieringsinställningar' },
-    { tid: '2026-03-30', händelse: 'Registrerade e-postadress'             },
-    { tid: '2026-03-10', händelse: 'Skapade konto'                         },
+    { tid: 'Idag 10:42',   händelse: 'Loggade in'                            },
+    { tid: 'Idag 10:43',   händelse: 'Öppnade Polisen-källan'                },
+    { tid: 'Igår 18:30',   händelse: 'Loggade in'                            },
+    { tid: 'Igår 18:31',   händelse: 'Uppdaterade notifieringsinställningar' },
+    { tid: '2026-03-30',   händelse: 'Registrerade e-postadress'             },
+    { tid: '2026-03-10',   händelse: 'Skapade konto'                         },
   ],
   6: [
-    { tid: 'Idag 08:50', händelse: 'Loggade in'                  },
-    { tid: 'Igår 20:10', händelse: 'Läste 4 artiklar från Polisen'},
-    { tid: '2026-03-20', händelse: 'Skapade konto'               },
+    { tid: 'Idag 08:50',   händelse: 'Loggade in'                   },
+    { tid: 'Igår 20:10',   händelse: 'Läste 4 artiklar från Polisen' },
+    { tid: '2026-03-20',   händelse: 'Skapade konto'                 },
+  ],
+}
+
+const MOCK_NOTIF: Record<number, NotifKälla[]> = {
+  3: [
+    { källNamn: 'Polisen',        aktiv: true,  kanaler: ['E-post', 'SMS'], geografier: ['Norrköping', 'Göteborg', 'Nationellt'], kategorier: ['Brott', 'Trafikhändelse']          },
+    { källNamn: 'SMHI',           aktiv: true,  kanaler: ['E-post'],        geografier: ['Västra Götaland', 'Nationellt'],        kategorier: ['Vädervarning']                     },
+    { källNamn: 'MSB',            aktiv: true,  kanaler: ['E-post'],        geografier: ['Nationellt'],                           kategorier: ['Krisberedskap']                    },
+    { källNamn: 'Trafikverket',   aktiv: false, kanaler: [],                geografier: [],                                       kategorier: []                                   },
+    { källNamn: 'Krisinformation',aktiv: false, kanaler: [],                geografier: [],                                       kategorier: []                                   },
+  ],
+  6: [
+    { källNamn: 'Polisen',        aktiv: true,  kanaler: ['E-post', 'SMS'], geografier: ['Göteborg', 'Malmö'],                   kategorier: ['Brott']                            },
+    { källNamn: 'SMHI',           aktiv: false, kanaler: [],                geografier: [],                                       kategorier: []                                   },
+    { källNamn: 'MSB',            aktiv: false, kanaler: [],                geografier: [],                                       kategorier: []                                   },
+    { källNamn: 'Trafikverket',   aktiv: true,  kanaler: ['E-post'],        geografier: ['Göteborg'],                             kategorier: ['Trafikstörning', 'Vägarbete']      },
+    { källNamn: 'Krisinformation',aktiv: false, kanaler: [],                geografier: [],                                       kategorier: []                                   },
+  ],
+  1: [
+    { källNamn: 'Polisen',        aktiv: true,  kanaler: ['E-post', 'SMS'], geografier: ['Nationellt'],                           kategorier: ['Brott', 'Trafikhändelse', 'Övrigt'] },
+    { källNamn: 'SMHI',           aktiv: true,  kanaler: ['E-post', 'SMS'], geografier: ['Nationellt'],                           kategorier: ['Vädervarning']                      },
+    { källNamn: 'MSB',            aktiv: true,  kanaler: ['E-post'],        geografier: ['Nationellt'],                           kategorier: ['Krisberedskap']                     },
+    { källNamn: 'Trafikverket',   aktiv: true,  kanaler: ['E-post'],        geografier: ['Nationellt'],                           kategorier: ['Trafikstörning']                    },
+    { källNamn: 'Krisinformation',aktiv: true,  kanaler: ['E-post'],        geografier: ['Nationellt'],                           kategorier: ['Krisberedskap', 'Samhällsinformation'] },
   ],
 }
 
 const ALLA_ROLLER_LIST: Roll[] = ['Admin', 'Support', 'Betatestare', 'Användare']
 
 const TIDSGRÄNSER: { label: string; dagar: number | null }[] = [
-  { label: '1 dag',       dagar: 1    },
-  { label: '3 dagar',     dagar: 3    },
-  { label: '1 vecka',     dagar: 7    },
-  { label: '2 veckor',    dagar: 14   },
-  { label: '1 månad',     dagar: 30   },
-  { label: 'Tills vidare',dagar: null },
+  { label: '1 dag',        dagar: 1    },
+  { label: '3 dagar',      dagar: 3    },
+  { label: '1 vecka',      dagar: 7    },
+  { label: '2 veckor',     dagar: 14   },
+  { label: '1 månad',      dagar: 30   },
+  { label: 'Tills vidare', dagar: null },
 ]
 
 const ROLL_CLS: Record<Roll, string> = {
@@ -100,6 +136,12 @@ const STATUS_DOT: Record<Status, string> = {
   'Aktiv':    'bg-green-500',
   'Inaktiv':  'bg-slate-300',
   'Avstängd': 'bg-red-500',
+}
+
+const INLOGGNING_CLS: Record<Inloggningsmetod, string> = {
+  'E-post': 'bg-slate-100 text-slate-600 border border-slate-200',
+  'Google': 'bg-blue-100 text-blue-700 border border-blue-200',
+  'BankID': 'bg-sky-100 text-sky-700 border border-sky-200',
 }
 
 const NOTIS_STATUS_CLS: Record<NotisRad['status'], string> = {
@@ -128,13 +170,14 @@ function addDagar(dagar: number): string {
 
 // --- Modaler ---
 
-function RollModal({ antal, onSpara, onStäng }: {
+function RollModal({ antal, initialRoller, onSpara, onStäng }: {
   antal: number
+  initialRoller?: Roll[]
   onSpara: (roller: Roll[], typ: RollÄndringTyp) => void
   onStäng: () => void
 }) {
-  const [valda, setValda] = useState<Roll[]>(['Användare'])
-  const [typ, setTyp] = useState<RollÄndringTyp>('ersätt')
+  const [valda, setValda] = useState<Roll[]>(initialRoller ?? ['Användare'])
+  const [typ, setTyp] = useState<RollÄndringTyp>(initialRoller ? 'ersätt' : 'ersätt')
 
   function toggleRoll(r: Roll) {
     setValda(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])
@@ -146,21 +189,23 @@ function RollModal({ antal, onSpara, onStäng }: {
         <div className="bg-gradient-to-br from-violet-600 to-violet-800 px-6 py-5 flex items-start justify-between">
           <div>
             <h2 className="text-lg font-bold text-white">Ändra roller</h2>
-            <p className="text-violet-200 text-sm mt-0.5">{antal} användare markerade</p>
+            <p className="text-violet-200 text-sm mt-0.5">{antal === 1 ? '1 användare' : `${antal} användare markerade`}</p>
           </div>
           <button onClick={onStäng} className="text-violet-300 hover:text-white transition-colors">✕</button>
         </div>
         <div className="px-6 py-5 flex flex-col gap-4">
-          <div className="flex gap-2">
-            {(['ersätt', 'lägg-till'] as RollÄndringTyp[]).map(t => (
-              <button key={t} onClick={() => setTyp(t)}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                  typ === t ? 'bg-violet-100 text-violet-700 border-violet-200' : 'text-slate-500 border-slate-200 hover:bg-slate-50'
-                }`}>
-                {t === 'ersätt' ? 'Ersätt roller' : 'Lägg till roller'}
-              </button>
-            ))}
-          </div>
+          {antal > 1 && (
+            <div className="flex gap-2">
+              {(['ersätt', 'lägg-till'] as RollÄndringTyp[]).map(t => (
+                <button key={t} onClick={() => setTyp(t)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    typ === t ? 'bg-violet-100 text-violet-700 border-violet-200' : 'text-slate-500 border-slate-200 hover:bg-slate-50'
+                  }`}>
+                  {t === 'ersätt' ? 'Ersätt roller' : 'Lägg till roller'}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex flex-col gap-2">
             {ALLA_ROLLER_LIST.map(r => (
               <label key={r} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 cursor-pointer">
@@ -190,8 +235,7 @@ function StängAvModal({ antal, onSpara, onStäng }: {
 }) {
   const [vald, setVald] = useState<number>(7)
 
-  const valtAlternativ = TIDSGRÄNSER.find(t => t.dagar === vald) ?? TIDSGRÄNSER[2]
-  const slutdatum = vald !== null ? addDagar(vald) : null
+  const slutdatum = vald !== -1 ? addDagar(vald) : null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
@@ -199,7 +243,7 @@ function StängAvModal({ antal, onSpara, onStäng }: {
         <div className="bg-gradient-to-br from-amber-500 to-amber-700 px-6 py-5 flex items-start justify-between">
           <div>
             <h2 className="text-lg font-bold text-white">Stäng av konto</h2>
-            <p className="text-amber-100 text-sm mt-0.5">{antal} användare markerade</p>
+            <p className="text-amber-100 text-sm mt-0.5">{antal === 1 ? '1 användare' : `${antal} användare markerade`}</p>
           </div>
           <button onClick={onStäng} className="text-amber-200 hover:text-white transition-colors">✕</button>
         </div>
@@ -283,6 +327,9 @@ export default function Anvandare() {
   const [detaljFlik, setDetaljFlik]     = useState<DetaljFlik>('oversikt')
   const [markerade, setMarkerade]       = useState<Set<number>>(new Set())
   const [modal, setModal]               = useState<'roller' | 'stäng-av' | 'radera' | null>(null)
+  const [enkildStängAv, setEnkildStängAv]   = useState<Användare | null>(null)
+  const [enkildRadera, setEnkildRadera]     = useState<Användare | null>(null)
+  const [enkildRollÄndring, setEnkildRollÄndring] = useState<Användare | null>(null)
 
   const filtrerade = användare.filter(u => {
     if (rollFilter !== 'Alla' && !u.roller.includes(rollFilter)) return false
@@ -323,6 +370,12 @@ export default function Anvandare() {
     setModal(null)
   }
 
+  function applicerapRollerEnkild(u: Användare, roller: Roll[]) {
+    setAnvändare(prev => prev.map(x => x.id === u.id ? { ...x, roller } : x))
+    setVald(prev => prev?.id === u.id ? { ...prev, roller } : prev)
+    setEnkildRollÄndring(null)
+  }
+
   function stängAv(till: string | null) {
     setAnvändare(prev => prev.map(u => {
       if (!markerade.has(u.id)) return u
@@ -347,11 +400,15 @@ export default function Anvandare() {
       x.id === u.id ? { ...x, status: 'Avstängd', avstängtTill: till ?? undefined } : x
     ))
     setVald(prev => prev?.id === u.id ? { ...prev, status: 'Avstängd', avstängtTill: till ?? undefined } : prev)
-    setModal(null)
+    setEnkildStängAv(null)
   }
 
-  const [enkildStängAv, setEnkildStängAv] = useState<Användare | null>(null)
-  const [enkildRadera, setEnkildRadera]   = useState<Användare | null>(null)
+  function aktiveraEnkild(u: Användare) {
+    setAnvändare(prev => prev.map(x =>
+      x.id === u.id ? { ...x, status: 'Aktiv', avstängtTill: undefined } : x
+    ))
+    setVald(prev => prev?.id === u.id ? { ...prev, status: 'Aktiv', avstängtTill: undefined } : prev)
+  }
 
   const antal = {
     totalt:      användare.length,
@@ -377,8 +434,16 @@ export default function Anvandare() {
       )}
 
       {/* Modaler — enskild */}
+      {enkildRollÄndring && (
+        <RollModal
+          antal={1}
+          initialRoller={enkildRollÄndring.roller}
+          onSpara={(roller) => applicerapRollerEnkild(enkildRollÄndring, roller)}
+          onStäng={() => setEnkildRollÄndring(null)}
+        />
+      )}
       {enkildStängAv && (
-        <StängAvModal antal={1} onSpara={till => { stängAvEnkild(enkildStängAv, till); setEnkildStängAv(null) }} onStäng={() => setEnkildStängAv(null)} />
+        <StängAvModal antal={1} onSpara={till => stängAvEnkild(enkildStängAv, till)} onStäng={() => setEnkildStängAv(null)} />
       )}
       {enkildRadera && (
         <RaderaModal antal={1} namn={enkildRadera.namn} onBekräfta={() => {
@@ -520,17 +585,25 @@ export default function Anvandare() {
       {/* Detaljpanel */}
       {vald && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+          {/* Header */}
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700">
+              <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700 shrink-0">
                 {initialer(vald.namn)}
               </div>
               <div>
-                <p className="font-semibold text-slate-800">{vald.namn}</p>
-                <p className="text-xs text-slate-400">{vald.epost} · ID #{vald.id}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-slate-800">{vald.namn}</p>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${STATUS_CLS[vald.status]}`}>{vald.status}</span>
+                  {!vald.epostVerifierad && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">E-post ej verifierad</span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">{vald.epost} · ID #{vald.id}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white transition-colors">
                 Logga in som
               </button>
@@ -538,11 +611,13 @@ export default function Anvandare() {
             </div>
           </div>
 
+          {/* Flikar */}
           <div className="flex border-b border-slate-100 px-6">
             {([
-              { id: 'oversikt',      label: 'Översikt'      },
-              { id: 'notishistorik', label: 'Notishistorik' },
-              { id: 'aktivitet',     label: 'Aktivitet'     },
+              { id: 'oversikt',           label: 'Översikt'              },
+              { id: 'notifinstallningar', label: 'Notifieringsinställningar' },
+              { id: 'notishistorik',      label: 'Notishistorik'         },
+              { id: 'aktivitet',          label: 'Aktivitet'             },
             ] as { id: DetaljFlik; label: string }[]).map(f => (
               <button key={f.id} onClick={() => setDetaljFlik(f.id)}
                 className={`text-sm font-medium px-4 py-3 border-b-2 transition-colors ${
@@ -553,9 +628,13 @@ export default function Anvandare() {
             ))}
           </div>
 
+          {/* Översikt */}
           {detaljFlik === 'oversikt' && (
-            <div className="px-6 py-5 grid grid-cols-2 gap-6">
-              <div className="flex flex-col gap-4">
+            <div className="px-6 py-5 grid grid-cols-2 gap-8">
+
+              {/* Vänster: Kontoinfo */}
+              <div className="flex flex-col gap-5">
+
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Roller</p>
                   <div className="flex flex-wrap gap-1.5">
@@ -564,45 +643,150 @@ export default function Anvandare() {
                     ))}
                   </div>
                 </div>
-                <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Status</p>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_CLS[vald.status]}`}>{vald.status}</span>
-                    {vald.avstängtTill && (
-                      <span className="text-xs text-slate-400">— aktiveras automatiskt {vald.avstängtTill}</span>
-                    )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Registrerad</p>
+                    <p className="text-sm text-slate-700">{vald.registrerad}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Senast aktiv</p>
+                    <p className="text-sm text-slate-700">{vald.senastAktiv}</p>
                   </div>
                 </div>
-                {[
-                  { label: 'Registrerad',  värde: vald.registrerad },
-                  { label: 'Senast aktiv', värde: vald.senastAktiv },
-                ].map(r => (
-                  <div key={r.label}>
-                    <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">{r.label}</p>
-                    <p className="text-sm text-slate-700">{r.värde}</p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Inloggningsmetod</p>
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${INLOGGNING_CLS[vald.inloggningsmetod]}`}>{vald.inloggningsmetod}</span>
                   </div>
-                ))}
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">E-post</p>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm text-slate-700">{vald.epostVerifierad ? 'Verifierad' : 'Ej verifierad'}</span>
+                      <span className={`w-2 h-2 rounded-full ${vald.epostVerifierad ? 'bg-green-500' : 'bg-amber-400'}`} />
+                    </div>
+                  </div>
+                </div>
+
+                {vald.telefon && (
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Telefon</p>
+                    <p className="text-sm text-slate-700">{vald.telefon}</p>
+                  </div>
+                )}
+
+                {vald.avstängtTill && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                    <p className="text-xs font-medium text-amber-700">Avstängd till {vald.avstängtTill}</p>
+                    <p className="text-xs text-amber-600 mt-0.5">Kontot aktiveras automatiskt detta datum.</p>
+                  </div>
+                )}
+
               </div>
+
+              {/* Höger: Åtgärder */}
               <div className="flex flex-col gap-3">
                 <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">Åtgärder</p>
-                <button className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
+
+                <button
+                  onClick={() => setEnkildRollÄndring(vald)}
+                  className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                >
                   Ändra roller
                 </button>
+
                 <button className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
                   Skicka lösenordsåterställning
                 </button>
-                <button onClick={() => setEnkildStängAv(vald)}
-                  className="text-left px-4 py-2.5 rounded-xl border border-amber-200 text-sm text-amber-700 hover:bg-amber-50 transition-colors">
-                  Stäng av konto tillfälligt
-                </button>
-                <button onClick={() => setEnkildRadera(vald)}
-                  className="text-left px-4 py-2.5 rounded-xl border border-red-200 text-sm text-red-600 hover:bg-red-50 transition-colors">
+
+                {!vald.epostVerifierad && (
+                  <button className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
+                    Skicka verifieringsmail
+                  </button>
+                )}
+
+                {vald.status === 'Avstängd' ? (
+                  <button
+                    onClick={() => aktiveraEnkild(vald)}
+                    className="text-left px-4 py-2.5 rounded-xl border border-green-200 text-sm text-green-700 hover:bg-green-50 transition-colors"
+                  >
+                    Aktivera konto
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setEnkildStängAv(vald)}
+                    className="text-left px-4 py-2.5 rounded-xl border border-amber-200 text-sm text-amber-700 hover:bg-amber-50 transition-colors"
+                  >
+                    Stäng av konto tillfälligt
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setEnkildRadera(vald)}
+                  className="text-left px-4 py-2.5 rounded-xl border border-red-200 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
                   Radera konto (GDPR)
                 </button>
               </div>
+
             </div>
           )}
 
+          {/* Notifieringsinställningar */}
+          {detaljFlik === 'notifinstallningar' && (
+            <div className="px-6 py-5">
+              {!(MOCK_NOTIF[vald.id]?.some(k => k.aktiv)) ? (
+                <p className="text-center text-sm text-slate-400 py-10">Användaren har inga aktiva notifieringar.</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {(MOCK_NOTIF[vald.id] ?? []).map(k => (
+                    <div key={k.källNamn} className={`rounded-xl border px-5 py-4 ${k.aktiv ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50 opacity-60'}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${k.aktiv ? 'bg-green-500' : 'bg-slate-300'}`} />
+                          <p className="text-sm font-semibold text-slate-800">{k.källNamn}</p>
+                        </div>
+                        <div className="flex gap-1">
+                          {k.kanaler.map(kanal => (
+                            <span key={kanal} className={`text-xs font-medium px-2 py-0.5 rounded-full ${KANAL_CLS[kanal]}`}>{kanal}</span>
+                          ))}
+                        </div>
+                      </div>
+                      {k.aktiv && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1.5">Geografier</p>
+                            <div className="flex flex-wrap gap-1">
+                              {k.geografier.length > 0
+                                ? k.geografier.map(g => (
+                                    <span key={g} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{g}</span>
+                                  ))
+                                : <span className="text-xs text-slate-400">Alla</span>
+                              }
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1.5">Kategorier</p>
+                            <div className="flex flex-wrap gap-1">
+                              {k.kategorier.length > 0
+                                ? k.kategorier.map(kat => (
+                                    <span key={kat} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{kat}</span>
+                                  ))
+                                : <span className="text-xs text-slate-400">Alla</span>
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Notishistorik */}
           {detaljFlik === 'notishistorik' && (
             <div>
               {(MOCK_NOTISER[vald.id] ?? []).length === 0 ? (
@@ -634,6 +818,7 @@ export default function Anvandare() {
             </div>
           )}
 
+          {/* Aktivitet */}
           {detaljFlik === 'aktivitet' && (
             <div className="divide-y divide-slate-50">
               {(MOCK_AKTIVITET[vald.id] ?? []).length === 0 ? (
@@ -648,6 +833,7 @@ export default function Anvandare() {
               )}
             </div>
           )}
+
         </div>
       )}
     </div>
