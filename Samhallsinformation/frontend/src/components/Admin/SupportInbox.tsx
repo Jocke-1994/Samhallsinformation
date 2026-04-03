@@ -242,17 +242,18 @@ function nyId(): string {
 // ---------------------------------------------------------------------------
 
 function ArendeModal({
-  arende, onClose, onSkicka, onStatusChange, onTilldela, onPåminnelse, onSchemalägg, onAvbrytSchema, onUpdateSchema,
+  arende, onClose, onSkicka, onStatusChange, onTilldela, onPåminnelse, onSchemalägg, onAvbrytSchema, onUpdateSchema, onÖppnaAnvändare,
 }: {
-  arende:           ArendeAdmin
-  onClose:          () => void
-  onSkicka:         (id: string, text: string, intern: boolean) => void
-  onStatusChange:   (id: string, status: ArendeStatus) => void
-  onTilldela:       (id: string, agent: string) => void
-  onPåminnelse:     (id: string, p: Påminnelse | undefined) => void
-  onSchemalägg:     (arendeId: string, å: SchemalagdÅtgärd) => void
-  onAvbrytSchema:   (arendeId: string, schemaId: string) => void
-  onUpdateSchema:   (arendeId: string, å: SchemalagdÅtgärd) => void
+  arende:              ArendeAdmin
+  onClose:             () => void
+  onSkicka:            (id: string, text: string, intern: boolean) => void
+  onStatusChange:      (id: string, status: ArendeStatus) => void
+  onTilldela:          (id: string, agent: string) => void
+  onPåminnelse:        (id: string, p: Påminnelse | undefined) => void
+  onSchemalägg:        (arendeId: string, å: SchemalagdÅtgärd) => void
+  onAvbrytSchema:      (arendeId: string, schemaId: string) => void
+  onUpdateSchema:      (arendeId: string, å: SchemalagdÅtgärd) => void
+  onÖppnaAnvändare?:   (epost: string) => void
 }) {
   const [flik, setFlik]                     = useState<SvarFlik>('svar')
   const [text, setText]                     = useState('')
@@ -428,6 +429,14 @@ function ArendeModal({
               <p className="text-sm font-medium text-slate-800">{arende.användare.namn}</p>
               <p className="text-xs text-slate-400">{arende.användare.epost}</p>
               <p className="text-xs text-slate-400 mt-1">Skapat {arende.skapat}</p>
+              {onÖppnaAnvändare && (
+                <button
+                  onClick={() => { onÖppnaAnvändare(arende.användare.epost); onClose() }}
+                  className="mt-3 text-xs text-violet-600 hover:text-violet-500 font-medium flex items-center gap-1 transition-colors"
+                >
+                  Notifieringsinställningar →
+                </button>
+              )}
             </div>
 
             {/* Status */}
@@ -650,8 +659,9 @@ function ArendeModal({
 // ---------------------------------------------------------------------------
 
 interface Props {
-  onPendingNotiser?: (items: PendingNotis[]) => void
-  defaultOpenId?:   string
+  onPendingNotiser?:  (items: PendingNotis[]) => void
+  defaultOpenId?:     string
+  onÖppnaAnvändare?:  (epost: string) => void
 }
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
@@ -668,7 +678,7 @@ function StatChip({ label, value, color }: { label: string; value: number; color
   )
 }
 
-export default function SupportInbox({ onPendingNotiser, defaultOpenId }: Props) {
+export default function SupportInbox({ onPendingNotiser, defaultOpenId, onÖppnaAnvändare }: Props) {
   const [ärenden, setÄrenden]           = useState<ArendeAdmin[]>(() => executeOverdueActions(INITIAL_ÄRENDEN))
   const [öppetId, setÖppetId]           = useState<string | null>(defaultOpenId ?? null)
   const [statusFilter, setStatus]       = useState<ArendeStatus | ''>('')
@@ -873,6 +883,7 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId }: Props)
           onSchemalägg={handleSchemalägg}
           onAvbrytSchema={handleAvbrytSchema}
           onUpdateSchema={handleUpdateSchema}
+          onÖppnaAnvändare={onÖppnaAnvändare}
         />
       )}
     </div>

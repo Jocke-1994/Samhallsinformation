@@ -28,6 +28,7 @@ export default function AdminPage() {
   const [notiser, setNotiser]             = useState<PendingNotis[]>([])
   const [notisDropdown, setNotisDropdown] = useState(false)
   const [inboxOpenId, setInboxOpenId]     = useState<string | undefined>(undefined)
+  const [öppnaAnvEpost, setÖppnaAnvEpost] = useState<string | undefined>(undefined)
   const [lästaNyckar, setLästaNyckar]     = useState<Set<string>>(new Set())
   const [borttagnaNyckar, setBorttagnaNyckar] = useState<Set<string>>(new Set())
 
@@ -161,12 +162,19 @@ export default function AdminPage() {
                   setInboxOpenId(id)
                   setSection('support-inbox')
                 }}
+                defaultÖppnaEpost={öppnaAnvEpost}
+                defaultFlik="notifinstallningar"
+                key={öppnaAnvEpost}
               />
             )}
             {section === 'support-inbox' && (
               <SupportInbox
                 onPendingNotiser={handlePendingNotiser}
                 defaultOpenId={inboxOpenId}
+                onÖppnaAnvändare={epost => {
+                  setÖppnaAnvEpost(epost)
+                  setSection('anvandare')
+                }}
                 key={inboxOpenId}
               />
             )}

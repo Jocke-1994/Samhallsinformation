@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd'
@@ -445,10 +445,12 @@ function RaderaModal({ antal, namn, onBekräfta, onStäng }: {
 // ---------------------------------------------------------------------------
 
 interface AnvandareProps {
-  onÖppnaÄrende?: (arendeId: string) => void
+  onÖppnaÄrende?:     (arendeId: string) => void
+  defaultÖppnaEpost?: string
+  defaultFlik?:       DetaljFlik
 }
 
-export default function Anvandare({ onÖppnaÄrende }: AnvandareProps) {
+export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik }: AnvandareProps) {
   const [användare, setAnvändare]               = useState<Användare[]>(INITIAL_ANVÄNDARE)
   const [rollFilter, setRollFilter]             = useState<Roll | 'Alla'>('Alla')
   const [statusFilter, setStatusFilter]         = useState<Status | 'Alla'>('Alla')
@@ -478,6 +480,12 @@ export default function Anvandare({ onÖppnaÄrende }: AnvandareProps) {
   function toggleAllaMarkerade() {
     setMarkerade(prev => prev.size === filtrerade.length ? new Set() : new Set(filtrerade.map(u => u.id)))
   }
+
+  useEffect(() => {
+    if (!defaultÖppnaEpost) return
+    const u = INITIAL_ANVÄNDARE.find(x => x.epost === defaultÖppnaEpost)
+    if (u) { setVald(u); setDetaljFlik(defaultFlik ?? 'notifinstallningar') }
+  }, [defaultÖppnaEpost, defaultFlik])
 
   function öppnaDetalj(u: Användare) { setVald(u); setDetaljFlik('oversikt') }
 
