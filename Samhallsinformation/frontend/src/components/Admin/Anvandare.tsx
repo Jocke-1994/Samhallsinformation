@@ -2,7 +2,9 @@ import { useState } from 'react'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd'
-type DetaljFlik = 'oversikt' | 'notifinstallningar' | 'notishistorik' | 'aktivitet'
+type DetaljFlik = 'oversikt' | 'notifinstallningar' | 'notishistorik' | 'aktivitet' | 'ärenden'
+type ArendeStatusMini = 'Öppet' | 'Under behandling' | 'Hanterat' | 'Stängt'
+interface ArendeMini { id: string; kategori: string; amne: string; status: ArendeStatusMini; skapat: string }
 type RollÄndringTyp = 'ersätt' | 'lägg-till'
 type Inloggningsmetod = 'E-post' | 'Google' | 'BankID'
 type KontaktTyp = 'E-post' | 'SMS'
@@ -191,6 +193,31 @@ const MOCK_AKTIVITET: Record<number, AktivitetRad[]> = {
     { tid: 'Igår 20:10',   händelse: 'Läste 4 artiklar från Polisen' },
     { tid: '2026-03-20',   händelse: 'Skapade konto'                 },
   ],
+}
+
+const MOCK_ÄRENDEN: Record<number, ArendeMini[]> = {
+  2: [ // Anna Svensson
+    { id: 'SUP-0031', kategori: 'Konto',          amne: 'Vill ta bort mitt konto',                         status: 'Hanterat',         skapat: '2026-03-01' },
+  ],
+  3: [ // Marcus Lindström
+    { id: 'SUP-0038', kategori: 'Tekniskt fel',   amne: 'Källknappen för SMHI visas inte i menyn',         status: 'Öppet',            skapat: '2026-03-10' },
+    { id: 'SUP-0024', kategori: 'Notifieringar',  amne: 'Vill ha notiser från fler regioner',              status: 'Stängt',           skapat: '2026-01-20' },
+  ],
+  4: [ // Emma Karlsson
+    { id: 'SUP-0041', kategori: 'Konto',          amne: 'Kan inte byta lösenord, får felmeddelande',       status: 'Öppet',            skapat: '2026-03-18' },
+    { id: 'SUP-0028', kategori: 'GDPR & uppgifter', amne: 'Fråga om GDPR och vilken data som sparas',     status: 'Stängt',           skapat: '2026-02-20' },
+  ],
+  5: [ // Peter Nilsson
+    { id: 'SUP-0042', kategori: 'Notifieringar',  amne: 'Får inte notiser från Polisen trots att det är inställt', status: 'Under behandling', skapat: '2026-03-15' },
+    { id: 'SUP-0019', kategori: 'Notifieringar',  amne: 'Notifieringar skickas vid fel tidpunkt',          status: 'Hanterat',         skapat: '2026-02-10' },
+  ],
+}
+
+const ARENDE_STATUS_CLS: Record<ArendeStatusMini, string> = {
+  'Öppet':            'bg-blue-50 text-blue-700 border border-blue-200',
+  'Under behandling': 'bg-amber-50 text-amber-700 border border-amber-200',
+  'Hanterat':         'bg-green-50 text-green-700 border border-green-200',
+  'Stängt':           'bg-slate-100 text-slate-500 border border-slate-200',
 }
 
 const MOCK_NOTIF: Record<number, NotifKälla[]> = {
@@ -417,7 +444,11 @@ function RaderaModal({ antal, namn, onBekräfta, onStäng }: {
 // Huvudkomponent
 // ---------------------------------------------------------------------------
 
-export default function Anvandare() {
+interface AnvandareProps {
+  onÖppnaÄrende?: (arendeId: string) => void
+}
+
+export default function Anvandare({ onÖppnaÄrende }: AnvandareProps) {
   const [användare, setAnvändare]               = useState<Användare[]>(INITIAL_ANVÄNDARE)
   const [rollFilter, setRollFilter]             = useState<Roll | 'Alla'>('Alla')
   const [statusFilter, setStatusFilter]         = useState<Status | 'Alla'>('Alla')
@@ -642,9 +673,18 @@ export default function Anvandare() {
         </table>
       </div>
 
-      {/* Detaljpanel */}
+      {/* Detaljpanel — backdrop */}
       {vald && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="fixed inset-0 z-30 bg-black/20" onClick={() => setVald(null)} />
+      )}
+
+      {/* Detaljpanel — slide-in från höger */}
+      <div
+        className={`fixed top-0 right-0 bottom-0 z-40 w-[700px] bg-white shadow-2xl overflow-y-auto flex flex-col transition-transform duration-300 ease-out ${vald ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ pointerEvents: vald ? 'auto' : 'none' }}
+      >
+      {vald && (
+        <div className="flex flex-col flex-1">
 
           {/* Header */}
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -674,6 +714,7 @@ export default function Anvandare() {
               { id: 'notifinstallningar', label: 'Notifieringsinställningar'  },
               { id: 'notishistorik',      label: 'Notishistorik'             },
               { id: 'aktivitet',          label: 'Aktivitet'                 },
+              { id: 'ärenden',            label: 'Supportärenden'            },
             ] as { id: DetaljFlik; label: string }[]).map(f => (
               <button key={f.id} onClick={() => setDetaljFlik(f.id)}
                 className={`text-sm font-medium px-4 py-3 border-b-2 transition-colors ${
@@ -879,6 +920,47 @@ export default function Anvandare() {
             </div>
           )}
 
+          {/* ── Supportärenden ── */}
+          {detaljFlik === 'ärenden' && (
+            <div>
+              {(MOCK_ÄRENDEN[vald.id] ?? []).length === 0 ? (
+                <p className="px-6 py-10 text-center text-sm text-slate-400">Inga supportärenden kopplade till den här användaren.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase tracking-wide">
+                      <th className="text-left px-6 py-3 font-medium">Ärende-ID</th>
+                      <th className="text-left px-4 py-3 font-medium">Kategori</th>
+                      <th className="text-left px-4 py-3 font-medium">Ämne</th>
+                      <th className="text-left px-4 py-3 font-medium">Status</th>
+                      <th className="text-left px-4 py-3 font-medium">Skapat</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {MOCK_ÄRENDEN[vald.id].map(a => (
+                      <tr
+                        key={a.id}
+                        onClick={() => onÖppnaÄrende?.(a.id)}
+                        className={`hover:bg-slate-50 transition-colors ${onÖppnaÄrende ? 'cursor-pointer' : ''}`}
+                      >
+                        <td className="px-6 py-3 font-mono text-xs text-slate-400">{a.id}</td>
+                        <td className="px-4 py-3 text-xs text-slate-400">
+                          <span className="bg-slate-100 px-2 py-0.5 rounded-full">{a.kategori}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{a.amne}</td>
+                        <td className="px-4 py-3">
+                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${ARENDE_STATUS_CLS[a.status]}`}>{a.status}</span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-400">{a.skapat}</td>
+                        {onÖppnaÄrende && <td className="pr-4 py-3 text-right text-xs text-violet-600">Öppna →</td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
           {/* ── Aktivitet ── */}
           {detaljFlik === 'aktivitet' && (
             <div className="divide-y divide-slate-50">
@@ -897,6 +979,8 @@ export default function Anvandare() {
 
         </div>
       )}
+      </div>
+
     </div>
   )
 }

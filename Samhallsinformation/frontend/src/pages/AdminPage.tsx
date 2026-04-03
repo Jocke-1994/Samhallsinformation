@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import AdminSidebar, { type AdminSection } from '../components/Admin/AdminSidebar'
 import Oversikt from '../components/Admin/Oversikt'
 import Kallhantering from '../components/Admin/Kallhantering'
 import Felsökning from '../components/Admin/Felsökning'
 import Anvandare from '../components/Admin/Anvandare'
+import SupportInbox, { type PendingNotis } from '../components/Admin/SupportInbox'
 
 const SECTION_LABELS: Record<AdminSection, string> = {
   'oversikt':       'Översikt',
@@ -16,8 +17,42 @@ const SECTION_LABELS: Record<AdminSection, string> = {
   'impersonation':  'Impersonation',
 }
 
+const NOTIS_LABELS: Record<PendingNotis['typ'], string> = {
+  'påminnelse': 'Påminnelse',
+  'tilldelad':  'Tilldelad till dig',
+}
+
 export default function AdminPage() {
-  const [section, setSection] = useState<AdminSection>('oversikt')
+  const [section, setSection]             = useState<AdminSection>('oversikt')
+  const [roll, setRoll]                   = useState<'Admin' | 'Support'>('Admin')
+  const [notiser, setNotiser]             = useState<PendingNotis[]>([])
+  const [notisDropdown, setNotisDropdown] = useState(false)
+  const [inboxOpenId, setInboxOpenId]     = useState<string | undefined>(undefined)
+  const [lästaNyckar, setLästaNyckar]     = useState<Set<string>>(new Set())
+  const [borttagnaNyckar, setBorttagnaNyckar] = useState<Set<string>>(new Set())
+
+  function notisNyckel(n: PendingNotis) { return `${n.arendeId}-${n.typ}` }
+  function markeraLäst(n: PendingNotis) { setLästaNyckar(prev => new Set([...prev, notisNyckel(n)])) }
+  function taBortNotis(n: PendingNotis) { setBorttagnaNyckar(prev => new Set([...prev, notisNyckel(n)])) }
+  function markeraAllaLästa() { setLästaNyckar(new Set(unikaNotiser.map(notisNyckel))) }
+
+  const handlePendingNotiser = useCallback((items: PendingNotis[]) => {
+    setNotiser(items)
+  }, [])
+
+  function öppnaÄrende(arendeId: string) {
+    setInboxOpenId(arendeId)
+    setSection('support-inbox')
+    setNotisDropdown(false)
+  }
+
+  const unikaNotiser = notiser.filter(
+    (n, i, arr) => arr.findIndex(x => x.arendeId === n.arendeId && x.typ === n.typ) === i
+  ).filter(n => !borttagnaNyckar.has(notisNyckel(n)))
+
+  const olästaNotiser   = unikaNotiser.filter(n => !lästaNyckar.has(notisNyckel(n)))
+  const påminnelseCount = olästaNotiser.filter(n => n.typ === 'påminnelse').length
+  const totalCount      = olästaNotiser.length
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
@@ -30,7 +65,85 @@ export default function AdminPage() {
         <div className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0">
           <h1 className="text-lg font-semibold text-slate-900">{SECTION_LABELS[section]}</h1>
           <div className="flex items-center gap-3">
-            <span className="text-xs font-medium bg-red-100 text-red-700 px-3 py-1 rounded-full">Admin-läge</span>
+
+            {/* Notis-klocka */}
+            <div className="relative">
+              <button
+                onClick={() => setNotisDropdown(v => !v)}
+                className="relative w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors"
+                title="Notiser"
+              >
+                <span className="text-lg">🔔</span>
+                {totalCount > 0 && (
+                  <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                    {totalCount}
+                  </span>
+                )}
+              </button>
+
+              {notisDropdown && (
+                <>
+                  {/* Backdrop */}
+                  <div className="fixed inset-0 z-30" onClick={() => setNotisDropdown(false)} />
+
+                  {/* Dropdown */}
+                  <div className="absolute right-0 top-11 z-40 w-80 bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                      <p className="text-sm font-semibold text-slate-800">Notiser</p>
+                      {olästaNotiser.length > 0 && (
+                        <button onClick={markeraAllaLästa} className="text-xs text-violet-600 hover:text-violet-500">Markera alla lästa</button>
+                      )}
+                    </div>
+
+                    {unikaNotiser.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-sm text-slate-400">Inga aktiva notiser.</div>
+                    ) : (
+                      <ul className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
+                        {unikaNotiser.map((n, i) => {
+                          const läst = lästaNyckar.has(notisNyckel(n))
+                          return (
+                            <li key={i} className={`flex items-start gap-2 px-4 py-3 ${läst ? 'opacity-50' : 'bg-slate-50/60'}`}>
+                              <button
+                                onClick={() => { markeraLäst(n); öppnaÄrende(n.arendeId) }}
+                                className="flex-1 text-left flex flex-col gap-0.5 hover:opacity-80 transition-opacity"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span>{n.typ === 'påminnelse' ? '⏰' : '👤'}</span>
+                                  <span className={`text-xs font-medium ${läst ? 'text-slate-400' : n.typ === 'påminnelse' ? 'text-red-600' : 'text-violet-600'}`}>
+                                    {NOTIS_LABELS[n.typ]}
+                                  </span>
+                                  <span className="font-mono text-xs text-slate-400 ml-auto">{n.arendeId}</span>
+                                </div>
+                                <p className="text-xs text-slate-600 truncate pl-6">{n.amne}</p>
+                                {n.notering && <p className="text-xs text-slate-400 truncate pl-6 italic">{n.notering}</p>}
+                              </button>
+                              <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                                {!läst && (
+                                  <button onClick={() => markeraLäst(n)} title="Markera läst" className="text-slate-300 hover:text-slate-500 text-sm transition-colors">👁</button>
+                                )}
+                                <button onClick={() => taBortNotis(n)} title="Ta bort" className="text-slate-300 hover:text-red-400 text-sm transition-colors">✕</button>
+                              </div>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={() => setRoll(r => r === 'Admin' ? 'Support' : 'Admin')}
+              title="Klicka för att byta roll"
+              className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${
+                roll === 'Admin'
+                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+              }`}
+            >
+              {roll}-läge
+            </button>
             <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700">A</div>
           </div>
         </div>
@@ -42,9 +155,23 @@ export default function AdminPage() {
             {section === 'oversikt'    && <Oversikt onNavigate={setSection} />}
             {section === 'kallor'      && <Kallhantering />}
             {section === 'felsökning'  && <Felsökning />}
-            {section === 'anvandare'   && <Anvandare />}
+            {section === 'anvandare' && (
+              <Anvandare
+                onÖppnaÄrende={id => {
+                  setInboxOpenId(id)
+                  setSection('support-inbox')
+                }}
+              />
+            )}
+            {section === 'support-inbox' && (
+              <SupportInbox
+                onPendingNotiser={handlePendingNotiser}
+                defaultOpenId={inboxOpenId}
+                key={inboxOpenId}
+              />
+            )}
 
-            {section !== 'oversikt' && section !== 'kallor' && section !== 'felsökning' && section !== 'anvandare' && (
+            {section !== 'oversikt' && section !== 'kallor' && section !== 'felsökning' && section !== 'anvandare' && section !== 'support-inbox' && (
               <div className="flex flex-col items-center justify-center py-32 text-center">
                 <p className="text-4xl mb-4">🚧</p>
                 <p className="text-lg font-semibold text-slate-700">{SECTION_LABELS[section]}</p>
