@@ -52,9 +52,8 @@ export default function AdminPage() {
     (n, i, arr) => arr.findIndex(x => x.arendeId === n.arendeId && x.typ === n.typ) === i
   ).filter(n => !borttagnaNyckar.has(notisNyckel(n)))
 
-  const olästaNotiser   = unikaNotiser.filter(n => !lästaNyckar.has(notisNyckel(n)))
-  const påminnelseCount = olästaNotiser.filter(n => n.typ === 'påminnelse').length
-  const totalCount      = olästaNotiser.length
+  const olästaNotiser = unikaNotiser.filter(n => !lästaNyckar.has(notisNyckel(n)))
+  const totalCount    = olästaNotiser.length
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
