@@ -6,6 +6,7 @@ import Felsökning from '../components/Admin/Felsökning'
 import Anvandare from '../components/Admin/Anvandare'
 import SupportInbox, { type PendingNotis } from '../components/Admin/SupportInbox'
 import Rapporter from '../components/Admin/Rapporter'
+import Aktivitetslogg from '../components/Admin/Aktivitetslogg'
 
 const SECTION_LABELS: Record<AdminSection, string> = {
   'oversikt':       'Översikt',
@@ -179,9 +180,10 @@ export default function AdminPage() {
               />
             )}
 
-            {section === 'rapporter' && <Rapporter onNavigate={setSection} />}
+            {section === 'rapporter'      && <Rapporter onNavigate={setSection} />}
+            {section === 'aktivitetslogg' && <Aktivitetslogg />}
 
-            {section !== 'oversikt' && section !== 'kallor' && section !== 'felsökning' && section !== 'anvandare' && section !== 'support-inbox' && section !== 'rapporter' && (
+            {section !== 'oversikt' && section !== 'kallor' && section !== 'felsökning' && section !== 'anvandare' && section !== 'support-inbox' && section !== 'rapporter' && section !== 'aktivitetslogg' && (
               <div className="flex flex-col items-center justify-center py-32 text-center">
                 <p className="text-4xl mb-4">🚧</p>
                 <p className="text-lg font-semibold text-slate-700">{SECTION_LABELS[section]}</p>
