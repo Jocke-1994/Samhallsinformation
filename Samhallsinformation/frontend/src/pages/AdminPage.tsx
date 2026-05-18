@@ -5,6 +5,7 @@ import Kallhantering from '../components/Admin/Kallhantering'
 import Felsökning from '../components/Admin/Felsökning'
 import Anvandare from '../components/Admin/Anvandare'
 import SupportInbox, { type PendingNotis } from '../components/Admin/SupportInbox'
+import Rapporter from '../components/Admin/Rapporter'
 
 const SECTION_LABELS: Record<AdminSection, string> = {
   'oversikt':       'Översikt',
@@ -51,9 +52,8 @@ export default function AdminPage() {
     (n, i, arr) => arr.findIndex(x => x.arendeId === n.arendeId && x.typ === n.typ) === i
   ).filter(n => !borttagnaNyckar.has(notisNyckel(n)))
 
-  const olästaNotiser   = unikaNotiser.filter(n => !lästaNyckar.has(notisNyckel(n)))
-  const påminnelseCount = olästaNotiser.filter(n => n.typ === 'påminnelse').length
-  const totalCount      = olästaNotiser.length
+  const olästaNotiser = unikaNotiser.filter(n => !lästaNyckar.has(notisNyckel(n)))
+  const totalCount    = olästaNotiser.length
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
@@ -179,7 +179,9 @@ export default function AdminPage() {
               />
             )}
 
-            {section !== 'oversikt' && section !== 'kallor' && section !== 'felsökning' && section !== 'anvandare' && section !== 'support-inbox' && (
+            {section === 'rapporter' && <Rapporter onNavigate={setSection} />}
+
+            {section !== 'oversikt' && section !== 'kallor' && section !== 'felsökning' && section !== 'anvandare' && section !== 'support-inbox' && section !== 'rapporter' && (
               <div className="flex flex-col items-center justify-center py-32 text-center">
                 <p className="text-4xl mb-4">🚧</p>
                 <p className="text-lg font-semibold text-slate-700">{SECTION_LABELS[section]}</p>

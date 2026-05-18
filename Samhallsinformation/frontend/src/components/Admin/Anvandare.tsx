@@ -537,10 +537,6 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
 
   const allaMarkerade = filtrerade.length > 0 && markerade.size === filtrerade.length
 
-  // Hjälpare för notif-fliken: slå upp kontaktuppgiftsvärde på en användare
-  function kontaktVärde(u: Användare, id: number): string {
-    return u.kontaktuppgifter.find(k => k.id === id)?.värde ?? `#${id}`
-  }
 
   const harOverifierad = (u: Användare) => u.kontaktuppgifter.some(k => !k.verifierad)
 

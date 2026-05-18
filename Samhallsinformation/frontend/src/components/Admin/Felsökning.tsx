@@ -212,17 +212,6 @@ const RESULTAT_CLS: Record<HistorikRad['resultat'], string> = {
   'Fel':     'bg-red-100 text-red-700 border border-red-200',
 }
 
-function simuleraPing(
-  setHälsa: (h: Hälsa) => void,
-  resultat: Hälsa,
-  svarstid?: (ms: string) => void,
-) {
-  setHälsa('Kontrollerar...')
-  setTimeout(() => {
-    setHälsa(resultat)
-    if (svarstid) svarstid(`${Math.floor(Math.random() * 80 + 10)} ms`)
-  }, 1200)
-}
 
 export default function Felsökning() {
   const [tjänster, setTjänster] = useState<Tjänst[]>(INITIAL_TJÄNSTER)
