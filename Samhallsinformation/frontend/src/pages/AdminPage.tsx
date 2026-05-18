@@ -8,10 +8,12 @@ import SupportInbox, { type PendingNotis } from '../components/Admin/SupportInbo
 import Rapporter from '../components/Admin/Rapporter'
 import Aktivitetslogg from '../components/Admin/Aktivitetslogg'
 import Impersonation from '../components/Admin/Impersonation'
+import AdminUppdateringar from '../components/Admin/AdminUppdateringar'
 
 const SECTION_LABELS: Record<AdminSection, string> = {
   'oversikt':       'Översikt',
   'kallor':         'Källhantering',
+  'uppdateringar':  'Uppdateringar',
   'anvandare':      'Användarhantering',
   'support-inbox':  'Support-inbox',
   'aktivitetslogg': 'Aktivitetslogg',
@@ -181,11 +183,12 @@ export default function AdminPage() {
               />
             )}
 
+            {section === 'uppdateringar'  && <AdminUppdateringar />}
             {section === 'rapporter'      && <Rapporter onNavigate={setSection} />}
             {section === 'aktivitetslogg' && <Aktivitetslogg />}
             {section === 'impersonation'  && <Impersonation onNavigate={setSection} />}
 
-            {section !== 'oversikt' && section !== 'kallor' && section !== 'felsökning' && section !== 'anvandare' && section !== 'support-inbox' && section !== 'rapporter' && section !== 'aktivitetslogg' && section !== 'impersonation' && (
+            {section !== 'oversikt' && section !== 'kallor' && section !== 'uppdateringar' && section !== 'felsökning' && section !== 'anvandare' && section !== 'support-inbox' && section !== 'rapporter' && section !== 'aktivitetslogg' && section !== 'impersonation' && (
               <div className="flex flex-col items-center justify-center py-32 text-center">
                 <p className="text-4xl mb-4">🚧</p>
                 <p className="text-lg font-semibold text-slate-700">{SECTION_LABELS[section]}</p>
