@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import Sidebar from './components/Sidebar/Sidebar'
 import NewsFeed from './components/NewsFeed/NewsFeed'
@@ -47,14 +47,40 @@ function HomePage() {
   )
 }
 
+function ImpersonationBanner() {
+  const [params] = useSearchParams()
+  const namn = params.get('namn')
+  if (!params.has('impersonating') || !namn) return null
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 px-6 py-2.5 flex items-center justify-between shadow-md">
+      <div className="flex items-center gap-2.5">
+        <span className="text-base">🎭</span>
+        <span className="text-sm font-medium text-white">
+          Du är inloggad som <strong>{namn}</strong> — adminläge
+        </span>
+      </div>
+      <button
+        onClick={() => window.close()}
+        className="text-xs font-semibold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg transition-colors"
+      >
+        Avsluta session
+      </button>
+    </div>
+  )
+}
+
 export default function App() {
   return (
-    <Routes>
+    <>
+      <ImpersonationBanner />
+      <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/profil" element={<ProfilePage />} />
       {import.meta.env.VITE_ADMIN_ENABLED === 'true' && (
         <Route path="/admin" element={<AdminPage />} />
       )}
     </Routes>
+    </>
   )
 }

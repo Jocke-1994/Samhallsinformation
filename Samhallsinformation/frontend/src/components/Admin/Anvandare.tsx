@@ -440,6 +440,60 @@ function RaderaModal({ antal, namn, onBekräfta, onStäng }: {
   )
 }
 
+function ImpersonationModal({ användare, onBekräfta, onStäng }: {
+  användare: Användare
+  onBekräfta: (kommentar: string) => void
+  onStäng: () => void
+}) {
+  const [kommentar, setKommentar] = useState('')
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="bg-gradient-to-br from-amber-500 to-amber-700 px-6 py-5 flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-white">Logga in som användare</h2>
+            <p className="text-amber-100 text-sm mt-0.5">{användare.namn}</p>
+          </div>
+          <button onClick={onStäng} className="text-amber-200 hover:text-white transition-colors">✕</button>
+        </div>
+        <div className="px-6 py-5 flex flex-col gap-4">
+          <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
+            <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700 shrink-0">
+              {användare.namn.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-800">{användare.namn}</p>
+              <p className="text-xs text-slate-400">{användare.epost} · ID #{användare.id}</p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+              Anteckning <span className="normal-case text-slate-400 font-normal">(frivillig)</span>
+            </label>
+            <textarea
+              rows={2}
+              value={kommentar}
+              onChange={e => setKommentar(e.target.value)}
+              placeholder="T.ex. 'Kontrollera att +46 70 123 45 67 tar emot SMS'"
+              className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none placeholder:text-slate-300"
+            />
+          </div>
+          <ul className="text-xs text-slate-600 flex flex-col gap-1.5 pl-1">
+            <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0">•</span>En ny flik öppnas med användarens vy</li>
+            <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0">•</span>Användaren märker ingenting och loggas inte ut</li>
+            <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0">•</span>Sessionen loggas i aktivitetsloggen</li>
+          </ul>
+          <div className="flex gap-3">
+            <button onClick={onStäng} className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Avbryt</button>
+            <button onClick={() => onBekräfta(kommentar)} className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold rounded-xl transition-colors">Öppna session</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Huvudkomponent
 // ---------------------------------------------------------------------------
@@ -462,6 +516,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   const [enkildStängAv, setEnkildStängAv]       = useState<Användare | null>(null)
   const [enkildRadera, setEnkildRadera]         = useState<Användare | null>(null)
   const [enkildRollÄndring, setEnkildRollÄndring] = useState<Användare | null>(null)
+  const [impersonationMål, setImpersonationMål]   = useState<Användare | null>(null)
 
   const filtrerade = användare.filter(u => {
     if (rollFilter !== 'Alla' && !u.roller.includes(rollFilter)) return false
@@ -556,6 +611,16 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
       )}
       {enkildStängAv && (
         <StängAvModal antal={1} onSpara={till => stängAvEnkild(enkildStängAv, till)} onStäng={() => setEnkildStängAv(null)} />
+      )}
+      {impersonationMål && (
+        <ImpersonationModal
+          användare={impersonationMål}
+          onBekräfta={(_kommentar) => {
+            window.open(`/?impersonating=${impersonationMål.id}&namn=${encodeURIComponent(impersonationMål.namn)}`, '_blank')
+            setImpersonationMål(null)
+          }}
+          onStäng={() => setImpersonationMål(null)}
+        />
       )}
       {enkildRadera && (
         <RaderaModal antal={1} namn={enkildRadera.namn} onBekräfta={() => {
@@ -706,7 +771,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white transition-colors">Logga in som</button>
+              <button onClick={() => setImpersonationMål(vald)} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white transition-colors">Logga in som</button>
               <button onClick={() => setVald(null)} className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none">✕</button>
             </div>
           </div>
