@@ -16,16 +16,39 @@ const FAQ_ITEMS: FaqItem[] = [
 const FAQ_KATEGORIER: FaqKategori[] = ['Notifieringar', 'Mina källor', 'Konto', 'Uppdateringar']
 
 export default function FaqKort() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null)
+  const [openIndex, setOpenIndex]       = useState<number | null>(null)
   const [aktivKategori, setAktivKategori] = useState<FaqKategori | 'alla'>('alla')
+  const [sökning, setSökning]           = useState('')
 
-  const visade = FAQ_ITEMS.filter(item => aktivKategori === 'alla' || item.kategori === aktivKategori)
+  const söktrim = sökning.trim().toLowerCase()
+
+  const visade = FAQ_ITEMS.filter(item => {
+    const katMatch = aktivKategori === 'alla' || item.kategori === aktivKategori
+    const sökMatch = !söktrim || item.q.toLowerCase().includes(söktrim) || item.a.toLowerCase().includes(söktrim)
+    return katMatch && sökMatch
+  })
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-200">
         <h2 className="text-lg font-semibold text-slate-900 text-center">Vanliga frågor</h2>
         <p className="text-sm text-slate-400 mt-0.5 text-center">Snabbsvar på de vanligaste frågorna</p>
+        <div className="relative mt-3">
+          <input
+            type="text"
+            value={sökning}
+            onChange={e => { setSökning(e.target.value); setOpenIndex(null) }}
+            placeholder="Sök bland frågorna…"
+            className="w-full pl-9 pr-8 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+          />
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
+          {sökning && (
+            <button
+              onClick={() => setSökning('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs leading-none"
+            >✕</button>
+          )}
+        </div>
       </div>
 
       {/* Filterflikar */}
@@ -58,6 +81,11 @@ export default function FaqKort() {
       </div>
 
       <div className="divide-y divide-slate-100">
+        {visade.length === 0 && (
+          <div className="px-6 py-8 text-center text-sm text-slate-400">
+            Inga frågor matchade <strong className="text-slate-500">"{sökning}"</strong>.
+          </div>
+        )}
         {visade.map((item, i) => (
           <div key={`${aktivKategori}-${i}`}>
             <button
