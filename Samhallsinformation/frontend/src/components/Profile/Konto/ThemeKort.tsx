@@ -30,7 +30,7 @@ export default function ThemeKort() {
           role="switch"
           aria-checked={dark}
         >
-          <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${dark ? 'translate-x-6' : 'translate-x-0'}`} />
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full shadow transition-transform duration-200 ${dark ? 'translate-x-6' : 'translate-x-0'}`} style={{ backgroundColor: 'white' }} />
         </button>
       </div>
     </div>
