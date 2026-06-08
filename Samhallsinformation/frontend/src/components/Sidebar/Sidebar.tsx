@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { fetchSources } from '../../api/sources'
 import SourceButton from './SourceButton'
 import type { Source } from '../../types'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth, type SystemRoll } from '../../context/AuthContext'
 
 interface Props {
   selectedSourceId: number | null
@@ -19,6 +20,18 @@ const PROFILE_SECTIONS = [
   { id: 'support',       label: 'Support',        icon: '💬' },
 ]
 
+const ROLL_CONFIG: Record<SystemRoll, { label: string; färg: string; initial: string }> = {
+  'Admin':     { label: 'Admin',    färg: 'bg-red-100 text-red-700',    initial: 'A' },
+  'Support':   { label: 'Support',  färg: 'bg-blue-100 text-blue-700',  initial: 'S' },
+  'Användare': { label: 'Användare', färg: 'bg-violet-100 text-violet-700', initial: 'JO' },
+}
+
+const TILLÅTNA_VYN: Record<SystemRoll, SystemRoll[]> = {
+  'Admin':     ['Admin', 'Support', 'Användare'],
+  'Support':   ['Support', 'Användare'],
+  'Användare': ['Användare'],
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center py-3">
@@ -28,9 +41,10 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 export default function Sidebar({ selectedSourceId, onSelectSource, unreadSourceIds }: Props) {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { isLoggedIn, logout } = useAuth()
+  const navigate  = useNavigate()
+  const location  = useLocation()
+  const { isLoggedIn, roll, aktivVy, logout, byttVy } = useAuth()
+  const [dropdownÖppen, setDropdownÖppen] = useState(false)
 
   const { data: sources = [] } = useQuery<Source[]>({
     queryKey: ['sources'],
@@ -41,6 +55,26 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
   const activeSection = isProfilePage
     ? new URLSearchParams(location.search).get('section') ?? ''
     : ''
+
+  const vynAttVälja = TILLÅTNA_VYN[roll].filter(v => v !== aktivVy)
+
+  function välj(vy: SystemRoll) {
+    byttVy(vy)
+    setDropdownÖppen(false)
+    if (vy === 'Admin' || vy === 'Support') {
+      navigate('/admin')
+    } else {
+      navigate('/')
+    }
+  }
+
+  function hanteraLogout() {
+    logout()
+    setDropdownÖppen(false)
+    navigate('/')
+  }
+
+  const aktivConfig = ROLL_CONFIG[aktivVy]
 
   return (
     <nav className="flex flex-col h-full w-56 bg-white border-r border-slate-200 px-3 py-5">
@@ -96,35 +130,85 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
         </div>
       </div>
 
-      {/* Profilknapp längst ner */}
-      <div className="border-t border-slate-200 pt-3 mt-3">
+      {/* Profilknapp med dropdown */}
+      <div className="border-t border-slate-200 pt-3 mt-3 relative">
+
+        {dropdownÖppen && (
+          <>
+            <div className="fixed inset-0 z-30" onClick={() => setDropdownÖppen(false)} />
+            <div className="absolute bottom-full left-0 right-0 mb-2 z-40 bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden">
+
+              {/* Användarprofil */}
+              <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-100">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                  JO
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 truncate">Joakim Rehn</p>
+                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${aktivConfig.färg}`}>
+                    {aktivConfig.label}
+                  </span>
+                </div>
+              </div>
+
+              {/* Rollväljare — visas bara om man har fler alternativ */}
+              {vynAttVälja.length > 0 && (
+                <div className="px-3 py-2 border-b border-slate-100">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1">Byt vy</p>
+                  <div className="flex flex-col gap-0.5">
+                    {TILLÅTNA_VYN[roll].map(vy => (
+                      <button
+                        key={vy}
+                        onClick={() => välj(vy)}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-between ${
+                          vy === aktivVy
+                            ? 'bg-violet-50 text-violet-700'
+                            : 'text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>{ROLL_CONFIG[vy].label}</span>
+                        {vy === aktivVy && <span className="text-violet-400 text-xs">●</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Logga ut */}
+              {isLoggedIn && (
+                <button
+                  onClick={hanteraLogout}
+                  className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  Logga ut
+                </button>
+              )}
+            </div>
+          </>
+        )}
+
         <button
-          onClick={() => navigate('/profil')}
+          onClick={() => setDropdownÖppen(v => !v)}
           className={`
             w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150
-            ${isProfilePage && !activeSection
-              ? 'bg-violet-100 text-violet-700'
-              : 'hover:bg-slate-100 text-slate-700'}
+            ${dropdownÖppen ? 'bg-slate-100' : 'hover:bg-slate-100 text-slate-700'}
           `}
         >
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
             {isLoggedIn ? 'JO' : '?'}
           </div>
-          <div className="text-left min-w-0">
+          <div className="text-left min-w-0 flex-1">
             <p className="text-sm font-semibold text-slate-900 truncate">Min profil</p>
             <p className="text-xs text-slate-400 truncate">
               {isLoggedIn ? 'Inställningar & konto' : 'Logga in för att fortsätta'}
             </p>
           </div>
+          {isLoggedIn && roll !== 'Användare' && (
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${aktivConfig.färg}`}>
+              {aktivConfig.initial !== 'JO' ? aktivConfig.initial : aktivVy.substring(0, 1)}
+            </span>
+          )}
         </button>
-        {isLoggedIn && (
-          <button
-            onClick={() => { logout(); navigate('/') }}
-            className="w-full text-left px-3 py-1.5 text-xs text-slate-400 hover:text-red-500 transition-colors mt-0.5"
-          >
-            Logga ut
-          </button>
-        )}
       </div>
 
     </nav>

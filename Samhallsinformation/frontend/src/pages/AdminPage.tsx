@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AdminSidebar, { type AdminSection, type AdminRoll } from '../components/Admin/AdminSidebar'
 import Oversikt from '../components/Admin/Oversikt'
 import Kallhantering from '../components/Admin/Kallhantering'
@@ -10,6 +11,7 @@ import Aktivitetslogg from '../components/Admin/Aktivitetslogg'
 import Impersonation from '../components/Admin/Impersonation'
 import AdminUppdateringar from '../components/Admin/AdminUppdateringar'
 import AdminFaq from '../components/Admin/AdminFaq'
+import { useAuth, type SystemRoll } from '../context/AuthContext'
 
 const SECTION_LABELS: Record<AdminSection, string> = {
   'oversikt':       'Översikt',
@@ -29,25 +31,42 @@ const NOTIS_LABELS: Record<PendingNotis['typ'], string> = {
   'tilldelad':  'Tilldelad till dig',
 }
 
+const ROLL_FÄRG: Record<AdminRoll, string> = {
+  'Admin':   'bg-red-100 text-red-700',
+  'Support': 'bg-blue-100 text-blue-700',
+}
+
+const TILLÅTNA_VYN: Record<SystemRoll, SystemRoll[]> = {
+  'Admin':     ['Admin', 'Support', 'Användare'],
+  'Support':   ['Support', 'Användare'],
+  'Användare': ['Användare'],
+}
+
+const SUPPORT_SEKTIONER: AdminSection[] = ['anvandare', 'support-inbox']
+
 export default function AdminPage() {
-  const [section, setSection]             = useState<AdminSection>('oversikt')
-  const [roll, setRoll]                   = useState<AdminRoll>('Admin')
+  const navigate = useNavigate()
+  const { roll, aktivVy, byttVy } = useAuth()
 
-  const SUPPORT_SEKTIONER: AdminSection[] = ['anvandare', 'support-inbox']
+  const adminRoll: AdminRoll = aktivVy === 'Support' ? 'Support' : 'Admin'
 
-  function byttRoll() {
-    const nyRoll: AdminRoll = roll === 'Admin' ? 'Support' : 'Admin'
-    if (nyRoll === 'Support' && !SUPPORT_SEKTIONER.includes(section)) {
-      setSection('support-inbox')
-    }
-    setRoll(nyRoll)
-  }
+  const [section, setSection]             = useState<AdminSection>(
+    aktivVy === 'Support' ? 'support-inbox' : 'oversikt'
+  )
   const [notiser, setNotiser]             = useState<PendingNotis[]>([])
   const [notisDropdown, setNotisDropdown] = useState(false)
+  const [avatarDropdown, setAvatarDropdown] = useState(false)
   const [inboxOpenId, setInboxOpenId]     = useState<string | undefined>(undefined)
   const [öppnaAnvEpost, setÖppnaAnvEpost] = useState<string | undefined>(undefined)
   const [lästaNyckar, setLästaNyckar]     = useState<Set<string>>(new Set())
   const [borttagnaNyckar, setBorttagnaNyckar] = useState<Set<string>>(new Set())
+
+  // Falla tillbaka till support-inbox om man byter till Support-vy på en admin-only sektion
+  useEffect(() => {
+    if (aktivVy === 'Support' && !SUPPORT_SEKTIONER.includes(section)) {
+      setSection('support-inbox')
+    }
+  }, [aktivVy, section])
 
   function notisNyckel(n: PendingNotis) { return `${n.arendeId}-${n.typ}` }
   function markeraLäst(n: PendingNotis) { setLästaNyckar(prev => new Set([...prev, notisNyckel(n)])) }
@@ -64,6 +83,12 @@ export default function AdminPage() {
     setNotisDropdown(false)
   }
 
+  function välj(vy: SystemRoll) {
+    byttVy(vy)
+    setAvatarDropdown(false)
+    if (vy === 'Användare') navigate('/')
+  }
+
   const unikaNotiser = notiser.filter(
     (n, i, arr) => arr.findIndex(x => x.arendeId === n.arendeId && x.typ === n.typ) === i
   ).filter(n => !borttagnaNyckar.has(notisNyckel(n)))
@@ -74,7 +99,7 @@ export default function AdminPage() {
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
 
-      <AdminSidebar active={section} onSelect={setSection} roll={roll} />
+      <AdminSidebar active={section} onSelect={setSection} roll={adminRoll} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
 
@@ -100,10 +125,7 @@ export default function AdminPage() {
 
               {notisDropdown && (
                 <>
-                  {/* Backdrop */}
                   <div className="fixed inset-0 z-30" onClick={() => setNotisDropdown(false)} />
-
-                  {/* Dropdown */}
                   <div className="absolute right-0 top-11 z-40 w-80 bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden">
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                       <p className="text-sm font-semibold text-slate-800">Notiser</p>
@@ -111,7 +133,6 @@ export default function AdminPage() {
                         <button onClick={markeraAllaLästa} className="text-xs text-violet-600 hover:text-violet-500">Markera alla lästa</button>
                       )}
                     </div>
-
                     {unikaNotiser.length === 0 ? (
                       <div className="px-4 py-6 text-center text-sm text-slate-400">Inga aktiva notiser.</div>
                     ) : (
@@ -150,22 +171,52 @@ export default function AdminPage() {
               )}
             </div>
 
-            <button
-              onClick={byttRoll}
-              title="Klicka för att byta roll"
-              className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${
-                roll === 'Admin'
-                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-              }`}
-            >
-              {roll}-läge
-            </button>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-              roll === 'Admin' ? 'bg-violet-100 text-violet-700' : 'bg-blue-100 text-blue-700'
-            }`}>
-              {roll === 'Admin' ? 'A' : 'S'}
+            {/* Avatar-dropdown med rollväljare */}
+            <div className="relative">
+              <button
+                onClick={() => setAvatarDropdown(v => !v)}
+                className={`flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl transition-colors ${avatarDropdown ? 'bg-slate-100' : 'hover:bg-slate-100'}`}
+              >
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${ROLL_FÄRG[adminRoll]}`}>
+                  {adminRoll === 'Admin' ? 'A' : 'S'}
+                </div>
+                <span className={`text-xs font-medium ${ROLL_FÄRG[adminRoll].split(' ')[1]}`}>
+                  {adminRoll}-läge
+                </span>
+              </button>
+
+              {avatarDropdown && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setAvatarDropdown(false)} />
+                  <div className="absolute right-0 top-11 z-40 w-52 bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100">
+                      <p className="text-sm font-semibold text-slate-900">Joakim Rehn</p>
+                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${ROLL_FÄRG[adminRoll]}`}>
+                        {adminRoll}
+                      </span>
+                    </div>
+                    <div className="px-3 py-2">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1">Byt vy</p>
+                      {TILLÅTNA_VYN[roll].map(vy => (
+                        <button
+                          key={vy}
+                          onClick={() => välj(vy)}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-between ${
+                            vy === aktivVy
+                              ? 'bg-violet-50 text-violet-700'
+                              : 'text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>{vy === 'Användare' ? 'Användarvy' : `${vy}-vy`}</span>
+                          {vy === aktivVy && <span className="text-violet-400 text-xs">●</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
+
           </div>
         </div>
 
