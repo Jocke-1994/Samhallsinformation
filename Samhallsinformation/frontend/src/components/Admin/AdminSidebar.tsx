@@ -4,6 +4,7 @@ export type AdminSection =
   | 'oversikt'
   | 'kallor'
   | 'uppdateringar'
+  | 'faq'
   | 'anvandare'
   | 'support-inbox'
   | 'aktivitetslogg'
@@ -15,6 +16,7 @@ const NAV: { key: AdminSection; label: string; ikon: string }[] = [
   { key: 'oversikt',       label: 'Översikt',         ikon: '🏠' },
   { key: 'kallor',         label: 'Källhantering',     ikon: '📡' },
   { key: 'uppdateringar',  label: 'Uppdateringar',     ikon: '📝' },
+  { key: 'faq',            label: 'FAQ-hantering',     ikon: '❓' },
   { key: 'anvandare',      label: 'Användare',         ikon: '👥' },
   { key: 'support-inbox',  label: 'Support-inbox',     ikon: '🎫' },
   { key: 'aktivitetslogg', label: 'Aktivitetslogg',    ikon: '📋' },
