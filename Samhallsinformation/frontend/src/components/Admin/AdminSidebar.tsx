@@ -12,27 +12,32 @@ export type AdminSection =
   | 'felsökning'
   | 'impersonation'
 
-const NAV: { key: AdminSection; label: string; ikon: string }[] = [
-  { key: 'oversikt',       label: 'Översikt',         ikon: '🏠' },
-  { key: 'kallor',         label: 'Källhantering',     ikon: '📡' },
-  { key: 'uppdateringar',  label: 'Uppdateringar',     ikon: '📝' },
-  { key: 'faq',            label: 'FAQ-hantering',     ikon: '❓' },
-  { key: 'anvandare',      label: 'Användare',         ikon: '👥' },
-  { key: 'support-inbox',  label: 'Support-inbox',     ikon: '🎫' },
-  { key: 'aktivitetslogg', label: 'Aktivitetslogg',    ikon: '📋' },
-  { key: 'rapporter',      label: 'Rapporter',         ikon: '📊' },
-  { key: 'felsökning',     label: 'Felsökning',        ikon: '🔧' },
-  { key: 'impersonation',  label: 'Impersonation',     ikon: '🎭' },
+export type AdminRoll = 'Admin' | 'Support'
+
+const NAV: { key: AdminSection; label: string; ikon: string; roller: AdminRoll[] }[] = [
+  { key: 'oversikt',       label: 'Översikt',         ikon: '🏠', roller: ['Admin'] },
+  { key: 'kallor',         label: 'Källhantering',     ikon: '📡', roller: ['Admin'] },
+  { key: 'uppdateringar',  label: 'Uppdateringar',     ikon: '📝', roller: ['Admin'] },
+  { key: 'faq',            label: 'FAQ-hantering',     ikon: '❓', roller: ['Admin'] },
+  { key: 'anvandare',      label: 'Användare',         ikon: '👥', roller: ['Admin', 'Support'] },
+  { key: 'support-inbox',  label: 'Support-inbox',     ikon: '🎫', roller: ['Admin', 'Support'] },
+  { key: 'aktivitetslogg', label: 'Aktivitetslogg',    ikon: '📋', roller: ['Admin'] },
+  { key: 'rapporter',      label: 'Rapporter',         ikon: '📊', roller: ['Admin'] },
+  { key: 'felsökning',     label: 'Felsökning',        ikon: '🔧', roller: ['Admin'] },
+  { key: 'impersonation',  label: 'Impersonation',     ikon: '🎭', roller: ['Admin'] },
 ]
 
 export default function AdminSidebar({
   active,
   onSelect,
+  roll,
 }: {
   active: AdminSection
   onSelect: (s: AdminSection) => void
+  roll: AdminRoll
 }) {
   const navigate = useNavigate()
+  const synliga = NAV.filter(item => item.roller.includes(roll))
 
   return (
     <div className="w-64 h-screen bg-slate-900 flex flex-col shrink-0">
@@ -40,9 +45,11 @@ export default function AdminSidebar({
       {/* Logo / titel */}
       <div className="px-6 py-6 border-b border-slate-700">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center text-white text-sm font-bold shrink-0">A</div>
+          <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
+            {roll === 'Support' ? 'S' : 'A'}
+          </div>
           <div>
-            <p className="text-sm font-bold text-white leading-tight">Admin</p>
+            <p className="text-sm font-bold text-white leading-tight">{roll}</p>
             <p className="text-xs text-slate-400 leading-tight">Samhällsinformation</p>
           </div>
         </div>
@@ -50,7 +57,7 @@ export default function AdminSidebar({
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
-        {NAV.map(item => (
+        {synliga.map(item => (
           <button
             key={item.key}
             onClick={() => onSelect(item.key)}
