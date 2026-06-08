@@ -1,0 +1,329 @@
+import { useState } from 'react'
+import type { FaqKategori } from '../../types'
+
+interface FaqItem {
+  id:       number
+  fråga:    string
+  svar:     string
+  kategori: FaqKategori
+}
+
+const KATEGORIER: FaqKategori[] = ['Notifieringar', 'Mina källor', 'Konto', 'Uppdateringar']
+
+const KAT_FÄRG: Record<FaqKategori, string> = {
+  'Notifieringar': 'bg-violet-100 text-violet-700 border-violet-200',
+  'Mina källor':   'bg-blue-100 text-blue-700 border-blue-200',
+  'Konto':         'bg-amber-100 text-amber-700 border-amber-200',
+  'Uppdateringar': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+}
+
+let nästaId = 100
+
+const INITIAL_FAQ: FaqItem[] = [
+  { id: 1,  kategori: 'Notifieringar', fråga: 'Varför fick jag ingen notis?',                    svar: 'Kontrollera att rätt kanal (mail/SMS) är aktiverad under Notifieringar och att källan är tillagd under Mina källor. Det kan ta upp till 5 minuter innan en ny händelse når dig.' },
+  { id: 2,  kategori: 'Notifieringar', fråga: 'Hur ändrar jag mitt SMS-nummer?',                 svar: 'Gå till Notifieringar → Standardinställningar. Där visas ditt registrerade nummer och du kan uppdatera det.' },
+  { id: 3,  kategori: 'Notifieringar', fråga: 'Kan jag pausa notiser tillfälligt?',              svar: 'Ja, avmarkera Mail och SMS i Standardinställningar under Notifieringar. Dina inställningar sparas och kan aktiveras igen när du vill.' },
+  { id: 4,  kategori: 'Mina källor',   fråga: 'Hur lägger jag till fler källor?',                svar: 'Gå till Mina källor i profilmenyn. Där kan du söka efter myndigheter eller hämta förslag automatiskt via SPAR.' },
+  { id: 5,  kategori: 'Mina källor',   fråga: 'Kan jag följa flera myndigheter samtidigt?',     svar: 'Ja, du kan lägga till hur många källor du vill. Alla visas i ditt nyhetsflöde och du kan välja vilka du vill få notiser från.' },
+  { id: 6,  kategori: 'Konto',         fråga: 'Hur tar jag bort mitt konto?',                   svar: 'Gå till Konto → Datahantering och välj Radera konto. Åtgärden är permanent och kan inte ångras.' },
+  { id: 7,  kategori: 'Konto',         fråga: 'Hur laddar jag ner min data?',                   svar: 'Gå till Konto → Datahantering och klicka på Ladda ner. Du får en JSON-fil med all data vi har om dig (GDPR art. 20).' },
+  { id: 8,  kategori: 'Uppdateringar', fråga: 'Hur ser jag vad som är nytt i senaste versionen?', svar: 'Gå till Uppdateringar i profilmenyn. Under Senaste version ser du alla ändringar med direktlänkar till berörda funktioner.' },
+  { id: 9,  kategori: 'Uppdateringar', fråga: 'Hur rapporterar jag ett fel?',                   svar: 'Skapa ett nytt ärende via formuläret längre ner på den här sidan. Välj "Tekniskt fel på sidan" som ämne och beskriv vad som hänt.' },
+]
+
+// ---------------------------------------------------------------------------
+// Ta bort-modal
+// ---------------------------------------------------------------------------
+
+function TaBortModal({ fråga, onBekräfta, onStäng }: {
+  fråga: string; onBekräfta: () => void; onStäng: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="bg-gradient-to-br from-red-600 to-red-800 px-6 py-5 flex items-start justify-between">
+          <h2 className="text-lg font-bold text-white">Ta bort fråga</h2>
+          <button onClick={onStäng} className="text-red-300 hover:text-white transition-colors">✕</button>
+        </div>
+        <div className="px-6 py-5 flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            <strong className="text-slate-800">"{fråga}"</strong> tas bort permanent. Åtgärden kan inte ångras.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={onStäng}      className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Avbryt</button>
+            <button onClick={onBekräfta}   className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-xl transition-colors">Ta bort</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Formulärpanel
+// ---------------------------------------------------------------------------
+
+function FormPanel({ redigerar, onSpara, onStäng }: {
+  redigerar: FaqItem | null
+  onSpara:   (fråga: string, svar: string, kategori: FaqKategori) => void
+  onStäng:   () => void
+}) {
+  const [fråga,    setFråga]    = useState(redigerar?.fråga    ?? '')
+  const [svar,     setSvar]     = useState(redigerar?.svar     ?? '')
+  const [kategori, setKategori] = useState<FaqKategori>(redigerar?.kategori ?? 'Notifieringar')
+
+  const kanSpara = fråga.trim() !== '' && svar.trim() !== ''
+
+  return (
+    <>
+      <div className="fixed inset-0 z-30 bg-black/20" onClick={onStäng} />
+      <div className="fixed top-0 right-0 bottom-0 z-40 w-[520px] bg-white shadow-2xl flex flex-col">
+
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <h2 className="text-base font-semibold text-slate-900">
+            {redigerar ? 'Redigera fråga' : 'Ny fråga'}
+          </h2>
+          <button onClick={onStäng} className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none">✕</button>
+        </div>
+
+        {/* Innehåll */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+
+          {/* Kategori */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Kategori</label>
+            <div className="flex gap-2 flex-wrap">
+              {KATEGORIER.map(k => (
+                <button
+                  key={k}
+                  onClick={() => setKategori(k)}
+                  className={`text-xs font-medium px-3 py-1.5 rounded-xl border transition-colors ${
+                    kategori === k ? KAT_FÄRG[k] + ' border' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                  }`}
+                >
+                  {k}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Fråga */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Fråga</label>
+            <input
+              type="text"
+              value={fråga}
+              onChange={e => setFråga(e.target.value)}
+              placeholder="T.ex. 'Varför fick jag ingen notis?'"
+              className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            />
+          </div>
+
+          {/* Svar */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Svar</label>
+            <textarea
+              value={svar}
+              onChange={e => setSvar(e.target.value)}
+              rows={5}
+              placeholder="Beskriv svaret tydligt och kortfattat..."
+              className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"
+            />
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
+          <button onClick={onStäng} className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+            Avbryt
+          </button>
+          <button
+            onClick={() => kanSpara && onSpara(fråga.trim(), svar.trim(), kategori)}
+            disabled={!kanSpara}
+            className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+          >
+            {redigerar ? 'Spara ändringar' : 'Skapa fråga'}
+          </button>
+        </div>
+
+      </div>
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Huvudkomponent
+// ---------------------------------------------------------------------------
+
+export default function AdminFaq() {
+  const [frågor,      setFrågor]      = useState<FaqItem[]>(INITIAL_FAQ)
+  const [katFilter,   setKatFilter]   = useState<FaqKategori | 'alla'>('alla')
+  const [sökning,     setSökning]     = useState('')
+  const [panelÖppen,  setPanelÖppen]  = useState(false)
+  const [redigerar,   setRedigerar]   = useState<FaqItem | null>(null)
+  const [taBort,      setTaBort]      = useState<FaqItem | null>(null)
+
+  const söktrim = sökning.trim().toLowerCase()
+
+  const filtrerade = frågor.filter(f => {
+    const katMatch = katFilter === 'alla' || f.kategori === katFilter
+    const sökMatch = !söktrim || f.fråga.toLowerCase().includes(söktrim) || f.svar.toLowerCase().includes(söktrim)
+    return katMatch && sökMatch
+  })
+
+  function öppnaSkapa()            { setRedigerar(null); setPanelÖppen(true) }
+  function öppnaRedigera(f: FaqItem) { setRedigerar(f);   setPanelÖppen(true) }
+  function stängPanel()            { setPanelÖppen(false); setRedigerar(null) }
+
+  function spara(fråga: string, svar: string, kategori: FaqKategori) {
+    if (redigerar) {
+      setFrågor(prev => prev.map(f => f.id === redigerar.id ? { ...f, fråga, svar, kategori } : f))
+    } else {
+      setFrågor(prev => [...prev, { id: nästaId++, fråga, svar, kategori }])
+    }
+    stängPanel()
+  }
+
+  const antal = {
+    totalt:        frågor.length,
+    notifieringar: frågor.filter(f => f.kategori === 'Notifieringar').length,
+    kallor:        frågor.filter(f => f.kategori === 'Mina källor').length,
+    konto:         frågor.filter(f => f.kategori === 'Konto').length,
+    uppdateringar: frågor.filter(f => f.kategori === 'Uppdateringar').length,
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+
+      {taBort && (
+        <TaBortModal
+          fråga={taBort.fråga}
+          onBekräfta={() => { setFrågor(prev => prev.filter(f => f.id !== taBort.id)); setTaBort(null) }}
+          onStäng={() => setTaBort(null)}
+        />
+      )}
+
+      {panelÖppen && (
+        <FormPanel redigerar={redigerar} onSpara={spara} onStäng={stängPanel} />
+      )}
+
+      {/* Stat-kort */}
+      <div className="grid grid-cols-5 gap-4">
+        {[
+          { label: 'Totalt',        värde: antal.totalt,        färg: 'text-slate-800' },
+          { label: 'Notifieringar', värde: antal.notifieringar, färg: 'text-violet-600' },
+          { label: 'Mina källor',   värde: antal.kallor,        färg: 'text-blue-600'   },
+          { label: 'Konto',         värde: antal.konto,         färg: 'text-amber-600'  },
+          { label: 'Uppdateringar', värde: antal.uppdateringar, färg: 'text-emerald-600' },
+        ].map(s => (
+          <div key={s.label} className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-5 text-center">
+            <p className={`text-3xl font-bold ${s.färg}`}>{s.värde}</p>
+            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-medium">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Lista */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+        {/* Verktygsfält */}
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 flex-wrap">
+
+          {/* Kategorifiltrar */}
+          <div className="flex gap-1 flex-wrap">
+            {(['alla', ...KATEGORIER] as (FaqKategori | 'alla')[]).map(k => (
+              <button
+                key={k}
+                onClick={() => setKatFilter(k)}
+                className={`text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
+                  katFilter === k
+                    ? k === 'alla' ? 'bg-violet-100 text-violet-700' : KAT_FÄRG[k as FaqKategori] + ' border'
+                    : 'text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                {k === 'alla' ? 'Alla kategorier' : k}
+              </button>
+            ))}
+          </div>
+
+          {/* Sök */}
+          <div className="relative ml-auto">
+            <input
+              type="text"
+              value={sökning}
+              onChange={e => setSökning(e.target.value)}
+              placeholder="Sök fråga eller svar…"
+              className="pl-8 pr-7 py-1.5 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent w-56"
+            />
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">🔍</span>
+            {sökning && (
+              <button onClick={() => setSökning('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">✕</button>
+            )}
+          </div>
+
+          <button
+            onClick={öppnaSkapa}
+            className="text-sm font-semibold px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white transition-colors shrink-0"
+          >
+            + Ny fråga
+          </button>
+        </div>
+
+        {/* Tabell */}
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase tracking-wide">
+              <th className="text-left px-6 py-3 font-medium">Fråga</th>
+              <th className="text-left px-4 py-3 font-medium">Svar</th>
+              <th className="text-left px-4 py-3 font-medium">Kategori</th>
+              <th className="px-4 py-3" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {filtrerade.map(f => (
+              <tr key={f.id} className="hover:bg-slate-50 transition-colors">
+                <td className="px-6 py-3 w-64">
+                  <p className="font-medium text-slate-800 line-clamp-2">{f.fråga}</p>
+                </td>
+                <td className="px-4 py-3">
+                  <p className="text-sm text-slate-500 line-clamp-2">{f.svar}</p>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${KAT_FÄRG[f.kategori]}`}>
+                    {f.kategori}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2 justify-end">
+                    <button
+                      onClick={() => öppnaRedigera(f)}
+                      className="text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
+                    >
+                      Redigera
+                    </button>
+                    <button
+                      onClick={() => setTaBort(f)}
+                      className="text-xs font-medium px-2.5 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      Ta bort
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {filtrerade.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-400">
+                  {sökning ? <>Inga frågor matchade <strong className="text-slate-500">"{sökning}"</strong>.</> : 'Inga frågor i den här kategorin.'}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  )
+}
