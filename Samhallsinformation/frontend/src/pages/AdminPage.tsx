@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import AdminSidebar, { type AdminSection } from '../components/Admin/AdminSidebar'
+import AdminSidebar, { type AdminSection, type AdminRoll } from '../components/Admin/AdminSidebar'
 import Oversikt from '../components/Admin/Oversikt'
 import Kallhantering from '../components/Admin/Kallhantering'
 import Felsökning from '../components/Admin/Felsökning'
@@ -31,7 +31,17 @@ const NOTIS_LABELS: Record<PendingNotis['typ'], string> = {
 
 export default function AdminPage() {
   const [section, setSection]             = useState<AdminSection>('oversikt')
-  const [roll, setRoll]                   = useState<'Admin' | 'Support'>('Admin')
+  const [roll, setRoll]                   = useState<AdminRoll>('Admin')
+
+  const SUPPORT_SEKTIONER: AdminSection[] = ['anvandare', 'support-inbox']
+
+  function byttRoll() {
+    const nyRoll: AdminRoll = roll === 'Admin' ? 'Support' : 'Admin'
+    if (nyRoll === 'Support' && !SUPPORT_SEKTIONER.includes(section)) {
+      setSection('support-inbox')
+    }
+    setRoll(nyRoll)
+  }
   const [notiser, setNotiser]             = useState<PendingNotis[]>([])
   const [notisDropdown, setNotisDropdown] = useState(false)
   const [inboxOpenId, setInboxOpenId]     = useState<string | undefined>(undefined)
@@ -64,7 +74,7 @@ export default function AdminPage() {
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
 
-      <AdminSidebar active={section} onSelect={setSection} />
+      <AdminSidebar active={section} onSelect={setSection} roll={roll} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
 
@@ -141,7 +151,7 @@ export default function AdminPage() {
             </div>
 
             <button
-              onClick={() => setRoll(r => r === 'Admin' ? 'Support' : 'Admin')}
+              onClick={byttRoll}
               title="Klicka för att byta roll"
               className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${
                 roll === 'Admin'
@@ -151,7 +161,11 @@ export default function AdminPage() {
             >
               {roll}-läge
             </button>
-            <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700">A</div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+              roll === 'Admin' ? 'bg-violet-100 text-violet-700' : 'bg-blue-100 text-blue-700'
+            }`}>
+              {roll === 'Admin' ? 'A' : 'S'}
+            </div>
           </div>
         </div>
 
