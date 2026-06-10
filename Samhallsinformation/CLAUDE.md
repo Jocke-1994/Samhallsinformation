@@ -73,6 +73,15 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - Begränsat mockdata till V1-källor: Polisen + Krisinformation aktiva, övriga 6 inaktiva (PR #191)
 - Lagt till `KrisinformationApiIngestor` mot `api.krisinformation.se/v3/news` (PR #192)
 - Uppdaterat `IngestorBackgroundService` och `Program.cs` för stöd av flera ingestors
+- Rensat 8 stale lokala branches (remote borttagna)
+- Kombinerat flöde: "Samhällsinfo" klickbar → alla källor samlade sorterade på tid (PR #194)
+- Färgad vänsterkant per källa (blå=Polisen, orange=Krisinformation), källnamn i grå text höger
+- Datumseparatorer i prickad stil med "Idag 10 juni" / "Igår" / datum
+- Filterbadges med pill-siffra, tomt-state vid tomma filterval
+- Klockslag istället för datum på varje rad, geografi-duplikat borttaget
+- "lästa"-separator gömd för utloggade + max en per lista
+- "Samhällsinformation" som rubrik i stora ytan, separator under app-namn i sidebar
+- Mockdatum uppdaterade till juni 2026
 
 **Next session:**
 - Google Analytics
