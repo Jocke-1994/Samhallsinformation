@@ -80,7 +80,7 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
     <nav className="flex flex-col h-full w-56 bg-white border-r border-slate-200 px-3 py-5">
 
       {/* App-namn */}
-      <div className="px-2 mb-4">
+      <div className="mb-4 text-center">
         <span className="text-lg font-extrabold text-slate-900 tracking-tight">Samhällsinfo</span>
       </div>
 
