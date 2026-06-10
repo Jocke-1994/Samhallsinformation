@@ -59,7 +59,26 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
-### Session 4 — 2026-02-16 (Current)
+### Session 5 — 2026-06-10 (Current)
+**What was done:**
+- Frikopplat alla UI-funktioner från versionsstyrning (`versionAtLeast` borttagen från `App.tsx` och `Sidebar.tsx`)
+- Etablerat tydlig rolldelning: versioner = rollback/deployment-spårning, feature flags = explicit aktivering av funktioner
+- Skapat `src/lib/version.ts` (versionssystem) på egen branch
+- Skapat `src/lib/featureFlags.ts`, `useFeatureFlags`-hook och `FeatureFlagsAdmin`-komponent på egen branch
+- Kopplat in Feature flags-sektionen i admin-panelen (AdminSidebar + AdminPage)
+- Löst merge-konflikt i `AdminPage.tsx` mellan rollvaljare- och feature-flags-brancherna
+- Mergat PR #186 (version-gates), PR #187 (feature-flags), PR #188 (rollvaljare) till main
+- Dolt inställningar och profilknapp i sidebaren för utloggade användare — visas bara när `isLoggedIn` är true (PR #189)
+- Centrerat app-namnet "Samhällsinfo" i sidebaren (PR #190)
+
+**Next session:**
+- Krisinformation-ingestor (backend)
+- Google Analytics
+- Hosting: Neon PostgreSQL + Railway (BE)
+
+---
+
+### Session 4 — 2026-02-16
 **What was done:**
 - Sprint 3 completed: Storage & API
 - Converted project from Console app to ASP.NET Core Web API
