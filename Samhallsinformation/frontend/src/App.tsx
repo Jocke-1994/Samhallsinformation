@@ -39,6 +39,7 @@ function HomePage() {
       <main className="flex-1 overflow-hidden">
         <NewsFeed
           source={selectedSource}
+          sources={sources}
           onReadStatusChange={handleReadStatusChange}
         />
       </main>
