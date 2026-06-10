@@ -86,31 +86,33 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
 
       <div className="flex flex-col flex-1 overflow-hidden">
 
-        {/* Inställningar */}
-        <>
-          <SectionLabel>Inställningar</SectionLabel>
-          <div className="flex flex-col gap-0.5">
-            {PROFILE_SECTIONS.map(s => {
-              const isActive = activeSection === s.id
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => navigate(`/profil?section=${s.id}`)}
-                  className={`
-                    w-full text-left px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 flex items-center gap-2.5
-                    ${isActive
-                      ? 'bg-violet-100 text-violet-700 font-semibold'
-                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}
-                  `}
-                >
-                  <span className="text-sm leading-none">{s.icon}</span>
-                  <span>{s.label}</span>
-                </button>
-              )
-            })}
-          </div>
-          <div className="border-t border-slate-200 my-3" />
-        </>
+        {/* Inställningar — endast för inloggade */}
+        {isLoggedIn && (
+          <>
+            <SectionLabel>Inställningar</SectionLabel>
+            <div className="flex flex-col gap-0.5">
+              {PROFILE_SECTIONS.map(s => {
+                const isActive = activeSection === s.id
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => navigate(`/profil?section=${s.id}`)}
+                    className={`
+                      w-full text-left px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 flex items-center gap-2.5
+                      ${isActive
+                        ? 'bg-violet-100 text-violet-700 font-semibold'
+                        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}
+                    `}
+                  >
+                    <span className="text-sm leading-none">{s.icon}</span>
+                    <span>{s.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <div className="border-t border-slate-200 my-3" />
+          </>
+        )}
 
         {/* Källor */}
         <SectionLabel>Källor</SectionLabel>
@@ -130,8 +132,8 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
         </div>
       </div>
 
-      {/* Profilknapp med dropdown */}
-      <div className="border-t border-slate-200 pt-3 mt-3 relative">
+      {/* Profilknapp med dropdown — endast för inloggade */}
+      {isLoggedIn && <div className="border-t border-slate-200 pt-3 mt-3 relative">
 
         {dropdownÖppen && (
           <>
@@ -209,7 +211,7 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
             </span>
           )}
         </button>
-      </div>
+      </div>}
 
     </nav>
   )
