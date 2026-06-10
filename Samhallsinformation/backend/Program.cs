@@ -11,7 +11,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // HTTP client for ingestors
 builder.Services.AddHttpClient<PolisenRssIngestor>();
+builder.Services.AddHttpClient<KrisinformationApiIngestor>();
 builder.Services.AddScoped<IIngestor, PolisenRssIngestor>();
+builder.Services.AddScoped<IIngestor, KrisinformationApiIngestor>();
 
 // Background service
 builder.Services.AddHostedService<IngestorBackgroundService>();
@@ -24,15 +26,19 @@ var app = builder.Build();
 // Seed: spara källorna från alla ingestors i databasen om de inte redan finns
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var ingestor = scope.ServiceProvider.GetRequiredService<IIngestor>();
-    var source = ingestor.Source;
+    var db        = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var ingestors = scope.ServiceProvider.GetRequiredService<IEnumerable<IIngestor>>();
 
-    if (!db.Sources.Any(s => s.Id == source.Id))
+    foreach (var ingestor in ingestors)
     {
-        db.Sources.Add(source);
-        await db.SaveChangesAsync();
+        var source = ingestor.Source;
+        if (!db.Sources.Any(s => s.Id == source.Id))
+        {
+            db.Sources.Add(source);
+        }
     }
+
+    await db.SaveChangesAsync();
 }
 
 app.MapControllers();
