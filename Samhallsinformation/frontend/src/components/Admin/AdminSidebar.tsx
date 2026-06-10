@@ -11,6 +11,7 @@ export type AdminSection =
   | 'rapporter'
   | 'felsökning'
   | 'impersonation'
+  | 'feature-flags'
 
 export type AdminRoll = 'Admin' | 'Support'
 
@@ -24,7 +25,8 @@ const NAV: { key: AdminSection; label: string; ikon: string; roller: AdminRoll[]
   { key: 'aktivitetslogg', label: 'Aktivitetslogg',    ikon: '📋', roller: ['Admin'] },
   { key: 'rapporter',      label: 'Rapporter',         ikon: '📊', roller: ['Admin'] },
   { key: 'felsökning',     label: 'Felsökning',        ikon: '🔧', roller: ['Admin'] },
-  { key: 'impersonation',  label: 'Impersonation',     ikon: '🎭', roller: ['Admin'] },
+  { key: 'impersonation',  label: 'Impersonation',  ikon: '🎭', roller: ['Admin'] },
+  { key: 'feature-flags',  label: 'Feature flags',  ikon: '🚩', roller: ['Admin'] },
 ]
 
 export default function AdminSidebar({

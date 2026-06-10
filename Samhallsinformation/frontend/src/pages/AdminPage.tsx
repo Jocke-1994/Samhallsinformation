@@ -11,7 +11,9 @@ import Aktivitetslogg from '../components/Admin/Aktivitetslogg'
 import Impersonation from '../components/Admin/Impersonation'
 import AdminUppdateringar from '../components/Admin/AdminUppdateringar'
 import AdminFaq from '../components/Admin/AdminFaq'
+import FeatureFlagsAdmin from '../components/Admin/FeatureFlagsAdmin'
 import { useAuth, type SystemRoll } from '../context/AuthContext'
+import { useFeatureFlags } from '../hooks/useFeatureFlags'
 
 const SECTION_LABELS: Record<AdminSection, string> = {
   'oversikt':       'Översikt',
@@ -24,6 +26,7 @@ const SECTION_LABELS: Record<AdminSection, string> = {
   'rapporter':      'Rapporter',
   'felsökning':     'Felsökning',
   'impersonation':  'Impersonation',
+  'feature-flags':  'Feature flags',
 }
 
 const NOTIS_LABELS: Record<PendingNotis['typ'], string> = {
@@ -49,6 +52,8 @@ export default function AdminPage() {
   const { roll, aktivVy, byttVy } = useAuth()
 
   const adminRoll: AdminRoll = aktivVy === 'Support' ? 'Support' : 'Admin'
+
+  const { flaggor, växlaFlagg, återställ } = useFeatureFlags()
 
   const [section, setSection]             = useState<AdminSection>(
     aktivVy === 'Support' ? 'support-inbox' : 'oversikt'
@@ -255,8 +260,15 @@ export default function AdminPage() {
             {section === 'rapporter'      && <Rapporter onNavigate={setSection} />}
             {section === 'aktivitetslogg' && <Aktivitetslogg />}
             {section === 'impersonation'  && <Impersonation onNavigate={setSection} />}
+            {section === 'feature-flags'  && (
+              <FeatureFlagsAdmin
+                flaggor={flaggor}
+                onVäxla={växlaFlagg}
+                onÅterställ={återställ}
+              />
+            )}
 
-            {section !== 'oversikt' && section !== 'kallor' && section !== 'uppdateringar' && section !== 'faq' && section !== 'felsökning' && section !== 'anvandare' && section !== 'support-inbox' && section !== 'rapporter' && section !== 'aktivitetslogg' && section !== 'impersonation' && (
+            {section !== 'oversikt' && section !== 'kallor' && section !== 'uppdateringar' && section !== 'faq' && section !== 'felsökning' && section !== 'anvandare' && section !== 'support-inbox' && section !== 'rapporter' && section !== 'aktivitetslogg' && section !== 'impersonation' && section !== 'feature-flags' && (
               <div className="flex flex-col items-center justify-center py-32 text-center">
                 <p className="text-4xl mb-4">🚧</p>
                 <p className="text-lg font-semibold text-slate-700">{SECTION_LABELS[section]}</p>
