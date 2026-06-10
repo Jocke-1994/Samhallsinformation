@@ -99,6 +99,38 @@ const MOCK_EVENTS: CanonicalEvent[] = [
     content: 'Tre personer greps sedan de stulit varor för ca 6 000 kronor från ett varuhus i Triangeln. Personerna, i åldrarna 19–24 år, är misstänkta för ringa stöld alternativt stöld.',
     publishedAt: '2026-03-24T13:22:00Z', url: 'https://polisen.se', geography: 'Malmö', severity: 'Bra att veta', isNational: false,
   },
+
+  // Krisinformation
+  {
+    id: 'k-001', sourceId: 5,
+    title: 'Skogsbrand i Dalarna — förhöjd risk',
+    content: 'MSB och Krisinformation uppmanar boende i Dalarna att följa lokala myndigheters anvisningar. Torrt väder och hårda vindar skapar förhöjd brandrisk. Undvik öppen eld utomhus. Följ SMHI:s varningar och håll dig uppdaterad via krisinformation.se.',
+    publishedAt: '2026-03-29T11:00:00Z', url: 'https://krisinformation.se', geography: 'Dalarna', severity: 'Viktigt', isNational: false,
+  },
+  {
+    id: 'k-002', sourceId: 5,
+    title: 'Dricksvattenvarning, Östersund',
+    content: 'Östersunds kommun uppmanar invånare i centrala Östersund att koka dricksvattnet tills vidare. Provtagning har visat på förhöjda halter av bakterier i ledningsnätet. Flaskvatten finns tillgängligt på kommunens servicecentrum.',
+    publishedAt: '2026-03-28T09:30:00Z', url: 'https://krisinformation.se', geography: 'Östersund', severity: 'Kritisk', isNational: false,
+  },
+  {
+    id: 'k-003', sourceId: 5,
+    title: 'Elavbrott drabbar delar av Skåne',
+    content: 'Ett fel i en transformatorstation i nordvästra Skåne har lett till elavbrott för ca 12 000 hushåll. E.ON arbetar med att åtgärda felet och beräknar att strömmen återkopplas inom 4–6 timmar. Undvik att använda hissar tills strömmen är återställd.',
+    publishedAt: '2026-03-27T20:15:00Z', url: 'https://krisinformation.se', geography: 'Skåne', severity: 'Viktigt', isNational: false,
+  },
+  {
+    id: 'k-004', sourceId: 5,
+    title: 'Viktigt meddelande till allmänheten — CBRN-övning',
+    content: 'Myndigheten för samhällsskydd och beredskap genomför en nationell övning den 2 april. Allmänheten kan komma att höra VMA-signalen (Viktigt meddelande till allmänheten) vid övningstillfället. Det är inte ett riktigt larm. Inga åtgärder behöver vidtas.',
+    publishedAt: '2026-03-26T08:00:00Z', url: 'https://krisinformation.se', geography: null, severity: 'Bra att veta', isNational: true,
+  },
+  {
+    id: 'k-005', sourceId: 5,
+    title: 'Översvämningsrisk längs Klarälven',
+    content: 'SMHI utfärdar klass 2-varning för höga flöden längs Klarälven i Värmland. Boende nära åns stränder uppmanas att flytta värdefulla föremål till höjdläge och följa kommunens anvisningar. Vägavstängningar kan förekomma.',
+    publishedAt: '2026-03-25T14:45:00Z', url: 'https://krisinformation.se', geography: 'Värmland', severity: 'Viktigt', isNational: false,
+  },
 ]
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
