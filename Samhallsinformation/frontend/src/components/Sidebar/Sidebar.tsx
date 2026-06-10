@@ -80,8 +80,17 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
     <nav className="flex flex-col h-full w-56 bg-white border-r border-slate-200 px-3 py-5">
 
       {/* App-namn */}
-      <div className="mb-4 text-center">
-        <span className="text-lg font-extrabold text-slate-900 tracking-tight">Samhällsinfo</span>
+      <div className="mb-4 pb-4 border-b border-slate-100 text-center">
+        <button
+          onClick={() => { onSelectSource(null); navigate('/') }}
+          className={`text-lg font-extrabold tracking-tight transition-colors ${
+            selectedSourceId === null && !isProfilePage
+              ? 'text-violet-700'
+              : 'text-slate-900 hover:text-violet-600'
+          }`}
+        >
+          Samhällsinfo
+        </button>
       </div>
 
       <div className="flex flex-col flex-1 overflow-hidden">
