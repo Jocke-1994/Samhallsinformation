@@ -70,11 +70,14 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - Mergat PR #186 (version-gates), PR #187 (feature-flags), PR #188 (rollvaljare) till main
 - Dolt inställningar och profilknapp i sidebaren för utloggade användare — visas bara när `isLoggedIn` är true (PR #189)
 - Centrerat app-namnet "Samhällsinfo" i sidebaren (PR #190)
+- Begränsat mockdata till V1-källor: Polisen + Krisinformation aktiva, övriga 6 inaktiva (PR #191)
+- Lagt till `KrisinformationApiIngestor` mot `api.krisinformation.se/v3/news` (PR #192)
+- Uppdaterat `IngestorBackgroundService` och `Program.cs` för stöd av flera ingestors
 
 **Next session:**
-- Krisinformation-ingestor (backend)
 - Google Analytics
 - Hosting: Neon PostgreSQL + Railway (BE)
+- Koppla frontend mot live-backend (VITE_USE_MOCK=false)
 
 ---
 
