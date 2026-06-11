@@ -33,3 +33,7 @@ jobs:
       - name: Build
         working-directory: Samhallsinformation/frontend
         run: npm run build
+
+      - name: Security audit
+        working-directory: Samhallsinformation/frontend
+        run: npm audit --audit-level=high
