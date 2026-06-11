@@ -13,7 +13,7 @@ const FILTER_STYLES: Record<SeverityFilter, { active: string; activeBadge: strin
   'Alla':         { active: 'bg-violet-100 text-violet-700 border-violet-200', activeBadge: 'bg-violet-200 text-violet-700', inactiveBadge: 'bg-slate-100 text-slate-500' },
   'Kritisk':      { active: 'bg-red-100 text-red-700 border-red-200',          activeBadge: 'bg-red-200 text-red-700',       inactiveBadge: 'bg-slate-100 text-slate-500' },
   'Viktigt':      { active: 'bg-amber-100 text-amber-700 border-amber-200',    activeBadge: 'bg-amber-200 text-amber-700',   inactiveBadge: 'bg-slate-100 text-slate-500' },
-  'Bra att veta': { active: 'bg-slate-100 text-slate-600 border-slate-200',    activeBadge: 'bg-slate-200 text-slate-600',   inactiveBadge: 'bg-slate-100 text-slate-500' },
+  'Bra att veta': { active: 'bg-sky-100 text-sky-700 border-sky-200',          activeBadge: 'bg-sky-200 text-sky-700',       inactiveBadge: 'bg-slate-100 text-slate-500' },
 }
 
 const EMPTY_STATE_TEXT: Partial<Record<SeverityFilter, string>> = {
