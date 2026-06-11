@@ -62,13 +62,29 @@ var app = builder.Build();
 
 app.UseCors();
 
-// Auto-migrate och seed
+// Schema-setup och seed
 using (var scope = app.Services.CreateScope())
 {
     var db        = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var ingestors = scope.ServiceProvider.GetRequiredService<IEnumerable<IIngestor>>();
 
-    await db.Database.MigrateAsync();
+    if (databaseUrl != null || pgHost != null)
+    {
+        // PostgreSQL: befintliga migrationer har SQLite-specifika typer (INTEGER för bool etc.)
+        // Droppa och återskapa med EnsureCreated som använder korrekta PostgreSQL-typer.
+        // Ingestorerna fyller på data igen inom 5 min.
+        await db.Database.ExecuteSqlRawAsync(@"
+            DROP TABLE IF EXISTS ""Events"";
+            DROP TABLE IF EXISTS ""UserPreferences"";
+            DROP TABLE IF EXISTS ""Sources"";
+            DROP TABLE IF EXISTS ""__EFMigrationsHistory"";
+        ");
+        await db.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        await db.Database.MigrateAsync();
+    }
 
     foreach (var ingestor in ingestors)
     {
