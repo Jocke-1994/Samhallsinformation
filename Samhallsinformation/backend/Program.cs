@@ -10,7 +10,13 @@ var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     if (databaseUrl != null)
-        options.UseNpgsql(databaseUrl);
+    {
+        // Railway levererar postgresql://user:pass@host:port/db — konvertera till Npgsql-format
+        var uri      = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':');
+        var connStr  = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+        options.UseNpgsql(connStr);
+    }
     else
         options.UseSqlite("Data Source=samhallsinformation.db");
 });
