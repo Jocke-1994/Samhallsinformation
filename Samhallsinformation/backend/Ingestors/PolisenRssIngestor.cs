@@ -46,7 +46,7 @@ public class PolisenRssIngestor : IIngestor
                 ExternalId = item.Id ?? link,
                 Title = rawTitle,
                 Content = item.Summary?.Text ?? string.Empty,
-                PublishedAt = item.PublishDate.LocalDateTime,
+                PublishedAt = item.PublishDate.UtcDateTime,
                 Url = link,
                 RawData = rawTitle + " | " + (item.Summary?.Text ?? string.Empty),
                 Geography = ExtractGeographyFromTitle(rawTitle),

@@ -45,7 +45,7 @@ public class KrisinformationApiIngestor : IIngestor
                 ExternalId = item.Identifier,
                 Title      = item.Headline ?? string.Empty,
                 Content    = StripHtml(item.BodyText ?? item.Preamble ?? string.Empty),
-                PublishedAt = DateTime.Parse(item.Published),
+                PublishedAt = DateTimeOffset.Parse(item.Published).UtcDateTime,
                 Url        = item.Web ?? string.Empty,
                 RawData    = item.Headline + " | " + item.Preamble,
                 Geography  = ExtractGeography(item.Area),
