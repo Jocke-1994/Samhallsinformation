@@ -15,6 +15,7 @@ function HomePage() {
     (location.state as { sourceId?: number } | null)?.sourceId ?? null
   )
   const [readTrigger, setReadTrigger] = useState(0)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const { data: sources = [] } = useQuery<Source[]>({
     queryKey: ['sources'],
@@ -30,17 +31,20 @@ function HomePage() {
   }, [])
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
       <Sidebar
         selectedSourceId={selectedSourceId}
         onSelectSource={setSelectedSourceId}
         unreadSourceIds={unreadSourceIds}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
       <main className="flex-1 overflow-hidden">
         <NewsFeed
           source={selectedSource}
           sources={sources}
           onReadStatusChange={handleReadStatusChange}
+          onOpenSidebar={() => setSidebarOpen(true)}
         />
       </main>
     </div>
