@@ -72,6 +72,10 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - Mergat 15 Dependabot-säkerhets-PR:ar, inklusive react-router 7.13.1→7.17.0 som fixade majoriteten av sårbarheterna
 - CodeQL ej tillgängligt på privat personligt repo (kräver GitHub Advanced Security för organisationer)
 - Secret scanning ej tillgängligt av samma anledning; Dependabot alerts aktiverat och täcker det viktigaste
+- Skapat `docs/kallor/OVERSIKT.md` med alla 8 källor, API-info, rate limits och licenser (PR #209)
+- Skapat `docs/kallor/CHANGELOG.md` för att logga källändringar över tid (PR #210)
+- Lagt till långsiktig vision i OVERSIKT.md: roadmap V1–V5 mot ~340 svenska källor, PSI-direktivet, datapartnerskap med myndigheter
+- Lagt till långsiktig vision i PROJEKT.md: kommuner som manuella användare via ticket-funktion, "Ansök om att bli källa" får konkret syfte som B2G-onboarding-flöde
 
 **Next session:**
 - Google Analytics
