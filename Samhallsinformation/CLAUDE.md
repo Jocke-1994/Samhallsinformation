@@ -77,6 +77,10 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - Lagt till långsiktig vision i OVERSIKT.md: roadmap V1–V5 mot ~340 svenska källor, PSI-direktivet, datapartnerskap med myndigheter
 - Lagt till långsiktig vision i PROJEKT.md: kommuner som manuella användare via ticket-funktion, "Ansök om att bli källa" får konkret syfte som B2G-onboarding-flöde
 
+- Ändrat "Bra att veta"-filterflik och händelsepill från grå till sky-blå för tydligare visuell distinktion (PR #213)
+- Lagt till `CookieConsent`-banner med accordion som visar vilken data som samlas in (nödvändiga vs analys); sparar val i localStorage (PR #213)
+- Lagt till `FeedbackModal` via Formspree kopplad till lila pill-knapp längst ner i sidebaren (PR #213)
+
 **Next session — Railway-deployment:**
 - Lägg till `Npgsql.EntityFrameworkCore.PostgreSQL` i backend, behåll SQLite för lokal dev
 - Uppdatera `Program.cs`: PostgreSQL när `DATABASE_URL` finns, annars SQLite; auto-migrate på startup; CORS för Vercel-frontend
