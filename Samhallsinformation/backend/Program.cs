@@ -5,12 +5,24 @@ using Samhallsinformation.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database — PostgreSQL på Railway, SQLite lokalt
-// Railway injicerar PGHOST automatiskt för PostgreSQL-plugin
-var pgHost = Environment.GetEnvironmentVariable("PGHOST");
+// Database — PostgreSQL på Railway (via DATABASE_URL eller PGHOST), SQLite lokalt
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+var pgHost      = Environment.GetEnvironmentVariable("PGHOST");
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    if (pgHost != null)
+    if (databaseUrl != null)
+    {
+        var uri      = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':');
+        var connStr  = $"Host={uri.Host};" +
+                       $"Port={uri.Port};" +
+                       $"Database={uri.AbsolutePath.TrimStart('/')};" +
+                       $"Username={userInfo[0]};" +
+                       $"Password={userInfo[1]};" +
+                       "SSL Mode=Require;Trust Server Certificate=true";
+        options.UseNpgsql(connStr);
+    }
+    else if (pgHost != null)
     {
         var connStr = $"Host={pgHost};" +
                       $"Port={Environment.GetEnvironmentVariable("PGPORT") ?? "5432"};" +
