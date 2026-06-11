@@ -77,10 +77,13 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - Lagt till långsiktig vision i OVERSIKT.md: roadmap V1–V5 mot ~340 svenska källor, PSI-direktivet, datapartnerskap med myndigheter
 - Lagt till långsiktig vision i PROJEKT.md: kommuner som manuella användare via ticket-funktion, "Ansök om att bli källa" får konkret syfte som B2G-onboarding-flöde
 
-**Next session:**
+**Next session — Railway-deployment:**
+- Lägg till `Npgsql.EntityFrameworkCore.PostgreSQL` i backend, behåll SQLite för lokal dev
+- Uppdatera `Program.cs`: PostgreSQL när `DATABASE_URL` finns, annars SQLite; auto-migrate på startup; CORS för Vercel-frontend
+- Skapa `Dockerfile` för Railway (.NET 10 för ny för Nixpacks auto-detect)
+- Skapa Railway-projekt, lägg till PostgreSQL-plugin, deploya backend
+- Sätt `VITE_USE_MOCK=false` + Railway-URL i Vercel env-vars
 - Google Analytics
-- Hosting: Neon PostgreSQL + Railway (BE)
-- Koppla frontend mot live-backend (VITE_USE_MOCK=false)
 
 ---
 
