@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Sidebar from '../components/Sidebar/Sidebar'
 import { type ProfileSection } from '../types'
@@ -23,6 +24,7 @@ const SECTION_LABELS: Record<ProfileSection, string> = {
 export default function ProfilePage() {
   const { isLoggedIn } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const sectionParam = searchParams.get('section')
   const section = VALID_SECTIONS.includes(sectionParam as ProfileSection)
     ? (sectionParam as ProfileSection)
@@ -36,7 +38,7 @@ export default function ProfilePage() {
   if (!isLoggedIn) {
     return (
       <div className="flex h-screen bg-slate-50">
-        <Sidebar selectedSourceId={null} onSelectSource={() => {}} unreadSourceIds={new Set()} />
+        <Sidebar selectedSourceId={null} onSelectSource={() => {}} unreadSourceIds={new Set()} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <GästProfil />
       </div>
     )
@@ -48,6 +50,8 @@ export default function ProfilePage() {
         selectedSourceId={null}
         onSelectSource={() => {}}
         unreadSourceIds={new Set()}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       <div className="flex flex-1 overflow-hidden">
