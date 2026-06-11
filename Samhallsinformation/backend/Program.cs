@@ -34,6 +34,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     }
     else
         options.UseSqlite("Data Source=samhallsinformation.db");
+
+    options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
 });
 
 // CORS — tillåt Vercel-frontend och lokal dev
