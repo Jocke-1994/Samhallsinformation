@@ -12,10 +12,11 @@ const MOCK_SOURCES: Source[] = [
 ]
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
 export async function fetchSources(): Promise<Source[]> {
   if (USE_MOCK) return MOCK_SOURCES
-  const res = await fetch('/api/sources')
+  const res = await fetch(`${API_BASE}/api/sources`)
   if (!res.ok) throw new Error(`fetchSources: ${res.status}`)
   return res.json()
 }

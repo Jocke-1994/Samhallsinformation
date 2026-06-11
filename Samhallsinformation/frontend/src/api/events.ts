@@ -134,6 +134,7 @@ const MOCK_EVENTS: CanonicalEvent[] = [
 ]
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
 export async function fetchEvents(params: FetchEventsParams = {}): Promise<EventsResponse> {
   if (USE_MOCK) {
@@ -150,7 +151,7 @@ export async function fetchEvents(params: FetchEventsParams = {}): Promise<Event
   if (params.page) query.set('page', String(params.page))
   if (params.pageSize) query.set('pageSize', String(params.pageSize))
 
-  const res = await fetch(`/api/events?${query}`)
+  const res = await fetch(`${API_BASE}/api/events?${query}`)
   if (!res.ok) throw new Error(`fetchEvents: ${res.status}`)
   return res.json()
 }
