@@ -134,3 +134,37 @@ Dokumenterar vilka källor som ingår, deras status, hur data hämtas och eventu
 ### Licens och attribution
 - All data presenteras med källhänvisning (källa visas i varje händelsekortt)
 - Ingen redigering eller tolkning av källmaterialet
+
+---
+
+## Långsiktig vision — Hela Sverige
+
+Målet på lång sikt är att täcka hela Sverige: alla nationella myndigheter, alla 21 länsstyrelser, alla 21 regioner och alla 290 kommuner.
+
+### Potentiellt antal källor
+
+| Nivå | Antal | Realistisk tillgång |
+|------|-------|-------------------|
+| Nationellt | ~8 | God — de flesta har RSS eller API |
+| Länsstyrelser | 21 | Medel — troligen RSS, varierar |
+| Regioner | 21 | Medel — varierar per region |
+| Kommuner | 290 | Låg — många saknar maskinläsbar data |
+| **Totalt** | **~340** | |
+
+### Lagstöd
+Sverige har implementerat EU:s öppna data-direktiv (PSI-direktivet) som kräver att offentliga myndigheter tillgängliggör sin data maskinläsbart. Nationell portal: **dataportal.se**. Det innebär att fler myndigheter aktivt bör arbeta mot öppna API:er — trenden går åt rätt håll.
+
+### Roadmap
+
+| Fas | Innehåll |
+|-----|----------|
+| **V1** (klart) | Polisen, Krisinformation |
+| **V2** | SMHI, MSB, Trafikverket |
+| **V3** | Alla 21 Länsstyrelser |
+| **V4** | Alla 21 Regioner |
+| **V5** | Kommuner via gemensamma plattformar (Mynewsdesk, Cision, osv) |
+
+### Datapartnerskap
+På sikt är ambitionen att kontakta myndigheter och föreslå strukturerade dataflöden skräddarsydda för systemet — istället för att extrahera geografi och kategori från fritext. Polisens RSS-feed är ett exempel där ett strukturerat API med koordinater och händelsekategorier hade gett betydligt rikare data.
+
+Myndigheter som ser värdet av att deras information når fler medborgare via en samlad plattform kan ha intresse av ett sådant samarbete.
