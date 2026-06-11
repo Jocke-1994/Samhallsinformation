@@ -5,9 +5,23 @@ using Samhallsinformation.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database
+// Database — PostgreSQL på Railway, SQLite lokalt
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=samhallsinformation.db"));
+{
+    if (databaseUrl != null)
+        options.UseNpgsql(databaseUrl);
+    else
+        options.UseSqlite("Data Source=samhallsinformation.db");
+});
+
+// CORS — tillåt Vercel-frontend och lokal dev
+var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "http://localhost:5173")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+builder.Services.AddCors(options =>
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
 
 // HTTP client for ingestors
 builder.Services.AddHttpClient<PolisenRssIngestor>();
@@ -23,19 +37,21 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// Seed: spara källorna från alla ingestors i databasen om de inte redan finns
+app.UseCors();
+
+// Auto-migrate och seed
 using (var scope = app.Services.CreateScope())
 {
     var db        = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var ingestors = scope.ServiceProvider.GetRequiredService<IEnumerable<IIngestor>>();
 
+    await db.Database.MigrateAsync();
+
     foreach (var ingestor in ingestors)
     {
         var source = ingestor.Source;
         if (!db.Sources.Any(s => s.Id == source.Id))
-        {
             db.Sources.Add(source);
-        }
     }
 
     await db.SaveChangesAsync();
