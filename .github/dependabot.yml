@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/Samhallsinformation/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "nuget"
+    directory: "/Samhallsinformation/backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

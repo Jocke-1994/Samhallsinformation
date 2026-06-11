@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Samhallsinformation/frontend/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "Samhallsinformation/frontend/**"
+
+jobs:
+  build:
+    name: Build & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: Samhallsinformation/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Samhallsinformation/frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: Samhallsinformation/frontend
+        run: npm run build
+
+      - name: Security audit
+        working-directory: Samhallsinformation/frontend
+        run: npm audit --audit-level=high
