@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { fetchSources } from '../../api/sources'
 import SourceButton from './SourceButton'
+import { FeedbackModal } from '../Feedback/FeedbackButton'
 import type { Source } from '../../types'
 import { useAuth, type SystemRoll } from '../../context/AuthContext'
 
@@ -47,6 +48,7 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
   const location  = useLocation()
   const { isLoggedIn, roll, aktivVy, logout, byttVy } = useAuth()
   const [dropdownÖppen, setDropdownÖppen] = useState(false)
+  const [feedbackÖppen, setFeedbackÖppen] = useState(false)
 
   const { data: sources = [] } = useQuery<Source[]>({
     queryKey: ['sources'],
@@ -155,6 +157,20 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
           ))}
         </div>
       </div>
+
+      {/* Feedback */}
+      <div className="border-t border-slate-200 dark:border-slate-700 pt-3 mt-3 flex justify-center">
+        <button
+          onClick={() => setFeedbackÖppen(true)}
+          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-full shadow transition-colors"
+        >
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h6m-6 8l4-4h7a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h2v4z" />
+          </svg>
+          Feedback
+        </button>
+      </div>
+      <FeedbackModal open={feedbackÖppen} onClose={() => setFeedbackÖppen(false)} />
 
       {/* Profilknapp med dropdown — endast för inloggade */}
       {isLoggedIn && <div className="border-t border-slate-200 pt-3 mt-3 relative">

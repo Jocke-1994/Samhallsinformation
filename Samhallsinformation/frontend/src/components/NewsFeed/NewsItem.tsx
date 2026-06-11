@@ -11,7 +11,7 @@ interface Props {
 const SEVERITY_CONFIG = {
   'Kritisk':      { pill: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',        severityBorder: 'border-l-red-500'   },
   'Viktigt':      { pill: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400', severityBorder: 'border-l-amber-400' },
-  'Bra att veta': { pill: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400',    severityBorder: 'border-l-slate-300' },
+  'Bra att veta': { pill: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',          severityBorder: 'border-l-sky-300'   },
 }
 
 const SOURCE_BORDER: Record<number, string> = {
