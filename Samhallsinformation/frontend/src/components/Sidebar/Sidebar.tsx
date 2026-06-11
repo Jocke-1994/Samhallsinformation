@@ -10,6 +10,8 @@ interface Props {
   selectedSourceId: number | null
   onSelectSource: (id: number | null) => void
   unreadSourceIds: Set<number>
+  isOpen: boolean
+  onClose: () => void
 }
 
 const PROFILE_SECTIONS = [
@@ -40,7 +42,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function Sidebar({ selectedSourceId, onSelectSource, unreadSourceIds }: Props) {
+export default function Sidebar({ selectedSourceId, onSelectSource, unreadSourceIds, isOpen, onClose }: Props) {
   const navigate  = useNavigate()
   const location  = useLocation()
   const { isLoggedIn, roll, aktivVy, logout, byttVy } = useAuth()
@@ -72,17 +74,29 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
     logout()
     setDropdownÖppen(false)
     navigate('/')
+    onClose()
   }
 
   const aktivConfig = ROLL_CONFIG[aktivVy]
 
   return (
-    <nav className="flex flex-col h-full w-56 bg-white border-r border-slate-200 px-3 py-5">
+    <>
+    {/* Backdrop — mobil */}
+    <div
+      className={`fixed inset-0 bg-black/30 z-40 md:hidden transition-opacity duration-200 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+      onClick={onClose}
+    />
+    <nav className={`
+      flex flex-col w-56 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 px-3 py-5 shrink-0
+      fixed inset-y-0 left-0 z-50 transition-transform duration-200
+      md:static md:translate-x-0 md:z-auto
+      ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+    `}>
 
       {/* App-namn */}
       <div className="mb-4 pb-4 border-b border-slate-100 text-center">
         <button
-          onClick={() => { onSelectSource(null); navigate('/') }}
+          onClick={() => { onSelectSource(null); navigate('/'); onClose() }}
           className={`text-lg font-extrabold tracking-tight transition-colors ${
             selectedSourceId === null && !isProfilePage
               ? 'text-violet-700'
@@ -105,7 +119,7 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
                 return (
                   <button
                     key={s.id}
-                    onClick={() => navigate(`/profil?section=${s.id}`)}
+                    onClick={() => { navigate(`/profil?section=${s.id}`); onClose() }}
                     className={`
                       w-full text-left px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 flex items-center gap-2.5
                       ${isActive
@@ -135,6 +149,7 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
               onClick={() => {
                 navigate('/')
                 onSelectSource(source.id)
+                onClose()
               }}
             />
           ))}
@@ -223,5 +238,6 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
       </div>}
 
     </nav>
+    </>
   )
 }
