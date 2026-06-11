@@ -74,7 +74,8 @@ public class KrisinformationApiIngestor : IIngestor
     private static string StripHtml(string html)
     {
         if (string.IsNullOrWhiteSpace(html)) return string.Empty;
-        return Regex.Replace(html, "<[^>]+>", string.Empty).Trim();
+        var text = Regex.Replace(html, "<[^>]+>", string.Empty).Trim();
+        return Regex.Replace(text, @"\{\d+\}", "[länk]").Trim();
     }
 }
 
