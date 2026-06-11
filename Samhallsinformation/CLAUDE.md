@@ -89,21 +89,33 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - Lagt till `samhallsinformation.se` i Vercel Domains; A-record `216.198.79.1` och CNAME `www → 3eefa53b97d41c65.vercel-dns-017c0m.`
 - Påbörjat Cloudflare-setup för gratis DNS (Loopia kräver betaluppgradering för DNS-redigering)
 
+- Cloudflare DNS aktivt — Loopias nameservers bytta till `dante.ns.cloudflare.com` + `perla.ns.cloudflare.com`
+- A-record `samhallsinformation.se → 216.198.79.1`, CNAME `www → cname.vercel-dns.com` (DNS only)
+- `ALLOWED_ORIGINS` i Railway utökad med `https://samhallsinformation.vercel.app`, `https://samhallsinformation.se`, `https://www.samhallsinformation.se`
+- Appen live med riktig data på `https://samhallsinformation.vercel.app` (PR #220–225)
+- GA4 (G-CT3BYVS6JQ) med Consent Mode v2 — analytics blockeras tills cookie-samtycke ges (PR #223)
+- Sidtiteln fixad från "frontend" till "Samhällsinformation" (PR #223)
+- `globals.d.ts` tillagd för `window.gtag` TypeScript-typer (PR #223)
+
 **Problem och lösningar denna session:**
 - `Npgsql 9.0.*` kräver EF Core 9.x → uppgraderat till `10.0.*`
 - Railway byggde från repo-roten och hittade inte Dockerfile → Root Directory satt till `Samhallsinformation/backend`
-- `DATABASE_URL` kom som URI (`postgresql://...`) men Npgsql kräver key=value → bytt till separata `PGHOST`/`PGPORT` etc.
-- `VITE_API_URL` saknades `https://`-prefix → URL byggdes som `vercel.app/railway-host/api/...` → fixat i Vercel env-vars
-- Vercel cachade gamla builden utan `VITE_API_URL` → tvingad cache-fri redeploy löste det
+- Railway injicerar bara `DATABASE_URL` (URI-format), inte `PGHOST` → kod uppdaterad att parsa `DATABASE_URL` med `Uri`-klassen (PR #220)
+- EF Core 10 kastar `PendingModelChangesWarning` — SQLite-migration vs PostgreSQL-provider → suppressad (PR #221)
+- `InitialCreate`-migration har SQLite-specifika typer (INTEGER för bool) → EF Core kraschar vid INSERT → bytt till `EnsureCreated` för PostgreSQL, droppar tabeller vid redeploy (PR #222)
+- `PublishedAt` skickades med `Kind=Local` → PostgreSQL kräver UTC → `.LocalDateTime` → `.UtcDateTime`, `DateTime.Parse` → `DateTimeOffset.Parse(...).UtcDateTime` (PR #224)
+- Krisinformation API skickar `{0}`, `{1}` som ej interpolerade platshållare → ersatta med `[länk]` (PR #225)
+- CORS blockerade `samhallsinformation.vercel.app` (produktions-URL) → ej med i `ALLOWED_ORIGINS` → tillagd
+- `VITE_API_URL` saknades `https://`-prefix → URL byggdes fel → fixat i Vercel env-vars
 - Loopia DNS kräver betaluppgradering → Cloudflare som gratis DNS-lösning
+- `www.samhallsinformation.se` SSL-certifikat provisioneras — klart inom 30 min (Vercel hanterar automatiskt)
 
 **Next session:**
-- Slutföra Cloudflare DNS-setup: A-record `samhallsinformation.se → 216.198.79.1`, CNAME `www → 3eefa53b97d41c65.vercel-dns-017c0m.`
-- Byta Loopias nameservers till Cloudflares
-- Lägga till `https://samhallsinformation.se,https://www.samhallsinformation.se` i Railway `ALLOWED_ORIGINS`
-- Google Analytics (GA4) — sätt upp med europeisk dataregion
-- Sätta upp e-post `info@samhallsinformation.se` via Zoho Mail (gratis)
-- Granska historisk data i Railway PostgreSQL — verifiera att all Polisen/Krisinformation-data finns
+- Verifiera att `https://samhallsinformation.se` och `https://www.samhallsinformation.se` fungerar
+- **Migrationsfixen** — skriva om `InitialCreate` utan SQLite-specifika typer så `EnsureCreated`-hacket kan tas bort och data inte försvinner vid redeploy
+- **Minska Railway-loggarna** — EF Core loggar varje SQL-query, 500 logs/sec är för mycket; sätt log level till Warning i produktion
+- **Railway till Europa** — flytta från US West till Europe för bättre prestanda för svenska användare
+- **Zoho Mail** — sätta upp `info@samhallsinformation.se`
 
 ---
 
