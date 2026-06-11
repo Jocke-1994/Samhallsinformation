@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { Routes, Route, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useSwipeable } from 'react-swipeable'
 import Sidebar from './components/Sidebar/Sidebar'
 import NewsFeed from './components/NewsFeed/NewsFeed'
 import ProfilePage from './pages/ProfilePage'
@@ -30,6 +31,12 @@ function HomePage() {
     setReadTrigger(n => n + 1)
   }, [])
 
+  const swipeHandlers = useSwipeable({
+    onSwipedRight: (e) => { if (e.initial[0] < 30) setSidebarOpen(true) },
+    onSwipedLeft:  ()  => setSidebarOpen(false),
+    touchEventOptions: { passive: true },
+  })
+
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
       <Sidebar
@@ -39,7 +46,7 @@ function HomePage() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      <main className="flex-1 overflow-hidden">
+      <main {...swipeHandlers} className="flex-1 overflow-hidden">
         <NewsFeed
           source={selectedSource}
           sources={sources}
