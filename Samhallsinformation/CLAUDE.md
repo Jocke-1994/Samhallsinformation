@@ -79,15 +79,31 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 - Ändrat "Bra att veta"-filterflik och händelsepill från grå till sky-blå för tydligare visuell distinktion (PR #213)
 - Lagt till `CookieConsent`-banner med accordion som visar vilken data som samlas in (nödvändiga vs analys); sparar val i localStorage (PR #213)
-- Lagt till `FeedbackModal` via Formspree kopplad till lila pill-knapp längst ner i sidebaren (PR #213)
+- Lagt till `FeedbackModal` via Formspree (ID: `xpqeyzjj`) kopplad till lila pill-knapp längst ner i sidebaren (PR #213)
+- Lagt till `Npgsql.EntityFrameworkCore.PostgreSQL 10.0.*` i backend (PR #215)
+- Uppdaterat `Program.cs`: PostgreSQL via `PGHOST`/`PGPORT`/`PGDATABASE`/`PGUSER`/`PGPASSWORD` när `PGHOST` finns, annars SQLite; CORS via `ALLOWED_ORIGINS` env-var; `MigrateAsync()` vid start (PR #215, #216, #217)
+- Skapat `Dockerfile` i `backend/` — Railway kan inte auto-detekta .NET 10 med Nixpacks (PR #215)
+- Railway: skapat projekt `Samhallsinformation`, lagt till PostgreSQL-plugin, Root Directory satt till `Samhallsinformation/backend`
+- Vercel: lagt till `VITE_API_URL=https://samhallsinformation-production.up.railway.app` och `VITE_USE_MOCK=false`; tvingad cache-fri redeploy för att baka in Vite env-vars (PR #218)
+- Köpt domän `samhallsinformation.se` från Loopia (9 SEK/år)
+- Lagt till `samhallsinformation.se` i Vercel Domains; A-record `216.198.79.1` och CNAME `www → 3eefa53b97d41c65.vercel-dns-017c0m.`
+- Påbörjat Cloudflare-setup för gratis DNS (Loopia kräver betaluppgradering för DNS-redigering)
 
-**Next session — Railway-deployment:**
-- Lägg till `Npgsql.EntityFrameworkCore.PostgreSQL` i backend, behåll SQLite för lokal dev
-- Uppdatera `Program.cs`: PostgreSQL när `DATABASE_URL` finns, annars SQLite; auto-migrate på startup; CORS för Vercel-frontend
-- Skapa `Dockerfile` för Railway (.NET 10 för ny för Nixpacks auto-detect)
-- Skapa Railway-projekt, lägg till PostgreSQL-plugin, deploya backend
-- Sätt `VITE_USE_MOCK=false` + Railway-URL i Vercel env-vars
-- Google Analytics
+**Problem och lösningar denna session:**
+- `Npgsql 9.0.*` kräver EF Core 9.x → uppgraderat till `10.0.*`
+- Railway byggde från repo-roten och hittade inte Dockerfile → Root Directory satt till `Samhallsinformation/backend`
+- `DATABASE_URL` kom som URI (`postgresql://...`) men Npgsql kräver key=value → bytt till separata `PGHOST`/`PGPORT` etc.
+- `VITE_API_URL` saknades `https://`-prefix → URL byggdes som `vercel.app/railway-host/api/...` → fixat i Vercel env-vars
+- Vercel cachade gamla builden utan `VITE_API_URL` → tvingad cache-fri redeploy löste det
+- Loopia DNS kräver betaluppgradering → Cloudflare som gratis DNS-lösning
+
+**Next session:**
+- Slutföra Cloudflare DNS-setup: A-record `samhallsinformation.se → 216.198.79.1`, CNAME `www → 3eefa53b97d41c65.vercel-dns-017c0m.`
+- Byta Loopias nameservers till Cloudflares
+- Lägga till `https://samhallsinformation.se,https://www.samhallsinformation.se` i Railway `ALLOWED_ORIGINS`
+- Google Analytics (GA4) — sätt upp med europeisk dataregion
+- Sätta upp e-post `info@samhallsinformation.se` via Zoho Mail (gratis)
+- Granska historisk data i Railway PostgreSQL — verifiera att all Polisen/Krisinformation-data finns
 
 ---
 
