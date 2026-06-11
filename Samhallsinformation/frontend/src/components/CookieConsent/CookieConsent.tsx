@@ -20,6 +20,11 @@ export default function CookieConsent() {
 
   function accept(choice: ConsentChoice) {
     localStorage.setItem(STORAGE_KEY, choice)
+    if (typeof window.gtag === 'function') {
+      window.gtag('consent', 'update', {
+        analytics_storage: choice === 'all' ? 'granted' : 'denied',
+      })
+    }
     setVisible(false)
   }
 
