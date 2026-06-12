@@ -16,7 +16,7 @@ public class PolisenRssIngestor : IIngestor
     {
         Id = 1,
         Name = "Polisen",
-        ShortName = "polisen.se",
+        ShortName = "Polisen",
         BaseUrl = "https://polisen.se",
         Type = SourceType.RSS,
         IsActive = true
