@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSwipeable } from 'react-swipeable'
 import Sidebar from '../components/Sidebar/Sidebar'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -13,6 +14,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function OmPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  const swipeHandlers = useSwipeable({
+    onSwipedRight: (e) => { if (e.initial[0] < 30) setSidebarOpen(true) },
+    onSwipedLeft:  ()  => setSidebarOpen(false),
+    touchEventOptions: { passive: true },
+  })
+
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
       <Sidebar
@@ -22,7 +29,7 @@ export default function OmPage() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      <main className="flex-1 overflow-y-auto">
+      <main {...swipeHandlers} className="flex-1 overflow-y-auto">
         {/* Hamburger — mobil */}
         <div className="md:hidden bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center">
           <button
