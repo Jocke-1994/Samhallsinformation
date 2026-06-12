@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { fetchSources } from '../../api/sources'
 import SourceButton from './SourceButton'
 import { FeedbackModal } from '../Feedback/FeedbackButton'
@@ -156,6 +156,17 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
             />
           ))}
         </div>
+      </div>
+
+      {/* Om-länk */}
+      <div className="flex justify-center mb-2">
+        <Link
+          to="/om"
+          onClick={onClose}
+          className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+        >
+          Om tjänsten
+        </Link>
       </div>
 
       {/* Feedback */}
