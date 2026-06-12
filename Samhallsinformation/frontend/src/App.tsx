@@ -49,7 +49,7 @@ function HomePage() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      <main {...swipeHandlers} className="flex-1 overflow-hidden select-none">
+      <main {...swipeHandlers} className="flex-1 overflow-hidden select-none md:select-auto">
         <NewsFeed
           source={selectedSource}
           sources={sources}

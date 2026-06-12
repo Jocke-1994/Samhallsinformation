@@ -30,7 +30,7 @@ export default function OmPage() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      <main {...swipeHandlers} className="flex-1 overflow-y-auto select-none">
+      <main {...swipeHandlers} className="flex-1 overflow-y-auto select-none md:select-auto">
         {/* Hamburger — mobil */}
         <div className="md:hidden bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center">
           <button
