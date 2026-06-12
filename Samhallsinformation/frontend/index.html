@@ -12,7 +12,8 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('consent', 'default', { analytics_storage: 'denied' });
       gtag('js', new Date());
-      gtag('config', 'G-CT3BYVS6JQ');
+      var gaConfig = localStorage.getItem('si_logged_in') === 'true' ? { traffic_type: 'internal' } : {};
+      gtag('config', 'G-CT3BYVS6JQ', gaConfig);
     </script>
   </head>
   <body>

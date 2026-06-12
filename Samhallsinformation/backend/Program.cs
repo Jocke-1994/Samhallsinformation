@@ -5,6 +5,8 @@ using Samhallsinformation.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+
 // Database — PostgreSQL på Railway (via DATABASE_URL eller PGHOST), SQLite lokalt
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 var pgHost      = Environment.GetEnvironmentVariable("PGHOST");
@@ -70,21 +72,23 @@ using (var scope = app.Services.CreateScope())
 
     if (databaseUrl != null || pgHost != null)
     {
-        // PostgreSQL: befintliga migrationer har SQLite-specifika typer (INTEGER för bool etc.)
-        // Droppa och återskapa med EnsureCreated som använder korrekta PostgreSQL-typer.
-        // Ingestorerna fyller på data igen inom 5 min.
-        await db.Database.ExecuteSqlRawAsync(@"
-            DROP TABLE IF EXISTS ""Events"";
-            DROP TABLE IF EXISTS ""UserPreferences"";
-            DROP TABLE IF EXISTS ""Sources"";
-            DROP TABLE IF EXISTS ""__EFMigrationsHistory"";
-        ");
-        await db.Database.EnsureCreatedAsync();
+        // Om migrationshistorik saknas (t.ex. gamla EnsureCreated-schema) → droppa och migrera rent.
+        // Efter första gången är detta en no-op: MigrateAsync ser att allt redan är applicerat.
+        bool alreadyMigrated;
+        try { alreadyMigrated = (await db.Database.GetAppliedMigrationsAsync()).Any(); }
+        catch { alreadyMigrated = false; }
+
+        if (!alreadyMigrated)
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                DROP TABLE IF EXISTS ""Events"";
+                DROP TABLE IF EXISTS ""UserPreferences"";
+                DROP TABLE IF EXISTS ""Sources"";
+                DROP TABLE IF EXISTS ""__EFMigrationsHistory"";
+            ");
+        }
     }
-    else
-    {
-        await db.Database.MigrateAsync();
-    }
+    await db.Database.MigrateAsync();
 
     foreach (var ingestor in ingestors)
     {
