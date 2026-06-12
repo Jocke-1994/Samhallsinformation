@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTheme, type Theme } from '../../context/ThemeContext'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { fetchSources } from '../../api/sources'
@@ -35,6 +36,13 @@ const TILLÅTNA_VYN: Record<SystemRoll, SystemRoll[]> = {
   'Användare': ['Användare'],
 }
 
+const THEMES: { id: Theme; label: string; color: string }[] = [
+  { id: 'true-black', label: 'True Black', color: '#000000' },
+  { id: 'dark',       label: 'Dark',       color: '#1e293b' },
+  { id: 'tan',        label: 'Dune',       color: '#f0e4c8' },
+  { id: 'light',      label: 'Light',      color: '#f8fafc' },
+]
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center py-3">
@@ -47,6 +55,7 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
   const navigate  = useNavigate()
   const location  = useLocation()
   const { isLoggedIn, roll, aktivVy, logout, byttVy } = useAuth()
+  const { theme, setTheme } = useTheme()
   const [dropdownÖppen, setDropdownÖppen] = useState(false)
   const [feedbackÖppen, setFeedbackÖppen] = useState(false)
 
@@ -96,13 +105,13 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
     `}>
 
       {/* App-namn */}
-      <div className="mb-4 pb-4 border-b border-slate-100 text-center">
+      <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700 text-center">
         <button
           onClick={() => { onSelectSource(null); navigate('/'); onClose() }}
           className={`text-lg font-extrabold tracking-tight transition-colors ${
             selectedSourceId === null && !isProfilePage
-              ? 'text-violet-700'
-              : 'text-slate-900 hover:text-violet-600'
+              ? 'text-violet-700 dark:text-violet-400'
+              : 'text-violet-600 dark:text-violet-500 hover:text-violet-700 dark:hover:text-violet-400'
           }`}
         >
           Samhällsinfo
@@ -179,6 +188,24 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
           </svg>
           Feedback
         </button>
+
+        {/* Tema-swatches */}
+        <div className="flex items-center gap-2.5 pt-1">
+          {THEMES.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTheme(t.id)}
+              title={t.label}
+              aria-label={t.label}
+              style={{ backgroundColor: t.color }}
+              className={`w-5 h-5 rounded-full border-2 transition-all duration-150 ${
+                theme === t.id
+                  ? 'border-violet-500 scale-110 shadow-sm'
+                  : 'border-slate-300 dark:border-slate-600 hover:scale-110 hover:border-slate-400'
+              }`}
+            />
+          ))}
+        </div>
       </div>
       <FeedbackModal open={feedbackÖppen} onClose={() => setFeedbackÖppen(false)} />
 

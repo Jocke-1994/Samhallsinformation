@@ -1,47 +1,49 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 
+export type Theme = 'true-black' | 'dark' | 'tan' | 'light'
+
 const STORAGE_KEY = 'theme'
+const VALID_THEMES: Theme[] = ['true-black', 'dark', 'tan', 'light']
 
 interface ThemeContextValue {
-  dark: boolean
-  toggle: () => void
+  theme: Theme
+  setTheme: (theme: Theme) => void
 }
 
-const ThemeContext = createContext<ThemeContextValue>({ dark: false, toggle: () => {} })
+const ThemeContext = createContext<ThemeContextValue>({ theme: 'dark', setTheme: () => {} })
 
-function getInitialDark(): boolean {
+function getInitialTheme(): Theme {
   const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored !== null) return stored === 'dark'
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
+  if (stored && VALID_THEMES.includes(stored as Theme)) return stored as Theme
+  return 'dark'
+}
+
+function applyTheme(theme: Theme) {
+  const html = document.documentElement
+  html.setAttribute('data-theme', theme)
+  if (theme === 'dark' || theme === 'true-black') {
+    html.classList.add('dark')
+  } else {
+    html.classList.remove('dark')
+  }
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [dark, setDark] = useState(getInitialDark)
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme)
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
-  }, [dark])
+    applyTheme(theme)
+  }, [theme])
 
-  // Follow OS preference changes when user has no manual override
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const handler = (e: MediaQueryListEvent) => {
-      if (localStorage.getItem(STORAGE_KEY) === null) setDark(e.matches)
-    }
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
-
-  function toggle() {
-    setDark(prev => {
-      const next = !prev
-      localStorage.setItem(STORAGE_KEY, next ? 'dark' : 'light')
-      return next
-    })
+  function setTheme(t: Theme) {
+    setThemeState(t)
+    localStorage.setItem(STORAGE_KEY, t)
+    const w = window as Window & { gtag?: (...args: unknown[]) => void }
+    w.gtag?.('event', 'theme_change', { theme: t })
   }
 
   return (
-    <ThemeContext.Provider value={{ dark, toggle }}>
+    <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   )
