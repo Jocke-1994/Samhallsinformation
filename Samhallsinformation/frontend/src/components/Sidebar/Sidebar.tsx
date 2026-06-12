@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useTheme } from '../../context/ThemeContext'
+import { useTheme, type Theme } from '../../context/ThemeContext'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { fetchSources } from '../../api/sources'
@@ -36,6 +36,13 @@ const TILLÅTNA_VYN: Record<SystemRoll, SystemRoll[]> = {
   'Användare': ['Användare'],
 }
 
+const THEMES: { id: Theme; label: string; color: string }[] = [
+  { id: 'true-black', label: 'True Black', color: '#000000' },
+  { id: 'dark',       label: 'Dark',       color: '#1e293b' },
+  { id: 'tan',        label: 'Dune',       color: '#f0e4c8' },
+  { id: 'light',      label: 'Light',      color: '#f8fafc' },
+]
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center py-3">
@@ -48,7 +55,7 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
   const navigate  = useNavigate()
   const location  = useLocation()
   const { isLoggedIn, roll, aktivVy, logout, byttVy } = useAuth()
-  const { dark, toggle: toggleTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
   const [dropdownÖppen, setDropdownÖppen] = useState(false)
   const [feedbackÖppen, setFeedbackÖppen] = useState(false)
 
@@ -98,7 +105,7 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
     `}>
 
       {/* App-namn */}
-      <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700 relative flex items-center justify-center">
+      <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700 text-center">
         <button
           onClick={() => { onSelectSource(null); navigate('/'); onClose() }}
           className={`text-lg font-extrabold tracking-tight transition-colors ${
@@ -108,21 +115,6 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
           }`}
         >
           Samhällsinfo
-        </button>
-        <button
-          onClick={toggleTheme}
-          className="absolute right-0 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          aria-label={dark ? 'Byt till ljust läge' : 'Byt till mörkt läge'}
-        >
-          {dark ? (
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          ) : (
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </svg>
-          )}
         </button>
       </div>
 
@@ -196,6 +188,24 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
           </svg>
           Feedback
         </button>
+
+        {/* Tema-swatches */}
+        <div className="flex items-center gap-2.5 pt-1">
+          {THEMES.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTheme(t.id)}
+              title={t.label}
+              aria-label={t.label}
+              style={{ backgroundColor: t.color }}
+              className={`w-5 h-5 rounded-full border-2 transition-all duration-150 ${
+                theme === t.id
+                  ? 'border-violet-500 scale-110 shadow-sm'
+                  : 'border-slate-300 dark:border-slate-600 hover:scale-110 hover:border-slate-400'
+              }`}
+            />
+          ))}
+        </div>
       </div>
       <FeedbackModal open={feedbackÖppen} onClose={() => setFeedbackÖppen(false)} />
 
