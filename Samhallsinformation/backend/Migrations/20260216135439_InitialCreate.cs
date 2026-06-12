@@ -15,18 +15,18 @@ namespace Samhallsinformation.Migrations
                 name: "Events",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    SourceId = table.Column<int>(type: "INTEGER", nullable: false),
-                    ExternalId = table.Column<string>(type: "TEXT", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", nullable: false),
-                    Content = table.Column<string>(type: "TEXT", nullable: false),
-                    PublishedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Url = table.Column<string>(type: "TEXT", nullable: false),
-                    RawData = table.Column<string>(type: "TEXT", nullable: false),
-                    Geography = table.Column<string>(type: "TEXT", nullable: true),
-                    Severity = table.Column<string>(type: "TEXT", nullable: false),
-                    IsNational = table.Column<bool>(type: "INTEGER", nullable: false),
-                    IngestedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    SourceId = table.Column<int>(nullable: false),
+                    ExternalId = table.Column<string>(nullable: false),
+                    Title = table.Column<string>(nullable: false),
+                    Content = table.Column<string>(nullable: false),
+                    PublishedAt = table.Column<DateTime>(nullable: false),
+                    Url = table.Column<string>(nullable: false),
+                    RawData = table.Column<string>(nullable: false),
+                    Geography = table.Column<string>(nullable: true),
+                    Severity = table.Column<string>(nullable: false),
+                    IsNational = table.Column<bool>(nullable: false),
+                    IngestedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -37,13 +37,13 @@ namespace Samhallsinformation.Migrations
                 name: "Sources",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
-                    ShortName = table.Column<string>(type: "TEXT", nullable: false),
-                    BaseUrl = table.Column<string>(type: "TEXT", nullable: false),
-                    Type = table.Column<int>(type: "INTEGER", nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Name = table.Column<string>(nullable: false),
+                    ShortName = table.Column<string>(nullable: false),
+                    BaseUrl = table.Column<string>(nullable: false),
+                    Type = table.Column<int>(nullable: false),
+                    IsActive = table.Column<bool>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -54,12 +54,12 @@ namespace Samhallsinformation.Migrations
                 name: "UserPreferences",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<string>(type: "TEXT", nullable: false),
-                    GeographyFilter = table.Column<string>(type: "TEXT", nullable: true),
-                    SourceFilter = table.Column<string>(type: "TEXT", nullable: true),
-                    SeverityFilter = table.Column<string>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<string>(nullable: false),
+                    GeographyFilter = table.Column<string>(nullable: true),
+                    SourceFilter = table.Column<string>(nullable: true),
+                    SeverityFilter = table.Column<string>(nullable: true),
+                    IsActive = table.Column<bool>(nullable: false)
                 },
                 constraints: table =>
                 {
