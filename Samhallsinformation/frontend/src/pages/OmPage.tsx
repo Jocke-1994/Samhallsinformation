@@ -50,6 +50,7 @@ export default function OmPage() {
                 'Innehåll omformuleras aldrig.',
                 'Tjänsten tar inte ställning i enskilda händelser eller frågor.',
                 'Det är alltid tydligt varifrån en uppgift kommer.',
+                'Alla länkar leder direkt till ursprungskällan — ingen information presenteras utan att originalet är länkat.',
               ].map(princip => (
                 <li key={princip} className="flex items-start gap-2.5 text-slate-600 dark:text-slate-400">
                   <span className="mt-2 w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
