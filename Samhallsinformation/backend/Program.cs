@@ -72,19 +72,43 @@ using (var scope = app.Services.CreateScope())
 
     if (databaseUrl != null || pgHost != null)
     {
-        // Om migrationshistorik saknas (t.ex. gamla EnsureCreated-schema) → droppa och migrera rent.
-        // Efter första gången är detta en no-op: MigrateAsync ser att allt redan är applicerat.
         bool alreadyMigrated;
         try { alreadyMigrated = (await db.Database.GetAppliedMigrationsAsync()).Any(); }
         catch { alreadyMigrated = false; }
 
         if (!alreadyMigrated)
         {
+            // Ingen migrationshistorik → droppa och skapa fresh med MigrateAsync
             await db.Database.ExecuteSqlRawAsync(@"
                 DROP TABLE IF EXISTS ""Events"";
                 DROP TABLE IF EXISTS ""UserPreferences"";
                 DROP TABLE IF EXISTS ""Sources"";
                 DROP TABLE IF EXISTS ""__EFMigrationsHistory"";
+            ");
+        }
+        else
+        {
+            // Historik finns — fixa SQLite-typade kolumner om de finns kvar från gammal migration
+            await db.Database.ExecuteSqlRawAsync(@"
+                DO $$
+                BEGIN
+                  IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name='Sources' AND column_name='IsActive' AND data_type='integer'
+                  ) THEN
+                    ALTER TABLE ""Events""          ALTER COLUMN ""IsNational"" TYPE boolean   USING (""IsNational""::boolean);
+                    ALTER TABLE ""Sources""         ALTER COLUMN ""IsActive""   TYPE boolean   USING (""IsActive""::boolean);
+                    ALTER TABLE ""UserPreferences"" ALTER COLUMN ""IsActive""   TYPE boolean   USING (""IsActive""::boolean);
+                    ALTER TABLE ""Events""          DROP CONSTRAINT ""PK_Events"";
+                    ALTER TABLE ""Events""          ALTER COLUMN ""Id""         TYPE uuid      USING (""Id""::uuid);
+                    ALTER TABLE ""Events""          ADD  CONSTRAINT ""PK_Events"" PRIMARY KEY (""Id"");
+                    ALTER TABLE ""UserPreferences"" DROP CONSTRAINT ""PK_UserPreferences"";
+                    ALTER TABLE ""UserPreferences"" ALTER COLUMN ""Id""         TYPE uuid      USING (""Id""::uuid);
+                    ALTER TABLE ""UserPreferences"" ADD  CONSTRAINT ""PK_UserPreferences"" PRIMARY KEY (""Id"");
+                    ALTER TABLE ""Events""          ALTER COLUMN ""PublishedAt"" TYPE timestamp with time zone USING (""PublishedAt""::timestamp with time zone);
+                    ALTER TABLE ""Events""          ALTER COLUMN ""IngestedAt""  TYPE timestamp with time zone USING (""IngestedAt""::timestamp with time zone);
+                  END IF;
+                END $$;
             ");
         }
     }
