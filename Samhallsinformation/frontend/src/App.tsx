@@ -7,6 +7,7 @@ import NewsFeed from './components/NewsFeed/NewsFeed'
 import ProfilePage from './pages/ProfilePage'
 import AdminPage from './pages/AdminPage'
 import CookieConsent from './components/CookieConsent/CookieConsent'
+import OmPage from './pages/OmPage'
 import { fetchSources } from './api/sources'
 import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 import type { Source } from './types'
@@ -92,6 +93,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/profil" element={<ProfilePage />} />
         {adminEnabled && <Route path="/admin" element={<AdminPage />} />}
+        <Route path="/om" element={<OmPage />} />
       </Routes>
       <CookieConsent />
     </>
