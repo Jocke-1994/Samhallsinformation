@@ -117,8 +117,16 @@ using (var scope = app.Services.CreateScope())
     foreach (var ingestor in ingestors)
     {
         var source = ingestor.Source;
-        if (!db.Sources.Any(s => s.Id == source.Id))
+        var existing = db.Sources.Find(source.Id);
+        if (existing == null)
             db.Sources.Add(source);
+        else
+        {
+            existing.Name = source.Name;
+            existing.ShortName = source.ShortName;
+            existing.BaseUrl = source.BaseUrl;
+            existing.Type = source.Type;
+        }
     }
 
     await db.SaveChangesAsync();
