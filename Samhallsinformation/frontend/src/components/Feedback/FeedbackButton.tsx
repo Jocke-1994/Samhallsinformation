@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 
 const FORMSPREE_ID = 'xpqeyzjj'
 
@@ -38,7 +39,7 @@ export function FeedbackModal({ open, onClose }: Props) {
     setStatus('idle')
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[8500] flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget) handleClose() }}
@@ -120,6 +121,7 @@ export function FeedbackModal({ open, onClose }: Props) {
         )}
 
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
