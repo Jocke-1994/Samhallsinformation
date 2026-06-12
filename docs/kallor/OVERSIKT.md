@@ -79,6 +79,50 @@ Dokumenterar vilka källor som ingår, deras status, hur data hämtas och eventu
 | **Licens** | Öppen data, fri att använda med attribution |
 | **Notering** | Täcker vägtrafikhändelser, störningar och vägarbeten. API-nyckel lagras som miljövariabel |
 
+### Folkhälsomyndigheten
+| Egenskap | Värde |
+|----------|-------|
+| **Status** | Planerad |
+| **Typ** | RSS |
+| **URL** | `https://www.folkhalsomyndigheten.se/nyheter-och-press/nyhetsarkiv/?topic=smittskydd-och-sjukdomar&syndication=rss` |
+| **API-nyckel** | Nej |
+| **Rate limit** | Ej dokumenterat — var 5:e minut bedöms rimligt |
+| **Licens** | Offentlig information, fri att använda (PSI-lagen) |
+| **Notering** | Ämnesfiltrerat RSS-flöde specifikt för smittskydd och sjukdomar. Också generellt nyhetsflöde tillgängligt. Uppdateras sällan men kritiskt vid utbrott |
+
+### Livsmedelsverket
+| Egenskap | Värde |
+|----------|-------|
+| **Status** | Planerad |
+| **Typ** | RSS |
+| **URL** | `https://www.livsmedelsverket.se/om-oss/press/rss/` (indexsida — specifikt återkallelseflöde finns på återkallelsesidan) |
+| **API-nyckel** | Nej |
+| **Rate limit** | Ej dokumenterat — var 5:e minut bedöms rimligt |
+| **Licens** | Creative Commons Attribution 4.0 (CC BY 4.0) |
+| **Notering** | RSS täcker återkallanden, pressmeddelanden och nyheter. Ingen recall-specifik REST API finns — RSS är enda maskinläsbara vägen till matåterkallelser |
+
+### Läkemedelsverket
+| Egenskap | Värde |
+|----------|-------|
+| **Status** | Planerad |
+| **Typ** | RSS |
+| **URL** | `https://www.lakemedelsverket.se/sv/om-lakemedelsverket/press-och-nyheter/rss` (indexsida med kategorier) |
+| **API-nyckel** | Nej |
+| **Rate limit** | Ej dokumenterat — var 5:e minut bedöms rimligt |
+| **Licens** | Öppen data (PSI-lagen) |
+| **Notering** | Säkerhetsnyheter och läkemedelsåterkallelser. Öppen data-portal finns men täcker läkemedelsregisterdata — inte säkerhetsvarningar. RSS är primär ingestväg |
+
+### Strålsäkerhetsmyndigheten (SSM)
+| Egenskap | Värde |
+|----------|-------|
+| **Status** | Utvärderas |
+| **Typ** | RSS |
+| **URL** | `https://www.stralsakerhetsmyndigheten.se/en/news/news/?view=rss` |
+| **API-nyckel** | Nej |
+| **Rate limit** | Ej dokumenterat |
+| **Licens** | Offentlig information |
+| **Notering** | RSS finns men innehåller generella nyheter och rapporter — sällan realtidshändelser. Faktiska strålningsincidenter når troligen Krisinformation.se före SSM:s eget flöde. Låg uppdateringsfrekvens |
+
 ---
 
 ## V2 — Regionala källor (planerade)
@@ -112,6 +156,43 @@ Dokumenterar vilka källor som ingår, deras status, hur data hämtas och eventu
 | **API-nyckel** | Troligen nej för öppna datasets |
 | **Rate limit** | Okänt |
 | **Notering** | Göteborg har en öppen dataportal — värt att undersöka vilka realtidsdataflöden som finns |
+
+---
+
+## V3 — Nationella källor (svår ingest, utvärderas)
+
+### Jordbruksverket
+| Egenskap | Värde |
+|----------|-------|
+| **Status** | Utvärderas |
+| **Typ** | REST API (grödprognoser) / XLSX-filer (djursjukdomar) |
+| **URL** | `https://api.jordbruksverket.se/rest/povapi/` |
+| **API-nyckel** | Ja — Basic Auth, testuppgifter finns, produktion kräver registrering |
+| **Rate limit** | Ej dokumenterat |
+| **Licens** | CC0 eller CC BY |
+| **Notering** | API:et täcker grödprognoser och skadedjursvarningar — inte djursjukdomar. Djursjukdomsdata (salmonella, fågelinfluensa m.m.) publiceras som XLSX-filer, inte via API. SVA (Statens veterinärmedicinska anstalt) har smittlägesrapporter men enbart som PDF |
+
+### Naturvårdsverket
+| Egenskap | Värde |
+|----------|-------|
+| **Status** | Utvärderas |
+| **Typ** | REST API (geodata/naturvårdsregister) |
+| **URL** | `https://geodata.naturvardsverket.se/naturvardsregistret/rest/v3/` |
+| **API-nyckel** | Nej |
+| **Rate limit** | Ej dokumenterat |
+| **Licens** | Fri (PSI-lagen) |
+| **Notering** | API:et täcker naturreservat och skyddade områden — inte miljövarningar eller föroreningslarm. Inget RSS-flöde för nyheter hittades. Akuta miljöhändelser (algblomning, föroreningar) når användare via länsstyrelserna eller Krisinformation, inte Naturvårdsverket direkt |
+
+### Sjöfartsverket
+| Egenskap | Värde |
+|----------|-------|
+| **Status** | Utvärderas |
+| **Typ** | REST API (fartygsrörelser) / PDF (sjökungorelser) |
+| **URL** | `https://snt-public-api.sjofartsverket.se/` |
+| **API-nyckel** | Ja — JWT-token, registrering krävs |
+| **Rate limit** | Ej dokumenterat |
+| **Licens** | MIT (API-kod), öppen data (innehåll) |
+| **Notering** | API:et täcker fartygsankomster/avgångar — inte sjösäkerhetskungörelser (NtM). Säkerhetsmeddelanden till sjöfarten publiceras som veckovisa PDF-häften på `ufs.sjofartsverket.se` — ingen RSS eller API finns. Ingest kräver PDF-skrapning |
 
 ---
 
@@ -159,8 +240,8 @@ Sverige har implementerat EU:s öppna data-direktiv (PSI-direktivet) som kräver
 | Fas | Innehåll |
 |-----|----------|
 | **V1** (klart) | Polisen, Krisinformation |
-| **V2** | SMHI, MSB, Trafikverket |
-| **V3** | Alla 21 Länsstyrelser |
+| **V2** | SMHI, Trafikverket, Folkhälsomyndigheten, Livsmedelsverket, Läkemedelsverket, MSB (utvärderas), SSM (utvärderas) |
+| **V3** | Jordbruksverket, Naturvårdsverket, Sjöfartsverket (svår ingest), alla 21 Länsstyrelser |
 | **V4** | Alla 21 Regioner |
 | **V5** | Kommuner via gemensamma plattformar (Mynewsdesk, Cision, osv) |
 
