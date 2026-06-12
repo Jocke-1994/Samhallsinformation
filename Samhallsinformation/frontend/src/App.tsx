@@ -36,7 +36,8 @@ function HomePage() {
   const swipeHandlers = useSwipeable({
     onSwipedRight: (e) => { if (e.initial[0] < 30) setSidebarOpen(true) },
     onSwipedLeft:  ()  => setSidebarOpen(false),
-    touchEventOptions: { passive: true },
+    preventScrollOnSwipe: true,
+    touchEventOptions: { passive: false },
   })
 
   return (
@@ -48,7 +49,7 @@ function HomePage() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      <main {...swipeHandlers} className="flex-1 overflow-hidden">
+      <main {...swipeHandlers} className="flex-1 overflow-hidden select-none">
         <NewsFeed
           source={selectedSource}
           sources={sources}
