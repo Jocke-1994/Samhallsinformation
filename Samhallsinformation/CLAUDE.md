@@ -75,6 +75,12 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - `StatsController`: ny `GET /api/admin/stats` — totalEvents, eventsLast24h, activeSources, eventsByDay (7 dagar fyllda), eventsBySource, eventsBySeverity
 - `Rapporter.tsx`: rewritten — LIVE-sektioner med riktig statistik, MOCK-badges på användare/notifikationer, "Besökare & trafik" Kort med länk till Google Analytics (PR feat/admin-rapporter)
 - Aktivitetslogg + Felsökning: MOCK-badges tillagda för tydlighet
+- `WelcomeModal`: visas vid första besök (localStorage `si_welcome_seen`), förklarar navigation inkl. swipe på mobil, försvinner permanent efter "Kom igång" (PR #238)
+- `/uppdateringar`: publik changelog-sida med beskrivande titlar istället för semver, startar från live-datum — manuellt underhållen (PR #238)
+- Sidebar: "Om" och "Nyheter" som två pills bredvid varandra (PR #238)
+- `fix/database-url-parsing`: suppressar `PendingModelChangesWarning` i Railway-loggarna (PR #239)
+- Gamla branches städade — 27 lokala branches raderade, bara `main` kvar
+- Google Search Console: domän verifierad via Cloudflare, kopplad till GA4, sitemap `https://samhallsinformation.se/sitemap.xml` inskickad
 
 **Problem och lösningar denna session:**
 - Dependabot: 2 high-severity alerts på `flatted` (prototype pollution + DoS) — transitiv dev-dependency via ESLint, körs aldrig i produktion, ignoreras tills vidare
@@ -84,6 +90,7 @@ Systemet hanterar information baserat på tillgänglig metadata:
 **Next session (Session 9):**
 - Zoho Mail: sätta upp `info@samhallsinformation.se`
 - Backend-auth: koppla AuthContext mot riktig autentisering
+- Fler källor: nästa ingestor (MSB, SMHI eller liknande)
 
 ---
 
