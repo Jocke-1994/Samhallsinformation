@@ -8,6 +8,8 @@ import ProfilePage from './pages/ProfilePage'
 import AdminPage from './pages/AdminPage'
 import CookieConsent from './components/CookieConsent/CookieConsent'
 import OmPage from './pages/OmPage'
+import UppdateringarPage from './pages/UppdateringarPage'
+import WelcomeModal from './components/WelcomeModal/WelcomeModal'
 import { fetchSources } from './api/sources'
 import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 import type { Source } from './types'
@@ -49,6 +51,7 @@ function HomePage() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
+      <WelcomeModal />
       <main {...swipeHandlers} className="flex-1 overflow-hidden select-none md:select-auto">
         <NewsFeed
           source={selectedSource}
@@ -95,6 +98,7 @@ export default function App() {
         <Route path="/profil" element={<ProfilePage />} />
         {adminEnabled && <Route path="/admin" element={<AdminPage />} />}
         <Route path="/om" element={<OmPage />} />
+        <Route path="/uppdateringar" element={<UppdateringarPage />} />
       </Routes>
       <CookieConsent />
     </>
