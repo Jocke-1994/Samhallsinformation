@@ -354,7 +354,10 @@ export default function Kallhantering() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Källhantering</h2>
+          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            Källhantering
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">LIVE</span>
+          </h2>
           <p className="text-sm text-slate-500 mt-0.5">
             {isLoading ? 'Laddar...' : `${kallor.length} källor registrerade · ${kallor.filter(k => k.aktiv).length} aktiva`}
           </p>
@@ -460,7 +463,9 @@ export default function Kallhantering() {
             <tr className="bg-slate-50 border-b border-slate-200 text-left">
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Källa</th>
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Kategori</th>
-              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Status</th>
+              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">
+                Status <span className="normal-case font-normal text-slate-300 ml-1">(simulerat)</span>
+              </th>
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Senast kontrollerad</th>
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-right">Händelser</th>
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-center">Aktiv</th>
@@ -578,7 +583,10 @@ export default function Kallhantering() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Schemalagda ändringar</h3>
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              Schemalagda ändringar
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">MOCK</span>
+            </h3>
             <p className="text-xs text-slate-400 mt-0.5">Planerat underhåll, av- och påslagningar</p>
           </div>
           <button
@@ -787,7 +795,10 @@ export default function Kallhantering() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Externa statusflöden</h3>
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              Externa statusflöden
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">MOCK</span>
+            </h3>
             <p className="text-xs text-slate-400 mt-0.5">Läser källornas egna driftstatus — uppdateras automatiskt</p>
           </div>
           <button

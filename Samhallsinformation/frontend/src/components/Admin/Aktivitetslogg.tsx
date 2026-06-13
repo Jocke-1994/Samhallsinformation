@@ -130,7 +130,10 @@ export default function Aktivitetslogg() {
 
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Aktivitetslogg</h2>
+          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            Aktivitetslogg
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">MOCK</span>
+          </h2>
           <p className="text-sm text-slate-500 mt-0.5">Systemnivå — ingestor-körningar, skickade notiser och fel.</p>
         </div>
         <button
