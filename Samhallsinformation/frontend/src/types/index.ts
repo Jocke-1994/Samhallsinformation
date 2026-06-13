@@ -3,8 +3,22 @@ export interface Source {
   name: string
   shortName: string
   baseUrl: string
+  url?: string | null
+  category?: string | null
   isActive: boolean
   scope: 'nationell' | 'regional'
+}
+
+export interface AdminSource {
+  id: number
+  name: string
+  shortName: string
+  baseUrl: string
+  url: string | null
+  category: string | null
+  type: number
+  isActive: boolean
+  eventCount: number
 }
 
 export interface CanonicalEvent {

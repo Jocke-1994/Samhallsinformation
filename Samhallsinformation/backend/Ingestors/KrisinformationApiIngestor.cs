@@ -19,6 +19,8 @@ public class KrisinformationApiIngestor : IIngestor
         Name = "Krisinformation.se",
         ShortName = "Krisinformation",
         BaseUrl = "https://krisinformation.se",
+        Url = ApiUrl,
+        Category = "Nationell",
         Type = SourceType.WebAPI,
         IsActive = true
     };

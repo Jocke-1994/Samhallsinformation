@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchAdminSources, createAdminSource, updateAdminSource, deleteAdminSource } from '../../api/sources'
+import type { AdminSource } from '../../types'
 
 type KällStatus      = 'OK' | 'Begränsad drift' | 'Nere' | 'Okänd'
 type Kategori        = 'Nationell' | 'Regional' | 'Kommunal' | 'Transport' | 'Väder'
@@ -112,17 +115,6 @@ interface Källa {
   händelser:        number
 }
 
-const INITIAL_KALLOR: Källa[] = [
-  { id: 1,  namn: 'Polisen',                    url: 'https://polisen.se/rss',              kategori: 'Nationell',  status: 'OK',              aktiv: true,  senastKontroll: '2026-03-21 10:42', händelser: 4821 },
-  { id: 2,  namn: 'SMHI',                       url: 'https://smhi.se/rss',                 kategori: 'Väder',      status: 'Begränsad drift', aktiv: true,  senastKontroll: '2026-03-21 10:40', händelser: 1203 },
-  { id: 3,  namn: 'MSB',                        url: 'https://msb.se/rss',                  kategori: 'Nationell',  status: 'OK',              aktiv: true,  senastKontroll: '2026-03-21 10:42', händelser: 398  },
-  { id: 4,  namn: 'Trafikverket',               url: 'https://trafikverket.se/rss',         kategori: 'Transport',  status: 'OK',              aktiv: true,  senastKontroll: '2026-03-21 10:41', händelser: 2940 },
-  { id: 5,  namn: 'Krisinformation.se',         url: 'https://krisinformation.se/rss',      kategori: 'Nationell',  status: 'OK',              aktiv: true,  senastKontroll: '2026-03-21 10:42', händelser: 87   },
-  { id: 6,  namn: 'Länsstyrelsen Västra Götaland', url: 'https://lansstyrelsen.se/vgr/rss', kategori: 'Regional',   status: 'OK',              aktiv: true,  senastKontroll: '2026-03-21 09:00', händelser: 210  },
-  { id: 7,  namn: 'Regeringen.se',              url: 'https://regeringen.se/rss',           kategori: 'Nationell',  status: 'Okänd',           aktiv: false, senastKontroll: '2026-03-20 22:00', händelser: 56   },
-  { id: 8,  namn: 'Göteborgs Stad',             url: 'https://goteborg.se/rss',             kategori: 'Kommunal',   status: 'OK',              aktiv: true,  senastKontroll: '2026-03-21 10:00', händelser: 143  },
-]
-
 const STATUS_CLS: Record<KällStatus, string> = {
   'OK':              'bg-green-100 text-green-700 border border-green-200',
   'Begränsad drift': 'bg-amber-100 text-amber-700 border border-amber-200',
@@ -148,9 +140,19 @@ interface NyForm {
   laddar:    boolean
 }
 
-let nextId = 100
+function toKälla(s: AdminSource, statusMap: Map<number, KällStatus>, tidMap: Map<number, string>): Källa {
+  return {
+    id:             s.id,
+    namn:           s.name,
+    url:            s.url ?? s.baseUrl,
+    kategori:       (s.category ?? 'Nationell') as Kategori,
+    status:         statusMap.get(s.id) ?? 'Okänd',
+    aktiv:          s.isActive,
+    senastKontroll: tidMap.get(s.id) ?? '—',
+    händelser:      s.eventCount,
+  }
+}
 
-// Simulerar automatisk analys av URL
 function analyseraUrl(url: string): { namn: string; kategori: Kategori } | null {
   try {
     const normad = url.startsWith('http') ? url : `https://${url}`
@@ -176,7 +178,6 @@ function analyseraUrl(url: string): { namn: string; kategori: Kategori } | null 
         return { namn: r.namn, kategori: r.kategori }
       }
     }
-    // Fallback: gissa namn från domänen
     const domän = host.split('.')[0]
     const namn = domän.charAt(0).toUpperCase() + domän.slice(1)
     return { namn, kategori: 'Nationell' }
@@ -186,7 +187,33 @@ function analyseraUrl(url: string): { namn: string; kategori: Kategori } | null 
 }
 
 export default function Kallhantering() {
-  const [kallor,      setKallor]      = useState<Källa[]>(INITIAL_KALLOR)
+  const queryClient = useQueryClient()
+
+  const { data: apiSources = [], isLoading } = useQuery({
+    queryKey: ['admin-sources'],
+    queryFn: fetchAdminSources,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: createAdminSource,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-sources'] }),
+  })
+  const updateMutation = useMutation({
+    mutationFn: ({ id, req }: { id: number; req: Parameters<typeof updateAdminSource>[1] }) =>
+      updateAdminSource(id, req),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-sources'] }),
+  })
+  const deleteMutation = useMutation({
+    mutationFn: deleteAdminSource,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-sources'] }),
+  })
+
+  // Client-side overlays for status checks (not persisted)
+  const [statusMap, setStatusMap] = useState<Map<number, KällStatus>>(new Map())
+  const [tidMap,    setTidMap]    = useState<Map<number, string>>(new Map())
+
+  const kallor: Källa[] = apiSources.map(s => toKälla(s, statusMap, tidMap))
+
   const [sök,         setSök]         = useState('')
   const [filterKat,   setFilterKat]   = useState<Kategori | ''>('')
   const [filterStatus,setFilterStatus]= useState<KällStatus | ''>('')
@@ -211,7 +238,8 @@ export default function Kallhantering() {
       const slump = Math.random()
       const status: KällStatus = slump < 0.75 ? 'OK' : slump < 0.90 ? 'Begränsad drift' : 'Nere'
       const nu = new Date().toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' })
-      setKallor(prev => prev.map(k => k.id === id ? { ...k, status, senastKontroll: nu } : k))
+      setStatusMap(prev => new Map(prev).set(id, status))
+      setTidMap(prev => new Map(prev).set(id, nu))
       setKontrollerar(prev => { const n = new Set(prev); n.delete(id); return n })
     }, delay)
   }
@@ -221,14 +249,17 @@ export default function Kallhantering() {
     setTimeout(() => setSparad(null), 2000)
   }
 
-  function toggleAktiv(id: number) {
-    setKallor(prev => prev.map(k => k.id === id ? { ...k, aktiv: !k.aktiv } : k))
-    flashSparad(id)
+  function toggleAktiv(k: Källa) {
+    updateMutation.mutate({ id: k.id, req: { isActive: !k.aktiv } })
+    flashSparad(k.id)
   }
 
   function sparaRedigering() {
     if (!redigerar) return
-    setKallor(prev => prev.map(k => k.id === redigerar.id ? redigerar : k))
+    updateMutation.mutate({
+      id: redigerar.id,
+      req: { name: redigerar.namn, url: redigerar.url, category: redigerar.kategori },
+    })
     flashSparad(redigerar.id)
     setRedigerar(null)
   }
@@ -250,25 +281,29 @@ export default function Kallhantering() {
 
   function läggTill() {
     if (!ny.namn.trim() || !ny.url.trim()) return
-    const id = nextId++
-    setKallor(prev => [...prev, {
-      id,
-      namn:           ny.namn.trim(),
-      url:            ny.url.startsWith('http') ? ny.url.trim() : `https://${ny.url.trim()}`,
-      kategori:       ny.kategori,
-      status:         'Okänd',
-      aktiv:          true,
-      senastKontroll: '—',
-      händelser:      0,
-    }])
-    setNy({ url: '', namn: '', kategori: 'Nationell', analyserad: false, laddar: false })
-    setVisaForm(false)
-    flashSparad(id)
-    kontrolleraKälla(id)
+    const url = ny.url.startsWith('http') ? ny.url.trim() : `https://${ny.url.trim()}`
+    let baseUrl = url
+    try { baseUrl = new URL(url).origin } catch { /* keep url as baseUrl */ }
+
+    createMutation.mutate({
+      name:      ny.namn.trim(),
+      shortName: ny.namn.trim(),
+      baseUrl,
+      url,
+      category:  ny.kategori,
+      type:      0,
+    }, {
+      onSuccess: (created) => {
+        setNy({ url: '', namn: '', kategori: 'Nationell', analyserad: false, laddar: false })
+        setVisaForm(false)
+        flashSparad(created.id)
+        kontrolleraKälla(created.id)
+      },
+    })
   }
 
   function taBort(id: number) {
-    setKallor(prev => prev.filter(k => k.id !== id))
+    deleteMutation.mutate(id)
     if (redigerar?.id === id) setRedigerar(null)
   }
 
@@ -319,8 +354,13 @@ export default function Kallhantering() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Källhantering</h2>
-          <p className="text-sm text-slate-500 mt-0.5">{kallor.length} källor registrerade · {kallor.filter(k => k.aktiv).length} aktiva</p>
+          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            Källhantering
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">LIVE</span>
+          </h2>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {isLoading ? 'Laddar...' : `${kallor.length} källor registrerade · ${kallor.filter(k => k.aktiv).length} aktiva`}
+          </p>
         </div>
         <button
           onClick={() => { setVisaForm(true); setRedigerar(null) }}
@@ -379,7 +419,13 @@ export default function Kallhantering() {
                 </div>
               </div>
               <div className="flex gap-3">
-                <button onClick={läggTill} className="bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">Lägg till källa</button>
+                <button
+                  onClick={läggTill}
+                  disabled={createMutation.isPending}
+                  className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+                >
+                  {createMutation.isPending ? 'Sparar...' : 'Lägg till källa'}
+                </button>
                 <button onClick={() => { setVisaForm(false); setNy({ url: '', namn: '', kategori: 'Nationell', analyserad: false, laddar: false }) }} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">Avbryt</button>
               </div>
             </div>
@@ -417,7 +463,9 @@ export default function Kallhantering() {
             <tr className="bg-slate-50 border-b border-slate-200 text-left">
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Källa</th>
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Kategori</th>
-              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Status</th>
+              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">
+                Status <span className="normal-case font-normal text-slate-300 ml-1">(simulerat)</span>
+              </th>
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Senast kontrollerad</th>
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-right">Händelser</th>
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-center">Aktiv</th>
@@ -425,7 +473,11 @@ export default function Kallhantering() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filtrerade.map(k => (
+            {isLoading ? (
+              <tr>
+                <td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-400">Laddar källor...</td>
+              </tr>
+            ) : filtrerade.map(k => (
               <>
                 <tr key={k.id} className="hover:bg-slate-50 transition-colors group">
                   <td className="px-5 py-4">
@@ -452,7 +504,7 @@ export default function Kallhantering() {
                   <td className="px-5 py-4 text-sm text-slate-700 text-right font-medium tabular-nums">{k.händelser.toLocaleString('sv-SE')}</td>
                   <td className="px-5 py-4 text-center">
                     <button
-                      onClick={() => toggleAktiv(k.id)}
+                      onClick={() => toggleAktiv(k)}
                       className={`w-10 h-5 rounded-full relative transition-colors ${k.aktiv ? 'bg-violet-600' : 'bg-slate-200'}`}
                     >
                       <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${k.aktiv ? 'left-5' : 'left-0.5'}`} />
@@ -505,7 +557,13 @@ export default function Kallhantering() {
                         </div>
                       </div>
                       <div className="flex gap-3 mt-4">
-                        <button onClick={sparaRedigering} className="bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">Spara</button>
+                        <button
+                          onClick={sparaRedigering}
+                          disabled={updateMutation.isPending}
+                          className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+                        >
+                          {updateMutation.isPending ? 'Sparar...' : 'Spara'}
+                        </button>
                         <button onClick={() => setRedigerar(null)} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">Avbryt</button>
                       </div>
                     </td>
@@ -516,7 +574,7 @@ export default function Kallhantering() {
           </tbody>
         </table>
 
-        {filtrerade.length === 0 && (
+        {!isLoading && filtrerade.length === 0 && (
           <div className="px-5 py-12 text-center text-sm text-slate-400">Inga källor matchar filtret.</div>
         )}
       </div>
@@ -525,7 +583,10 @@ export default function Kallhantering() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Schemalagda ändringar</h3>
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              Schemalagda ändringar
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">MOCK</span>
+            </h3>
             <p className="text-xs text-slate-400 mt-0.5">Planerat underhåll, av- och påslagningar</p>
           </div>
           <button
@@ -734,7 +795,10 @@ export default function Kallhantering() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Externa statusflöden</h3>
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              Externa statusflöden
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">MOCK</span>
+            </h3>
             <p className="text-xs text-slate-400 mt-0.5">Läser källornas egna driftstatus — uppdateras automatiskt</p>
           </div>
           <button
