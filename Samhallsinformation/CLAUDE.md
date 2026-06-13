@@ -59,6 +59,34 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 8 — 2026-06-13
+**What was done:**
+- `samhallsinformation.se` live och verifierad — DNS propagerat, sidan fungerar
+- SEO: meta description, canonical, Open Graph-taggar, Twitter Card-taggar i `index.html` (PR #236)
+- `robots.txt`: tillåter alla crawlers, blockerar `/admin`, pekar på sitemap (PR #236)
+- `sitemap.xml`: `/` (hourly, 1.0) och `/om` (monthly, 0.7) — `/profil` och `/admin` exkluderade (PR #236)
+- `Source`-modellen: lade till `Url?` och `Category?` — migration `AddSourceUrlCategory` (PR #237)
+- `GenericRssIngestor`: ny generisk ingestor som tar `Source` från DB och läser dess `Url`-fält — möjliggör nya RSS-källor utan koddeploy (PR #237)
+- `IngestorBackgroundService`: skapar nu dynamiskt `GenericRssIngestor` för aktiva RSS-källor i DB som saknar dedikerad ingestor (PR #237)
+- Admin-API: `GET /api/admin/sources` (med händelseräkning), `POST`, `PATCH`, `DELETE /api/admin/sources/{id}` (PR #237)
+- `Kallhantering.tsx`: ersatte all hårdkodad mockdata med `useQuery` + `useMutation` mot backend-API (PR #237)
+- LIVE/MOCK-badges: tydliga badges i admin-UI — grön "LIVE" på sektioner med riktig data, grå "MOCK" på hårdkodade sektioner; Status-kolumn markerad "(simulerat)" (PR #237)
+- Tumregel etablerad: LIVE-badge = riktig data, ingen badge/MOCK = hårdkodad testdata
+- `StatsController`: ny `GET /api/admin/stats` — totalEvents, eventsLast24h, activeSources, eventsByDay (7 dagar fyllda), eventsBySource, eventsBySeverity
+- `Rapporter.tsx`: rewritten — LIVE-sektioner med riktig statistik, MOCK-badges på användare/notifikationer, "Besökare & trafik" Kort med länk till Google Analytics (PR feat/admin-rapporter)
+- Aktivitetslogg + Felsökning: MOCK-badges tillagda för tydlighet
+
+**Problem och lösningar denna session:**
+- Dependabot: 2 high-severity alerts på `flatted` (prototype pollution + DoS) — transitiv dev-dependency via ESLint, körs aldrig i produktion, ignoreras tills vidare
+- `git stash`-behov vid pull: CLAUDE.md hade unstaged ändringar — löstes med stash/pull/pop-mönster
+- Backend låst av bakgrundsprocess vid `dotnet build` → stoppades via PowerShell `Get-Process | Stop-Process -Force`
+
+**Next session (Session 9):**
+- Zoho Mail: sätta upp `info@samhallsinformation.se`
+- Backend-auth: koppla AuthContext mot riktig autentisering
+
+---
+
 ### Session 7 — 2026-06-12
 **What was done:**
 - Migration-fix: tog bort SQLite-specifika `type:`-strängar (TEXT/INTEGER) från `InitialCreate` och snapshot — EF Core väljer nu rätt typ per provider (PR #227)
@@ -81,6 +109,12 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - ThemeKort på profilsidan: visar 4 klickbara rutor med temafärger (PR #231)
 - GA4 `theme_change`-event skickas vid temabyte med `theme`-parameter — synligt under Händelser i GA4 (PR #231)
 - `docs/ROADMAP.md` skapad med sprintstruktur: nuläge, Sprint 4 (SEO + fler källor), Sprint 5 (auth + notis), Sprint 6 (tillväxt) (PR #231)
+- Polisen `ShortName` ändrat från `"polisen.se"` → `"Polisen"` — seeding fixad i `Program.cs` så befintliga rader uppdateras (inte bara add-if-missing) (PR #232)
+- `lang="sv"` satt i `index.html` (var `lang="en"`) (PR #233)
+- `favicon.svg` skapad i `public/` — lila (#7c3aed) rektangel med "S" (PR #233)
+- `docs/kallor/OVERSIKT.md` utökad med 7 nya källkandidater: Folkhälsomyndigheten, Livsmedelsverket, Läkemedelsverket, SSM (alla RSS, V2 planerade), Jordbruksverket, Naturvårdsverket, Sjöfartsverket (V3, svår ingest) (PR #234)
+- Admin-säkerhet diskuterad: `VITE_ADMIN_SECRET`-ansatsen avfärdad (VITE_-prefix = bundlas in i JS, läsbar för alla) — beslut: håll admin lokalt tills backend-auth finns
+- Arkitekturplan för generisk RSS-ingestor diskuterad: en `RssIngestor` som läser URL från databasen istället för hårdkodade klasser — gör "Lägg till källa"-knapp möjlig för RSS-källor
 
 **Problem och lösningar denna session:**
 - `__EFMigrationsHistory` hade `InitialCreate` registrerad med SQLite-typer → smart check såg `alreadyMigrated = true` och hoppade över drop → INSERT krashade → löst med ALTER TABLE DO-block (PR #228)
@@ -89,10 +123,15 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - FeedbackModal täckte bara sidebar och inte hela skärmen → CSS-transform på `<nav>` skapar stacking context som trapper `fixed` → löst med `createPortal`
 - ThemeKort-komponenten använde det gamla `{ dark, toggle }`-gränssnittet → uppdaterad till `{ theme, setTheme }` när ThemeContext byttes till 4-tema-system
 
-**Next session:**
-- SEO: meta description, Open Graph-taggar, robots.txt, sitemap (väntar på att `samhallsinformation.se` propagerar fullt)
-- Fler källor: MSB, SMHI eller annan nästa ingestor (nyckel för tillväxt)
-- Zoho Mail: sätta upp `info@samhallsinformation.se` + lägg till kontaktsektion i Om-sidan
+**Next session (Session 8):**
+- Verifiera att `samhallsinformation.se` fungerar live (DNS bör ha propagerat)
+- SEO: meta description, Open Graph-taggar, robots.txt, sitemap
+- Admin källhantering → kopplad till riktig backend:
+  1. Generisk `RssIngestor` som läser URL från DB (ersätter hårdkodade klasser för RSS-källor)
+  2. `POST /api/admin/sources` + `PATCH /api/admin/sources/{id}` endpoints
+  3. Källhantering-UI anropar riktigt API (inte mockdata)
+- Admin rapportsida: snygg UI med faktisk data (händelsestatistik från backend, ev. GA4-integration)
+- Zoho Mail: sätta upp `info@samhallsinformation.se`
 
 ---
 
