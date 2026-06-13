@@ -3,18 +3,22 @@ namespace Samhallsinformation.Services;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
 using Samhallsinformation.Ingestors;
+using Samhallsinformation.Models;
 
 public class IngestorBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<IngestorBackgroundService> _logger;
     private readonly TimeSpan _interval = TimeSpan.FromMinutes(5);
 
     public IngestorBackgroundService(
         IServiceScopeFactory scopeFactory,
+        IHttpClientFactory httpClientFactory,
         ILogger<IngestorBackgroundService> logger)
     {
         _scopeFactory = scopeFactory;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -33,9 +37,21 @@ public class IngestorBackgroundService : BackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
         var db        = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var ingestors = scope.ServiceProvider.GetRequiredService<IEnumerable<IIngestor>>();
+        var dedicated = scope.ServiceProvider.GetRequiredService<IEnumerable<IIngestor>>().ToList();
 
-        foreach (var ingestor in ingestors)
+        var dedicatedIds = dedicated.Select(i => i.Source.Id).ToHashSet();
+
+        var genericSources = await db.Sources
+            .Where(s => s.IsActive && s.Type == SourceType.RSS && s.Url != null && !dedicatedIds.Contains(s.Id))
+            .ToListAsync(ct);
+
+        var genericIngestors = genericSources
+            .Select(s => new GenericRssIngestor(_httpClientFactory.CreateClient(), s))
+            .ToList<IIngestor>();
+
+        var allIngestors = dedicated.Concat(genericIngestors);
+
+        foreach (var ingestor in allIngestors)
         {
             try
             {

@@ -122,10 +122,12 @@ using (var scope = app.Services.CreateScope())
             db.Sources.Add(source);
         else
         {
-            existing.Name = source.Name;
+            existing.Name      = source.Name;
             existing.ShortName = source.ShortName;
-            existing.BaseUrl = source.BaseUrl;
-            existing.Type = source.Type;
+            existing.BaseUrl   = source.BaseUrl;
+            existing.Type      = source.Type;
+            existing.Url       = source.Url;
+            if (source.Category != null) existing.Category = source.Category;
         }
     }
 

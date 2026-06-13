@@ -18,6 +18,8 @@ public class PolisenRssIngestor : IIngestor
         Name = "Polisen",
         ShortName = "Polisen",
         BaseUrl = "https://polisen.se",
+        Url = FeedUrl,
+        Category = "Nationell",
         Type = SourceType.RSS,
         IsActive = true
     };

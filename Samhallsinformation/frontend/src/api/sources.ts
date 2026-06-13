@@ -1,4 +1,4 @@
-import type { Source } from '../types'
+import type { Source, AdminSource } from '../types'
 
 const MOCK_SOURCES: Source[] = [
   { id: 1,  name: 'Polisen',                      shortName: 'Polisen',          baseUrl: 'https://polisen.se',              isActive: true, scope: 'nationell' },
@@ -19,4 +19,39 @@ export async function fetchSources(): Promise<Source[]> {
   const res = await fetch(`${API_BASE}/api/sources`)
   if (!res.ok) throw new Error(`fetchSources: ${res.status}`)
   return res.json()
+}
+
+export async function fetchAdminSources(): Promise<AdminSource[]> {
+  const res = await fetch(`${API_BASE}/api/admin/sources`)
+  if (!res.ok) throw new Error(`fetchAdminSources: ${res.status}`)
+  return res.json()
+}
+
+export async function createAdminSource(req: {
+  name: string; shortName: string; baseUrl: string; url?: string; category?: string; type: number
+}): Promise<AdminSource> {
+  const res = await fetch(`${API_BASE}/api/admin/sources`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+  if (!res.ok) throw new Error(`createAdminSource: ${res.status}`)
+  return res.json()
+}
+
+export async function updateAdminSource(id: number, req: {
+  name?: string; shortName?: string; url?: string; category?: string; isActive?: boolean
+}): Promise<AdminSource> {
+  const res = await fetch(`${API_BASE}/api/admin/sources/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+  if (!res.ok) throw new Error(`updateAdminSource: ${res.status}`)
+  return res.json()
+}
+
+export async function deleteAdminSource(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/admin/sources/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`deleteAdminSource: ${res.status}`)
 }
