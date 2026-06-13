@@ -242,12 +242,21 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
       {/* Användare (mock) + Händelser (live) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        <Kort titel="Nya användare per dag" sub="Senaste 7 dagarna" badge={<MockBadge />}>
-          <Stapeldiagram data={ANVANDARE_PER_DAG} stapelFärg="bg-violet-400" höjd={96} />
-          <div className="mt-4 flex items-center justify-between text-sm">
-            <div><p className="font-semibold text-slate-900">1 284</p><p className="text-xs text-slate-400">Totalt registrerade</p></div>
-            <div className="text-right"><p className="font-semibold text-slate-900">847</p><p className="text-xs text-slate-400">Aktiva senaste 30 d</p></div>
-            <div className="text-right"><p className="font-semibold text-red-500">3</p><p className="text-xs text-slate-400">Inaktiverade</p></div>
+        <Kort titel="Besökare & trafik" sub="Hanteras av Google Analytics" badge={<MockBadge />}>
+          <div className="flex flex-col items-center justify-center gap-4 py-4 text-center">
+            <p className="text-sm text-slate-500">Besöksstatistik (sidvisningar, sessioner, aktiva användare) finns i GA4-dashboarden.</p>
+            <a
+              href="https://analytics.google.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>
+              </svg>
+              Öppna Google Analytics
+            </a>
+            <p className="text-xs text-slate-400">Logga in med kontot kopplat till samhallsinformation.se</p>
           </div>
         </Kort>
 
