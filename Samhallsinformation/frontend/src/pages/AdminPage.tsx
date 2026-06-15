@@ -49,7 +49,15 @@ const SUPPORT_SEKTIONER: AdminSection[] = ['anvandare', 'support-inbox']
 
 export default function AdminPage() {
   const navigate = useNavigate()
-  const { roll, aktivVy, byttVy } = useAuth()
+  const { isLoggedIn, roll, aktivVy, byttVy } = useAuth()
+
+  useEffect(() => {
+    if (!isLoggedIn || (roll !== 'Admin' && roll !== 'Support')) {
+      navigate('/profil', { replace: true })
+    }
+  }, [isLoggedIn, roll, navigate])
+
+  if (!isLoggedIn || (roll !== 'Admin' && roll !== 'Support')) return null
 
   const adminRoll: AdminRoll = aktivVy === 'Support' ? 'Support' : 'Admin'
 
