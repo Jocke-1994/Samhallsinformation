@@ -41,13 +41,12 @@ public class TrafikverketApiIngestor : IIngestor
               <LOGIN authenticationkey="{_apiKey}" />
               <QUERY objecttype="Situation" schemaversion="1.2" limit="100">
                 <FILTER>
-                  <EQ name="Deleted" value="false" />
                 </FILTER>
               </QUERY>
             </REQUEST>
             """;
 
-        using var body     = new StringContent(xml, Encoding.UTF8, "text/xml");
+        using var body     = new StringContent(xml, Encoding.UTF8, "application/xml");
         using var response = await _httpClient.PostAsync(ApiUrl, body);
         response.EnsureSuccessStatusCode();
 
