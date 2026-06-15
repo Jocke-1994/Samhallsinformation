@@ -157,6 +157,24 @@ using (var scope = app.Services.CreateScope())
     }
     await db.Database.MigrateAsync();
 
+    // Fix Users.Id — skapas som text av SQLite-migrationen, måste vara uuid i PostgreSQL
+    if (databaseUrl != null || pgHost != null)
+    {
+        await db.Database.ExecuteSqlRawAsync(@"
+            DO $$
+            BEGIN
+              IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='Users' AND column_name='Id' AND data_type='text'
+              ) THEN
+                ALTER TABLE ""Users"" DROP CONSTRAINT ""PK_Users"";
+                ALTER TABLE ""Users"" ALTER COLUMN ""Id"" TYPE uuid USING (""Id""::uuid);
+                ALTER TABLE ""Users"" ADD CONSTRAINT ""PK_Users"" PRIMARY KEY (""Id"");
+              END IF;
+            END $$;
+        ");
+    }
+
     foreach (var ingestor in ingestors)
     {
         var source = ingestor.Source;
