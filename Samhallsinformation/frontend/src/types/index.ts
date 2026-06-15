@@ -18,6 +18,7 @@ export interface AdminSource {
   category: string | null
   type: number
   isActive: boolean
+  isPublished: boolean
   eventCount: number
 }
 

@@ -157,6 +157,23 @@ using (var scope = app.Services.CreateScope())
     }
     await db.Database.MigrateAsync();
 
+    // Fix Sources.IsPublished — SQLite-migration skapar den som INTEGER, PostgreSQL behöver boolean
+    // DEFAULT true: befintliga källor förblir synliga
+    if (databaseUrl != null || pgHost != null)
+    {
+        await db.Database.ExecuteSqlRawAsync(@"
+            DO $$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='Sources' AND column_name='IsPublished'
+              ) THEN
+                ALTER TABLE ""Sources"" ADD COLUMN ""IsPublished"" boolean NOT NULL DEFAULT true;
+              END IF;
+            END $$;
+        ");
+    }
+
     // Fix Users.Id — skapas som text av SQLite-migrationen, måste vara uuid i PostgreSQL
     if (databaseUrl != null || pgHost != null)
     {

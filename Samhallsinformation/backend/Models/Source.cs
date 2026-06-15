@@ -9,5 +9,6 @@ public class Source
     public string? Url { get; set; }
     public string? Category { get; set; }
     public SourceType Type { get; set; }
-    public bool IsActive { get; set; }
+    public bool IsActive     { get; set; }
+    public bool IsPublished  { get; set; }
 }
