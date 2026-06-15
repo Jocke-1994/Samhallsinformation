@@ -111,6 +111,21 @@ using (var scope = app.Services.CreateScope())
                 END $$;
             ");
         }
+
+        // Säkerställ att Sources.Id har en sequence för auto-increment (saknades i SQLite-migrationen)
+        await db.Database.ExecuteSqlRawAsync(@"
+            DO $$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM information_schema.sequences
+                WHERE sequence_name = 'Sources_Id_seq'
+              ) THEN
+                CREATE SEQUENCE ""Sources_Id_seq"";
+                PERFORM setval('""Sources_Id_seq""', COALESCE((SELECT MAX(""Id"") FROM ""Sources""), 0) + 1, false);
+                ALTER TABLE ""Sources"" ALTER COLUMN ""Id"" SET DEFAULT nextval('""Sources_Id_seq""');
+              END IF;
+            END $$;
+        ");
     }
     await db.Database.MigrateAsync();
 
