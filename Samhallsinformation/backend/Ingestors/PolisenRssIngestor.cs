@@ -39,7 +39,7 @@ public class PolisenRssIngestor : IIngestor
 
         foreach (var item in feed.Items)
         {
-            var rawTitle = item.Title?.Text ?? string.Empty;
+            var rawTitle = System.Net.WebUtility.HtmlDecode(item.Title?.Text ?? string.Empty);
             var link = item.Links.FirstOrDefault()?.Uri?.ToString() ?? string.Empty;
 
             var canonicalEvent = new CanonicalEvent
@@ -47,7 +47,7 @@ public class PolisenRssIngestor : IIngestor
                 SourceId = Source.Id,
                 ExternalId = item.Id ?? link,
                 Title = rawTitle,
-                Content = item.Summary?.Text ?? string.Empty,
+                Content = System.Net.WebUtility.HtmlDecode(item.Summary?.Text ?? string.Empty),
                 PublishedAt = item.PublishDate.UtcDateTime,
                 Url = link,
                 RawData = rawTitle + " | " + (item.Summary?.Text ?? string.Empty),
