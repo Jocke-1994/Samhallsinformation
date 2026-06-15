@@ -15,6 +15,16 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    title: 'Tre nya myndigheter',
+    date: 'Juni 2026',
+    changes: [
+      { type: 'nytt',       text: 'Folkhälsomyndigheten: nyheter om smittskydd och sjukdomar' },
+      { type: 'nytt',       text: 'Livsmedelsverket: matåterkallelser och livsmedelssäkerhet' },
+      { type: 'nytt',       text: 'Läkemedelsverket: säkerhetsvarningar och läkemedelsåterkallelser' },
+      { type: 'förbättrat', text: 'Källhantering i admin visar nu en kuraterad lista med verifierade källor att aktivera med ett klick' },
+    ],
+  },
+  {
     title: 'Tjänsten är live',
     date: 'Juni 2026',
     changes: [
@@ -22,7 +32,7 @@ const UPDATES: Update[] = [
       { type: 'nytt',       text: 'Händelser och nyheter från Polisen och Krisinformation i ett samlat flöde under Samhällsinfo' },
       { type: 'nytt',       text: 'Filtrera flödet per källa via sidomenyn' },
       { type: 'nytt',       text: 'Fyra teman att välja mellan: mörkt, ljust, true black och dune, dessa ligger längst ner i sidomenyn' },
-      { type: 'nytt',       text: 'Knappen "Om" förklara tjänstens funktioner och mål' },
+      { type: 'nytt',       text: 'Knappen "Om" förklarar tjänstens funktioner och mål' },
       { type: 'nytt',       text: 'En Feedback-knapp för att ge återkoppling om tjänsten' },
       { type: 'förbättrat', text: 'Stabilitet och förbättringar' },
     ],
