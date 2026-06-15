@@ -18,10 +18,7 @@ const UPDATES: Update[] = [
     title: 'Tre nya myndigheter',
     date: 'Juni 2026',
     changes: [
-      { type: 'nytt',       text: 'Folkhälsomyndigheten: nyheter om smittskydd och sjukdomar' },
-      { type: 'nytt',       text: 'Livsmedelsverket: matåterkallelser och livsmedelssäkerhet' },
-      { type: 'nytt',       text: 'Läkemedelsverket: säkerhetsvarningar och läkemedelsåterkallelser' },
-      { type: 'förbättrat', text: 'Källhantering i admin visar nu en kuraterad lista med verifierade källor att aktivera med ett klick' },
+      { type: 'nytt', text: '3 källor har lagts till; Folkhälsomyndigheten, Livsmedelsverket och Läkemedelsverket' },
     ],
   },
   {
