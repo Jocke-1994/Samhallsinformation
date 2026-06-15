@@ -59,6 +59,24 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 9 — 2026-06-15
+**What was done:**
+- Kuraterad källlista i admin: ersatte fri URL-inmatning med en lista över verifierade källkandidater — RSS-klara källor aktiveras med ett klick, API-källor visas med förklaringstext (PR #241)
+- `GenericRssIngestor` hanterar de nya källorna utan koddeploy
+- `fix/sources-id-sequence`: `Sources.Id` saknade PostgreSQL sequence (SQLite-annotation ignorerades vid migration) — INSERT av nya källor kraschade med NOT NULL violation. Löst med idempotent DO-block i `Program.cs` som skapar sequence vid första start (PR #242)
+- Folkhälsomyndigheten, Livsmedelsverket och Läkemedelsverket aktiverade i produktion via admin
+- CORS: lade till `http://localhost:5174` i Railway `ALLOWED_ORIGINS` för lokal testning mot Railway-backend
+- `/uppdateringar`: ny entry "Tre nya myndigheter" tillagd
+
+**Problem och lösningar denna session:**
+- CORS blockerade POST från localhost:5174 → lade till i Railway ALLOWED_ORIGINS (CORS skyddar bara browsern, inte backend — ingen säkerhetsrisk)
+- POST /api/admin/sources → 500: NOT NULL violation på Sources.Id → PostgreSQL hade ingen sequence eftersom InitialCreate-migration använde `Sqlite:Autoincrement`-annotation som PostgreSQL ignorerar → löst med DO-block i Program.cs
+
+**Next session (Session 10):**
+- Backend-auth: koppla AuthContext mot riktig autentisering (JWT)
+- Zoho Mail: sätta upp `info@samhallsinformation.se`
+- SMHI-ingestor (eget API-format, nästa naturliga källa)
+
 ### Session 8 — 2026-06-13
 **What was done:**
 - `samhallsinformation.se` live och verifierad — DNS propagerat, sidan fungerar
