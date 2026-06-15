@@ -51,8 +51,10 @@ builder.Services.AddCors(options =>
 // HTTP client for ingestors
 builder.Services.AddHttpClient<PolisenRssIngestor>();
 builder.Services.AddHttpClient<KrisinformationApiIngestor>();
+builder.Services.AddHttpClient<TrafikverketApiIngestor>();
 builder.Services.AddScoped<IIngestor, PolisenRssIngestor>();
 builder.Services.AddScoped<IIngestor, KrisinformationApiIngestor>();
+builder.Services.AddScoped<IIngestor, TrafikverketApiIngestor>();
 
 // Background service
 builder.Services.AddHostedService<IngestorBackgroundService>();
