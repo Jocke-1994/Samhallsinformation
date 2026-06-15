@@ -23,7 +23,8 @@ public class GenericRssIngestor : IIngestor
             return [];
 
         using var stream = await _httpClient.GetStreamAsync(Source.Url);
-        using var xmlReader = XmlReader.Create(stream);
+        var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Parse };
+        using var xmlReader = XmlReader.Create(stream, settings);
 
         var feed = SyndicationFeed.Load(xmlReader);
         var events = new List<CanonicalEvent>();
