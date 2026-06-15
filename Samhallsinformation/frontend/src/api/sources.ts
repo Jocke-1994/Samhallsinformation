@@ -40,7 +40,7 @@ export async function createAdminSource(req: {
 }
 
 export async function updateAdminSource(id: number, req: {
-  name?: string; shortName?: string; url?: string; category?: string; isActive?: boolean; isTestOnly?: boolean
+  name?: string; shortName?: string; url?: string; category?: string; isActive?: boolean; isPublished?: boolean
 }): Promise<AdminSource> {
   const res = await adminFetch(`/api/admin/sources/${id}`, {
     method: 'PATCH',

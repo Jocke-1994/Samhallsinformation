@@ -28,13 +28,13 @@ public class EventsController : ControllerBase
         if (pageSize > 100) pageSize = 100;
         if (page < 1) page = 1;
 
-        var testOnlySourceIds = await _db.Sources
-            .Where(s => s.IsTestOnly)
+        var publishedSourceIds = await _db.Sources
+            .Where(s => s.IsPublished)
             .Select(s => s.Id)
             .ToListAsync();
 
         var query = _db.Events
-            .Where(e => !testOnlySourceIds.Contains(e.SourceId))
+            .Where(e => publishedSourceIds.Contains(e.SourceId))
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(geography))

@@ -179,7 +179,7 @@ interface Källa {
   kategori:         Kategori
   status:           KällStatus
   aktiv:            boolean
-  testOnly:         boolean
+  publicerad:       boolean
   senastKontroll:   string
   händelser:        number
 }
@@ -210,7 +210,7 @@ function toKälla(s: AdminSource, statusMap: Map<number, KällStatus>, tidMap: M
     kategori:       (s.category ?? 'Nationell') as Kategori,
     status:         statusMap.get(s.id) ?? 'Okänd',
     aktiv:          s.isActive,
-    testOnly:       s.isTestOnly,
+    publicerad:     s.isPublished,
     senastKontroll: tidMap.get(s.id) ?? '—',
     händelser:      s.eventCount,
   }
@@ -285,8 +285,8 @@ export default function Kallhantering() {
     flashSparad(k.id)
   }
 
-  function toggleTestOnly(k: Källa) {
-    updateMutation.mutate({ id: k.id, req: { isTestOnly: !k.testOnly } })
+  function togglePublicerad(k: Källa) {
+    updateMutation.mutate({ id: k.id, req: { isPublished: !k.publicerad } })
     flashSparad(k.id)
   }
 
@@ -294,7 +294,7 @@ export default function Kallhantering() {
     if (!redigerar) return
     updateMutation.mutate({
       id: redigerar.id,
-      req: { name: redigerar.namn, url: redigerar.url, category: redigerar.kategori, isTestOnly: redigerar.testOnly },
+      req: { name: redigerar.namn, url: redigerar.url, category: redigerar.kategori, isPublished: redigerar.publicerad },
     })
     flashSparad(redigerar.id)
     setRedigerar(null)
@@ -486,7 +486,7 @@ export default function Kallhantering() {
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Senast kontrollerad</th>
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-right">Händelser</th>
               <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-center">Aktiv</th>
-              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-center">Test</th>
+              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-center">Publicerad</th>
               <th className="px-5 py-3" />
             </tr>
           </thead>
@@ -530,11 +530,11 @@ export default function Kallhantering() {
                   </td>
                   <td className="px-5 py-4 text-center">
                     <button
-                      onClick={() => toggleTestOnly(k)}
-                      title={k.testOnly ? 'Testläge på — osynlig för besökare' : 'Testläge av — synlig för alla'}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${k.testOnly ? 'bg-amber-400' : 'bg-slate-200'}`}
+                      onClick={() => togglePublicerad(k)}
+                      title={k.publicerad ? 'Publicerad — synlig för besökare' : 'Opublicerad — osynlig för besökare'}
+                      className={`w-10 h-5 rounded-full relative transition-colors ${k.publicerad ? 'bg-green-500' : 'bg-slate-200'}`}
                     >
-                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${k.testOnly ? 'left-5' : 'left-0.5'}`} />
+                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${k.publicerad ? 'left-5' : 'left-0.5'}`} />
                     </button>
                   </td>
                   <td className="px-5 py-4">
@@ -585,13 +585,16 @@ export default function Kallhantering() {
                       </div>
                       <div className="flex items-center gap-2 mt-3">
                         <button
-                          onClick={() => setRedigerar(p => p ? { ...p, testOnly: !p.testOnly } : p)}
-                          className={`w-10 h-5 rounded-full relative transition-colors shrink-0 ${redigerar.testOnly ? 'bg-amber-400' : 'bg-slate-200'}`}
+                          onClick={() => setRedigerar(p => p ? { ...p, publicerad: !p.publicerad } : p)}
+                          className={`w-10 h-5 rounded-full relative transition-colors shrink-0 ${redigerar.publicerad ? 'bg-green-500' : 'bg-slate-200'}`}
                         >
-                          <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${redigerar.testOnly ? 'left-5' : 'left-0.5'}`} />
+                          <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${redigerar.publicerad ? 'left-5' : 'left-0.5'}`} />
                         </button>
                         <span className="text-xs text-slate-500">
-                          Testläge — {redigerar.testOnly ? <span className="text-amber-600 font-medium">osynlig för besökare, ingestor aktiv</span> : 'synlig för alla'}
+                          {redigerar.publicerad
+                            ? <span className="text-green-600 font-medium">Publicerad — synlig för besökare</span>
+                            : <span className="text-amber-600 font-medium">Opublicerad — osynlig (testläge)</span>
+                          }
                         </span>
                       </div>
                       <div className="flex gap-3 mt-4">

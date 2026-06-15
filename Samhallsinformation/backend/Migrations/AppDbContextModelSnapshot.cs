@@ -89,7 +89,7 @@ namespace Samhallsinformation.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("IsTestOnly")
+                    b.Property<bool>("IsPublished")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")

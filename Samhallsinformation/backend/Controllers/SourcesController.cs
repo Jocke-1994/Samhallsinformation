@@ -20,7 +20,7 @@ public class SourcesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetSources()
     {
-        var sources = await _db.Sources.Where(s => !s.IsTestOnly).ToListAsync();
+        var sources = await _db.Sources.Where(s => s.IsPublished).ToListAsync();
         return Ok(sources);
     }
 
@@ -45,7 +45,7 @@ public class SourcesController : ControllerBase
             s.Category,
             s.Type,
             s.IsActive,
-            s.IsTestOnly,
+            s.IsPublished,
             EventCount = counts.TryGetValue(s.Id, out var c) ? c : 0,
         });
 
@@ -63,8 +63,9 @@ public class SourcesController : ControllerBase
             BaseUrl   = req.BaseUrl,
             Url       = req.Url,
             Category  = req.Category,
-            Type      = req.Type,
-            IsActive  = true,
+            Type        = req.Type,
+            IsActive    = false,
+            IsPublished = false,
         };
 
         _db.Sources.Add(source);
@@ -83,8 +84,8 @@ public class SourcesController : ControllerBase
         if (req.ShortName!= null) source.ShortName= req.ShortName;
         if (req.Url      != null) source.Url      = req.Url;
         if (req.Category != null) source.Category = req.Category;
-        if (req.IsActive.HasValue)   source.IsActive   = req.IsActive.Value;
-        if (req.IsTestOnly.HasValue) source.IsTestOnly = req.IsTestOnly.Value;
+        if (req.IsActive.HasValue)    source.IsActive    = req.IsActive.Value;
+        if (req.IsPublished.HasValue) source.IsPublished = req.IsPublished.Value;
 
         await _db.SaveChangesAsync();
         return Ok(source);
@@ -118,5 +119,5 @@ public record UpdateSourceRequest(
     string? Url,
     string? Category,
     bool? IsActive,
-    bool? IsTestOnly
+    bool? IsPublished
 );

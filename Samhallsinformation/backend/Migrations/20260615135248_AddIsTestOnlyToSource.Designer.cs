@@ -11,7 +11,7 @@ using Samhallsinformation.Data;
 namespace Samhallsinformation.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260615135248_AddIsTestOnlyToSource")]
+    [Migration("20260615135248_AddIsPublishedToSource")]
     partial class AddIsTestOnlyToSource
     {
         /// <inheritdoc />
@@ -92,7 +92,7 @@ namespace Samhallsinformation.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("IsTestOnly")
+                    b.Property<bool>("IsPublished")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
