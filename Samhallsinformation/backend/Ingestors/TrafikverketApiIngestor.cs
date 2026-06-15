@@ -39,7 +39,7 @@ public class TrafikverketApiIngestor : IIngestor
         var xml = $"""
             <REQUEST>
               <LOGIN authenticationkey="{_apiKey}" />
-              <QUERY objecttype="Situation" schemaversion="1.2" limit="100">
+              <QUERY objecttype="TrafficSituation" schemaversion="1.0" limit="100">
               </QUERY>
             </REQUEST>
             """;
@@ -143,7 +143,7 @@ internal class TvResponse
 
 internal class TvResult
 {
-    [JsonPropertyName("Situation")] public List<TvSituation>? Situation { get; set; }
+    [JsonPropertyName("TrafficSituation")] public List<TvSituation>? Situation { get; set; }
 }
 
 internal class TvSituation
