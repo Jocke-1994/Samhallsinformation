@@ -12,6 +12,7 @@ public class TrafikverketApiIngestor : IIngestor
     private readonly string _apiKey;
 
     private const string ApiUrl = "https://api.trafikinfo.trafikverket.se/v2/data.json";
+    private const string ApiUrlV1 = "https://api.trafikinfo.trafikverket.se/v1/data.json";
 
     public Source Source { get; } = new Source
     {
@@ -39,13 +40,13 @@ public class TrafikverketApiIngestor : IIngestor
         var xml = $"""
             <REQUEST>
               <LOGIN authenticationkey="{_apiKey}" />
-              <QUERY objecttype="TrafficSituation" schemaversion="1.0" limit="100">
+              <QUERY objecttype="Situation" schemaversion="1.2" limit="100">
               </QUERY>
             </REQUEST>
             """;
 
         using var body     = new StringContent(xml, Encoding.UTF8, "text/xml");
-        using var response = await _httpClient.PostAsync(ApiUrl, body);
+        using var response = await _httpClient.PostAsync(ApiUrlV1, body);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -143,7 +144,7 @@ internal class TvResponse
 
 internal class TvResult
 {
-    [JsonPropertyName("TrafficSituation")] public List<TvSituation>? Situation { get; set; }
+    [JsonPropertyName("Situation")] public List<TvSituation>? Situation { get; set; }
 }
 
 internal class TvSituation
