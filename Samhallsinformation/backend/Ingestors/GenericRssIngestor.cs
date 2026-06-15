@@ -27,6 +27,11 @@ public class GenericRssIngestor : IIngestor
         request.Headers.TryAddWithoutValidation("Accept", "application/rss+xml, application/xml, text/xml, */*");
         using var response = await _httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
+
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? string.Empty;
+        if (contentType.Contains("html", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException($"Källan {Source.Name} returnerade HTML istället för RSS (Content-Type: {contentType}). URL: {Source.Url}");
+
         using var stream = await response.Content.ReadAsStreamAsync();
         var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Parse };
         using var xmlReader = XmlReader.Create(stream, settings);

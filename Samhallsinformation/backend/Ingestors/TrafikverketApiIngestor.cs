@@ -40,15 +40,18 @@ public class TrafikverketApiIngestor : IIngestor
             <REQUEST>
               <LOGIN authenticationkey="{_apiKey}" />
               <QUERY objecttype="Situation" schemaversion="1.2" limit="100">
-                <FILTER>
-                </FILTER>
               </QUERY>
             </REQUEST>
             """;
 
-        using var body     = new StringContent(xml, Encoding.UTF8, "application/xml");
+        using var body     = new StringContent(xml, Encoding.UTF8, "text/xml");
         using var response = await _httpClient.PostAsync(ApiUrl, body);
-        response.EnsureSuccessStatusCode();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Trafikverket {(int)response.StatusCode}: {errorBody}");
+        }
 
         var json   = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<TvRoot>(json);
