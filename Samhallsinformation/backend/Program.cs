@@ -167,7 +167,9 @@ using (var scope = app.Services.CreateScope())
                 SELECT 1 FROM information_schema.columns
                 WHERE table_name='Sources' AND column_name='IsPublished' AND data_type='integer'
               ) THEN
+                ALTER TABLE ""Sources"" ALTER COLUMN ""IsPublished"" DROP DEFAULT;
                 ALTER TABLE ""Sources"" ALTER COLUMN ""IsPublished"" TYPE boolean USING (""IsPublished""::boolean);
+                ALTER TABLE ""Sources"" ALTER COLUMN ""IsPublished"" SET DEFAULT true;
               END IF;
             END $$;
         ");
