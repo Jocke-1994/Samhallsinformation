@@ -143,6 +143,20 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
                   </button>
                 )
               })}
+              {roll === 'Admin' && (
+                <button
+                  onClick={() => { navigate('/admin'); onClose() }}
+                  className={`
+                    w-full text-left px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 flex items-center gap-2.5
+                    ${location.pathname.startsWith('/admin')
+                      ? 'bg-red-100 text-red-700 font-semibold'
+                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}
+                  `}
+                >
+                  <span className="text-sm leading-none">⚙️</span>
+                  <span>Adminpanel</span>
+                </button>
+              )}
             </div>
             <div className="border-t border-slate-200 my-3" />
           </>
