@@ -1,4 +1,5 @@
 import type { Source, AdminSource } from '../types'
+import { adminFetch } from './adminFetch'
 
 const MOCK_SOURCES: Source[] = [
   { id: 1,  name: 'Polisen',                      shortName: 'Polisen',          baseUrl: 'https://polisen.se',              isActive: true, scope: 'nationell' },
@@ -22,7 +23,7 @@ export async function fetchSources(): Promise<Source[]> {
 }
 
 export async function fetchAdminSources(): Promise<AdminSource[]> {
-  const res = await fetch(`${API_BASE}/api/admin/sources`)
+  const res = await adminFetch('/api/admin/sources')
   if (!res.ok) throw new Error(`fetchAdminSources: ${res.status}`)
   return res.json()
 }
@@ -30,9 +31,8 @@ export async function fetchAdminSources(): Promise<AdminSource[]> {
 export async function createAdminSource(req: {
   name: string; shortName: string; baseUrl: string; url?: string; category?: string; type: number
 }): Promise<AdminSource> {
-  const res = await fetch(`${API_BASE}/api/admin/sources`, {
+  const res = await adminFetch('/api/admin/sources', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
   })
   if (!res.ok) throw new Error(`createAdminSource: ${res.status}`)
@@ -42,9 +42,8 @@ export async function createAdminSource(req: {
 export async function updateAdminSource(id: number, req: {
   name?: string; shortName?: string; url?: string; category?: string; isActive?: boolean
 }): Promise<AdminSource> {
-  const res = await fetch(`${API_BASE}/api/admin/sources/${id}`, {
+  const res = await adminFetch(`/api/admin/sources/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
   })
   if (!res.ok) throw new Error(`updateAdminSource: ${res.status}`)
@@ -52,6 +51,6 @@ export async function updateAdminSource(id: number, req: {
 }
 
 export async function deleteAdminSource(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/admin/sources/${id}`, { method: 'DELETE' })
+  const res = await adminFetch(`/api/admin/sources/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(`deleteAdminSource: ${res.status}`)
 }

@@ -6,37 +6,60 @@ interface AuthContextType {
   isLoggedIn: boolean
   roll: SystemRoll
   aktivVy: SystemRoll
-  login: () => void
+  login: (email: string, password: string) => Promise<void>
   logout: () => void
   byttVy: (vy: SystemRoll) => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
-// Dev-default: Admin så att alla vyer är åtkomliga
-const DEFAULT_ROLL: SystemRoll = 'Admin'
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
+
+function parseRole(token: string): SystemRoll {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    const role = payload['role']
+    if (role === 'Admin') return 'Admin'
+    if (role === 'Support') return 'Support'
+  } catch { /* ignore */ }
+  return 'Användare'
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(
-    () => localStorage.getItem('si_logged_in') === 'true'
-  )
-  const [roll] = useState<SystemRoll>(
-    () => (localStorage.getItem('si_roll') as SystemRoll) ?? DEFAULT_ROLL
-  )
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('si_token'))
+
+  const isLoggedIn = token !== null
+  const roll       = token ? parseRole(token) : 'Användare'
+
   const [aktivVy, setAktivVy] = useState<SystemRoll>(
     () => (localStorage.getItem('si_aktiv_vy') as SystemRoll) ?? roll
   )
 
-  function login() {
+  async function login(email: string, password: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email, password }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error((err as { error?: string }).error ?? 'Inloggningen misslyckades')
+    }
+    const data = await res.json() as { token: string; role: string }
+    localStorage.setItem('si_token',    data.token)
     localStorage.setItem('si_logged_in', 'true')
-    setIsLoggedIn(true)
+    setToken(data.token)
+    const newRoll = parseRole(data.token)
+    setAktivVy(newRoll)
+    localStorage.setItem('si_aktiv_vy', newRoll)
   }
 
   function logout() {
+    localStorage.removeItem('si_token')
     localStorage.removeItem('si_logged_in')
     localStorage.removeItem('si_aktiv_vy')
-    setIsLoggedIn(false)
-    setAktivVy(roll)
+    setToken(null)
+    setAktivVy('Användare')
   }
 
   function byttVy(vy: SystemRoll) {

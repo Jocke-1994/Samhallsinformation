@@ -1,5 +1,6 @@
 namespace Samhallsinformation.Controllers;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
@@ -15,6 +16,7 @@ public class StatsController : ControllerBase
     }
 
     [HttpGet("/api/admin/stats")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetStats()
     {
         var now         = DateTime.UtcNow;
