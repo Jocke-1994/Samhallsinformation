@@ -15,10 +15,10 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
-    title: 'Tre nya myndigheter',
+    title: 'Fyra nya myndigheter',
     date: 'Juni 2026',
     changes: [
-      { type: 'nytt', text: '3 källor har lagts till; Folkhälsomyndigheten, Livsmedelsverket och Läkemedelsverket' },
+      { type: 'nytt', text: '4 källor har lagts till; Folkhälsomyndigheten, Livsmedelsverket, Läkemedelsverket och Trafikverket' },
     ],
   },
   {

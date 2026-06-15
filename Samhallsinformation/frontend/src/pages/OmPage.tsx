@@ -85,7 +85,7 @@ export default function OmPage() {
               Tjänsten hämtar för närvarande information från:
             </p>
             <ul className="space-y-2">
-              {['Polisen', 'Krisinformation (MSB)', 'Folkhälsomyndigheten', 'Livsmedelsverket', 'Läkemedelsverket'].map(källa => (
+              {['Polisen', 'Krisinformation (MSB)', 'Folkhälsomyndigheten', 'Livsmedelsverket', 'Läkemedelsverket', 'Trafikverket'].map(källa => (
                 <li key={källa} className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
                   {källa}
