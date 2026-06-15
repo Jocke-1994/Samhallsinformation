@@ -157,6 +157,22 @@ using (var scope = app.Services.CreateScope())
     }
     await db.Database.MigrateAsync();
 
+    // Fix Sources.IsTestOnly — SQLite-migration skapar den som INTEGER, PostgreSQL behöver boolean
+    if (databaseUrl != null || pgHost != null)
+    {
+        await db.Database.ExecuteSqlRawAsync(@"
+            DO $$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='Sources' AND column_name='IsTestOnly'
+              ) THEN
+                ALTER TABLE ""Sources"" ADD COLUMN ""IsTestOnly"" boolean NOT NULL DEFAULT false;
+              END IF;
+            END $$;
+        ");
+    }
+
     // Fix Users.Id — skapas som text av SQLite-migrationen, måste vara uuid i PostgreSQL
     if (databaseUrl != null || pgHost != null)
     {

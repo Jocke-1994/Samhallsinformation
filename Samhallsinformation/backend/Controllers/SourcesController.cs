@@ -20,7 +20,7 @@ public class SourcesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetSources()
     {
-        var sources = await _db.Sources.ToListAsync();
+        var sources = await _db.Sources.Where(s => !s.IsTestOnly).ToListAsync();
         return Ok(sources);
     }
 
@@ -45,6 +45,7 @@ public class SourcesController : ControllerBase
             s.Category,
             s.Type,
             s.IsActive,
+            s.IsTestOnly,
             EventCount = counts.TryGetValue(s.Id, out var c) ? c : 0,
         });
 
@@ -82,7 +83,8 @@ public class SourcesController : ControllerBase
         if (req.ShortName!= null) source.ShortName= req.ShortName;
         if (req.Url      != null) source.Url      = req.Url;
         if (req.Category != null) source.Category = req.Category;
-        if (req.IsActive.HasValue) source.IsActive = req.IsActive.Value;
+        if (req.IsActive.HasValue)   source.IsActive   = req.IsActive.Value;
+        if (req.IsTestOnly.HasValue) source.IsTestOnly = req.IsTestOnly.Value;
 
         await _db.SaveChangesAsync();
         return Ok(source);
@@ -115,5 +117,6 @@ public record UpdateSourceRequest(
     string? ShortName,
     string? Url,
     string? Category,
-    bool? IsActive
+    bool? IsActive,
+    bool? IsTestOnly
 );
