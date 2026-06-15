@@ -31,8 +31,8 @@ public class GenericRssIngestor : IIngestor
         foreach (var item in feed.Items)
         {
             var link    = item.Links.FirstOrDefault()?.Uri?.ToString() ?? string.Empty;
-            var title   = item.Title?.Text ?? string.Empty;
-            var summary = item.Summary?.Text ?? string.Empty;
+            var title   = System.Net.WebUtility.HtmlDecode(item.Title?.Text ?? string.Empty);
+            var summary = System.Net.WebUtility.HtmlDecode(item.Summary?.Text ?? string.Empty);
 
             var canonicalEvent = new CanonicalEvent
             {
