@@ -22,7 +22,12 @@ public class GenericRssIngestor : IIngestor
         if (string.IsNullOrEmpty(Source.Url))
             return [];
 
-        using var stream = await _httpClient.GetStreamAsync(Source.Url);
+        using var request = new HttpRequestMessage(HttpMethod.Get, Source.Url);
+        request.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (compatible; Samhallsinformation/1.0)");
+        request.Headers.TryAddWithoutValidation("Accept", "application/rss+xml, application/xml, text/xml, */*");
+        using var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        using var stream = await response.Content.ReadAsStreamAsync();
         var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Parse };
         using var xmlReader = XmlReader.Create(stream, settings);
 
