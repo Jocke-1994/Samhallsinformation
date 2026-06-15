@@ -59,6 +59,26 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 11 — 2026-06-15
+**What was done:**
+- PR #260: fix för `IsPublished`-boolean-konvertering i PostgreSQL — `ALTER COLUMN TYPE` kraschar när kolumnen har ett `DEFAULT`-värde av fel typ. Löst med DROP DEFAULT → ALTER TYPE → SET DEFAULT (true)
+
+**Problem och lösningar denna session:**
+- Server kraschade med `42804: default for column "IsPublished" cannot be cast automatically to type boolean` — PostgreSQL kan inte casta INTEGER DEFAULT (1) till boolean automatiskt. Måste droppas explicit innan ALTER TYPE.
+
+**Etablerat mönster:**
+Vid `ALTER COLUMN TYPE` i PostgreSQL: om kolumnen har DEFAULT av fel typ → DROP DEFAULT → ALTER TYPE USING → SET DEFAULT (rätt typ). Gäller alla framtida boolean-fixar.
+
+**Next session (Session 12):**
+- Merge PR #260 (om inte redan mergad) och verifiera att Railway startar rent
+- Uppdatera Livsmedelsverkets URL i DB via admin till `/rss/rss-aterkallanden/`, aktivera i testläge, verifiera i Railway-loggar
+- Hitta och uppdatera Läkemedelsverkets rätta RSS-URL
+- Trafikverket: verifiera API-nyckelns behörighet i Trafikverkets developer portal
+- Zoho Mail (`info@samhallsinformation.se`)
+- SMHI-ingestor
+
+---
+
 ### Session 10 — 2026-06-15
 **What was done:**
 - Trafikverket-ingestor: diagnostik av 400-fel — response body loggas nu vid fel (PR #252, #253)
