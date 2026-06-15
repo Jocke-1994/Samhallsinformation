@@ -88,15 +88,13 @@ function ImpersonationBanner() {
 }
 
 export default function App() {
-  const adminEnabled = import.meta.env.VITE_ADMIN_ENABLED === 'true'
-
   return (
     <>
-      {adminEnabled && <ImpersonationBanner />}
+      <ImpersonationBanner />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/profil" element={<ProfilePage />} />
-        {adminEnabled && <Route path="/admin" element={<AdminPage />} />}
+        <Route path="/admin" element={<AdminPage />} />
         <Route path="/om" element={<OmPage />} />
         <Route path="/uppdateringar" element={<UppdateringarPage />} />
       </Routes>
