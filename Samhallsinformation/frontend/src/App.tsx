@@ -90,6 +90,7 @@ function ImpersonationBanner() {
 export default function App() {
   return (
     <>
+      <ImpersonationBanner />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/profil" element={<ProfilePage />} />
