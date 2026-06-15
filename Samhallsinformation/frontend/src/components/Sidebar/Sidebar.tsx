@@ -158,7 +158,7 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
               active={selectedSourceId === source.id && !isProfilePage}
               hasUnread={unreadSourceIds.has(source.id)}
               onClick={() => {
-                navigate('/')
+                navigate('/', { state: { sourceId: source.id } })
                 onSelectSource(source.id)
                 onClose()
               }}
