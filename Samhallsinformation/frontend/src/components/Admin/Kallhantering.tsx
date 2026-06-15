@@ -7,6 +7,74 @@ type KällStatus      = 'OK' | 'Begränsad drift' | 'Nere' | 'Okänd'
 type Kategori        = 'Nationell' | 'Regional' | 'Kommunal' | 'Transport' | 'Väder'
 type ÄndringTyp      = 'Underhåll' | 'Inaktivering' | 'Aktivering' | 'Källbyte'
 type FlödesStatus    = 'OK' | 'Planerat underhåll' | 'Driftstörning'
+type IngestTyp       = 'RSS' | 'API'
+
+interface KureradKälla {
+  namn:        string
+  kortNamn:    string
+  beskrivning: string
+  url:         string
+  baseUrl:     string
+  kategori:    Kategori
+  typ:         IngestTyp
+  redo:        boolean
+  anledning?:  string
+}
+
+const KURATERADE_KALLOR: KureradKälla[] = [
+  {
+    namn:        'Folkhälsomyndigheten',
+    kortNamn:    'Folkhälsomyndigheten',
+    beskrivning: 'Nyheter om smittskydd och sjukdomar',
+    url:         'https://www.folkhalsomyndigheten.se/nyheter-och-press/nyhetsarkiv/?topic=smittskydd-och-sjukdomar&syndication=rss',
+    baseUrl:     'https://www.folkhalsomyndigheten.se',
+    kategori:    'Nationell',
+    typ:         'RSS',
+    redo:        true,
+  },
+  {
+    namn:        'Livsmedelsverket',
+    kortNamn:    'Livsmedelsverket',
+    beskrivning: 'Matåterkallelser och livsmedelssäkerhet',
+    url:         'https://www.livsmedelsverket.se/om-oss/press/rss/',
+    baseUrl:     'https://www.livsmedelsverket.se',
+    kategori:    'Nationell',
+    typ:         'RSS',
+    redo:        true,
+  },
+  {
+    namn:        'Läkemedelsverket',
+    kortNamn:    'Läkemedelsverket',
+    beskrivning: 'Säkerhetsvarningar och läkemedelsåterkallelser',
+    url:         'https://www.lakemedelsverket.se/sv/om-lakemedelsverket/press-och-nyheter/rss',
+    baseUrl:     'https://www.lakemedelsverket.se',
+    kategori:    'Nationell',
+    typ:         'RSS',
+    redo:        true,
+  },
+  {
+    namn:        'SMHI',
+    kortNamn:    'SMHI',
+    beskrivning: 'Väder- och naturvarningar',
+    url:         'https://opendata-download-warnings.smhi.se/api/version/2/warnings.json',
+    baseUrl:     'https://www.smhi.se',
+    kategori:    'Väder',
+    typ:         'API',
+    redo:        false,
+    anledning:   'Kräver egen ingestor (JSON API)',
+  },
+  {
+    namn:        'Trafikverket',
+    kortNamn:    'Trafikverket',
+    beskrivning: 'Vägtrafikhändelser och störningar',
+    url:         'https://api.trafikinfo.trafikverket.se/',
+    baseUrl:     'https://www.trafikverket.se',
+    kategori:    'Transport',
+    typ:         'API',
+    redo:        false,
+    anledning:   'Kräver API-nyckel och egen ingestor',
+  },
+]
 
 type Kanal = 'E-post' | 'SMS' | 'Push'
 
@@ -132,13 +200,6 @@ const STATUS_DOT: Record<KällStatus, string> = {
 const KATEGORIER: Kategori[] = ['Nationell', 'Regional', 'Kommunal', 'Transport', 'Väder']
 const STATUSER: KällStatus[]  = ['OK', 'Begränsad drift', 'Nere', 'Okänd']
 
-interface NyForm {
-  url:       string
-  namn:      string
-  kategori:  Kategori
-  analyserad: boolean
-  laddar:    boolean
-}
 
 function toKälla(s: AdminSource, statusMap: Map<number, KällStatus>, tidMap: Map<number, string>): Källa {
   return {
@@ -153,38 +214,6 @@ function toKälla(s: AdminSource, statusMap: Map<number, KällStatus>, tidMap: M
   }
 }
 
-function analyseraUrl(url: string): { namn: string; kategori: Kategori } | null {
-  try {
-    const normad = url.startsWith('http') ? url : `https://${url}`
-    const host = new URL(normad).hostname.replace('www.', '')
-    const regler: { match: string | RegExp; namn: string; kategori: Kategori }[] = [
-      { match: 'polisen.se',           namn: 'Polisen',              kategori: 'Nationell'  },
-      { match: 'smhi.se',              namn: 'SMHI',                 kategori: 'Väder'      },
-      { match: 'msb.se',              namn: 'MSB',                  kategori: 'Nationell'  },
-      { match: 'trafikverket.se',      namn: 'Trafikverket',         kategori: 'Transport'  },
-      { match: 'krisinformation.se',   namn: 'Krisinformation.se',   kategori: 'Nationell'  },
-      { match: 'regeringen.se',        namn: 'Regeringen.se',        kategori: 'Nationell'  },
-      { match: 'lansstyrelsen.se',     namn: 'Länsstyrelsen',        kategori: 'Regional'   },
-      { match: 'goteborg.se',          namn: 'Göteborgs Stad',       kategori: 'Kommunal'   },
-      { match: 'stockholm.se',         namn: 'Stockholms Stad',      kategori: 'Kommunal'   },
-      { match: 'malmo.se',             namn: 'Malmö Stad',           kategori: 'Kommunal'   },
-      { match: 'sl.se',                namn: 'SL',                   kategori: 'Transport'  },
-      { match: 'vastrafik.se',         namn: 'Västtrafik',           kategori: 'Transport'  },
-      { match: /region\w+\.se/,        namn: 'Region',               kategori: 'Regional'   },
-      { match: /kommun\.se/,           namn: 'Kommun',               kategori: 'Kommunal'   },
-    ]
-    for (const r of regler) {
-      if (typeof r.match === 'string' ? host.includes(r.match) : r.match.test(host)) {
-        return { namn: r.namn, kategori: r.kategori }
-      }
-    }
-    const domän = host.split('.')[0]
-    const namn = domän.charAt(0).toUpperCase() + domän.slice(1)
-    return { namn, kategori: 'Nationell' }
-  } catch {
-    return null
-  }
-}
 
 export default function Kallhantering() {
   const queryClient = useQueryClient()
@@ -219,7 +248,7 @@ export default function Kallhantering() {
   const [filterStatus,setFilterStatus]= useState<KällStatus | ''>('')
   const [redigerar,   setRedigerar]   = useState<Källa | null>(null)
   const [visaForm,    setVisaForm]    = useState(false)
-  const [ny,          setNy]          = useState<NyForm>({ url: '', namn: '', kategori: 'Nationell', analyserad: false, laddar: false })
+  const [aktiverar,   setAktiverar]   = useState<Set<string>>(new Set())
   const [sparad,      setSparad]      = useState<number | null>(null)
   const [kontrollerar,setKontrollerar]= useState<Set<number>>(new Set())
   const [ändringar,   setÄndringar]   = useState<SchemalagdÄndring[]>(INITIAL_ÄNDRINGAR)
@@ -264,40 +293,23 @@ export default function Kallhantering() {
     setRedigerar(null)
   }
 
-  function analyseraKlick() {
-    if (!ny.url.trim()) return
-    setNy(p => ({ ...p, laddar: true, analyserad: false }))
-    setTimeout(() => {
-      const resultat = analyseraUrl(ny.url)
-      setNy(p => ({
-        ...p,
-        laddar:     false,
-        analyserad: true,
-        namn:       resultat?.namn      ?? '',
-        kategori:   resultat?.kategori  ?? 'Nationell',
-      }))
-    }, 800)
-  }
-
-  function läggTill() {
-    if (!ny.namn.trim() || !ny.url.trim()) return
-    const url = ny.url.startsWith('http') ? ny.url.trim() : `https://${ny.url.trim()}`
-    let baseUrl = url
-    try { baseUrl = new URL(url).origin } catch { /* keep url as baseUrl */ }
-
+  function aktiveraKälla(k: KureradKälla) {
+    setAktiverar(prev => new Set(prev).add(k.url))
     createMutation.mutate({
-      name:      ny.namn.trim(),
-      shortName: ny.namn.trim(),
-      baseUrl,
-      url,
-      category:  ny.kategori,
+      name:      k.namn,
+      shortName: k.kortNamn,
+      baseUrl:   k.baseUrl,
+      url:       k.url,
+      category:  k.kategori,
       type:      0,
     }, {
       onSuccess: (created) => {
-        setNy({ url: '', namn: '', kategori: 'Nationell', analyserad: false, laddar: false })
-        setVisaForm(false)
+        setAktiverar(prev => { const n = new Set(prev); n.delete(k.url); return n })
         flashSparad(created.id)
         kontrolleraKälla(created.id)
+      },
+      onError: () => {
+        setAktiverar(prev => { const n = new Set(prev); n.delete(k.url); return n })
       },
     })
   }
@@ -370,72 +382,70 @@ export default function Kallhantering() {
         </button>
       </div>
 
-      {/* Lägg till-formulär */}
-      {visaForm && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
-          <h3 className="text-base font-semibold text-slate-900">Ny källa</h3>
-
-          {/* Steg 1: URL */}
-          <div className="flex gap-3 items-end">
-            <div className="flex flex-col gap-1.5 flex-1">
-              <label className="text-xs font-medium text-slate-500">URL till källan</label>
-              <input
-                type="url"
-                value={ny.url}
-                onChange={e => setNy(p => ({ ...p, url: e.target.value, analyserad: false }))}
-                onKeyDown={e => e.key === 'Enter' && analyseraKlick()}
-                placeholder="https://exempel.se/rss"
-                className={inputCls}
-              />
+      {/* Kuraterad källlista */}
+      {visaForm && (() => {
+        const tillagdaUrls = new Set(apiSources.map(s => s.url ?? ''))
+        const tillgängliga = KURATERADE_KALLOR.filter(k => !tillagdaUrls.has(k.url))
+        return (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">Tillgängliga källor</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Verifierade källor redo att ansluta</p>
+              </div>
+              <button
+                onClick={() => setVisaForm(false)}
+                className="text-sm text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                Stäng
+              </button>
             </div>
-            <button
-              onClick={analyseraKlick}
-              disabled={!ny.url.trim() || ny.laddar}
-              className="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors shrink-0"
-            >
-              {ny.laddar ? 'Analyserar...' : 'Analysera'}
-            </button>
+
+            {tillgängliga.length === 0 ? (
+              <div className="px-6 py-10 text-center text-sm text-slate-400">
+                Alla tillgängliga källkandidater är redan tillagda.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {tillgängliga.map(k => {
+                  const laddar = aktiverar.has(k.url)
+                  return (
+                    <div key={k.url} className="flex items-center gap-4 px-6 py-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold text-slate-800">{k.namn}</span>
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                            k.typ === 'RSS'
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>{k.typ}</span>
+                          <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k.kategori}</span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-0.5">{k.beskrivning}</p>
+                      </div>
+                      <div className="shrink-0">
+                        {k.redo ? (
+                          <button
+                            onClick={() => aktiveraKälla(k)}
+                            disabled={laddar}
+                            className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+                          >
+                            {laddar ? 'Aktiverar...' : 'Aktivera'}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl">
+                            {k.anledning}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
-
-          {/* Steg 2: Förslag */}
-          {ny.analyserad && (
-            <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
-              <p className="text-xs text-slate-400 font-medium">Förslag — justera om det behövs</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-slate-500">Namn</label>
-                  <input
-                    type="text"
-                    value={ny.namn}
-                    onChange={e => setNy(p => ({ ...p, namn: e.target.value }))}
-                    className={inputCls}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-slate-500">Kategori</label>
-                  <select value={ny.kategori} onChange={e => setNy(p => ({ ...p, kategori: e.target.value as Kategori }))} className={selectCls}>
-                    {KATEGORIER.map(k => <option key={k} value={k}>{k}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={läggTill}
-                  disabled={createMutation.isPending}
-                  className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
-                >
-                  {createMutation.isPending ? 'Sparar...' : 'Lägg till källa'}
-                </button>
-                <button onClick={() => { setVisaForm(false); setNy({ url: '', namn: '', kategori: 'Nationell', analyserad: false, laddar: false }) }} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">Avbryt</button>
-              </div>
-            </div>
-          )}
-
-          {!ny.analyserad && !ny.laddar && (
-            <button onClick={() => { setVisaForm(false); setNy({ url: '', namn: '', kategori: 'Nationell', analyserad: false, laddar: false }) }} className="text-sm text-slate-400 hover:text-slate-600 transition-colors self-start">Avbryt</button>
-          )}
-        </div>
-      )}
+        )
+      })()}
 
       {/* Filter + sök */}
       <div className="flex gap-3 flex-wrap">
