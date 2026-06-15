@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     public DbSet<CanonicalEvent> Events => Set<CanonicalEvent>();
     public DbSet<Source> Sources => Set<Source>();
     public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,6 +31,12 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.UserId);
+        });
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Email).IsUnique();
         });
     }
 }

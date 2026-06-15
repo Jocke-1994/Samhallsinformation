@@ -1,6 +1,11 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Samhallsinformation.Data;
 using Samhallsinformation.Ingestors;
+using Samhallsinformation.Models;
 using Samhallsinformation.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,6 +53,25 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
         policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
 
+// JWT-autentisering
+var jwtSecret = builder.Configuration["JWT_SECRET"]
+    ?? Environment.GetEnvironmentVariable("JWT_SECRET")
+    ?? "dev-secret-change-in-production-at-least-32-chars";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ValidateIssuer           = false,
+            ValidateAudience         = false,
+            RoleClaimType            = "role",
+        };
+    });
+builder.Services.AddAuthorization();
+
 // HTTP client for ingestors
 builder.Services.AddHttpClient<PolisenRssIngestor>();
 builder.Services.AddHttpClient<KrisinformationApiIngestor>();
@@ -65,6 +89,8 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 
 // Schema-setup och seed
 using (var scope = app.Services.CreateScope())
@@ -149,6 +175,28 @@ using (var scope = app.Services.CreateScope())
     }
 
     await db.SaveChangesAsync();
+
+    // Seed admin-användare från env-variabler
+    var adminEmail    = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
+    var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
+    var adminName     = Environment.GetEnvironmentVariable("ADMIN_NAME") ?? "Joakim Rehn";
+
+    if (!string.IsNullOrEmpty(adminEmail) && !string.IsNullOrEmpty(adminPassword))
+    {
+        if (!db.Users.Any(u => u.Email == adminEmail))
+        {
+            var hasher = new PasswordHasher<User>();
+            var admin  = new User
+            {
+                Email        = adminEmail,
+                Name         = adminName,
+                Role         = "Admin",
+                PasswordHash = hasher.HashPassword(null!, adminPassword),
+            };
+            db.Users.Add(admin);
+            await db.SaveChangesAsync();
+        }
+    }
 }
 
 app.MapControllers();

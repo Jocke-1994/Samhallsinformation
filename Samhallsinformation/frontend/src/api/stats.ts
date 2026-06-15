@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
+import { adminFetch } from './adminFetch'
 
 export interface AdminStats {
   totalEvents:      number
@@ -10,7 +10,7 @@ export interface AdminStats {
 }
 
 export async function fetchAdminStats(): Promise<AdminStats> {
-  const res = await fetch(`${API_BASE}/api/admin/stats`)
+  const res = await adminFetch('/api/admin/stats')
   if (!res.ok) throw new Error(`fetchAdminStats: ${res.status}`)
   return res.json()
 }

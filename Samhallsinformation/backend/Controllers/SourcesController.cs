@@ -1,5 +1,6 @@
 namespace Samhallsinformation.Controllers;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
@@ -24,6 +25,7 @@ public class SourcesController : ControllerBase
     }
 
     [HttpGet("/api/admin/sources")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAdminSources()
     {
         var sources = await _db.Sources.ToListAsync();
@@ -50,6 +52,7 @@ public class SourcesController : ControllerBase
     }
 
     [HttpPost("/api/admin/sources")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateSource([FromBody] CreateSourceRequest req)
     {
         var source = new Source
@@ -69,6 +72,7 @@ public class SourcesController : ControllerBase
     }
 
     [HttpPatch("/api/admin/sources/{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateSource(int id, [FromBody] UpdateSourceRequest req)
     {
         var source = await _db.Sources.FindAsync(id);
@@ -85,6 +89,7 @@ public class SourcesController : ControllerBase
     }
 
     [HttpDelete("/api/admin/sources/{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteSource(int id)
     {
         var source = await _db.Sources.FindAsync(id);
