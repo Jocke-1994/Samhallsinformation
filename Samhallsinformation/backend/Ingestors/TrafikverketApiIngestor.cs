@@ -9,6 +9,7 @@ using Samhallsinformation.Helpers;
 public class TrafikverketApiIngestor : IIngestor
 {
     private readonly HttpClient _httpClient;
+    private readonly ILogger<TrafikverketApiIngestor> _logger;
     private readonly string _apiKey;
 
     private const string ApiUrl = "https://api.trafikinfo.trafikverket.se/v2/data.json";
@@ -27,16 +28,20 @@ public class TrafikverketApiIngestor : IIngestor
         IsPublished = true,
     };
 
-    public TrafikverketApiIngestor(HttpClient httpClient)
+    public TrafikverketApiIngestor(HttpClient httpClient, ILogger<TrafikverketApiIngestor> logger)
     {
         _httpClient = httpClient;
+        _logger     = logger;
         _apiKey     = Environment.GetEnvironmentVariable("TRAFIKVERKET_API_KEY") ?? string.Empty;
     }
 
     public async Task<List<CanonicalEvent>> FetchEventsAsync()
     {
         if (string.IsNullOrEmpty(_apiKey))
+        {
+            _logger.LogWarning("TRAFIKVERKET_API_KEY is not set — skipping ingestion");
             return [];
+        }
 
         var xml = $"""
             <REQUEST>
@@ -61,6 +66,10 @@ public class TrafikverketApiIngestor : IIngestor
         var situations = result?.RESPONSE?.RESULT
             ?.SelectMany(r => r.Situation ?? [])
             .ToList() ?? [];
+
+        _logger.LogInformation("Trafikverket API returned {SituationCount} situations (RESULT blocks: {ResultCount})",
+            situations.Count,
+            result?.RESPONSE?.RESULT?.Count ?? 0);
 
         var events = new List<CanonicalEvent>();
 
