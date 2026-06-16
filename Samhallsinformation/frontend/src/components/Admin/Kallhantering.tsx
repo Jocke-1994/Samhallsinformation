@@ -36,7 +36,7 @@ const KURATERADE_KALLOR: KureradKälla[] = [
     namn:        'Livsmedelsverket',
     kortNamn:    'Livsmedelsverket',
     beskrivning: 'Matåterkallelser och livsmedelssäkerhet',
-    url:         'https://www.livsmedelsverket.se/om-oss/press/rss/',
+    url:         'https://www.livsmedelsverket.se/rss/rss-aterkallanden/',
     baseUrl:     'https://www.livsmedelsverket.se',
     kategori:    'Nationell',
     typ:         'RSS',
