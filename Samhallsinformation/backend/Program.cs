@@ -201,16 +201,27 @@ using (var scope = app.Services.CreateScope())
             db.Sources.Add(source);
         else
         {
-            existing.Name      = source.Name;
-            existing.ShortName = source.ShortName;
-            existing.BaseUrl   = source.BaseUrl;
-            existing.Type      = source.Type;
-            existing.Url       = source.Url;
+            existing.Name        = source.Name;
+            existing.ShortName   = source.ShortName;
+            existing.BaseUrl     = source.BaseUrl;
+            existing.Type        = source.Type;
+            existing.Url         = source.Url;
+            existing.IsPublished = source.IsPublished;
             if (source.Category != null) existing.Category = source.Category;
         }
     }
 
     await db.SaveChangesAsync();
+
+    // Rätta felaktig RSS-URL för Livsmedelsverket (gammal URL pekade på HTML-sida)
+    var lmvSource = await db.Sources.FirstOrDefaultAsync(s =>
+        s.Name == "Livsmedelsverket" &&
+        s.Url == "https://www.livsmedelsverket.se/om-oss/press/rss/");
+    if (lmvSource != null)
+    {
+        lmvSource.Url = "https://www.livsmedelsverket.se/rss/rss-aterkallanden/";
+        await db.SaveChangesAsync();
+    }
 
     // Seed admin-användare från env-variabler
     var adminEmail    = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
