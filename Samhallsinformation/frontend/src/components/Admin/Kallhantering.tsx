@@ -220,9 +220,10 @@ function toKälla(s: AdminSource, statusMap: Map<number, KällStatus>, tidMap: M
 export default function Kallhantering() {
   const queryClient = useQueryClient()
 
-  const { data: apiSources = [], isLoading } = useQuery({
+  const { data: apiSources = [], isLoading, isError, error } = useQuery({
     queryKey: ['admin-sources'],
     queryFn: fetchAdminSources,
+    retry: 1,
   })
 
   const createMutation = useMutation({
@@ -388,6 +389,26 @@ export default function Kallhantering() {
           + Lägg till källa
         </button>
       </div>
+
+      {/* Auth-fel */}
+      {isError && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+          <span className="text-red-500 text-lg shrink-0">⚠</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-red-800">Kunde inte hämta källista från backend</p>
+            <p className="text-xs text-red-600 mt-0.5 font-mono">{error instanceof Error ? error.message : String(error)}</p>
+            <p className="text-xs text-red-500 mt-1">
+              401 = JWT-token ogiltig (prova att logga ut och in igen) · 403 = saknar Admin-roll · 500 = serverfel (kolla Railway-loggar)
+            </p>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-xs text-red-600 hover:text-red-800 font-medium shrink-0"
+          >
+            Ladda om
+          </button>
+        </div>
+      )}
 
       {/* Kuraterad källlista */}
       {visaForm && (() => {
