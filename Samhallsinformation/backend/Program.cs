@@ -61,6 +61,9 @@ var jwtSecret = builder.Configuration["JWT_SECRET"]
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // Förhindrar att JsonWebTokenHandler remappar "role" till ClaimTypes.Role URI.
+        // Utan detta matchar inte RoleClaimType = "role" mot [Authorize(Roles = "Admin")] → 403.
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
