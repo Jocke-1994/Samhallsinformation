@@ -46,13 +46,13 @@ public class TrafikverketApiIngestor : IIngestor
         var xml = $"""
             <REQUEST>
               <LOGIN authenticationkey="{_apiKey}" />
-              <QUERY objecttype="Situation" schemaversion="1.5" limit="100">
+              <QUERY objecttype="Situation" schemaversion="1.2" limit="100">
               </QUERY>
             </REQUEST>
             """;
 
         using var body     = new StringContent(xml, Encoding.UTF8, "text/xml");
-        using var response = await _httpClient.PostAsync(ApiUrl, body);
+        using var response = await _httpClient.PostAsync(ApiUrlV1, body);
 
         if (!response.IsSuccessStatusCode)
         {
