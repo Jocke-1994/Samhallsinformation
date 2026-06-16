@@ -184,13 +184,6 @@ interface Källa {
   händelser:        number
 }
 
-const STATUS_CLS: Record<KällStatus, string> = {
-  'OK':              'bg-green-100 text-green-700 border border-green-200',
-  'Begränsad drift': 'bg-amber-100 text-amber-700 border border-amber-200',
-  'Nere':            'bg-red-100 text-red-700 border border-red-200',
-  'Okänd':           'bg-slate-100 text-slate-500 border border-slate-200',
-}
-
 const STATUS_DOT: Record<KällStatus, string> = {
   'OK':              'bg-green-500',
   'Begränsad drift': 'bg-amber-400',
@@ -199,7 +192,6 @@ const STATUS_DOT: Record<KällStatus, string> = {
 }
 
 const KATEGORIER: Kategori[] = ['Nationell', 'Regional', 'Kommunal', 'Transport', 'Väder']
-const STATUSER: KällStatus[]  = ['OK', 'Begränsad drift', 'Nere', 'Okänd']
 
 
 function toKälla(s: AdminSource, statusMap: Map<number, KällStatus>, tidMap: Map<number, string>): Källa {
@@ -248,7 +240,6 @@ export default function Kallhantering() {
 
   const [sök,         setSök]         = useState('')
   const [filterKat,   setFilterKat]   = useState<Kategori | ''>('')
-  const [filterStatus,setFilterStatus]= useState<KällStatus | ''>('')
   const [redigerar,   setRedigerar]   = useState<Källa | null>(null)
   const [visaForm,    setVisaForm]    = useState(false)
   const [aktiverar,   setAktiverar]   = useState<Set<string>>(new Set())
@@ -361,8 +352,7 @@ export default function Kallhantering() {
   const filtrerade = kallor.filter(k => {
     const matchSök = k.namn.toLowerCase().includes(sök.toLowerCase()) || k.url.toLowerCase().includes(sök.toLowerCase())
     const matchKat  = !filterKat    || k.kategori === filterKat
-    const matchStat = !filterStatus || k.status   === filterStatus
-    return matchSök && matchKat && matchStat
+    return matchSök && matchKat
   })
 
   const selectCls = "bg-slate-100 text-slate-700 text-sm px-3 py-2 rounded-xl border-0 focus:outline-none focus:ring-1 focus:ring-violet-400 cursor-pointer"
@@ -488,57 +478,40 @@ export default function Kallhantering() {
           <option value="">Alla kategorier</option>
           {KATEGORIER.map(k => <option key={k} value={k}>{k}</option>)}
         </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as KällStatus | '')} className={selectCls}>
-          <option value="">Alla statusar</option>
-          {STATUSER.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
       </div>
 
       {/* Tabell */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-left">
-              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Källa</th>
-              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Kategori</th>
-              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">
-                Status <span className="normal-case font-normal text-slate-300 ml-1">(simulerat)</span>
-              </th>
-              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Senast kontrollerad</th>
-              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-right">Händelser</th>
-              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-center">Aktiv</th>
-              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-center">Publicerad</th>
-              <th className="px-5 py-3" />
+              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide w-[40%]">Källa</th>
+              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide w-28">Kategori</th>
+              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-right w-24">Händelser</th>
+              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-center w-20">Aktiv</th>
+              <th className="px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide text-center w-24">Publicerad</th>
+              <th className="px-5 py-3 w-44" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-400">Laddar källor...</td>
+                <td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-400">Laddar källor...</td>
               </tr>
             ) : filtrerade.map(k => (
               <>
                 <tr key={k.id} className="hover:bg-slate-50 transition-colors group">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2">
+                  <td className="px-5 py-4 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[k.status]}`} />
-                      <div>
-                        <p className="font-medium text-slate-800">{k.namn}</p>
-                        <p className="text-xs text-slate-400 mt-0.5 font-mono">{k.url}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium text-slate-800 truncate">{k.namn}</p>
+                        <p className="text-xs text-slate-400 mt-0.5 font-mono truncate" title={k.url}>{k.url}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-4">
                     <span className="text-xs font-medium bg-slate-100 text-slate-600 px-3 py-1 rounded-full">{k.kategori}</span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`text-xs font-medium px-3 py-1 rounded-full ${STATUS_CLS[k.status]}`}>{k.status}</span>
-                  </td>
-                  <td className="px-5 py-4 text-xs text-slate-400">
-                    {kontrollerar.has(k.id)
-                      ? <span className="text-violet-500 animate-pulse">Kontrollerar...</span>
-                      : k.senastKontroll
-                    }
                   </td>
                   <td className="px-5 py-4 text-sm text-slate-700 text-right font-medium tabular-nums">{k.händelser.toLocaleString('sv-SE')}</td>
                   <td className="px-5 py-4 text-center">
@@ -587,7 +560,7 @@ export default function Kallhantering() {
                 {/* Inline redigering */}
                 {redigerar?.id === k.id && (
                   <tr key={`edit-${k.id}`}>
-                    <td colSpan={8} className="bg-violet-50 border-t border-b border-violet-100 px-5 py-4">
+                    <td colSpan={6} className="bg-violet-50 border-t border-b border-violet-100 px-5 py-4">
                       <div className="grid grid-cols-3 gap-4">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-medium text-slate-500">Namn</label>
@@ -636,7 +609,7 @@ export default function Kallhantering() {
           </tbody>
         </table>
 
-        {!isLoading && filtrerade.length === 0 && (
+        {!isLoading && !isError && filtrerade.length === 0 && (
           <div className="px-5 py-12 text-center text-sm text-slate-400">Inga källor matchar filtret.</div>
         )}
       </div>
