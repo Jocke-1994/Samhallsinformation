@@ -213,13 +213,22 @@ using (var scope = app.Services.CreateScope())
 
     await db.SaveChangesAsync();
 
-    // Rätta felaktig RSS-URL för Livsmedelsverket (gammal URL pekade på HTML-sida)
+    // Rätta felaktiga RSS-URL:er (gamla URL:er pekade på HTML-sidor)
     var lmvSource = await db.Sources.FirstOrDefaultAsync(s =>
         s.Name == "Livsmedelsverket" &&
         s.Url == "https://www.livsmedelsverket.se/om-oss/press/rss/");
     if (lmvSource != null)
     {
         lmvSource.Url = "https://www.livsmedelsverket.se/rss/rss-aterkallanden/";
+        await db.SaveChangesAsync();
+    }
+
+    var lkvSource = await db.Sources.FirstOrDefaultAsync(s =>
+        s.Name == "Läkemedelsverket" &&
+        s.Url == "https://www.lakemedelsverket.se/sv/om-lakemedelsverket/press-och-nyheter/rss");
+    if (lkvSource != null)
+    {
+        lkvSource.Url = "https://www.lakemedelsverket.se/api/newslist/newsrss?query=&pageTypeId=&from=&to=";
         await db.SaveChangesAsync();
     }
 

@@ -46,7 +46,7 @@ const KURATERADE_KALLOR: KureradKälla[] = [
     namn:        'Läkemedelsverket',
     kortNamn:    'Läkemedelsverket',
     beskrivning: 'Säkerhetsvarningar och läkemedelsåterkallelser',
-    url:         'https://www.lakemedelsverket.se/sv/om-lakemedelsverket/press-och-nyheter/rss',
+    url:         'https://www.lakemedelsverket.se/api/newslist/newsrss?query=&pageTypeId=&from=&to=',
     baseUrl:     'https://www.lakemedelsverket.se',
     kategori:    'Nationell',
     typ:         'RSS',
