@@ -22,7 +22,8 @@ public class KrisinformationApiIngestor : IIngestor
         Url = ApiUrl,
         Category = "Nationell",
         Type = SourceType.WebAPI,
-        IsActive = true
+        IsActive    = true,
+        IsPublished = true,
     };
 
     public KrisinformationApiIngestor(HttpClient httpClient)

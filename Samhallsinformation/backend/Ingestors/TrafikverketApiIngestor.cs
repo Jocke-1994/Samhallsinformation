@@ -22,8 +22,9 @@ public class TrafikverketApiIngestor : IIngestor
         BaseUrl   = "https://www.trafikverket.se",
         Url       = ApiUrl,
         Category  = "Transport",
-        Type      = SourceType.WebAPI,
-        IsActive  = true,
+        Type        = SourceType.WebAPI,
+        IsActive    = true,
+        IsPublished = true,
     };
 
     public TrafikverketApiIngestor(HttpClient httpClient)

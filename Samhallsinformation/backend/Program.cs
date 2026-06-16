@@ -201,11 +201,12 @@ using (var scope = app.Services.CreateScope())
             db.Sources.Add(source);
         else
         {
-            existing.Name      = source.Name;
-            existing.ShortName = source.ShortName;
-            existing.BaseUrl   = source.BaseUrl;
-            existing.Type      = source.Type;
-            existing.Url       = source.Url;
+            existing.Name        = source.Name;
+            existing.ShortName   = source.ShortName;
+            existing.BaseUrl     = source.BaseUrl;
+            existing.Type        = source.Type;
+            existing.Url         = source.Url;
+            existing.IsPublished = source.IsPublished;
             if (source.Category != null) existing.Category = source.Category;
         }
     }
