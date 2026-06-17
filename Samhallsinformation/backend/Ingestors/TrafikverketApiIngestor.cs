@@ -46,7 +46,7 @@ public class TrafikverketApiIngestor : IIngestor
         var xml = $"""
             <REQUEST>
               <LOGIN authenticationkey="{_apiKey}" />
-              <QUERY objecttype="Situation" schemaversion="1.6" limit="100">
+              <QUERY objecttype="Situation" schemaversion="1.6" namespace="road.trafficinfo" limit="100">
               </QUERY>
             </REQUEST>
             """;
