@@ -46,13 +46,13 @@ public class TrafikverketApiIngestor : IIngestor
         var xml = $"""
             <REQUEST>
               <LOGIN authenticationkey="{_apiKey}" />
-              <QUERY objecttype="Situation" schemaversion="1.2" limit="100">
+              <QUERY objecttype="Situation" schemaversion="1.6" limit="100">
               </QUERY>
             </REQUEST>
             """;
 
         using var body     = new StringContent(xml, Encoding.UTF8, "text/xml");
-        using var response = await _httpClient.PostAsync(ApiUrlV1, body);
+        using var response = await _httpClient.PostAsync(ApiUrl, body);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -75,12 +75,17 @@ public class TrafikverketApiIngestor : IIngestor
 
         foreach (var s in situations)
         {
+            if (s.Deleted == true) continue;
+
             var dev = s.Deviation?.FirstOrDefault();
             if (dev == null) continue;
+            if (dev.Suspended == true) continue;
 
-            var title   = System.Net.WebUtility.HtmlDecode(dev.MessageCodeValue ?? dev.MessageCode ?? "Trafikhändelse");
+            var title   = System.Net.WebUtility.HtmlDecode(dev.Header ?? dev.MessageCodeValue ?? dev.MessageCode ?? "Trafikhändelse");
             var content = System.Net.WebUtility.HtmlDecode(dev.Message ?? string.Empty);
-            var geo     = CountyName(dev.CountyNo?.FirstOrDefault());
+            var county  = CountyName(dev.CountyNo?.FirstOrDefault());
+            var geo     = string.IsNullOrEmpty(dev.RoadNumber) ? county : $"{county} {dev.RoadNumber}".Trim();
+            var url     = dev.WebLink ?? "https://www.trafikverket.se/trafikinformation/vag/?TrafficType=personalTraffic";
 
             var ev = new CanonicalEvent
             {
@@ -88,8 +93,8 @@ public class TrafikverketApiIngestor : IIngestor
                 ExternalId  = dev.Id ?? s.Id ?? Guid.NewGuid().ToString(),
                 Title       = title,
                 Content     = content,
-                PublishedAt = ParseDate(s.StartTime),
-                Url         = "https://www.trafikverket.se/trafikinformation/vag/?TrafficType=personalTraffic",
+                PublishedAt = ParseDate(dev.StartTime ?? s.PublicationTime),
+                Url         = url,
                 RawData     = title + " | " + content,
                 Geography   = geo,
                 Severity    = MapSeverity(dev.SeverityCode),
@@ -110,9 +115,9 @@ public class TrafikverketApiIngestor : IIngestor
 
     private static string MapSeverity(int? code) => code switch
     {
-        >= 4 => "Kritisk",
-        3    => "Viktigt",
-        _    => "Bra att veta",
+        5 => "Kritisk",
+        4 => "Viktigt",
+        _ => "Bra att veta",
     };
 
     private static string? CountyName(int? no) => no switch
@@ -159,17 +164,23 @@ internal class TvResult
 
 internal class TvSituation
 {
-    [JsonPropertyName("Id")]        public string?          Id        { get; set; }
-    [JsonPropertyName("StartTime")] public string?          StartTime { get; set; }
-    [JsonPropertyName("Deviation")] public List<TvDeviation>? Deviation { get; set; }
+    [JsonPropertyName("Id")]              public string?            Id              { get; set; }
+    [JsonPropertyName("Deleted")]         public bool?              Deleted         { get; set; }
+    [JsonPropertyName("PublicationTime")] public string?            PublicationTime { get; set; }
+    [JsonPropertyName("Deviation")]       public List<TvDeviation>? Deviation       { get; set; }
 }
 
 internal class TvDeviation
 {
     [JsonPropertyName("Id")]               public string?    Id               { get; set; }
+    [JsonPropertyName("Header")]           public string?    Header           { get; set; }
     [JsonPropertyName("Message")]          public string?    Message          { get; set; }
     [JsonPropertyName("MessageCode")]      public string?    MessageCode      { get; set; }
     [JsonPropertyName("MessageCodeValue")] public string?    MessageCodeValue { get; set; }
     [JsonPropertyName("SeverityCode")]     public int?       SeverityCode     { get; set; }
     [JsonPropertyName("CountyNo")]         public List<int>? CountyNo         { get; set; }
+    [JsonPropertyName("StartTime")]        public string?    StartTime        { get; set; }
+    [JsonPropertyName("WebLink")]          public string?    WebLink          { get; set; }
+    [JsonPropertyName("RoadNumber")]       public string?    RoadNumber       { get; set; }
+    [JsonPropertyName("Suspended")]        public bool?      Suspended        { get; set; }
 }
