@@ -93,7 +93,7 @@ public class TrafikverketApiIngestor : IIngestor
                 ExternalId  = dev.Id ?? s.Id ?? Guid.NewGuid().ToString(),
                 Title       = title,
                 Content     = content,
-                PublishedAt = ParseDate(dev.StartTime ?? s.PublicationTime),
+                PublishedAt = ParseDate(s.PublicationTime ?? dev.StartTime),
                 Url         = url,
                 RawData     = title + " | " + content,
                 Geography   = geo,
