@@ -81,7 +81,7 @@ public class TrafikverketApiIngestor : IIngestor
             if (dev == null) continue;
             if (dev.Suspended == true) continue;
 
-            var title   = System.Net.WebUtility.HtmlDecode(dev.Header ?? dev.MessageCodeValue ?? dev.MessageCode ?? "Trafikhändelse");
+            var title   = System.Net.WebUtility.HtmlDecode(dev.Header ?? dev.MessageCode ?? dev.MessageType ?? "Trafikhändelse");
             var content = System.Net.WebUtility.HtmlDecode(dev.Message ?? string.Empty);
             var county  = CountyName(dev.CountyNo?.FirstOrDefault());
             var geo     = string.IsNullOrEmpty(dev.RoadNumber) ? county : $"{county} {dev.RoadNumber}".Trim();
@@ -177,6 +177,7 @@ internal class TvDeviation
     [JsonPropertyName("Message")]          public string?    Message          { get; set; }
     [JsonPropertyName("MessageCode")]      public string?    MessageCode      { get; set; }
     [JsonPropertyName("MessageCodeValue")] public string?    MessageCodeValue { get; set; }
+    [JsonPropertyName("MessageType")]      public string?    MessageType      { get; set; }
     [JsonPropertyName("SeverityCode")]     public int?       SeverityCode     { get; set; }
     [JsonPropertyName("CountyNo")]         public List<int>? CountyNo         { get; set; }
     [JsonPropertyName("StartTime")]        public string?    StartTime        { get; set; }
