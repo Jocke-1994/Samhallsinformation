@@ -59,6 +59,39 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 12 — 2026-06-17
+**What was done:**
+- Trafikverket-ingestor: fullständig fix och live (PR #267, #268, #269, #270)
+  - Schemaversion 1.2 → 1.6 (rätt version per dokumentationen)
+  - API v1 → v2
+  - Lagt till `namespace="road.trafficinfo"` — detta var rotorsaken till "ObjectType does not exist"
+  - `StartTime` flyttad från `TvSituation` till `TvDeviation` (rätt nivå i datamodellen)
+  - `PublicationTime` används nu som `PublishedAt` (istället för `StartTime` som kan vara i framtiden)
+  - Filtrerar bort `Deleted` och `Suspended` händelser
+  - Titel: `Header` → `MessageCode` (svenska) → `MessageType` som fallback
+  - URL: `WebLink` från API, fallback till Trafikverkets trafiksida
+  - Geografi: länsnamn + vägnummer (t.ex. "Västra Götaland Väg 570")
+  - `SeverityCode` justerad: 5=Kritisk, 4=Viktigt (dokumenterade värden är 1,2,4,5)
+- Livsmedelsverket: URL uppdaterad i admin till `/rss/rss-aterkallanden/`
+- Läkemedelsverket: URL uppdaterad i admin till Atom-flöde `/api/newslist/newsrss?query=&pageTypeId=1&from=&to=` — fungerar och artiklarna flödar in
+- SMHI: hittade rätt API (vädervarningar med RED/ORANGE/YELLOW nivåer) men inte rätt endpoint-URL än — fick 404
+
+**Problem och lösningar denna session:**
+- Trafikverket "ObjectType does not exist": rotorsaken var saknad `namespace="road.trafficinfo"` i QUERY-elementet — gäller sedan mars 2026 enligt Trafikverkets portal
+- Trafikverket framtida datum i flödet: `StartTime` kan vara i framtiden (planerade arbeten) → bytte till `PublicationTime` som `PublishedAt`
+- "roadworks" på engelska: `MessageCodeValue` är engelska, `MessageCode` är svenska — bytte fallback-ordning
+
+**Etablerat mönster:**
+Trafikverkets Situation-API (v2): kräver `namespace="road.trafficinfo"` och `schemaversion="1.6"` i QUERY-elementet. Utan namespace → "ObjectType does not exist".
+
+**Next session (Session 13):**
+- Hitta rätt SMHI warnings endpoint-URL och bygg `SmhiApiIngestor`
+- Trafikverket länktext: ändra "Läs mer hos källan" → "Se trafikläget hos Trafikverket" (frontend)
+- `/testing`-sida: JWT-skyddad förhandsgranskningsvy för opublicerade källor
+- Verifiera att Livsmedelsverket återkallanden-flöde hämtar data
+
+---
+
 ### Session 11 — 2026-06-15
 **What was done:**
 - PR #260: fix för `IsPublished`-boolean-konvertering i PostgreSQL — `ALTER COLUMN TYPE` kraschar när kolumnen har ett `DEFAULT`-värde av fel typ. Löst med DROP DEFAULT → ALTER TYPE → SET DEFAULT (true)
