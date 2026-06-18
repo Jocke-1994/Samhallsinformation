@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 export type AdminSection =
   | 'oversikt'
   | 'kallor'
+  | 'sandlada'
   | 'uppdateringar'
   | 'faq'
   | 'anvandare'
@@ -18,6 +19,7 @@ export type AdminRoll = 'Admin' | 'Support'
 const NAV: { key: AdminSection; label: string; ikon: string; roller: AdminRoll[] }[] = [
   { key: 'oversikt',       label: 'Översikt',         ikon: '🏠', roller: ['Admin'] },
   { key: 'kallor',         label: 'Källhantering',     ikon: '📡', roller: ['Admin'] },
+  { key: 'sandlada',       label: 'Sandlåda',          ikon: '🧪', roller: ['Admin'] },
   { key: 'uppdateringar',  label: 'Uppdateringar',     ikon: '📝', roller: ['Admin'] },
   { key: 'faq',            label: 'FAQ-hantering',     ikon: '❓', roller: ['Admin'] },
   { key: 'anvandare',      label: 'Användare',         ikon: '👥', roller: ['Admin', 'Support'] },
