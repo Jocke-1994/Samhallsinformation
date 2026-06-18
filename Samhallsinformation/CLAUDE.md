@@ -59,6 +59,27 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 13 — 2026-06-19
+**What was done:**
+- Sandlåda (PR #277): ny admin-sektion med två flikar
+  - Förhandsvisning: visar händelser från IsActive=true + IsPublished=false källor (redan ingestade, dolda för besökare)
+  - Testa källa: dry-run av valfri RSS-URL via GenericRssIngestor utan att spara till DB
+- TestingController: GET /api/admin/testing/preview och POST /api/admin/testing/dryrun — JWT Admin-roll krävs
+- NewsItem: länktext "Se trafikläget hos Trafikverket" visas när URL innehåller "trafikinformation" (Trafikverkets fallback-URL)
+
+**Problem och lösningar denna session:**
+- Inga tekniska problem — backend och frontend byggde rent från start
+
+**Etablerat mönster:**
+Sandlådan är det naturliga testverktyget för alla nya ingestors. Flödet: lägg till källa med IsActive=true + IsPublished=false → se händelser i Förhandsvisning → när det ser bra ut, publicera.
+
+**Next session (Session 14):**
+- Genomgång av sandlådan live (se att Förhandsvisning och Testa källa fungerar mot Railway-backend)
+- SMHI-ingestor: hitta rätt warnings-endpoint och bygg SmhiApiIngestor (sandlådan används för att testa innan publicering)
+- Eventuellt: koppla "Testa källa"-knapp direkt från källhanteringen för smidigare workflow
+
+---
+
 ### Session 12 — 2026-06-17
 **What was done:**
 - Trafikverket-ingestor: fullständig fix och live (PR #267, #268, #269, #270)
