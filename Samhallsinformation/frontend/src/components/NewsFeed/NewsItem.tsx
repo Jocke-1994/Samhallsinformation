@@ -84,7 +84,7 @@ export default function NewsItem({ event, isRead, sourceName }: Props) {
             rel="noopener noreferrer"
             className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-500 transition-colors"
           >
-            Läs mer hos källan →
+            {event.url.includes('trafikinformation') ? 'Se trafikläget hos Trafikverket' : 'Läs mer hos källan'} →
           </a>
         </div>
       )}
