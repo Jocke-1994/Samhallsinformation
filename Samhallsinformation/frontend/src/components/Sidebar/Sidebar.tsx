@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useTheme, type Theme } from '../../context/ThemeContext'
+import { useTheme } from '../../context/ThemeContext'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { fetchSources } from '../../api/sources'
@@ -36,12 +36,6 @@ const TILLÅTNA_VYN: Record<SystemRoll, SystemRoll[]> = {
   'Användare': ['Användare'],
 }
 
-const THEMES: { id: Theme; label: string; color: string }[] = [
-  { id: 'true-black', label: 'True Black', color: '#000000' },
-  { id: 'dark',       label: 'Dark',       color: '#1e293b' },
-  { id: 'tan',        label: 'Dune',       color: '#f0e4c8' },
-  { id: 'light',      label: 'Light',      color: '#f8fafc' },
-]
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -105,10 +99,11 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
     `}>
 
       {/* App-namn */}
-      <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700 text-center">
+      <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700 flex items-center">
+        <div className="w-8 shrink-0" />
         <button
           onClick={() => { onSelectSource(null); navigate('/'); onClose() }}
-          className={`text-lg font-extrabold tracking-tight transition-colors ${
+          className={`flex-1 text-center text-lg font-extrabold tracking-tight transition-colors ${
             selectedSourceId === null && !isProfilePage
               ? 'text-violet-700 dark:text-violet-400'
               : 'text-violet-600 dark:text-violet-500 hover:text-violet-700 dark:hover:text-violet-400'
@@ -116,9 +111,27 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
         >
           Samhällsinfo
         </button>
+        <button
+          onClick={() => setTheme(theme === 'light' || theme === 'tan' ? 'dark' : 'light')}
+          title={theme === 'light' || theme === 'tan' ? 'Byt till mörkt läge' : 'Byt till ljust läge'}
+          aria-label={theme === 'light' || theme === 'tan' ? 'Byt till mörkt läge' : 'Byt till ljust läge'}
+          className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+        >
+          {theme === 'light' || theme === 'tan' ? (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <circle cx="12" cy="12" r="5" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+            </svg>
+          )}
+        </button>
       </div>
 
-      <div className="flex flex-col flex-1 overflow-hidden">
+      {/* Scrollbar innehållsyta — sources + knappar scrollar tillsammans */}
+      <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">
 
         {/* Inställningar — endast för inloggade */}
         {isLoggedIn && (
@@ -164,7 +177,7 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
 
         {/* Källor */}
         <SectionLabel>Källor</SectionLabel>
-        <div className="flex flex-col gap-0.5 flex-1 overflow-y-auto min-h-0">
+        <div className="flex flex-col gap-0.5">
           {sources.filter(s => s.isActive).map(source => (
             <SourceButton
               key={source.id}
@@ -179,15 +192,15 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
             />
           ))}
         </div>
-      </div>
 
-      {/* Om-länk + Feedback */}
-      <div className="border-t border-slate-200 dark:border-slate-700 pt-3 mt-3 flex flex-col items-center gap-2">
-        <div className="flex gap-1.5 w-full">
+        <div className="border-t border-slate-100 dark:border-slate-800 mt-2" />
+
+        {/* Om, Nyheter, Feedback — direkt under källorna */}
+        <div className="pt-2 flex flex-col gap-1">
           <Link
             to="/om"
             onClick={onClose}
-            className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium px-3 py-2 rounded-full transition-colors flex-1 justify-center"
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-600 dark:hover:bg-slate-500 text-slate-600 dark:text-slate-100 text-sm font-medium px-4 py-2 rounded-full transition-colors w-full justify-center"
           >
             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -197,42 +210,27 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
           <Link
             to="/uppdateringar"
             onClick={onClose}
-            className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium px-3 py-2 rounded-full transition-colors flex-1 justify-center"
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-600 dark:hover:bg-slate-500 text-slate-600 dark:text-slate-100 text-sm font-medium px-4 py-2 rounded-full transition-colors w-full justify-center"
           >
             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             Nyheter
           </Link>
-        </div>
-        <button
-          onClick={() => setFeedbackÖppen(true)}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-full shadow transition-colors w-full justify-center"
-        >
-          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h6m-6 8l4-4h7a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h2v4z" />
-          </svg>
-          Feedback
-        </button>
+          <button
+            onClick={() => setFeedbackÖppen(true)}
+            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-full shadow transition-colors w-full justify-center"
+          >
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h6m-6 8l4-4h7a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h2v4z" />
+            </svg>
+            Feedback
+          </button>
 
-        {/* Tema-swatches */}
-        <div className="flex items-center gap-2.5 pt-1">
-          {THEMES.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTheme(t.id)}
-              title={t.label}
-              aria-label={t.label}
-              style={{ backgroundColor: t.color }}
-              className={`w-5 h-5 rounded-full border-2 transition-all duration-150 ${
-                theme === t.id
-                  ? 'border-violet-500 scale-110 shadow-sm'
-                  : 'border-slate-300 dark:border-slate-600 hover:scale-110 hover:border-slate-400'
-              }`}
-            />
-          ))}
         </div>
+
       </div>
+
       <FeedbackModal open={feedbackÖppen} onClose={() => setFeedbackÖppen(false)} />
 
       {/* Profilknapp med dropdown — endast för inloggade */}

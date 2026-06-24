@@ -96,6 +96,12 @@ export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSi
     'Bra att veta': sortedEvents.filter(e => e.severity === 'Bra att veta').length,
   }), [sortedEvents])
 
+  const availableSeverities = useMemo(
+    () => (['Kritisk', 'Viktigt', 'Bra att veta'] as const).filter(f => severityCounts[f] > 0),
+    [severityCounts]
+  )
+  const showFilters = availableSeverities.length > 1
+
   const title = source ? source.shortName : 'Samhällsinformation'
 
   if (isLoading) return (
@@ -133,35 +139,37 @@ export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSi
         )}
       </div>
 
-      {/* Filter */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 shrink-0">
-        <div className="max-w-3xl mx-auto flex gap-1.5">
-          {(['Alla', 'Kritisk', 'Viktigt', 'Bra att veta'] as SeverityFilter[])
-            .filter(f => f === 'Alla' || severityCounts[f] > 0)
-            .map(f => {
-              const count = f === 'Alla' ? sortedEvents.length : severityCounts[f]
-              const isActive = severityFilter === f
-              const s = FILTER_STYLES[f]
-              return (
-                <button
-                  key={f}
-                  onClick={() => setSeverityFilter(f)}
-                  style={{ marginBottom: '-1px' }}
-                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-t-lg border transition-colors ${
-                    isActive ? s.active : 'bg-white dark:bg-slate-800 text-slate-600 border-transparent hover:text-slate-900'
-                  }`}
-                >
-                  {f}
-                  <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold ${
-                    isActive ? s.activeBadge : s.inactiveBadge
-                  }`}>
-                    {count}
-                  </span>
-                </button>
-              )
-            })}
+      {/* Filter — visas bara om det finns minst 2 olika allvarlighetsgrader */}
+      {showFilters && (
+        <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 shrink-0">
+          <div className="max-w-3xl mx-auto flex gap-1.5">
+            {(['Alla', 'Kritisk', 'Viktigt', 'Bra att veta'] as SeverityFilter[])
+              .filter(f => f === 'Alla' || severityCounts[f] > 0)
+              .map(f => {
+                const count = f === 'Alla' ? sortedEvents.length : severityCounts[f]
+                const isActive = severityFilter === f
+                const s = FILTER_STYLES[f]
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setSeverityFilter(f)}
+                    style={{ marginBottom: '-1px' }}
+                    className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-t-lg border transition-colors ${
+                      isActive ? s.active : 'bg-white dark:bg-slate-800 text-slate-600 border-transparent hover:text-slate-900'
+                    }`}
+                  >
+                    {f}
+                    <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold ${
+                      isActive ? s.activeBadge : s.inactiveBadge
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                )
+              })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Händelselista */}
       <div className="flex-1 overflow-y-auto px-4 md:px-10 py-4 md:py-6">
