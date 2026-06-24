@@ -15,6 +15,14 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    title: 'Förbättrad sidmeny',
+    date: 'Juni 2026',
+    changes: [
+      { type: 'förbättrat', text: 'Om, Nyheter och Feedback ligger nu direkt under källlistan för snabbare åtkomst' },
+      { type: 'förbättrat', text: 'Växla mellan mörkt och ljust läge via ikonen bredvid logotypen' },
+    ],
+  },
+  {
     title: 'Fyra nya myndigheter',
     date: 'Juni 2026',
     changes: [
@@ -28,7 +36,7 @@ const UPDATES: Update[] = [
       { type: 'nytt',       text: 'samhallsinformation.se är nu tillgänglig för alla' },
       { type: 'nytt',       text: 'Händelser och nyheter från Polisen och Krisinformation i ett samlat flöde under Samhällsinfo' },
       { type: 'nytt',       text: 'Filtrera flödet per källa via sidomenyn' },
-      { type: 'nytt',       text: 'Fyra teman att välja mellan: mörkt, ljust, true black och dune, dessa ligger längst ner i sidomenyn' },
+      { type: 'nytt',       text: 'Växla mellan mörkt och ljust läge via ikonen bredvid logotypen' },
       { type: 'nytt',       text: 'Knappen "Om" förklarar tjänstens funktioner och mål' },
       { type: 'nytt',       text: 'En Feedback-knapp för att ge återkoppling om tjänsten' },
       { type: 'förbättrat', text: 'Stabilitet och förbättringar' },
