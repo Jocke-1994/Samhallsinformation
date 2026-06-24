@@ -59,6 +59,31 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 14 — 2026-06-24
+**What was done:**
+- Sidebar UX-förbättringar baserade på feedback från senior utvecklare (PR #279):
+  - Om, Nyheter och Feedback flyttade direkt under källlistan med subtil avgränsare — scrollar med källorna om de blir många
+  - Färgswatchar (4 teman) ersatta med sol/måne-toggle för mörkt/ljust läge
+  - Toggle flyttad till headerraden bredvid centrerad Samhällsinfo-logotyp
+  - Om och Nyheter-knappar framhävda i mörkt läge (`dark:bg-slate-600`) — fixade CSS-specificitetskonflikt i `index.css`
+  - Filterbar döljs helt om flödet bara innehåller en allvarlighetsgrad
+- Mockdata uppdaterad med alla 6 live-källor och representativa händelser (Folkhälsomyndigheten, Livsmedelsverket, Läkemedelsverket, Trafikverket)
+- Folkhälsomyndighetens kortnamn ändrat till fullständigt "Folkhälsomyndigheten"
+- Nyheter-sidan uppdaterad (PR #280): ny post "Förbättrad sidmeny", tematext ändrad från fyra teman till mörkt/ljust-toggle
+
+**Problem och lösningar denna session:**
+- `dark:bg-slate-600` hade ingen effekt — `html.dark .bg-slate-100` i `index.css` har högre CSS-specificitet och överskriver Tailwinds `dark:`-prefix. Löst med explicita regler i `index.css` för de nya dark-klasserna.
+- Knappar hamnade längst ned i sidebar (inte direkt under källorna) — `flex-1` på källlistan tog all höjd. Löst genom att lägga hela innehållsytan i en scrollbar `flex-1 overflow-y-auto`-container och ha profilknappen utanför.
+
+**Etablerat mönster:**
+I detta projekt har `index.css` manuella dark-mode-overrides med högre specificitet än Tailwinds `dark:`-prefix. Vid nya dark-mode-klasser: lägg alltid till en explicit regel i `index.css` på formen `html.dark .dark\:bg-[klass] { ... }`.
+
+**Next session (Session 15):**
+- Genomgång av sandlådan live mot Railway-backend
+- SMHI-ingestor: hitta rätt warnings-endpoint och bygg SmhiApiIngestor
+
+---
+
 ### Session 13 — 2026-06-19
 **What was done:**
 - Sandlåda (PR #277): ny admin-sektion med två flikar
