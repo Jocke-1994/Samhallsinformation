@@ -100,6 +100,86 @@ const MOCK_EVENTS: CanonicalEvent[] = [
     publishedAt: '2026-06-05T13:22:00Z', url: 'https://polisen.se', geography: 'Malmö', severity: 'Bra att veta', isNational: false,
   },
 
+  // Folkhälsomyndigheten
+  {
+    id: 'fhm-001', sourceId: 6,
+    title: 'Ökad spridning av kikhosta i Sverige',
+    content: 'Folkhälsomyndigheten rapporterar om en ovanligt hög förekomst av kikhosta under våren. Flest fall ses hos spädbarn och ovaccinerade ungdomar. Myndigheten påminner om vikten av att hålla vaccinationsskyddet aktuellt.',
+    publishedAt: '2026-06-10T09:00:00Z', url: 'https://folkhalsomyndigheten.se', geography: null, severity: 'Viktigt', isNational: true,
+  },
+  {
+    id: 'fhm-002', sourceId: 6,
+    title: 'Säsongsinfluensan avtar — normal nivå uppnådd',
+    content: 'Antalet influensafall i Sverige har nu sjunkit till under epidemitröskeln. Folkhälsomyndigheten bedömer att säsongens influensavåg är på väg att klinga av. Totalbelastningen på sjukvården bedöms som hanterbar.',
+    publishedAt: '2026-06-08T10:30:00Z', url: 'https://folkhalsomyndigheten.se', geography: null, severity: 'Bra att veta', isNational: true,
+  },
+  {
+    id: 'fhm-003', sourceId: 6,
+    title: 'Utbrott av magsjuka på äldreboende i Västra Götaland',
+    content: 'Ett utbrott av calicivirus har konstaterats på ett äldreboende i Borås. Totalt 18 boende och 4 personal är drabbade. Smittskyddsenheten i regionen har kontaktats och besöksförbud råder tillsvidare.',
+    publishedAt: '2026-06-07T14:00:00Z', url: 'https://folkhalsomyndigheten.se', geography: 'Västra Götaland', severity: 'Viktigt', isNational: false,
+  },
+
+  // Livsmedelsverket
+  {
+    id: 'lv-001', sourceId: 7,
+    title: 'Återkallelse: Färsk spenat — risk för salmonella',
+    content: 'Livsmedelsverket och importören återkallar ett parti färsk babyspenat förpackad i 200 g påsar med bäst-före-datum 2026-06-12. Produkten säljs i livsmedelsbutiker i hela landet. Konsumenter uppmanas att inte äta produkten och returnera den till inköpsstället för full återbetalning.',
+    publishedAt: '2026-06-10T08:00:00Z', url: 'https://livsmedelsverket.se', geography: null, severity: 'Viktigt', isNational: true,
+  },
+  {
+    id: 'lv-002', sourceId: 7,
+    title: 'Återkallelse: Mjölkchoklad — odeklarerade nötter',
+    content: 'Tillverkaren återkallar ett parti mjölkchokladkakor på grund av att hasselnötter kan förekomma utan att det anges på förpackningen. Produkten kan vara farlig för personer med nötallergi. Bäst-före-datum: 2026-09-30.',
+    publishedAt: '2026-06-09T11:00:00Z', url: 'https://livsmedelsverket.se', geography: null, severity: 'Viktigt', isNational: true,
+  },
+  {
+    id: 'lv-003', sourceId: 7,
+    title: 'Information om nya regler för märkning av livsmedel',
+    content: 'Från och med 1 juli 2026 gäller uppdaterade krav på ursprungsmärkning för kött och mejeriprodukter. Livsmedelsverket informerar om vad de nya reglerna innebär för producenter och konsumenter.',
+    publishedAt: '2026-06-07T09:00:00Z', url: 'https://livsmedelsverket.se', geography: null, severity: 'Bra att veta', isNational: true,
+  },
+
+  // Läkemedelsverket
+  {
+    id: 'lmv-001', sourceId: 8,
+    title: 'Säkerhetsvarning: Metformin — batchåterkallelse',
+    content: 'Läkemedelsverket och distributören återkallar ett parti Metformin 500 mg tabletter (batch MT2603) på grund av avvikelse i tillverkningsprocessen. Berörda patienter uppmanas att kontakta sin förskrivare för alternativ medicinering.',
+    publishedAt: '2026-06-10T10:00:00Z', url: 'https://lakemedelsverket.se', geography: null, severity: 'Viktigt', isNational: true,
+  },
+  {
+    id: 'lmv-002', sourceId: 8,
+    title: 'Ny godkänd behandling mot KOL',
+    content: 'Läkemedelsverket har godkänt en ny inhalationsbehandling för patienter med kroniskt obstruktiv lungsjukdom (KOL). Preparatet tillhör en ny läkemedelsklass och erbjuder ett komplement till befintliga behandlingar.',
+    publishedAt: '2026-06-08T13:00:00Z', url: 'https://lakemedelsverket.se', geography: null, severity: 'Bra att veta', isNational: true,
+  },
+  {
+    id: 'lmv-003', sourceId: 8,
+    title: 'Brist på blodtrycksmedicin — alternativ finns',
+    content: 'Läkemedelsverket informerar om tillfällig brist på Amlodipin 10 mg från en tillverkare. Förskrivare uppmanas att byta till alternativa produkter med samma aktiva substans. Bristen beräknas vara löst under juli 2026.',
+    publishedAt: '2026-06-06T09:30:00Z', url: 'https://lakemedelsverket.se', geography: null, severity: 'Viktigt', isNational: true,
+  },
+
+  // Trafikverket
+  {
+    id: 'tv-001', sourceId: 4,
+    title: 'Vägarbete E4 Sundsvall — körfältsinskränkning',
+    content: 'Trafikverket utför beläggningsarbete på E4 norr om Sundsvall. Ett körfält stängs av i norrgående riktning mellan avfarterna Kovland och Njurundabommen. Arbetet pågår dygnet runt och beräknas vara klart 2026-06-20.',
+    publishedAt: '2026-06-10T06:00:00Z', url: 'https://trafikverket.se/trafikinformation', geography: 'Västernorrland', severity: 'Bra att veta', isNational: false,
+  },
+  {
+    id: 'tv-002', sourceId: 4,
+    title: 'Trafikolycka E6 Göteborg — stopp i trafiken',
+    content: 'En trafikolycka med två fordon har inträffat på E6 söderut vid avfarten Kungsbackamotet. Räddningstjänst och polis är på plats. Trafiken leds förbi via nödkörfält. Beräknad restid ökar med 30–40 minuter.',
+    publishedAt: '2026-06-09T16:45:00Z', url: 'https://trafikverket.se/trafikinformation', geography: 'Västra Götaland', severity: 'Viktigt', isNational: false,
+  },
+  {
+    id: 'tv-003', sourceId: 4,
+    title: 'Broprovning Ölandsbron — kortvarig trafikstyrning',
+    content: 'Trafikverket genomför en planerad broprovning av Ölandsbron natten mot fredag. Trafiken regleras med trafikljus och väntetider om upp till 15 minuter kan förekomma mellan 22:00 och 05:00.',
+    publishedAt: '2026-06-08T15:00:00Z', url: 'https://trafikverket.se/trafikinformation', geography: 'Kalmar', severity: 'Bra att veta', isNational: false,
+  },
+
   // Krisinformation
   {
     id: 'k-001', sourceId: 5,
