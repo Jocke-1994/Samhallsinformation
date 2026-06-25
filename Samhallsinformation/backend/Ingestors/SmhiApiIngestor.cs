@@ -1,0 +1,129 @@
+namespace Samhallsinformation.Ingestors;
+
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+using Samhallsinformation.Models;
+using Samhallsinformation.Helpers;
+
+public class SmhiApiIngestor : IIngestor
+{
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<SmhiApiIngestor> _logger;
+
+    private const string ApiUrl = "https://opendata-download-warnings.smhi.se/api/version/2/warnings.json";
+
+    public Source Source { get; } = new Source
+    {
+        Id        = 10,
+        Name      = "SMHI",
+        ShortName = "SMHI",
+        BaseUrl   = "https://www.smhi.se",
+        Url       = ApiUrl,
+        Category  = "Väder",
+        Type      = SourceType.WebAPI,
+        IsActive    = true,
+        IsPublished = false, // Testar i sandlådan först
+    };
+
+    public SmhiApiIngestor(HttpClient httpClient, ILogger<SmhiApiIngestor> logger)
+    {
+        _httpClient = httpClient;
+        _logger     = logger;
+    }
+
+    public async Task<List<CanonicalEvent>> FetchEventsAsync()
+    {
+        var warnings = await _httpClient.GetFromJsonAsync<List<SmhiWarning>>(ApiUrl)
+            ?? [];
+
+        _logger.LogInformation("SMHI API returned {Count} warnings", warnings.Count);
+
+        var events = new List<CanonicalEvent>();
+
+        foreach (var warning in warnings)
+        {
+            foreach (var area in warning.WarningAreas ?? [])
+            {
+                var areaName  = area.AreaName?.Sv ?? "Sverige";
+                var eventType = area.EventDescription?.Sv ?? "Varning";
+                var levelCode = area.WarningLevel?.Code ?? "YELLOW";
+                var levelSv   = area.WarningLevel?.Sv ?? "Gul";
+
+                var title = $"{eventType} — {levelSv} varning";
+
+                var descParts = area.Descriptions?
+                    .Select(d => string.IsNullOrWhiteSpace(d.Title?.Sv)
+                        ? d.Text?.Sv
+                        : $"{d.Title.Sv}: {d.Text?.Sv}")
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .ToList() ?? [];
+                var content = string.Join(" ", descParts);
+
+                var ev = new CanonicalEvent
+                {
+                    SourceId    = Source.Id,
+                    ExternalId  = $"smhi-{warning.Id}-{area.Id}",
+                    Title       = title,
+                    Content     = content,
+                    PublishedAt = ParseDate(area.Published ?? area.ApproximateStart),
+                    Url         = "https://www.smhi.se/vadret/vadret-i-sverige/varningar",
+                    RawData     = title + " | " + content,
+                    Geography   = areaName,
+                    Severity    = MapSeverity(levelCode),
+                };
+
+                MetadataFallbacks.ApplyAll(ev);
+                events.Add(ev);
+            }
+        }
+
+        return events;
+    }
+
+    private static DateTime ParseDate(string? s)
+    {
+        if (s == null) return DateTime.UtcNow;
+        return DateTimeOffset.TryParse(s, out var dto) ? dto.UtcDateTime : DateTime.UtcNow;
+    }
+
+    private static string MapSeverity(string? code) => code?.ToUpperInvariant() switch
+    {
+        "RED"    => "Kritisk",
+        "ORANGE" => "Viktigt",
+        _        => "Bra att veta", // YELLOW
+    };
+}
+
+internal class SmhiWarning
+{
+    [JsonPropertyName("id")]           public int?                   Id           { get; set; }
+    [JsonPropertyName("warningAreas")] public List<SmhiWarningArea>? WarningAreas { get; set; }
+}
+
+internal class SmhiWarningArea
+{
+    [JsonPropertyName("id")]               public string?                Id               { get; set; }
+    [JsonPropertyName("areaName")]         public SmhiLocalizedText?     AreaName         { get; set; }
+    [JsonPropertyName("warningLevel")]     public SmhiWarningLevel?      WarningLevel     { get; set; }
+    [JsonPropertyName("eventDescription")] public SmhiLocalizedText?     EventDescription { get; set; }
+    [JsonPropertyName("descriptions")]     public List<SmhiDescription>? Descriptions     { get; set; }
+    [JsonPropertyName("approximateStart")] public string?                ApproximateStart { get; set; }
+    [JsonPropertyName("published")]        public string?                Published        { get; set; }
+}
+
+internal class SmhiWarningLevel
+{
+    [JsonPropertyName("code")] public string? Code { get; set; }
+    [JsonPropertyName("sv")]   public string? Sv   { get; set; }
+}
+
+internal class SmhiLocalizedText
+{
+    [JsonPropertyName("sv")] public string? Sv { get; set; }
+}
+
+internal class SmhiDescription
+{
+    [JsonPropertyName("title")] public SmhiLocalizedText? Title { get; set; }
+    [JsonPropertyName("text")]  public SmhiLocalizedText? Text  { get; set; }
+}
