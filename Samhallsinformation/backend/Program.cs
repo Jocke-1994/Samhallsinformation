@@ -79,9 +79,11 @@ builder.Services.AddAuthorization();
 builder.Services.AddHttpClient<PolisenRssIngestor>();
 builder.Services.AddHttpClient<KrisinformationApiIngestor>();
 builder.Services.AddHttpClient<TrafikverketApiIngestor>();
+builder.Services.AddHttpClient<SmhiApiIngestor>();
 builder.Services.AddScoped<IIngestor, PolisenRssIngestor>();
 builder.Services.AddScoped<IIngestor, KrisinformationApiIngestor>();
 builder.Services.AddScoped<IIngestor, TrafikverketApiIngestor>();
+builder.Services.AddScoped<IIngestor, SmhiApiIngestor>();
 
 // Background service
 builder.Services.AddHostedService<IngestorBackgroundService>();
