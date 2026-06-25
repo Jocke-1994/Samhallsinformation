@@ -411,8 +411,11 @@ export default function Kallhantering() {
 
       {/* Kuraterad källlista */}
       {visaForm && (() => {
-        const tillagdaUrls = new Set(apiSources.map(s => s.url ?? ''))
-        const tillgängliga = KURATERADE_KALLOR.filter(k => !tillagdaUrls.has(k.url))
+        const tillagdaBaseUrls = new Set(apiSources.map(s => s.baseUrl))
+        const tillagdaNamn    = new Set(apiSources.map(s => s.name.toLowerCase()))
+        const tillgängliga = KURATERADE_KALLOR.filter(k =>
+          !tillagdaBaseUrls.has(k.baseUrl) && !tillagdaNamn.has(k.namn.toLowerCase())
+        )
         return (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
