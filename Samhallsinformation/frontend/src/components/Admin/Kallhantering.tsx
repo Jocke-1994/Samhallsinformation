@@ -60,8 +60,7 @@ const KURATERADE_KALLOR: KureradKälla[] = [
     baseUrl:     'https://www.smhi.se',
     kategori:    'Väder',
     typ:         'API',
-    redo:        false,
-    anledning:   'Kräver egen ingestor (JSON API)',
+    redo:        true,
   },
   {
     namn:        'Trafikverket',
@@ -173,15 +172,16 @@ const ÄNDRING_IKON: Record<ÄndringTyp, string> = {
 }
 
 interface Källa {
-  id:               number
-  namn:             string
-  url:              string
-  kategori:         Kategori
-  status:           KällStatus
-  aktiv:            boolean
-  publicerad:       boolean
-  senastKontroll:   string
-  händelser:        number
+  id:             number
+  namn:           string
+  url:            string
+  kategori:       Kategori
+  status:         KällStatus
+  aktiv:          boolean
+  publicerad:     boolean
+  senastKontroll: string
+  fetchError:     string | null
+  händelser:      number
 }
 
 const STATUS_DOT: Record<KällStatus, string> = {
@@ -193,17 +193,35 @@ const STATUS_DOT: Record<KällStatus, string> = {
 
 const KATEGORIER: Kategori[] = ['Nationell', 'Regional', 'Kommunal', 'Transport', 'Väder']
 
+function relativeTime(iso: string | null): string {
+  if (!iso) return '—'
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (mins < 1)  return 'Just nu'
+  if (mins < 60) return `${mins} min sedan`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)  return `${hrs} h sedan`
+  return `${Math.floor(hrs / 24)} d sedan`
+}
 
-function toKälla(s: AdminSource, statusMap: Map<number, KällStatus>, tidMap: Map<number, string>): Källa {
+function deriveStatus(s: AdminSource): KällStatus {
+  if (!s.isActive) return 'Okänd'
+  if (s.lastFetchError) return 'Nere'
+  if (!s.lastFetchedAt) return 'Okänd'
+  const mins = (Date.now() - new Date(s.lastFetchedAt).getTime()) / 60000
+  return mins < 10 ? 'OK' : 'Begränsad drift'
+}
+
+function toKälla(s: AdminSource): Källa {
   return {
     id:             s.id,
     namn:           s.name,
     url:            s.url ?? s.baseUrl,
     kategori:       (s.category ?? 'Nationell') as Kategori,
-    status:         statusMap.get(s.id) ?? 'Okänd',
+    status:         deriveStatus(s),
     aktiv:          s.isActive,
     publicerad:     s.isPublished,
-    senastKontroll: tidMap.get(s.id) ?? '—',
+    senastKontroll: relativeTime(s.lastFetchedAt),
+    fetchError:     s.lastFetchError,
     händelser:      s.eventCount,
   }
 }
@@ -232,11 +250,7 @@ export default function Kallhantering() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-sources'] }),
   })
 
-  // Client-side overlays for status checks (not persisted)
-  const [statusMap, setStatusMap] = useState<Map<number, KällStatus>>(new Map())
-  const [tidMap,    setTidMap]    = useState<Map<number, string>>(new Map())
-
-  const kallor: Källa[] = apiSources.map(s => toKälla(s, statusMap, tidMap))
+  const kallor: Källa[] = apiSources.map(s => toKälla(s))
 
   const [sök,         setSök]         = useState('')
   const [filterKat,   setFilterKat]   = useState<Kategori | ''>('')
@@ -244,7 +258,6 @@ export default function Kallhantering() {
   const [visaForm,    setVisaForm]    = useState(false)
   const [aktiverar,   setAktiverar]   = useState<Set<string>>(new Set())
   const [sparad,      setSparad]      = useState<number | null>(null)
-  const [kontrollerar,setKontrollerar]= useState<Set<number>>(new Set())
   const [ändringar,   setÄndringar]   = useState<SchemalagdÄndring[]>(INITIAL_ÄNDRINGAR)
   const [visaÄndring,    setVisaÄndring]    = useState(false)
   const [nyÄndring,      setNyÄndring]      = useState<Omit<SchemalagdÄndring, 'id'>>({
@@ -253,19 +266,6 @@ export default function Kallhantering() {
   const [redigerarÄndring, setRedigerarÄndring] = useState<SchemalagdÄndring | null>(null)
   const [flöden,          setFlöden]          = useState<ExterntFlöde[]>(INITIAL_FLÖDEN)
   const [kontrollerarFlöde, setKontrollerarFlöde] = useState<Set<number>>(new Set())
-
-  function kontrolleraKälla(id: number) {
-    setKontrollerar(prev => new Set(prev).add(id))
-    const delay = 1500 + Math.random() * 1000
-    setTimeout(() => {
-      const slump = Math.random()
-      const status: KällStatus = slump < 0.75 ? 'OK' : slump < 0.90 ? 'Begränsad drift' : 'Nere'
-      const nu = new Date().toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' })
-      setStatusMap(prev => new Map(prev).set(id, status))
-      setTidMap(prev => new Map(prev).set(id, nu))
-      setKontrollerar(prev => { const n = new Set(prev); n.delete(id); return n })
-    }, delay)
-  }
 
   function flashSparad(id: number) {
     setSparad(id)
@@ -305,7 +305,6 @@ export default function Kallhantering() {
       onSuccess: (created) => {
         setAktiverar(prev => { const n = new Set(prev); n.delete(k.url); return n })
         flashSparad(created.id)
-        kontrolleraKälla(created.id)
       },
       onError: () => {
         setAktiverar(prev => { const n = new Set(prev); n.delete(k.url); return n })
@@ -532,15 +531,9 @@ export default function Kallhantering() {
                     </button>
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-2 justify-end">
+                    <div className="flex items-center gap-3 justify-end">
                       {sparad === k.id && <span className="text-xs text-green-500 font-medium">✓</span>}
-                      <button
-                        onClick={() => kontrolleraKälla(k.id)}
-                        disabled={kontrollerar.has(k.id)}
-                        className="text-xs text-sky-600 hover:text-sky-800 font-medium opacity-0 group-hover:opacity-100 transition-all disabled:opacity-30"
-                      >
-                        Kontrollera
-                      </button>
+                      <span className="text-xs text-slate-400 tabular-nums">{k.senastKontroll}</span>
                       <button
                         onClick={() => setRedigerar(redigerar?.id === k.id ? null : { ...k })}
                         className="text-xs text-violet-600 hover:text-violet-800 font-medium opacity-0 group-hover:opacity-100 transition-all"
@@ -554,6 +547,11 @@ export default function Kallhantering() {
                         Ta bort
                       </button>
                     </div>
+                    {k.fetchError && (
+                      <p className="text-xs text-red-500 mt-1 text-right truncate max-w-[16rem] ml-auto" title={k.fetchError}>
+                        {k.fetchError}
+                      </p>
+                    )}
                   </td>
                 </tr>
 

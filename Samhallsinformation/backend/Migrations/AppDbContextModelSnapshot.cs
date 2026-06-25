@@ -92,6 +92,12 @@ namespace Samhallsinformation.Migrations
                     b.Property<bool>("IsPublished")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("LastFetchError")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastFetchedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
