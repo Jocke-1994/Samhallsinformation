@@ -15,10 +15,10 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
-    title: 'Kemikalieinspektionen',
+    title: 'Kemikalieinspektionen är tillagd som källa',
     date: 'Juni 2026',
     changes: [
-      { type: 'nytt', text: 'Kemikalieinspektionen (KEMI) har lagts till som källa att se information ifrån' },
+      { type: 'nytt', text: 'Kemikalieinspektionen har lagts till som källa att se information ifrån' },
     ],
   },
   {
@@ -26,14 +26,14 @@ const UPDATES: Update[] = [
     date: 'Juni 2026',
     changes: [
       { type: 'förbättrat', text: 'Om, Nyheter och Feedback ligger nu direkt under källlistan för snabbare åtkomst' },
-      { type: 'förbättrat', text: 'Växla mellan mörkt och ljust läge via ikonen bredvid logotypen' },
+      { type: 'förbättrat', text: 'Växla mellan mörkt och ljust läge — ikonen ligger nu bredvid logotypen istället' },
     ],
   },
   {
-    title: 'Fem nya myndigheter',
+    title: 'Fyra nya myndigheter',
     date: 'Juni 2026',
     changes: [
-      { type: 'nytt', text: '5 källor har lagts till; Folkhälsomyndigheten, Livsmedelsverket, Läkemedelsverket, Trafikverket och Kemikalieinspektionen' },
+      { type: 'nytt', text: '4 källor har lagts till; Folkhälsomyndigheten, Livsmedelsverket, Läkemedelsverket och Trafikverket' },
     ],
   },
   {
@@ -43,7 +43,6 @@ const UPDATES: Update[] = [
       { type: 'nytt',       text: 'samhallsinformation.se är nu tillgänglig för alla' },
       { type: 'nytt',       text: 'Händelser och nyheter från Polisen och Krisinformation i ett samlat flöde under Samhällsinfo' },
       { type: 'nytt',       text: 'Filtrera flödet per källa via sidomenyn' },
-      { type: 'nytt',       text: 'Växla mellan mörkt och ljust läge via ikonen bredvid logotypen' },
       { type: 'nytt',       text: 'Knappen "Om" förklarar tjänstens funktioner och mål' },
       { type: 'nytt',       text: 'En Feedback-knapp för att ge återkoppling om tjänsten' },
       { type: 'förbättrat', text: 'Stabilitet och förbättringar' },
