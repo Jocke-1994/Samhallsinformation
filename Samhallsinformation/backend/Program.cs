@@ -180,6 +180,24 @@ using (var scope = app.Services.CreateScope())
         ");
     }
 
+    // Fix Sources.LastFetchedAt — SQLite-migration skapar TEXT, PostgreSQL behöver timestamp with time zone
+    if (databaseUrl != null || pgHost != null)
+    {
+        await db.Database.ExecuteSqlRawAsync(@"
+            DO $$
+            BEGIN
+              IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='Sources' AND column_name='LastFetchedAt' AND data_type='text'
+              ) THEN
+                ALTER TABLE ""Sources"" ALTER COLUMN ""LastFetchedAt""
+                  TYPE timestamp with time zone
+                  USING (""LastFetchedAt""::timestamp with time zone);
+              END IF;
+            END $$;
+        ");
+    }
+
     // Fix Users.Id — skapas som text av SQLite-migrationen, måste vara uuid i PostgreSQL
     if (databaseUrl != null || pgHost != null)
     {

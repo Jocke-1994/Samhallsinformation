@@ -33,8 +33,17 @@ public class SmhiApiIngestor : IIngestor
 
     public async Task<List<CanonicalEvent>> FetchEventsAsync()
     {
-        var warnings = await _httpClient.GetFromJsonAsync<List<SmhiWarning>>(ApiUrl)
-            ?? [];
+        using var response = await _httpClient.GetAsync(ApiUrl);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            _logger.LogInformation("SMHI API returned 404 — inga aktiva varningar");
+            return [];
+        }
+
+        response.EnsureSuccessStatusCode();
+
+        var warnings = await response.Content.ReadFromJsonAsync<List<SmhiWarning>>() ?? [];
 
         _logger.LogInformation("SMHI API returned {Count} warnings", warnings.Count);
 
