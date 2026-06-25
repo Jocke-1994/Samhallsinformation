@@ -255,6 +255,14 @@ using (var scope = app.Services.CreateScope())
         await db.SaveChangesAsync();
     }
 
+    // Rätta KEMI ShortName: sattes till "KEMI" vid aktivering via admin
+    var kemiSource = await db.Sources.FirstOrDefaultAsync(s => s.ShortName == "KEMI");
+    if (kemiSource != null)
+    {
+        kemiSource.ShortName = "Kemikalieinspektionen";
+        await db.SaveChangesAsync();
+    }
+
     // Seed admin-användare från env-variabler
     var adminEmail    = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
     var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
