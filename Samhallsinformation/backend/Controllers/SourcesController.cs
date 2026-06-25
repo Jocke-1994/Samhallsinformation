@@ -46,6 +46,8 @@ public class SourcesController : ControllerBase
             s.Type,
             s.IsActive,
             s.IsPublished,
+            s.LastFetchedAt,
+            s.LastFetchError,
             EventCount = counts.TryGetValue(s.Id, out var c) ? c : 0,
         });
 

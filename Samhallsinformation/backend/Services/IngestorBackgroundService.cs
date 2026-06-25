@@ -53,6 +53,7 @@ public class IngestorBackgroundService : BackgroundService
 
         foreach (var ingestor in allIngestors)
         {
+            var sourceId = ingestor.Source.Id;
             try
             {
                 var events = await ingestor.FetchEventsAsync();
@@ -72,7 +73,6 @@ public class IngestorBackgroundService : BackgroundService
                 if (newEvents.Count > 0)
                 {
                     db.Events.AddRange(newEvents);
-                    await db.SaveChangesAsync(ct);
                     _logger.LogInformation("Saved {Count} new events (skipped {Skipped} duplicates)",
                         newEvents.Count, events.Count - newEvents.Count);
                 }
@@ -80,10 +80,31 @@ public class IngestorBackgroundService : BackgroundService
                 {
                     _logger.LogInformation("No new events (all {Count} were duplicates)", events.Count);
                 }
+
+                var dbSource = await db.Sources.FindAsync([sourceId], ct);
+                if (dbSource != null)
+                {
+                    dbSource.LastFetchedAt  = DateTime.UtcNow;
+                    dbSource.LastFetchError = null;
+                }
+
+                await db.SaveChangesAsync(ct);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during ingestion for {Source}", ingestor.Source.Name);
+                try
+                {
+                    var dbSource = await db.Sources.FindAsync([sourceId], ct);
+                    if (dbSource != null)
+                    {
+                        dbSource.LastFetchError = ex.Message.Length > 500
+                            ? ex.Message[..500]
+                            : ex.Message;
+                    }
+                    await db.SaveChangesAsync(ct);
+                }
+                catch { /* loggfel ska inte krascha loopen */ }
             }
         }
     }

@@ -20,6 +20,8 @@ export interface AdminSource {
   isActive: boolean
   isPublished: boolean
   eventCount: number
+  lastFetchedAt: string | null
+  lastFetchError: string | null
 }
 
 export interface CanonicalEvent {
