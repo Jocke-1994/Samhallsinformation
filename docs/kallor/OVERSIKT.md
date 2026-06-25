@@ -159,6 +159,19 @@ Dokumenterar vilka källor som ingår, deras status, hur data hämtas och eventu
 
 ---
 
+### Kemikalieinspektionen (KEMI)
+| Egenskap | Värde |
+|----------|-------|
+| **Status** | Aktiv |
+| **Typ** | RSS (Sitevision CMS) |
+| **URL** | `https://www.kemi.se/4.39a6b9eb175a977d0431924/12.39a6b9eb175a977d043192c.portlet?state=rss&sv.contenttype=text/xml;charset=UTF-8` |
+| **API-nyckel** | Nej |
+| **Rate limit** | Ej dokumenterat — var 5:e minut bedöms rimligt |
+| **Licens** | Offentlig information (PSI-lagen) |
+| **Notering** | Sitevision-baserat RSS-flöde. URL verifierad via sandlåda 2026-06-25. IVO saknar RSS-flöde. |
+
+---
+
 ## V3 — Nationella källor (svår ingest, utvärderas)
 
 ### Jordbruksverket

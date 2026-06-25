@@ -63,6 +63,16 @@ const KURATERADE_KALLOR: KureradKälla[] = [
     redo:        true,
   },
   {
+    namn:        'Kemikalieinspektionen',
+    kortNamn:    'KEMI',
+    beskrivning: 'Nyheter om kemikalier och kemikaliesäkerhet',
+    url:         'https://www.kemi.se/4.39a6b9eb175a977d0431924/12.39a6b9eb175a977d043192c.portlet?state=rss&sv.contenttype=text/xml;charset=UTF-8',
+    baseUrl:     'https://www.kemi.se',
+    kategori:    'Nationell',
+    typ:         'RSS',
+    redo:        true,
+  },
+  {
     namn:        'Trafikverket',
     kortNamn:    'Trafikverket',
     beskrivning: 'Vägtrafikhändelser och störningar',
