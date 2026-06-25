@@ -15,11 +15,18 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    title: 'Kemikalieinspektionen är tillagd som källa',
+    date: 'Juni 2026',
+    changes: [
+      { type: 'nytt', text: 'Kemikalieinspektionen har lagts till som källa att se information ifrån' },
+    ],
+  },
+  {
     title: 'Förbättrad sidmeny',
     date: 'Juni 2026',
     changes: [
       { type: 'förbättrat', text: 'Om, Nyheter och Feedback ligger nu direkt under källlistan för snabbare åtkomst' },
-      { type: 'förbättrat', text: 'Växla mellan mörkt och ljust läge via ikonen bredvid logotypen' },
+      { type: 'förbättrat', text: 'Växla mellan mörkt och ljust läge — ikonen ligger nu bredvid logotypen istället' },
     ],
   },
   {
@@ -36,7 +43,6 @@ const UPDATES: Update[] = [
       { type: 'nytt',       text: 'samhallsinformation.se är nu tillgänglig för alla' },
       { type: 'nytt',       text: 'Händelser och nyheter från Polisen och Krisinformation i ett samlat flöde under Samhällsinfo' },
       { type: 'nytt',       text: 'Filtrera flödet per källa via sidomenyn' },
-      { type: 'nytt',       text: 'Växla mellan mörkt och ljust läge via ikonen bredvid logotypen' },
       { type: 'nytt',       text: 'Knappen "Om" förklarar tjänstens funktioner och mål' },
       { type: 'nytt',       text: 'En Feedback-knapp för att ge återkoppling om tjänsten' },
       { type: 'förbättrat', text: 'Stabilitet och förbättringar' },

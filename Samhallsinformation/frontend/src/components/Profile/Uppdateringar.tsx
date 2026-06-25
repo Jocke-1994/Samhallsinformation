@@ -4,6 +4,17 @@ import type { ChangeEntry, Release, KändBugg, KommandeVersion } from '../../typ
 
 const RELEASES: Release[] = [
   {
+    version: '0.5.0',
+    date: '25 juni 2026',
+    changes: [
+      { type: 'nytt', summary: 'Trafikverket', text: 'Vägtrafikhändelser i realtid — olyckor, vägarbeten och framkomlighetsstörningar från Trafikverkets API' },
+      { type: 'nytt', summary: 'Folkhälsomyndigheten', text: 'Nyheter om smittskydd och folksjukdomar direkt från Folkhälsomyndigheten' },
+      { type: 'nytt', summary: 'Livsmedelsverket', text: 'Matåterkallelser och livsmedelssäkerhet från Livsmedelsverket' },
+      { type: 'nytt', summary: 'Läkemedelsverket', text: 'Säkerhetsvarningar och läkemedelsåterkallelser från Läkemedelsverket' },
+      { type: 'nytt', summary: 'Kemikalieinspektionen', text: 'Nyheter om kemikalier och kemikaliesäkerhet från Kemikalieinspektionen (KEMI)' },
+    ],
+  },
+  {
     version: '0.4.0',
     date: '9 mars 2026',
     changes: [
@@ -46,22 +57,16 @@ const KANDA_BUGGAR: KändBugg[] = [
     workaround: 'Klicka på källan en extra gång så uppdateras flödet.',
   },
   {
-    text: 'Notifieringar via SMS skickas ibland med upp till 5 minuters fördröjning.',
-    allvar: 'medel',
-    workaround: 'Kontrollera appen direkt om du misstänker att ett larm missats.',
-    status: 'Åtgärdas i v0.5.0',
-  },
-  {
-    text: 'Vid inloggning med BankID kan sessionen i sällsynta fall avslutas utan förvarning.',
-    allvar: 'hög',
-    status: 'Under utredning',
+    text: 'SMHI-varningar visas bara när aktiva varningar utfärdats — inga händelser visas vid lugnt väder.',
+    allvar: 'låg',
+    workaround: 'Det är korrekt beteende. SMHI:s API returnerar tom lista när inga varningar är aktiva.',
   },
 ]
 
 const PA_GANG: KommandeVersion | null = {
-  version: '0.5.0',
-  description: 'Inloggning med BankID och personliga notifieringsinställningar per källa.',
-  plannedDate: '14 april 2026',
+  version: '0.6.0',
+  description: 'Personliga konton med källprenumerationer och anpassade notifieringar.',
+  plannedDate: 'Höst 2026',
 }
 
 const TYPE_CONFIG: Record<ChangeEntry['type'], { label: string; pill: string }> = {
