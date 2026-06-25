@@ -15,6 +15,13 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    title: 'Kemikalieinspektionen',
+    date: 'Juni 2026',
+    changes: [
+      { type: 'nytt', text: 'Kemikalieinspektionen (KEMI) har lagts till som källa att se information ifrån' },
+    ],
+  },
+  {
     title: 'Förbättrad sidmeny',
     date: 'Juni 2026',
     changes: [
@@ -23,10 +30,10 @@ const UPDATES: Update[] = [
     ],
   },
   {
-    title: 'Fyra nya myndigheter',
+    title: 'Fem nya myndigheter',
     date: 'Juni 2026',
     changes: [
-      { type: 'nytt', text: '4 källor har lagts till; Folkhälsomyndigheten, Livsmedelsverket, Läkemedelsverket och Trafikverket' },
+      { type: 'nytt', text: '5 källor har lagts till; Folkhälsomyndigheten, Livsmedelsverket, Läkemedelsverket, Trafikverket och Kemikalieinspektionen' },
     ],
   },
   {
