@@ -6,6 +6,8 @@ import { type ProfileSection } from '../types'
 import { fetchSources } from '../api/sources'
 import { useUnreadSourceIds } from '../hooks/useUnreadSourceIds'
 import type { Source } from '../types'
+import { useFlags } from '../context/FeatureFlagsContext'
+import { isSektionSynlig } from '../lib/featureFlags'
 
 const NAV_CARDS: {
   id: ProfileSection
@@ -255,6 +257,8 @@ export default function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSect
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+  const flaggor = useFlags()
+  const synligaKort = NAV_CARDS.filter(card => isSektionSynlig(card.id, flaggor))
 
   function handleSelectSource(sourceId: number) {
     navigate('/', { state: { sourceId } })
@@ -310,7 +314,7 @@ export default function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSect
         {/* Inställningskort */}
         <div className="w-full max-w-3xl pb-16" style={{ marginTop: '48px' }}>
           <div className="grid grid-cols-3 gap-6">
-            {NAV_CARDS.map(card => (
+            {synligaKort.map(card => (
               <button
                 key={card.id}
                 onClick={() => onSelect(card.id)}

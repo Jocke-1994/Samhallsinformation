@@ -14,7 +14,7 @@ import AdminFaq from '../components/Admin/AdminFaq'
 import FeatureFlagsAdmin from '../components/Admin/FeatureFlagsAdmin'
 import Sandlada from '../components/Admin/Sandlada'
 import { useAuth, type SystemRoll } from '../context/AuthContext'
-import { useFeatureFlags } from '../hooks/useFeatureFlags'
+import { useFeatureFlagsAdmin } from '../context/FeatureFlagsContext'
 
 const SECTION_LABELS: Record<AdminSection, string> = {
   'oversikt':       'Översikt',
@@ -63,7 +63,7 @@ export default function AdminPage() {
 
   const adminRoll: AdminRoll = aktivVy === 'Support' ? 'Support' : 'Admin'
 
-  const { flaggor, växlaFlagg, återställ } = useFeatureFlags()
+  const { flaggor, växlaFlagg, återställ } = useFeatureFlagsAdmin()
 
   const [section, setSection]             = useState<AdminSection>(
     aktivVy === 'Support' ? 'support-inbox' : 'oversikt'

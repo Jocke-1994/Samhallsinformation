@@ -4,6 +4,7 @@ import Mottagare from './Mottagare'
 import StorEj from './StorEj'
 import Leveranslage from './Leveranslage'
 import NotisHistorik from './NotisHistorik'
+import { useFlags } from '../../../context/FeatureFlagsContext'
 
 export type SektionKey = 'epost' | 'sms' | 'push'
 
@@ -28,6 +29,7 @@ let nextMottagareId = 10
 
 export default function Notifieringar() {
   const [mottagare, setMottagare] = useState<AllData>(INITIAL_DATA)
+  const flaggor = useFlags()
 
   function getNextId() { return nextMottagareId++ }
 
@@ -35,19 +37,22 @@ export default function Notifieringar() {
     <div className="flex flex-col gap-6 mt-6">
 
       {/* Övre rad: två kort sida vid sida */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ObligatoriskaKallor data={mottagare} />
-        <Mottagare data={mottagare} onChange={setMottagare} getNextId={getNextId} />
-      </div>
+      {(flaggor.notif_obligatoriska || flaggor.notif_mottagare) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {flaggor.notif_obligatoriska && <ObligatoriskaKallor data={mottagare} />}
+          {flaggor.notif_mottagare && <Mottagare data={mottagare} onChange={setMottagare} getNextId={getNextId} />}
+        </div>
+      )}
 
       {/* Andra rad: två kort */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <StorEj />
-        <Leveranslage data={mottagare} />
-      </div>
+      {(flaggor.notif_stor_ej || flaggor.notif_leveranslage) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {flaggor.notif_stor_ej && <StorEj />}
+          {flaggor.notif_leveranslage && <Leveranslage data={mottagare} />}
+        </div>
+      )}
 
-      {/* Notifieringshistorik */}
-      <NotisHistorik />
+      {flaggor.notif_historik && <NotisHistorik />}
 
     </div>
   )
