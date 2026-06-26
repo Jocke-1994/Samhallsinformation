@@ -144,8 +144,8 @@ export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSi
         )}
       </div>
 
-      {/* Allt / Mina — visas bara när inloggad och inte i källvy. TODO: lägg tillbaka isLoggedIn-check inför prod */}
-      {source === null && (
+      {/* Allt / Mitt — visas bara när inloggad och inte i källvy */}
+      {isLoggedIn && source === null && (
         <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 py-2.5 shrink-0">
           <div className="max-w-3xl mx-auto flex items-center gap-1 w-fit">
             {(['Allt', 'Mitt'] as ViewMode[]).map(mode => (
