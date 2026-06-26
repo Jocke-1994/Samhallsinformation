@@ -1,12 +1,14 @@
 import { Fragment } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { fetchEvents } from '../../api/events'
 import { getReadStatus, markAllAsRead } from '../../services/readState'
 import NewsItem from './NewsItem'
 import type { CanonicalEvent, Source } from '../../types'
 import { useAuth } from '../../context/AuthContext'
 
+type ViewMode = 'Allt' | 'Mitt'
 type SeverityFilter = 'Alla' | 'Kritisk' | 'Viktigt' | 'Bra att veta'
 
 const FILTER_STYLES: Record<SeverityFilter, { active: string; activeBadge: string; inactiveBadge: string }> = {
@@ -47,6 +49,7 @@ interface Props {
 
 export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSidebar }: Props) {
   const { isLoggedIn } = useAuth()
+  const navigate = useNavigate()
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['events', source?.id ?? 'all'],
@@ -56,9 +59,11 @@ export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSi
   const events: CanonicalEvent[] = data?.events ?? []
 
   const [readMap, setReadMap] = useState<Record<string, boolean>>({})
+  const [viewMode, setViewMode] = useState<ViewMode>('Allt')
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('Alla')
 
   useEffect(() => { setSeverityFilter('Alla') }, [source?.id])
+  useEffect(() => { if (!isLoggedIn) setViewMode('Allt') }, [isLoggedIn])
 
   useEffect(() => {
     if (events.length > 0) setReadMap(getReadStatus(events.map(e => e.id)))
@@ -139,8 +144,29 @@ export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSi
         )}
       </div>
 
+      {/* Allt / Mina — visas bara när inloggad och inte i källvy. TODO: lägg tillbaka isLoggedIn-check inför prod */}
+      {source === null && (
+        <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 py-2.5 shrink-0">
+          <div className="max-w-3xl mx-auto flex items-center gap-1 w-fit">
+            {(['Allt', 'Mitt'] as ViewMode[]).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors ${
+                  viewMode === mode
+                    ? 'bg-violet-600 text-white'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filter — visas bara om det finns minst 2 olika allvarlighetsgrader */}
-      {showFilters && (
+      {showFilters && viewMode === 'Allt' && (
         <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 shrink-0">
           <div className="max-w-3xl mx-auto flex gap-1.5">
             {(['Alla', 'Kritisk', 'Viktigt', 'Bra att veta'] as SeverityFilter[])
@@ -175,18 +201,34 @@ export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSi
       <div className="flex-1 overflow-y-auto px-4 md:px-10 py-4 md:py-6">
         <div className="max-w-3xl mx-auto flex flex-col gap-1.5">
 
-          {sortedEvents.length === 0 && (
+          {viewMode === 'Mitt' && (
+            <div className="flex flex-col items-center py-20 gap-4 text-center">
+              <span className="text-4xl">🗂️</span>
+              <p className="text-slate-700 dark:text-slate-200 font-semibold text-base">Ditt personliga flöde</p>
+              <p className="text-slate-400 text-sm max-w-xs leading-relaxed">
+                Här visas nyheter från de källor du väljer att följa. Lägg till källor i Mina källör för att komma igång.
+              </p>
+              <button
+                onClick={() => navigate('/profil?section=mina-kallor')}
+                className="mt-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-colors"
+              >
+                Gå till Mina källör
+              </button>
+            </div>
+          )}
+
+          {viewMode === 'Allt' && sortedEvents.length === 0 && (
             <p className="text-slate-400 text-sm py-6 text-center">Inga händelser hittades.</p>
           )}
 
-          {sortedEvents.length > 0 && filteredEvents.length === 0 && (
+          {viewMode === 'Allt' && sortedEvents.length > 0 && filteredEvents.length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3 text-slate-400">
               <span className="text-3xl">✓</span>
               <p className="text-sm">{EMPTY_STATE_TEXT[severityFilter] ?? 'Inga händelser hittades'}</p>
             </div>
           )}
 
-          {(() => {
+          {viewMode === 'Allt' && (() => {
             let readSepShown = false
             return filteredEvents.map((event, i) => {
               const prev = filteredEvents[i - 1]
