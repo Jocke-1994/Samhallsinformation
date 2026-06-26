@@ -6,6 +6,7 @@ import './index.css'
 import App from './App.tsx'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
+import { FeatureFlagsProvider } from './context/FeatureFlagsContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,9 +22,11 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <ThemeProvider>
-            <App />
-          </ThemeProvider>
+          <FeatureFlagsProvider>
+            <ThemeProvider>
+              <App />
+            </ThemeProvider>
+          </FeatureFlagsProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

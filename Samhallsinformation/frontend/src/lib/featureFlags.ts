@@ -47,7 +47,7 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
     flaggor: [
       { key: 'kallor_lagg_till',      label: 'Lägg till källa',        beskrivning: 'Möjlighet att lägga till nya källor',             defaultAktiv: true },
       { key: 'kallor_aktiva',         label: 'Aktiva källor',          beskrivning: 'Visa användarens aktiva och prenumererade källor', defaultAktiv: true },
-      { key: 'kallor_rekommenderade', label: 'Rekommenderade källor',  beskrivning: 'Visa rekommenderade källor baserat på profil',     defaultAktiv: true },
+      { key: 'kallor_rekommenderade', label: 'Rekommenderade källor',  beskrivning: 'Visa rekommenderade källor baserat på profil',     defaultAktiv: false },
       { key: 'kallor_alla',           label: 'Alla källor',            beskrivning: 'Bläddra bland samtliga tillgängliga källor',       defaultAktiv: true },
     ],
   },
@@ -56,11 +56,11 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
     label: 'Notifieringar',
     ikon: '🔔',
     flaggor: [
-      { key: 'notif_obligatoriska', label: 'Obligatoriska källor', beskrivning: 'Källor som alltid notifierar oavsett inställning', defaultAktiv: true },
-      { key: 'notif_mottagare',     label: 'Mottagare',            beskrivning: 'Hantera e-post och andra mottagarkanaler',         defaultAktiv: true },
-      { key: 'notif_stor_ej',       label: 'Stör ej',              beskrivning: 'Tysta notifieringar under valda tider',           defaultAktiv: true },
-      { key: 'notif_leveranslage',  label: 'Leveransläge',         beskrivning: 'Ställ in hur och när notifieringar levereras',    defaultAktiv: true },
-      { key: 'notif_historik',      label: 'Notishistorik',        beskrivning: 'Visa tidigare skickade notifieringar',            defaultAktiv: true },
+      { key: 'notif_obligatoriska', label: 'Obligatoriska källor', beskrivning: 'Källor som alltid notifierar oavsett inställning', defaultAktiv: false },
+      { key: 'notif_mottagare',     label: 'Mottagare',            beskrivning: 'Hantera e-post och andra mottagarkanaler',         defaultAktiv: false },
+      { key: 'notif_stor_ej',       label: 'Stör ej',              beskrivning: 'Tysta notifieringar under valda tider',           defaultAktiv: false },
+      { key: 'notif_leveranslage',  label: 'Leveransläge',         beskrivning: 'Ställ in hur och när notifieringar levereras',    defaultAktiv: false },
+      { key: 'notif_historik',      label: 'Notishistorik',        beskrivning: 'Visa tidigare skickade notifieringar',            defaultAktiv: false },
     ],
   },
   {
@@ -70,11 +70,11 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
     flaggor: [
       { key: 'konto_info',           label: 'Kontoinformation',  beskrivning: 'Visa och ändra namn, e-post och grunduppgifter', defaultAktiv: true },
       { key: 'konto_losenord',       label: 'Lösenordsbyte',     beskrivning: 'Byt lösenord för kontot',                       defaultAktiv: true },
-      { key: 'konto_tvafaktor',      label: 'Tvåfaktor',         beskrivning: 'Aktivera tvåfaktorsautentisering',               defaultAktiv: true },
-      { key: 'konto_app_notiser',    label: 'App-notiser',       beskrivning: 'Inställningar för push-notiser i appen',         defaultAktiv: true },
-      { key: 'konto_sessioner',      label: 'Sessioner',         beskrivning: 'Visa och avsluta aktiva inloggningar',           defaultAktiv: true },
-      { key: 'konto_aktivitetslogg', label: 'Aktivitetslogg',    beskrivning: 'Visa inloggningshistorik och kontoaktivitet',    defaultAktiv: true },
-      { key: 'konto_samtycke',       label: 'Spara samtycke',    beskrivning: 'Hantera samtycken för datalagring',              defaultAktiv: true },
+      { key: 'konto_tvafaktor',      label: 'Tvåfaktor',         beskrivning: 'Aktivera tvåfaktorsautentisering',               defaultAktiv: false },
+      { key: 'konto_app_notiser',    label: 'App-notiser',       beskrivning: 'Inställningar för push-notiser i appen',         defaultAktiv: false },
+      { key: 'konto_sessioner',      label: 'Sessioner',         beskrivning: 'Visa och avsluta aktiva inloggningar',           defaultAktiv: false },
+      { key: 'konto_aktivitetslogg', label: 'Aktivitetslogg',    beskrivning: 'Visa inloggningshistorik och kontoaktivitet',    defaultAktiv: false },
+      { key: 'konto_samtycke',       label: 'Spara samtycke',    beskrivning: 'Hantera samtycken för datalagring',              defaultAktiv: false },
       { key: 'konto_datahantering',  label: 'Datahantering',     beskrivning: 'Exportera eller radera kontodata',               defaultAktiv: true },
       { key: 'konto_tema',           label: 'Tema',              beskrivning: 'Växla mellan ljust och mörkt läge',              defaultAktiv: true },
     ],
@@ -95,14 +95,20 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
     label: 'Support',
     ikon: '💬',
     flaggor: [
-      { key: 'support_arenden',      label: 'Ärendehantering', beskrivning: 'Skapa och följa upp supportärenden',    defaultAktiv: true },
-      { key: 'support_systemstatus', label: 'Systemstatus',    beskrivning: 'Visa aktuell driftstatus för systemet', defaultAktiv: true },
+      { key: 'support_arenden',      label: 'Ärendehantering', beskrivning: 'Skapa och följa upp supportärenden',    defaultAktiv: false },
+      { key: 'support_systemstatus', label: 'Systemstatus',    beskrivning: 'Visa aktuell driftstatus för systemet', defaultAktiv: false },
       { key: 'support_faq',          label: 'FAQ',             beskrivning: 'Vanliga frågor och svar',               defaultAktiv: true },
     ],
   },
 ]
 
 export const FLAG_DEFINITIONER = FLAG_GRUPPER.flatMap(g => g.flaggor)
+
+export function isSektionSynlig(sektionKey: string, flaggor: FlagState): boolean {
+  const grupp = FLAG_GRUPPER.find(g => g.key === sektionKey)
+  if (!grupp) return true
+  return grupp.flaggor.some(f => flaggor[f.key])
+}
 
 export type FlagState = Record<FlagKey, boolean>
 

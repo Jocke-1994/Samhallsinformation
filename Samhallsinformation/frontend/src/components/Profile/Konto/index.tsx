@@ -10,6 +10,7 @@ import SessionerKort from './SessionerKort'
 import TvafaktorKort from './TvafaktorKort'
 import LösenordByte from './LösenordByte'
 import Datahantering from './Datahantering'
+import { useFlags } from '../../../context/FeatureFlagsContext'
 
 export default function Konto() {
   const [namn, setNamn] = useState<FormField>(makeField(''))
@@ -17,6 +18,7 @@ export default function Konto() {
   const [telefon, setTelefon] = useState<FormField>(makeField(''))
   const location = useLocation()
   const [highlightId, setHighlightId] = useState<string | null>(location.state?.highlightId ?? null)
+  const flaggor = useFlags()
 
   useEffect(() => {
     if (!highlightId) return
@@ -57,7 +59,7 @@ export default function Konto() {
 
         {/* Vänster kolumn */}
         <div className="flex flex-col gap-6">
-          <KontoInfo
+          {flaggor.konto_info && <KontoInfo
             namn={namn}
             epost={epost}
             telefon={telefon}
@@ -68,23 +70,23 @@ export default function Konto() {
             onSaveEpost={() => save(setEpost, () => epost.value.includes('@') ? '' : 'Ange en giltig e-postadress.')}
             onSaveTelefon={() => save(setTelefon, () => telefon.value.trim() ? '' : 'Ange ett telefonnummer.')}
             onRemoveTelefon={() => setTelefon(makeField(''))}
-          />
-          <LösenordByte />
-          <TvafaktorKort harTelefon={telefon.saved && !!telefon.value} />
-          <SparSamtycke />
+          />}
+          {flaggor.konto_losenord && <LösenordByte />}
+          {flaggor.konto_tvafaktor && <TvafaktorKort harTelefon={telefon.saved && !!telefon.value} />}
+          {flaggor.konto_samtycke && <SparSamtycke />}
         </div>
 
         {/* Höger kolumn */}
         <div className="flex flex-col gap-6">
-          <ThemeKort />
-          <AppNotiserKort />
-          <SessionerKort />
-          <AktivitetsloggKort />
-          <Datahantering
+          {flaggor.konto_tema && <ThemeKort />}
+          {flaggor.konto_app_notiser && <AppNotiserKort />}
+          {flaggor.konto_sessioner && <SessionerKort />}
+          {flaggor.konto_aktivitetslogg && <AktivitetsloggKort />}
+          {flaggor.konto_datahantering && <Datahantering
             highlightId={highlightId}
             namnValue={namn.value}
             epostValue={epost.value}
-          />
+          />}
         </div>
 
       </div>

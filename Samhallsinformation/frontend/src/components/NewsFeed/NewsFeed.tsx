@@ -108,7 +108,7 @@ export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSi
     <div className="flex items-center justify-center h-full text-neutral-500 text-sm">Hämtar nyheter...</div>
   )
   if (isError) return (
-    <div className="flex items-center justify-center h-full text-red-400 text-sm">Kunde inte hämta nyheter. Är backend igång?</div>
+    <div className="flex items-center justify-center h-full text-neutral-500 text-sm">Just nu har vi tekniska problem, vi jobbar för att åtgärda detta.</div>
   )
 
   return (
