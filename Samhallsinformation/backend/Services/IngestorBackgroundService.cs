@@ -28,7 +28,19 @@ public class IngestorBackgroundService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            await IngestAsync(stoppingToken);
+            try
+            {
+                await IngestAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "IngestAsync failed — retrying after {Interval}", _interval);
+            }
+
             await Task.Delay(_interval, stoppingToken);
         }
     }
