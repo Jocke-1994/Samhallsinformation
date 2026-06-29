@@ -11,10 +11,20 @@ export default function Support() {
 
       {flaggor.support_arenden && <ArendehanteringKort />}
 
-      {(flaggor.support_systemstatus || flaggor.support_faq) && (
+      {flaggor.support_systemstatus && flaggor.support_faq && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {flaggor.support_systemstatus && <SystemstatusKort />}
-          {flaggor.support_faq && <FaqKort />}
+          <SystemstatusKort />
+          <FaqKort />
+        </div>
+      )}
+
+      {flaggor.support_systemstatus && !flaggor.support_faq && <SystemstatusKort />}
+
+      {flaggor.support_faq && !flaggor.support_systemstatus && (
+        <div className="flex justify-center">
+          <div className="w-full max-w-2xl">
+            <FaqKort />
+          </div>
         </div>
       )}
 
