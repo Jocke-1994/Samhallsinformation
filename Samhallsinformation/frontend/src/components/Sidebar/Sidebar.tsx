@@ -4,11 +4,15 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { fetchSources } from '../../api/sources'
 import SourceButton from './SourceButton'
+import SortableSourceButton from './SortableSourceButton'
 import { FeedbackModal } from '../Feedback/FeedbackButton'
 import type { Source } from '../../types'
 import { useAuth, type SystemRoll } from '../../context/AuthContext'
 import { useFlags } from '../../context/FeatureFlagsContext'
 import { isSektionSynlig } from '../../lib/featureFlags'
+import { useSourceOrder } from '../../hooks/useSourceOrder'
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 
 interface Props {
   selectedShortName: string | null
@@ -71,6 +75,23 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
     }
     return groups
   }, [sources])
+
+  const shortNames = useMemo(() => [...sourceGroups.keys()], [sourceGroups])
+  const [orderedNames, sparaOrdning] = useSourceOrder(shortNames)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  )
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      const oldIndex = orderedNames.indexOf(String(active.id))
+      const newIndex = orderedNames.indexOf(String(over.id))
+      sparaOrdning(arrayMove(orderedNames, oldIndex, newIndex))
+    }
+  }
 
   const isProfilePage = location.pathname === '/profil'
   const activeSection = isProfilePage
@@ -192,19 +213,43 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
         {/* Källor — en knapp per myndighet oavsett antal feeds */}
         <SectionLabel>Källor</SectionLabel>
         <div className="flex flex-col gap-0.5">
-          {[...sourceGroups.entries()].map(([shortName, group]) => (
-            <SourceButton
-              key={shortName}
-              label={shortName}
-              active={selectedShortName === shortName && !isProfilePage}
-              hasUnread={isLoggedIn && group.some(s => unreadSourceIds.has(s.id))}
-              onClick={() => {
-                navigate('/', { state: { shortName } })
-                onSelectSource(shortName)
-                onClose()
-              }}
-            />
-          ))}
+          {isLoggedIn ? (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={orderedNames} strategy={verticalListSortingStrategy}>
+                {orderedNames.map(shortName => {
+                  const group = sourceGroups.get(shortName)
+                  if (!group) return null
+                  return (
+                    <SortableSourceButton
+                      key={shortName}
+                      shortName={shortName}
+                      active={selectedShortName === shortName && !isProfilePage}
+                      hasUnread={group.some(s => unreadSourceIds.has(s.id))}
+                      onClick={() => {
+                        navigate('/', { state: { shortName } })
+                        onSelectSource(shortName)
+                        onClose()
+                      }}
+                    />
+                  )
+                })}
+              </SortableContext>
+            </DndContext>
+          ) : (
+            [...sourceGroups.keys()].map(shortName => (
+              <SourceButton
+                key={shortName}
+                label={shortName}
+                active={selectedShortName === shortName && !isProfilePage}
+                hasUnread={false}
+                onClick={() => {
+                  navigate('/', { state: { shortName } })
+                  onSelectSource(shortName)
+                  onClose()
+                }}
+              />
+            ))
+          )}
         </div>
 
         <div className="border-t border-slate-100 dark:border-slate-800 mt-2" />
