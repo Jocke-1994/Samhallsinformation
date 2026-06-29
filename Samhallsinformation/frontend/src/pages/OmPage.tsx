@@ -24,7 +24,7 @@ export default function OmPage() {
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
       <Sidebar
-        selectedSourceId={null}
+        selectedShortName={null}
         onSelectSource={() => {}}
         unreadSourceIds={new Set()}
         isOpen={sidebarOpen}
