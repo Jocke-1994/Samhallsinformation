@@ -85,8 +85,8 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
     ikon: '🔄',
     flaggor: [
       { key: 'uppdateringar_senaste',       label: 'Senaste version', beskrivning: 'Visa det senaste releaset med ändringslogg',        defaultAktiv: true },
-      { key: 'uppdateringar_pagang',        label: 'Påväg',           beskrivning: 'Visa nästa planerade version och vad som är på gång', defaultAktiv: true },
-      { key: 'uppdateringar_kanda_problem', label: 'Kända problem',   beskrivning: 'Visa lista över kända buggar och workarounds',       defaultAktiv: true },
+      { key: 'uppdateringar_pagang',        label: 'Påväg',           beskrivning: 'Visa nästa planerade version och vad som är på gång', defaultAktiv: false },
+      { key: 'uppdateringar_kanda_problem', label: 'Kända problem',   beskrivning: 'Visa lista över kända buggar och workarounds',       defaultAktiv: false },
       { key: 'uppdateringar_historik',      label: 'Versionshistorik', beskrivning: 'Visa alla tidigare versioner och deras ändringar',  defaultAktiv: true },
     ],
   },

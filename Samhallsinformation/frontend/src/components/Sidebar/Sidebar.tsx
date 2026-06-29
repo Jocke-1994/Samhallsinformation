@@ -7,6 +7,8 @@ import SourceButton from './SourceButton'
 import { FeedbackModal } from '../Feedback/FeedbackButton'
 import type { Source } from '../../types'
 import { useAuth, type SystemRoll } from '../../context/AuthContext'
+import { useFlags } from '../../context/FeatureFlagsContext'
+import { isSektionSynlig } from '../../lib/featureFlags'
 
 interface Props {
   selectedShortName: string | null
@@ -50,6 +52,8 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
   const location  = useLocation()
   const { isLoggedIn, roll, aktivVy, logout, byttVy } = useAuth()
   const { theme, setTheme } = useTheme()
+  const flaggor = useFlags()
+  const synligaSektioner = PROFILE_SECTIONS.filter(s => isSektionSynlig(s.id, flaggor))
   const [dropdownÖppen, setDropdownÖppen] = useState(false)
   const [feedbackÖppen, setFeedbackÖppen] = useState(false)
 
@@ -148,7 +152,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
           <>
             <SectionLabel>Inställningar</SectionLabel>
             <div className="flex flex-col gap-0.5">
-              {PROFILE_SECTIONS.map(s => {
+              {synligaSektioner.map(s => {
                 const isActive = activeSection === s.id
                 return (
                   <button
