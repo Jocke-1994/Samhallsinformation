@@ -212,7 +212,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
         )}
 
         {/* Källor — en knapp per myndighet oavsett antal feeds */}
-        <div className="flex items-center justify-between px-1 py-3">
+        <div className="flex items-center justify-between px-3 py-3">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Källor</p>
           {isLoggedIn && (
             <button
