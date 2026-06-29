@@ -19,6 +19,7 @@ public class EventsController : ControllerBase
     public async Task<IActionResult> GetEvents(
         [FromQuery] string? geography,
         [FromQuery] string? shortName,
+        [FromQuery] string? source,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         [FromQuery] bool? national,
@@ -42,11 +43,17 @@ public class EventsController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(shortName))
         {
+            // Ny frontend: filtrera per myndighetsgrupp (alla feeds med samma shortName)
             var idsForGroup = await _db.Sources
                 .Where(s => s.ShortName == shortName && publishedSourceIds.Contains(s.Id))
                 .Select(s => s.Id)
                 .ToListAsync();
             query = query.Where(e => idsForGroup.Contains(e.SourceId));
+        }
+        else if (!string.IsNullOrWhiteSpace(source))
+        {
+            // Gammal frontend: filtrera per enskilt sourceId (bakåtkompatibilitet)
+            query = query.Where(e => e.SourceId.ToString() == source);
         }
 
         if (from.HasValue)
