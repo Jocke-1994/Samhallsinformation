@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FaqItem, FaqKategori } from '../../../types'
 
-const PUBLICERADE_FAQ: (FaqItem & { publicerad: boolean })[] = [
+const FAQ_ITEMS: (FaqItem & { publicerad: boolean })[] = [
   { kategori: 'Notifieringar', publicerad: true, q: 'Varför fick jag ingen notis?', a: 'Kontrollera att rätt kanal (mail/SMS) är aktiverad under Notifieringar och att källan är tillagd under Mina källor. Det kan ta upp till 5 minuter innan en ny händelse når dig.' },
   { kategori: 'Notifieringar', publicerad: true, q: 'Hur ändrar jag mitt SMS-nummer?', a: 'Gå till Notifieringar → Standardinställningar. Där visas ditt registrerade nummer och du kan uppdatera det.' },
   { kategori: 'Notifieringar', publicerad: true, q: 'Kan jag pausa notiser tillfälligt?', a: 'Ja, avmarkera Mail och SMS i Standardinställningar under Notifieringar. Dina inställningar sparas och kan aktiveras igen när du vill.' },
@@ -13,7 +13,7 @@ const PUBLICERADE_FAQ: (FaqItem & { publicerad: boolean })[] = [
   { kategori: 'Uppdateringar', publicerad: true, q: 'Hur rapporterar jag ett fel?', a: 'Skapa ett nytt ärende via formuläret längre ner på den här sidan. Välj "Tekniskt fel på sidan" som ämne och beskriv vad som hänt.' },
 ]
 
-const PUBLICERADE_FAQ = PUBLICERADE_FAQ.filter(i => i.publicerad)
+const PUBLICERADE_FAQ = FAQ_ITEMS.filter(i => i.publicerad)
 
 const FAQ_KATEGORIER: FaqKategori[] = ['Notifieringar', 'Mina källor', 'Konto', 'Uppdateringar']
 
