@@ -1,7 +1,7 @@
 import type { CanonicalEvent, EventsResponse } from '../types'
 
 interface FetchEventsParams {
-  sourceId?: number
+  shortName?: string
   geography?: string
   national?: boolean
   page?: number
@@ -218,14 +218,11 @@ const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
 export async function fetchEvents(params: FetchEventsParams = {}): Promise<EventsResponse> {
   if (USE_MOCK) {
-    const filtered = MOCK_EVENTS.filter(e =>
-      params.sourceId === undefined || e.sourceId === params.sourceId
-    )
-    return { total: filtered.length, page: 1, pageSize: filtered.length, events: filtered }
+    return { total: MOCK_EVENTS.length, page: 1, pageSize: MOCK_EVENTS.length, events: MOCK_EVENTS }
   }
 
   const query = new URLSearchParams()
-  if (params.sourceId !== undefined) query.set('source', String(params.sourceId))
+  if (params.shortName) query.set('shortName', params.shortName)
   if (params.geography) query.set('geography', params.geography)
   if (params.national !== undefined) query.set('national', String(params.national))
   if (params.page) query.set('page', String(params.page))

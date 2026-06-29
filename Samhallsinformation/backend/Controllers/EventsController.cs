@@ -18,7 +18,7 @@ public class EventsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetEvents(
         [FromQuery] string? geography,
-        [FromQuery] string? source,
+        [FromQuery] string? shortName,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         [FromQuery] bool? national,
@@ -40,8 +40,14 @@ public class EventsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(geography))
             query = query.Where(e => e.Geography == geography);
 
-        if (!string.IsNullOrWhiteSpace(source))
-            query = query.Where(e => e.SourceId.ToString() == source);
+        if (!string.IsNullOrWhiteSpace(shortName))
+        {
+            var idsForGroup = await _db.Sources
+                .Where(s => s.ShortName == shortName && publishedSourceIds.Contains(s.Id))
+                .Select(s => s.Id)
+                .ToListAsync();
+            query = query.Where(e => idsForGroup.Contains(e.SourceId));
+        }
 
         if (from.HasValue)
             query = query.Where(e => e.PublishedAt >= from.Value);

@@ -41,19 +41,19 @@ function formatDateLabel(iso: string): string {
 }
 
 interface Props {
-  source: Source | null
+  shortName: string | null
   sources: Source[]
-  onReadStatusChange: (sourceId: number) => void
+  onReadStatusChange: () => void
   onOpenSidebar: () => void
 }
 
-export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSidebar }: Props) {
+export default function NewsFeed({ shortName, sources, onReadStatusChange, onOpenSidebar }: Props) {
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['events', source?.id ?? 'all'],
-    queryFn: () => fetchEvents({ sourceId: source?.id, pageSize: 50 }),
+    queryKey: ['events', shortName ?? 'all'],
+    queryFn: () => fetchEvents({ shortName: shortName ?? undefined, pageSize: 50 }),
   })
 
   const events: CanonicalEvent[] = data?.events ?? []
@@ -62,7 +62,7 @@ export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSi
   const [viewMode, setViewMode] = useState<ViewMode>('Allt')
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('Alla')
 
-  useEffect(() => { setSeverityFilter('Alla') }, [source?.id])
+  useEffect(() => { setSeverityFilter('Alla') }, [shortName])
   useEffect(() => { if (!isLoggedIn) setViewMode('Allt') }, [isLoggedIn])
 
   useEffect(() => {
@@ -75,17 +75,17 @@ export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSi
   )
 
   const sortedEvents = useMemo(() => {
-    if (source !== null) return events
+    if (shortName !== null) return events
     return [...events].sort(
       (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
     )
-  }, [events, source])
+  }, [events, shortName])
 
   function handleMarkAllRead() {
     const ids = sortedEvents.map(e => e.id)
     markAllAsRead(ids)
     setReadMap(Object.fromEntries(ids.map(id => [id, true])))
-    if (source) onReadStatusChange(source.id)
+    if (shortName) onReadStatusChange()
   }
 
   const filteredEvents = useMemo(() =>
@@ -107,7 +107,7 @@ export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSi
   )
   const showFilters = availableSeverities.length > 1
 
-  const title = source ? source.shortName : 'Samhällsinformation'
+  const title = shortName ?? 'Samhällsinformation'
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-full text-neutral-500 text-sm">Hämtar nyheter...</div>
@@ -145,7 +145,7 @@ export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSi
       </div>
 
       {/* Allt / Mitt — visas bara när inloggad och inte i källvy */}
-      {isLoggedIn && source === null && (
+      {isLoggedIn && shortName === null && (
         <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 py-2.5 shrink-0">
           <div className="max-w-3xl mx-auto flex items-center gap-1 w-fit">
             {(['Allt', 'Mitt'] as ViewMode[]).map(mode => (
@@ -256,7 +256,7 @@ export default function NewsFeed({ source, sources, onReadStatusChange, onOpenSi
                   <NewsItem
                     event={event}
                     isRead={!!readMap[event.id]}
-                    sourceName={source === null ? sourceMap[event.sourceId] : undefined}
+                    sourceName={shortName === null ? sourceMap[event.sourceId] : undefined}
                   />
                 </Fragment>
               )
