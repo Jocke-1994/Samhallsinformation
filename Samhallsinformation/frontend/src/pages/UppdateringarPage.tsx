@@ -15,6 +15,14 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    title: 'SMHI är tillagd som källa',
+    date: 'Juni 2026',
+    changes: [
+      { type: 'nytt',       text: 'SMHI har lagts till som källa — nyheter och rapporter från Sveriges meteorologiska och hydrologiska institut' },
+      { type: 'fixat',      text: 'Förbättrat stabilitet och buggfixar' },
+    ],
+  },
+  {
     title: 'Kemikalieinspektionen är tillagd som källa',
     date: 'Juni 2026',
     changes: [
