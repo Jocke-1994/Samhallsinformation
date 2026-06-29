@@ -313,7 +313,7 @@ export default function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSect
 
         {/* Inställningskort */}
         <div className="w-full max-w-3xl pb-16" style={{ marginTop: '48px' }}>
-          <div className="grid grid-cols-3 gap-6">
+          <div className={`grid gap-6 ${synligaKort.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
             {synligaKort.map(card => (
               <button
                 key={card.id}
