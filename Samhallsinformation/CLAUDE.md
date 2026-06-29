@@ -62,12 +62,17 @@ Systemet hanterar information baserat på tillgänglig metadata:
 ### Session 17 — 2026-06-29
 **What was done:**
 - FAQ-admin kopplad mot användarsidan via delad localStorage (PR #317): ny `faqStorage.ts` med `laddaFaq()` / `sparaFaq()` + `INITIAL_FAQ`. `AdminFaq` initieras från localStorage och sparar vid varje toggle/spara/ta bort. `FaqKort` läser från samma `laddaFaq()` och renderar enbart frågor med `publicerad: true`.
+- Felsökning källkontroller live (PR #319): källlistan hämtar från `fetchAdminSources` (delar query-cache med Källhantering). Toggle Aktiv skriver via `updateAdminSource`. Testa-knappen kör riktig `dryRunSource` och visar faktiska händelseantal i pipeline-trace. `senastHämtad`/`färskhetStatus` beräknas från `lastFetchedAt`, auto-refresh var 60 s. Mock-toggle (inget backend-stöd) borttagen.
 
 **Problem och lösningar denna session:**
 - Fältnamn-mismatch: `AdminFaqItem` använder `fråga`/`svar`, `FaqKort` använde `q`/`a` (gamla `FaqItem`-typen). Löst genom att `FaqKort` nu importerar `AdminFaqItem` och refererar `item.fråga`/`item.svar` direkt.
 
 **Etablerat mönster:**
 Delad localStorage-modul för feature-data: en fil med `INITIAL_FAQ`, `laddaFaq()` (läser → parser → mergar nyinlagda poster), `sparaFaq()`. Admin skriver, användarsida läser. Gör att admin-ändringar slår igenom utan backend.
+
+**Vad som fortfarande är mock i Felsökning:**
+- Systemhälsa (ping-simulering — kräver `/api/health`-endpoint)
+- Kommande kontroller, Kontrollhistorik, Felloggar (kräver scheduler/logging-backend)
 
 **Next session (Session 18):**
 - Koppla källordning mot användarkonto när backend-profiler (Issue #298) byggs
