@@ -18,7 +18,9 @@ export default function SourceButton({ label, active, hasUnread, onClick }: Prop
     >
       <span className="truncate">{label}</span>
       {hasUnread && (
-        <span className="ml-2 shrink-0 w-2 h-2 rounded-full bg-violet-500" />
+        <span className="ml-2 shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500 text-white leading-none">
+          Nytt
+        </span>
       )}
     </button>
   )
