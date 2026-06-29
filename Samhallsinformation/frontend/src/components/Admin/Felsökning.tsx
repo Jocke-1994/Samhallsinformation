@@ -1,4 +1,8 @@
 import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchAdminSources, updateAdminSource } from '../../api/sources'
+import { dryRunSource } from '../../api/testing'
+import type { AdminSource } from '../../types'
 
 type Hälsa = 'OK' | 'Varning' | 'Nere' | 'Kontrollerar...'
 
@@ -14,16 +18,13 @@ interface Tjänst {
 type FärskhetStatus = 'OK' | 'Försenad' | 'Kritisk'
 
 interface KällKontroll {
-  id:              number
-  namn:            string
-  url:             string
-  hälsa:           Hälsa
-  aktiv:           boolean
-  mock:            boolean
-  senast:          string
-  senastArtikel:   string   // tidsstämpel för senaste inlästa artikel
-  förväntadFrekvens: string // t.ex. "< 2 h"
-  färskhetStatus:  FärskhetStatus
+  id:             number
+  namn:           string
+  url:            string
+  hälsa:          Hälsa
+  aktiv:          boolean
+  senastHämtad:   string
+  färskhetStatus: FärskhetStatus
 }
 
 interface Felrad {
@@ -34,21 +35,10 @@ interface Felrad {
 }
 
 const INITIAL_TJÄNSTER: Tjänst[] = [
-  { id: 'api',      namn: 'Backend-API',  beskrivning: 'REST-API på port 5000',        hälsa: 'OK',      svarstid: '42 ms',  senast: '10:55:01' },
-  { id: 'db',       namn: 'Databas',      beskrivning: 'SQLite / EF Core',             hälsa: 'OK',      svarstid: '8 ms',   senast: '10:55:01' },
-  { id: 'ingestor', namn: 'Ingestor',     beskrivning: 'Bakgrundstjänst — 5 min-cykel',hälsa: 'OK',      svarstid: '—',      senast: '10:50:00' },
-  { id: 'notis',    namn: 'Notifieringar',beskrivning: 'Utskickstjänst e-post / SMS',  hälsa: 'Varning', svarstid: '—',      senast: '10:30:00' },
-]
-
-const INITIAL_KÄLLOR: KällKontroll[] = [
-  { id: 1, namn: 'Polisen',         url: 'https://polisen.se/aktuellt/rss',           hälsa: 'OK',      aktiv: true,  mock: false, senast: '10:50', senastArtikel: '14:23',  förväntadFrekvens: '< 2 h',  färskhetStatus: 'Kritisk'  },
-  { id: 2, namn: 'SMHI',            url: 'https://smhi.se/vader/varningar/rss',        hälsa: 'Varning', aktiv: true,  mock: false, senast: '10:50', senastArtikel: '10:11',  förväntadFrekvens: '< 6 h',  färskhetStatus: 'OK'       },
-  { id: 3, namn: 'MSB',             url: 'https://msb.se/sv/om-msb/nyheter/rss',       hälsa: 'OK',      aktiv: true,  mock: false, senast: '10:50', senastArtikel: '09:45',  förväntadFrekvens: '< 12 h', färskhetStatus: 'OK'       },
-  { id: 4, namn: 'Trafikverket',    url: 'https://api.trafikinfo.trafikverket.se',      hälsa: 'Nere',    aktiv: true,  mock: true,  senast: '10:50', senastArtikel: '09:15',  förväntadFrekvens: '< 2 h',  färskhetStatus: 'Försenad' },
-  { id: 5, namn: 'Krisinformation', url: 'https://krisinformation.se/rss',             hälsa: 'OK',      aktiv: true,  mock: false, senast: '10:50', senastArtikel: '08:30',  förväntadFrekvens: '< 24 h', färskhetStatus: 'OK'       },
-  { id: 6, namn: 'Gbg Stad',        url: 'https://goteborg.se/rss',                   hälsa: 'OK',      aktiv: false, mock: false, senast: '10:50', senastArtikel: '—',       förväntadFrekvens: '< 24 h', färskhetStatus: 'OK'       },
-  { id: 7, namn: 'Lst VGR',         url: 'https://lansstyrelsen.se/vgr/rss',           hälsa: 'OK',      aktiv: false, mock: false, senast: '10:50', senastArtikel: '—',       förväntadFrekvens: '< 24 h', färskhetStatus: 'OK'       },
-  { id: 8, namn: 'VGR',             url: 'https://vgregion.se/rss',                   hälsa: 'OK',      aktiv: false, mock: false, senast: '10:50', senastArtikel: '—',       förväntadFrekvens: '< 24 h', färskhetStatus: 'OK'       },
+  { id: 'api',      namn: 'Backend-API',  beskrivning: 'REST-API på port 5000',         hälsa: 'OK',      svarstid: '42 ms', senast: '10:55:01' },
+  { id: 'db',       namn: 'Databas',      beskrivning: 'SQLite / EF Core',              hälsa: 'OK',      svarstid: '8 ms',  senast: '10:55:01' },
+  { id: 'ingestor', namn: 'Ingestor',     beskrivning: 'Bakgrundstjänst — 5 min-cykel', hälsa: 'OK',      svarstid: '—',     senast: '10:50:00' },
+  { id: 'notis',    namn: 'Notifieringar',beskrivning: 'Utskickstjänst e-post / SMS',   hälsa: 'Varning', svarstid: '—',     senast: '10:30:00' },
 ]
 
 type KontrollTyp = 'Ingestor' | 'Fullständigt flödestest' | 'Event-drivet' | 'Intern'
@@ -93,7 +83,6 @@ const KATEGORI_FILTER: KontrollKategori[] = ['Källa', 'Intern']
 
 function KommandeKontroller() {
   const [filter, setFilter] = useState<KontrollKategori | 'Alla'>('Alla')
-
   const visade = filter === 'Alla' ? KOMMANDE : KOMMANDE.filter(k => k.kategori === filter)
 
   return (
@@ -109,9 +98,7 @@ function KommandeKontroller() {
               key={f}
               onClick={() => setFilter(f)}
               className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                filter === f
-                  ? 'bg-violet-100 text-violet-700'
-                  : 'text-slate-500 hover:bg-slate-100'
+                filter === f ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:bg-slate-100'
               }`}
             >
               {f}
@@ -126,9 +113,7 @@ function KommandeKontroller() {
               <p className="text-sm font-mono text-slate-700">{k.tid}</p>
               <p className="text-xs text-slate-400">{k.om}</p>
             </div>
-            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border shrink-0 ${TYP_CLS[k.typ]}`}>
-              {k.typ}
-            </span>
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border shrink-0 ${TYP_CLS[k.typ]}`}>{k.typ}</span>
             <p className="flex-1 text-sm text-slate-600">{k.beskrivning}</p>
             <span className={`text-xs shrink-0 ${STATUS_CLS[k.status]}`}>{k.status}</span>
           </div>
@@ -153,10 +138,10 @@ const FÄRSKHET_CLS: Record<FärskhetStatus, string> = {
 }
 
 const HÄLSA_CLS: Record<Hälsa, { pill: string; dot: string }> = {
-  'OK':              { pill: 'bg-green-100 text-green-700 border border-green-200',  dot: 'bg-green-500' },
-  'Varning':         { pill: 'bg-amber-100 text-amber-700 border border-amber-200',  dot: 'bg-amber-400' },
-  'Nere':            { pill: 'bg-red-100 text-red-700 border border-red-200',        dot: 'bg-red-500'   },
-  'Kontrollerar...': { pill: 'bg-slate-100 text-slate-500 border border-slate-200',  dot: 'bg-slate-400 animate-pulse' },
+  'OK':              { pill: 'bg-green-100 text-green-700 border border-green-200',  dot: 'bg-green-500'              },
+  'Varning':         { pill: 'bg-amber-100 text-amber-700 border border-amber-200',  dot: 'bg-amber-400'              },
+  'Nere':            { pill: 'bg-red-100 text-red-700 border border-red-200',        dot: 'bg-red-500'                },
+  'Kontrollerar...': { pill: 'bg-slate-100 text-slate-500 border border-slate-200',  dot: 'bg-slate-400 animate-pulse'},
 }
 
 const NIVÅ_CLS: Record<Felrad['nivå'], string> = {
@@ -199,11 +184,11 @@ interface HistorikRad {
 }
 
 const HISTORIK: HistorikRad[] = [
-  { id: 1, typ: 'Fullständigt flödestest', beskrivning: 'Alla aktiva källor',          tid: '04:00', resultat: 'Varning', varaktighet: '1 min 12 s' },
-  { id: 2, typ: 'Event-drivet',            beskrivning: 'Trafikverket',                 tid: '09:16', resultat: 'Fel',     varaktighet: '10 s'       },
-  { id: 3, typ: 'Event-drivet',            beskrivning: 'Polisen',                      tid: '14:24', resultat: 'OK',      varaktighet: '8 s'        },
-  { id: 4, typ: 'Ingestor',               beskrivning: 'Alla aktiva källor',            tid: '18:50', resultat: 'OK',      varaktighet: '23 s'       },
-  { id: 5, typ: 'Intern',                  beskrivning: 'Retry-kö — 1 operation omköad',tid: '18:53', resultat: 'OK',      varaktighet: '2 s'        },
+  { id: 1, typ: 'Fullständigt flödestest', beskrivning: 'Alla aktiva källor',           tid: '04:00', resultat: 'Varning', varaktighet: '1 min 12 s' },
+  { id: 2, typ: 'Event-drivet',            beskrivning: 'Trafikverket',                  tid: '09:16', resultat: 'Fel',     varaktighet: '10 s'       },
+  { id: 3, typ: 'Event-drivet',            beskrivning: 'Polisen',                       tid: '14:24', resultat: 'OK',      varaktighet: '8 s'        },
+  { id: 4, typ: 'Ingestor',               beskrivning: 'Alla aktiva källor',             tid: '18:50', resultat: 'OK',      varaktighet: '23 s'       },
+  { id: 5, typ: 'Intern',                  beskrivning: 'Retry-kö — 1 operation omköad', tid: '18:53', resultat: 'OK',      varaktighet: '2 s'        },
 ]
 
 const RESULTAT_CLS: Record<HistorikRad['resultat'], string> = {
@@ -212,13 +197,54 @@ const RESULTAT_CLS: Record<HistorikRad['resultat'], string> = {
   'Fel':     'bg-red-100 text-red-700 border border-red-200',
 }
 
+function toKällKontroll(s: AdminSource): KällKontroll {
+  let hälsa: Hälsa = 'Varning'
+  let färskhetStatus: FärskhetStatus = 'OK'
+  let senastHämtad = '—'
+
+  if (s.lastFetchError) {
+    hälsa = 'Nere'
+    färskhetStatus = 'Kritisk'
+  } else if (s.lastFetchedAt) {
+    const mins = (Date.now() - new Date(s.lastFetchedAt).getTime()) / 60000
+    hälsa = mins < 10 ? 'OK' : 'Varning'
+    färskhetStatus = mins < 120 ? 'OK' : mins < 360 ? 'Försenad' : 'Kritisk'
+    senastHämtad = new Date(s.lastFetchedAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  return {
+    id:             s.id,
+    namn:           s.name,
+    url:            s.url ?? s.baseUrl,
+    hälsa,
+    aktiv:          s.isActive,
+    senastHämtad,
+    färskhetStatus,
+  }
+}
 
 export default function Felsökning() {
+  const queryClient = useQueryClient()
+
+  const { data: apiSources = [], isLoading: källorLaddar } = useQuery({
+    queryKey: ['admin-sources'],
+    queryFn:  fetchAdminSources,
+    retry: 1,
+    refetchInterval: 60_000,
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, req }: { id: number; req: Parameters<typeof updateAdminSource>[1] }) =>
+      updateAdminSource(id, req),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-sources'] }),
+  })
+
+  const källorLive: KällKontroll[] = apiSources.map(toKällKontroll)
+
   const [tjänster, setTjänster] = useState<Tjänst[]>(INITIAL_TJÄNSTER)
-  const [källor, setKällor] = useState<KällKontroll[]>(INITIAL_KÄLLOR)
-  const [testar, setTestar] = useState<number | null>(null)
+  const [testar, setTestar]     = useState<number | null>(null)
   const [pipeline, setPipeline] = useState<Record<number, PipelineSteg[]>>({})
-  const [kör, setKör] = useState<number | null>(null)
+  const [kör, setKör]           = useState<number | null>(null)
   const [loggFilter, setLoggFilter] = useState<Felrad['nivå'] | 'Alla'>('Alla')
 
   function pingTjänst(id: string) {
@@ -242,12 +268,8 @@ export default function Felsökning() {
     }, 1400)
   }
 
-  function toggleAktiv(id: number) {
-    setKällor(prev => prev.map(k => k.id === id ? { ...k, aktiv: !k.aktiv } : k))
-  }
-
-  function toggleMock(id: number) {
-    setKällor(prev => prev.map(k => k.id === id ? { ...k, mock: !k.mock } : k))
+  function toggleAktiv(k: KällKontroll) {
+    updateMutation.mutate({ id: k.id, req: { isActive: !k.aktiv } })
   }
 
   function körNu(id: number) {
@@ -255,17 +277,17 @@ export default function Felsökning() {
     setTimeout(() => setKör(null), 2000)
   }
 
-  function testaAnslutning(k: KällKontroll) {
+  async function testaAnslutning(k: KällKontroll) {
     setTestar(k.id)
 
-    const steg: PipelineSteg[] = [
-      { namn: 'Anslutning',           status: 'väntar' },
-      { namn: 'RSS/XML-parsing',      status: 'väntar' },
+    const init: PipelineSteg[] = [
+      { namn: 'Anslutning',                status: 'väntar' },
+      { namn: 'RSS/XML-parsing',           status: 'väntar' },
       { namn: 'Mappning → CanonicalEvent', status: 'väntar' },
-      { namn: 'Deduplicering',        status: 'väntar' },
-      { namn: 'Databas-skrivning',    status: 'väntar' },
+      { namn: 'Deduplicering',             status: 'väntar' },
+      { namn: 'Databas-skrivning',         status: 'väntar' },
     ]
-    setPipeline(prev => ({ ...prev, [k.id]: steg }))
+    setPipeline(prev => ({ ...prev, [k.id]: init }))
 
     const uppdatera = (index: number, status: StegStatus, detalj?: string) => {
       setPipeline(prev => ({
@@ -273,51 +295,39 @@ export default function Felsökning() {
         [k.id]: prev[k.id].map((s, i) => i === index ? { ...s, status, detalj } : s),
       }))
     }
+    const vänta = (ms: number) => new Promise(res => setTimeout(res, ms))
 
-    const ms = Math.floor(Math.random() * 200 + 50)
-    const poster = Math.floor(Math.random() * 30 + 5)
-    const nya = poster - Math.floor(Math.random() * 3)
-
-    if (k.hälsa === 'Nere') {
-      setTimeout(() => { uppdatera(0, 'kör') }, 300)
-      setTimeout(() => { uppdatera(0, 'Fel', `Timeout efter 10 000 ms — ingen respons`); setTestar(null) }, 1500)
-      return
-    }
-
-    setTimeout(() => { uppdatera(0, 'kör') }, 200)
-    setTimeout(() => {
-      uppdatera(0, k.hälsa === 'Varning' ? 'Varning' : 'OK', `HTTP 200 på ${ms} ms`)
+    uppdatera(0, 'kör')
+    try {
+      const result = await dryRunSource(k.url, k.namn)
+      await vänta(250)
+      uppdatera(0, 'OK', 'HTTP 200')
       uppdatera(1, 'kör')
-    }, 700)
-    setTimeout(() => {
-      uppdatera(1, k.hälsa === 'Varning' ? 'Varning' : 'OK',
-        k.hälsa === 'Varning' ? `Content-Type text/html — förväntat application/xml` : `${poster} poster hittade`)
-      if (k.hälsa !== 'Varning') uppdatera(2, 'kör')
-    }, 1200)
-    setTimeout(() => {
-      if (k.hälsa === 'Varning') { setTestar(null); return }
-      uppdatera(2, 'OK', `${poster}/${poster} mappade korrekt`)
+      await vänta(250)
+      uppdatera(1, 'OK', `${result.count} poster hittade`)
+      uppdatera(2, 'kör')
+      await vänta(250)
+      uppdatera(2, 'OK', `${result.count}/${result.count} mappade korrekt`)
       uppdatera(3, 'kör')
-    }, 1700)
-    setTimeout(() => {
-      if (k.hälsa === 'Varning') return
-      uppdatera(3, 'OK', `${poster - nya} dubbletter ignorerade`)
+      await vänta(250)
+      uppdatera(3, 'OK', 'Deduplicering klar')
       uppdatera(4, 'kör')
-    }, 2100)
-    setTimeout(() => {
-      if (k.hälsa === 'Varning') return
-      uppdatera(4, 'OK', `${nya} nya events sparade`)
+      await vänta(250)
+      uppdatera(4, 'OK', `${result.count} händelser inlästa`)
+    } catch (err) {
+      uppdatera(0, 'Fel', err instanceof Error ? err.message : 'Timeout eller nätverksfel')
+    } finally {
       setTestar(null)
-    }, 2500)
+    }
   }
 
-  const systemOK = tjänster.every(t => t.hälsa === 'OK')
+  const systemOK      = tjänster.every(t => t.hälsa === 'OK')
   const systemVarning = !systemOK && tjänster.every(t => t.hälsa !== 'Nere')
 
   return (
     <div className="flex flex-col gap-6">
 
-      {/* Systemhälsa */}
+      {/* Systemhälsa — simulerad ping */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
@@ -340,7 +350,6 @@ export default function Felsökning() {
             </button>
           </div>
         </div>
-
         <div className="divide-y divide-slate-50">
           {tjänster.map(t => {
             const cls = HÄLSA_CLS[t.hälsa]
@@ -367,102 +376,105 @@ export default function Felsökning() {
         </div>
       </div>
 
-      {/* Källkontroller */}
+      {/* Källkontroller — live */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-base font-semibold text-slate-900">Källkontroller</h3>
-          <p className="text-xs text-slate-400 mt-0.5">Aktivera/inaktivera, mockläge och manuell insamling per källa</p>
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              Källkontroller
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">LIVE</span>
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {källorLaddar
+                ? 'Hämtar källor...'
+                : `${källorLive.length} källor · ${källorLive.filter(k => k.aktiv).length} aktiva`
+              }
+            </p>
+          </div>
         </div>
 
-        <div className="divide-y divide-slate-50">
-          {källor.map(k => {
-            const cls = HÄLSA_CLS[k.hälsa]
-            const pågår = testar === k.id
-            return (
-              <div key={k.id} className="px-6 py-4 flex flex-col gap-2">
-                <div className="flex items-center gap-4">
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${cls.dot}`} />
+        {källorLaddar ? (
+          <div className="px-6 py-10 text-center text-sm text-slate-400">Laddar källdata...</div>
+        ) : (
+          <div className="divide-y divide-slate-50">
+            {källorLive.map(k => {
+              const cls   = HÄLSA_CLS[k.hälsa]
+              const pågår = testar === k.id
+              return (
+                <div key={k.id} className="px-6 py-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-4">
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${cls.dot}`} />
 
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800">{k.namn}</p>
-                    <p className="text-xs text-slate-400 truncate">{k.url}</p>
-                  </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800">{k.namn}</p>
+                      <p className="text-xs text-slate-400 truncate">{k.url}</p>
+                    </div>
 
-                  {/* Datafärskhets */}
-                  <div className="text-right shrink-0 w-40">
-                    <p className="text-xs text-slate-400">Senaste artikel</p>
-                    <p className={`text-xs ${FÄRSKHET_CLS[k.färskhetStatus]}`}>
-                      {k.senastArtikel === '—' ? '—' : `kl ${k.senastArtikel}`}
-                      {k.färskhetStatus !== 'OK' && k.senastArtikel !== '—' && (
-                        <span className="ml-1">⚠</span>
-                      )}
-                    </p>
-                    <p className="text-xs text-slate-300">förväntat {k.förväntadFrekvens}</p>
-                  </div>
-
-                  {/* Mock-toggle */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-slate-400">Mock</span>
-                    <button
-                      onClick={() => toggleMock(k.id)}
-                      className={`relative w-9 h-5 rounded-full transition-colors ${k.mock ? 'bg-amber-400' : 'bg-slate-200'}`}
-                    >
-                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${k.mock ? 'left-[18px]' : 'left-0.5'}`} />
-                    </button>
-                  </div>
-
-                  {/* Aktiv-toggle */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-slate-400">Aktiv</span>
-                    <button
-                      onClick={() => toggleAktiv(k.id)}
-                      className={`relative w-9 h-5 rounded-full transition-colors ${k.aktiv ? 'bg-green-500' : 'bg-slate-200'}`}
-                    >
-                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${k.aktiv ? 'left-[18px]' : 'left-0.5'}`} />
-                    </button>
-                  </div>
-
-                  {/* Kör nu */}
-                  <button
-                    onClick={() => körNu(k.id)}
-                    disabled={kör === k.id || !k.aktiv}
-                    className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 border-slate-200 text-slate-600 hover:border-violet-200 hover:text-violet-600 hover:bg-violet-50"
-                  >
-                    {kör === k.id ? 'Kör...' : 'Kör nu'}
-                  </button>
-
-                  {/* Testa anslutning */}
-                  <button
-                    onClick={() => testaAnslutning(k)}
-                    disabled={pågår}
-                    className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 border-slate-200 text-slate-600 hover:border-sky-200 hover:text-sky-600 hover:bg-sky-50"
-                  >
-                    {pågår ? 'Testar...' : 'Testa'}
-                  </button>
-                </div>
-
-                {/* Pipeline-trace */}
-                {pipeline[k.id] && (
-                  <div className="ml-6 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 flex flex-col gap-1.5">
-                    {pipeline[k.id].map((steg, i) => (
-                      <div key={i} className="flex items-baseline gap-2">
-                        <span className={`text-xs font-bold w-4 shrink-0 ${STEG_CLS[steg.status]}`}>
-                          {STEG_IKON[steg.status]}
-                        </span>
-                        <span className="text-xs text-slate-600 w-44 shrink-0">{steg.namn}</span>
-                        {steg.detalj && (
-                          <span className={`text-xs ${steg.status === 'Fel' ? 'text-red-500' : steg.status === 'Varning' ? 'text-amber-500' : 'text-slate-400'}`}>
-                            {steg.detalj}
-                          </span>
+                    {/* Senast hämtad */}
+                    <div className="text-right shrink-0 w-36">
+                      <p className="text-xs text-slate-400">Senast hämtad</p>
+                      <p className={`text-xs ${FÄRSKHET_CLS[k.färskhetStatus]}`}>
+                        {k.senastHämtad === '—' ? '—' : `kl ${k.senastHämtad}`}
+                        {k.färskhetStatus !== 'OK' && k.senastHämtad !== '—' && (
+                          <span className="ml-1">⚠</span>
                         )}
-                      </div>
-                    ))}
+                      </p>
+                    </div>
+
+                    {/* Aktiv-toggle */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-slate-400">Aktiv</span>
+                      <button
+                        onClick={() => toggleAktiv(k)}
+                        disabled={updateMutation.isPending}
+                        className={`relative w-9 h-5 rounded-full transition-colors disabled:opacity-60 ${k.aktiv ? 'bg-green-500' : 'bg-slate-200'}`}
+                      >
+                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${k.aktiv ? 'left-[18px]' : 'left-0.5'}`} />
+                      </button>
+                    </div>
+
+                    {/* Kör nu */}
+                    <button
+                      onClick={() => körNu(k.id)}
+                      disabled={kör === k.id || !k.aktiv}
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 border-slate-200 text-slate-600 hover:border-violet-200 hover:text-violet-600 hover:bg-violet-50"
+                    >
+                      {kör === k.id ? 'Kör...' : 'Kör nu'}
+                    </button>
+
+                    {/* Testa anslutning — kör riktig dryRun */}
+                    <button
+                      onClick={() => testaAnslutning(k)}
+                      disabled={pågår}
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 border-slate-200 text-slate-600 hover:border-sky-200 hover:text-sky-600 hover:bg-sky-50"
+                    >
+                      {pågår ? 'Testar...' : 'Testa'}
+                    </button>
                   </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+
+                  {/* Pipeline-trace */}
+                  {pipeline[k.id] && (
+                    <div className="ml-6 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 flex flex-col gap-1.5">
+                      {pipeline[k.id].map((steg, i) => (
+                        <div key={i} className="flex items-baseline gap-2">
+                          <span className={`text-xs font-bold w-4 shrink-0 ${STEG_CLS[steg.status]}`}>
+                            {STEG_IKON[steg.status]}
+                          </span>
+                          <span className="text-xs text-slate-600 w-44 shrink-0">{steg.namn}</span>
+                          {steg.detalj && (
+                            <span className={`text-xs ${steg.status === 'Fel' ? 'text-red-500' : steg.status === 'Varning' ? 'text-amber-500' : 'text-slate-400'}`}>
+                              {steg.detalj}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Kommande kontroller */}
@@ -478,14 +490,10 @@ export default function Felsökning() {
           {HISTORIK.map(h => (
             <div key={h.id} className="flex items-center gap-4 px-6 py-3">
               <span className="text-xs text-slate-400 font-mono w-12 shrink-0">{h.tid}</span>
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border shrink-0 ${TYP_CLS[h.typ]}`}>
-                {h.typ}
-              </span>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border shrink-0 ${TYP_CLS[h.typ]}`}>{h.typ}</span>
               <p className="flex-1 text-sm text-slate-600">{h.beskrivning}</p>
               <span className="text-xs text-slate-400 shrink-0">{h.varaktighet}</span>
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border shrink-0 ${RESULTAT_CLS[h.resultat]}`}>
-                {h.resultat}
-              </span>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border shrink-0 ${RESULTAT_CLS[h.resultat]}`}>{h.resultat}</span>
             </div>
           ))}
         </div>
@@ -517,7 +525,6 @@ export default function Felsökning() {
             </button>
           </div>
         </div>
-
         <div className="divide-y divide-slate-50">
           {FELLOGGAR.filter(f => loggFilter === 'Alla' || f.nivå === loggFilter).map((f, i) => (
             <div key={i} className="flex items-start gap-3 px-6 py-3">
