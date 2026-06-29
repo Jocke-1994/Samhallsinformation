@@ -134,10 +134,13 @@ export default function NewsFeed({ shortName, sources, onReadStatusChange, onOpe
         <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white text-center">{title}</h1>
         {isLoggedIn && hasUnread && (
           <div className="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 flex items-center gap-3">
-            <span className="text-xs font-semibold text-violet-600 bg-violet-50 border border-violet-200 px-2.5 py-1 rounded-full">
+            <button
+              onClick={handleMarkAllRead}
+              className="text-xs font-semibold text-violet-600 bg-violet-50 border border-violet-200 px-2.5 py-1 rounded-full hover:bg-violet-100 transition-colors"
+            >
               {filteredEvents.filter(e => !readMap[e.id]).length} olästa
-            </span>
-            <button onClick={handleMarkAllRead} className="text-xs text-slate-400 hover:text-slate-700 transition-colors">
+            </button>
+            <button onClick={handleMarkAllRead} className="hidden md:block text-xs text-slate-400 hover:text-slate-700 transition-colors">
               Markera alla som lästa
             </button>
           </div>
