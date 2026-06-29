@@ -236,7 +236,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
               </SortableContext>
             </DndContext>
           ) : (
-            [...sourceGroups.entries()].map(([shortName, group]) => (
+            [...sourceGroups.keys()].map(shortName => (
               <SourceButton
                 key={shortName}
                 label={shortName}
