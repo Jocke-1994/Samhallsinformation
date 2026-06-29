@@ -19,8 +19,7 @@ const UPDATES: Update[] = [
     date: 'Juni 2026',
     changes: [
       { type: 'nytt',       text: 'SMHI har lagts till som källa — nyheter och rapporter från Sveriges meteorologiska och hydrologiska institut' },
-      { type: 'nytt',       text: 'Systemet hanterar nu flera feeds per myndighet i ett samlat flöde' },
-      { type: 'fixat',      text: 'Stabilitet och tillförlitlighetsförbättringar i hur händelser hämtas och filtreras' },
+      { type: 'fixat',      text: 'Förbättrat stabilitet och buggfixar' },
     ],
   },
   {
