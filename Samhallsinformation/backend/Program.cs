@@ -224,17 +224,34 @@ using (var scope = app.Services.CreateScope())
             db.Sources.Add(source);
         else
         {
-            existing.Name        = source.Name;
-            existing.ShortName   = source.ShortName;
-            existing.BaseUrl     = source.BaseUrl;
-            existing.Type        = source.Type;
-            existing.Url         = source.Url;
-            existing.IsPublished = source.IsPublished;
+            existing.Name      = source.Name;
+            existing.ShortName = source.ShortName;
+            existing.BaseUrl   = source.BaseUrl;
+            existing.Type      = source.Type;
+            existing.Url       = source.Url;
+            // IsPublished uppdateras INTE — admin-ändringar ska överleva restarts
             if (source.Category != null) existing.Category = source.Category;
         }
     }
 
     await db.SaveChangesAsync();
+
+    // Seed SMHI Nyheter — RSS-komplement till SmhiApiIngestor (varningar)
+    if (!db.Sources.Any(s => s.Url == "https://www.smhi.se/rss/nyheter-fran-smhi"))
+    {
+        db.Sources.Add(new Source
+        {
+            Name        = "SMHI Nyheter",
+            ShortName   = "SMHI",
+            BaseUrl     = "https://www.smhi.se",
+            Url         = "https://www.smhi.se/rss/nyheter-fran-smhi",
+            Category    = "Väder",
+            Type        = SourceType.RSS,
+            IsActive    = true,
+            IsPublished = false,
+        });
+        await db.SaveChangesAsync();
+    }
 
     // Rätta felaktiga RSS-URL:er (gamla URL:er pekade på HTML-sidor)
     var lmvSource = await db.Sources.FirstOrDefaultAsync(s =>
