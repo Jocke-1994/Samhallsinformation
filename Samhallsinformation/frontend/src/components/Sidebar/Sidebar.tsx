@@ -60,6 +60,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
   const synligaSektioner = PROFILE_SECTIONS.filter(s => isSektionSynlig(s.id, flaggor))
   const [dropdownÖppen, setDropdownÖppen] = useState(false)
   const [feedbackÖppen, setFeedbackÖppen] = useState(false)
+  const [sorteraAktiv, setSorteraAktiv] = useState(false)
 
   const { data: sources = [] } = useQuery<Source[]>({
     queryKey: ['sources'],
@@ -211,7 +212,20 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
         )}
 
         {/* Källor — en knapp per myndighet oavsett antal feeds */}
-        <SectionLabel>Källor</SectionLabel>
+        <div className="flex items-center justify-between px-1 py-3">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Källor</p>
+          {isLoggedIn && (
+            <button
+              onClick={() => setSorteraAktiv(v => !v)}
+              title={sorteraAktiv ? 'Stäng sortering' : 'Sortera källor'}
+              className={`p-1 rounded transition-colors ${sorteraAktiv ? 'text-violet-600' : 'text-slate-300 hover:text-slate-500'}`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7l4-4 4 4M16 17l-4 4-4-4" />
+              </svg>
+            </button>
+          )}
+        </div>
         <div className="flex flex-col gap-0.5">
           {isLoggedIn ? (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -223,6 +237,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
                     <SortableSourceButton
                       key={shortName}
                       shortName={shortName}
+                      sorteraAktiv={sorteraAktiv}
                       active={selectedShortName === shortName && !isProfilePage}
                       hasUnread={group.some(s => unreadSourceIds.has(s.id))}
                       onClick={() => {
