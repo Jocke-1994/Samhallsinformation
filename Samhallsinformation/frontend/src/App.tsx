@@ -16,8 +16,8 @@ import type { Source } from './types'
 
 function HomePage() {
   const location = useLocation()
-  const [selectedSourceId, setSelectedSourceId] = useState<number | null>(
-    (location.state as { sourceId?: number } | null)?.sourceId ?? null
+  const [selectedShortName, setSelectedShortName] = useState<string | null>(
+    (location.state as { shortName?: string } | null)?.shortName ?? null
   )
   const [readTrigger, setReadTrigger] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -28,8 +28,6 @@ function HomePage() {
   })
 
   const unreadSourceIds = useUnreadSourceIds(sources, readTrigger)
-
-  const selectedSource = sources.find(s => s.id === selectedSourceId) ?? null
 
   const handleReadStatusChange = useCallback(() => {
     setReadTrigger(n => n + 1)
@@ -45,8 +43,8 @@ function HomePage() {
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
       <Sidebar
-        selectedSourceId={selectedSourceId}
-        onSelectSource={setSelectedSourceId}
+        selectedShortName={selectedShortName}
+        onSelectSource={setSelectedShortName}
         unreadSourceIds={unreadSourceIds}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -54,7 +52,7 @@ function HomePage() {
       <WelcomeModal />
       <main {...swipeHandlers} className="flex-1 overflow-hidden select-none md:select-auto">
         <NewsFeed
-          source={selectedSource}
+          shortName={selectedShortName}
           sources={sources}
           onReadStatusChange={handleReadStatusChange}
           onOpenSidebar={() => setSidebarOpen(true)}

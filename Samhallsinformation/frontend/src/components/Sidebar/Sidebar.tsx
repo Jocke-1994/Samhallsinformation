@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTheme } from '../../context/ThemeContext'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
@@ -9,8 +9,8 @@ import type { Source } from '../../types'
 import { useAuth, type SystemRoll } from '../../context/AuthContext'
 
 interface Props {
-  selectedSourceId: number | null
-  onSelectSource: (id: number | null) => void
+  selectedShortName: string | null
+  onSelectSource: (shortName: string | null) => void
   unreadSourceIds: Set<number>
   isOpen: boolean
   onClose: () => void
@@ -45,7 +45,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function Sidebar({ selectedSourceId, onSelectSource, unreadSourceIds, isOpen, onClose }: Props) {
+export default function Sidebar({ selectedShortName, onSelectSource, unreadSourceIds, isOpen, onClose }: Props) {
   const navigate  = useNavigate()
   const location  = useLocation()
   const { isLoggedIn, roll, aktivVy, logout, byttVy } = useAuth()
@@ -57,6 +57,16 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
     queryKey: ['sources'],
     queryFn: fetchSources,
   })
+
+  // Gruppera aktiva källor per myndighet (shortName) — bevarar ordningen från API:t
+  const sourceGroups = useMemo(() => {
+    const groups = new Map<string, Source[]>()
+    for (const s of sources.filter(s => s.isActive)) {
+      if (!groups.has(s.shortName)) groups.set(s.shortName, [])
+      groups.get(s.shortName)!.push(s)
+    }
+    return groups
+  }, [sources])
 
   const isProfilePage = location.pathname === '/profil'
   const activeSection = isProfilePage
@@ -104,7 +114,7 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
         <button
           onClick={() => { onSelectSource(null); navigate('/'); onClose() }}
           className={`flex-1 text-center text-lg font-extrabold tracking-tight transition-colors ${
-            selectedSourceId === null && !isProfilePage
+            selectedShortName === null && !isProfilePage
               ? 'text-violet-700 dark:text-violet-400'
               : 'text-violet-600 dark:text-violet-500 hover:text-violet-700 dark:hover:text-violet-400'
           }`}
@@ -175,18 +185,18 @@ export default function Sidebar({ selectedSourceId, onSelectSource, unreadSource
           </>
         )}
 
-        {/* Källor */}
+        {/* Källor — en knapp per myndighet oavsett antal feeds */}
         <SectionLabel>Källor</SectionLabel>
         <div className="flex flex-col gap-0.5">
-          {sources.filter(s => s.isActive).map(source => (
+          {[...sourceGroups.entries()].map(([shortName, group]) => (
             <SourceButton
-              key={source.id}
-              label={source.shortName}
-              active={selectedSourceId === source.id && !isProfilePage}
-              hasUnread={unreadSourceIds.has(source.id)}
+              key={shortName}
+              label={shortName}
+              active={selectedShortName === shortName && !isProfilePage}
+              hasUnread={group.some(s => unreadSourceIds.has(s.id))}
               onClick={() => {
-                navigate('/', { state: { sourceId: source.id } })
-                onSelectSource(source.id)
+                navigate('/', { state: { shortName } })
+                onSelectSource(shortName)
                 onClose()
               }}
             />
