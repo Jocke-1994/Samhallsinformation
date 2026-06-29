@@ -2,10 +2,11 @@ import { useState } from 'react'
 import type { FaqKategori } from '../../types'
 
 interface FaqItem {
-  id:       number
-  fråga:    string
-  svar:     string
-  kategori: FaqKategori
+  id:         number
+  fråga:      string
+  svar:       string
+  kategori:   FaqKategori
+  publicerad: boolean
 }
 
 const KATEGORIER: FaqKategori[] = ['Notifieringar', 'Mina källor', 'Konto', 'Uppdateringar']
@@ -20,15 +21,15 @@ const KAT_FÄRG: Record<FaqKategori, string> = {
 let nästaId = 100
 
 const INITIAL_FAQ: FaqItem[] = [
-  { id: 1,  kategori: 'Notifieringar', fråga: 'Varför fick jag ingen notis?',                    svar: 'Kontrollera att rätt kanal (mail/SMS) är aktiverad under Notifieringar och att källan är tillagd under Mina källor. Det kan ta upp till 5 minuter innan en ny händelse når dig.' },
-  { id: 2,  kategori: 'Notifieringar', fråga: 'Hur ändrar jag mitt SMS-nummer?',                 svar: 'Gå till Notifieringar → Standardinställningar. Där visas ditt registrerade nummer och du kan uppdatera det.' },
-  { id: 3,  kategori: 'Notifieringar', fråga: 'Kan jag pausa notiser tillfälligt?',              svar: 'Ja, avmarkera Mail och SMS i Standardinställningar under Notifieringar. Dina inställningar sparas och kan aktiveras igen när du vill.' },
-  { id: 4,  kategori: 'Mina källor',   fråga: 'Hur lägger jag till fler källor?',                svar: 'Gå till Mina källor i profilmenyn. Där kan du söka efter myndigheter eller hämta förslag automatiskt via SPAR.' },
-  { id: 5,  kategori: 'Mina källor',   fråga: 'Kan jag följa flera myndigheter samtidigt?',     svar: 'Ja, du kan lägga till hur många källor du vill. Alla visas i ditt nyhetsflöde och du kan välja vilka du vill få notiser från.' },
-  { id: 6,  kategori: 'Konto',         fråga: 'Hur tar jag bort mitt konto?',                   svar: 'Gå till Konto → Datahantering och välj Radera konto. Åtgärden är permanent och kan inte ångras.' },
-  { id: 7,  kategori: 'Konto',         fråga: 'Hur laddar jag ner min data?',                   svar: 'Gå till Konto → Datahantering och klicka på Ladda ner. Du får en JSON-fil med all data vi har om dig (GDPR art. 20).' },
-  { id: 8,  kategori: 'Uppdateringar', fråga: 'Hur ser jag vad som är nytt i senaste versionen?', svar: 'Gå till Uppdateringar i profilmenyn. Under Senaste version ser du alla ändringar med direktlänkar till berörda funktioner.' },
-  { id: 9,  kategori: 'Uppdateringar', fråga: 'Hur rapporterar jag ett fel?',                   svar: 'Skapa ett nytt ärende via formuläret längre ner på den här sidan. Välj "Tekniskt fel på sidan" som ämne och beskriv vad som hänt.' },
+  { id: 1,  kategori: 'Notifieringar', publicerad: true, fråga: 'Varför fick jag ingen notis?',                    svar: 'Kontrollera att rätt kanal (mail/SMS) är aktiverad under Notifieringar och att källan är tillagd under Mina källor. Det kan ta upp till 5 minuter innan en ny händelse når dig.' },
+  { id: 2,  kategori: 'Notifieringar', publicerad: true, fråga: 'Hur ändrar jag mitt SMS-nummer?',                 svar: 'Gå till Notifieringar → Standardinställningar. Där visas ditt registrerade nummer och du kan uppdatera det.' },
+  { id: 3,  kategori: 'Notifieringar', publicerad: true, fråga: 'Kan jag pausa notiser tillfälligt?',              svar: 'Ja, avmarkera Mail och SMS i Standardinställningar under Notifieringar. Dina inställningar sparas och kan aktiveras igen när du vill.' },
+  { id: 4,  kategori: 'Mina källor',   publicerad: true, fråga: 'Hur lägger jag till fler källor?',                svar: 'Gå till Mina källor i profilmenyn. Där kan du söka efter myndigheter eller hämta förslag automatiskt via SPAR.' },
+  { id: 5,  kategori: 'Mina källor',   publicerad: true, fråga: 'Kan jag följa flera myndigheter samtidigt?',     svar: 'Ja, du kan lägga till hur många källor du vill. Alla visas i ditt nyhetsflöde och du kan välja vilka du vill få notiser från.' },
+  { id: 6,  kategori: 'Konto',         publicerad: true, fråga: 'Hur tar jag bort mitt konto?',                   svar: 'Gå till Konto → Datahantering och välj Radera konto. Åtgärden är permanent och kan inte ångras.' },
+  { id: 7,  kategori: 'Konto',         publicerad: true, fråga: 'Hur laddar jag ner min data?',                   svar: 'Gå till Konto → Datahantering och klicka på Ladda ner. Du får en JSON-fil med all data vi har om dig (GDPR art. 20).' },
+  { id: 8,  kategori: 'Uppdateringar', publicerad: true, fråga: 'Hur ser jag vad som är nytt i senaste versionen?', svar: 'Gå till Uppdateringar i profilmenyn. Under Senaste version ser du alla ändringar med direktlänkar till berörda funktioner.' },
+  { id: 9,  kategori: 'Uppdateringar', publicerad: true, fråga: 'Hur rapporterar jag ett fel?',                   svar: 'Skapa ett nytt ärende via formuläret längre ner på den här sidan. Välj "Tekniskt fel på sidan" som ämne och beskriv vad som hänt.' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -181,13 +182,18 @@ export default function AdminFaq() {
     if (redigerar) {
       setFrågor(prev => prev.map(f => f.id === redigerar.id ? { ...f, fråga, svar, kategori } : f))
     } else {
-      setFrågor(prev => [...prev, { id: nästaId++, fråga, svar, kategori }])
+      setFrågor(prev => [...prev, { id: nästaId++, fråga, svar, kategori, publicerad: true }])
     }
     stängPanel()
   }
 
+  function togglePublicerad(id: number) {
+    setFrågor(prev => prev.map(f => f.id === id ? { ...f, publicerad: !f.publicerad } : f))
+  }
+
   const antal = {
     totalt:        frågor.length,
+    publicerade:   frågor.filter(f => f.publicerad).length,
     notifieringar: frågor.filter(f => f.kategori === 'Notifieringar').length,
     kallor:        frågor.filter(f => f.kategori === 'Mina källor').length,
     konto:         frågor.filter(f => f.kategori === 'Konto').length,
@@ -210,9 +216,10 @@ export default function AdminFaq() {
       )}
 
       {/* Stat-kort */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-6 gap-4">
         {[
           { label: 'Totalt',        värde: antal.totalt,        färg: 'text-slate-800' },
+          { label: 'Publicerade',   värde: antal.publicerade,   färg: 'text-green-600' },
           { label: 'Notifieringar', värde: antal.notifieringar, färg: 'text-violet-600' },
           { label: 'Mina källor',   värde: antal.kallor,        färg: 'text-blue-600'   },
           { label: 'Konto',         värde: antal.konto,         färg: 'text-amber-600'  },
@@ -278,12 +285,13 @@ export default function AdminFaq() {
               <th className="text-left px-6 py-3 font-medium">Fråga</th>
               <th className="text-left px-4 py-3 font-medium">Svar</th>
               <th className="text-left px-4 py-3 font-medium">Kategori</th>
+              <th className="text-left px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
             {filtrerade.map(f => (
-              <tr key={f.id} className="hover:bg-slate-50 transition-colors">
+              <tr key={f.id} className={`transition-colors ${f.publicerad ? 'hover:bg-slate-50' : 'bg-slate-50/60 opacity-60 hover:opacity-80'}`}>
                 <td className="px-6 py-3 w-64">
                   <p className="font-medium text-slate-800 line-clamp-2">{f.fråga}</p>
                 </td>
@@ -294,6 +302,18 @@ export default function AdminFaq() {
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${KAT_FÄRG[f.kategori]}`}>
                     {f.kategori}
                   </span>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <button
+                    onClick={() => togglePublicerad(f.id)}
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                      f.publicerad
+                        ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                        : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f.publicerad ? 'Publicerad' : 'Dold'}
+                  </button>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2 justify-end">
