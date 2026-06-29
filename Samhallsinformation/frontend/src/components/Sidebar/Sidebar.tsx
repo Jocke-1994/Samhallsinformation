@@ -197,7 +197,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
               key={shortName}
               label={shortName}
               active={selectedShortName === shortName && !isProfilePage}
-              hasUnread={group.some(s => unreadSourceIds.has(s.id))}
+              hasUnread={isLoggedIn && group.some(s => unreadSourceIds.has(s.id))}
               onClick={() => {
                 navigate('/', { state: { shortName } })
                 onSelectSource(shortName)
