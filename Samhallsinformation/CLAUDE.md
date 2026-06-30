@@ -59,6 +59,29 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 19 — 2026-06-30
+**What was done:**
+- Felsökte och åtgärdade PostgreSQL-krasch (42804) vid backend-start efter PR #321-merge
+- Rotorsak: SQLite-genererade migrationer skriver `HasColumnType("TEXT")` i Designer.cs-snapshot. EF Core använder snapshot — inte `Up()`-metoden — för att bestämma kolumntyper vid körning. `Users.Id` var `text` och nya `UserId`-kolumner skapades som `text`; efter DO-block-konvertering av `Users.Id` till `uuid` kraschade FK text→uuid.
+- PR #323: DO-block i migrationen för att konvertera `Users.Id` text→uuid
+- PR #324: tog bort explicit `type: "TEXT"` från Guid-kolumner i migrationen (hjälpte inte — snapshot vinner)
+- PR #325: flyttade `Users.Id`-konverteringen till före `MigrateAsync()` i Program.cs (hjälpte inte — tabellerna skapades fortfarande med TEXT)
+- PR #326 (definitiv fix): kör `AddUserSystem` och `AddPasswordResetToken` som raw SQL i Program.cs med korrekta PostgreSQL-typer (`uuid`, `timestamptz`, `boolean`) och markerar dem i `__EFMigrationsHistory` — `MigrateAsync()` hoppar sedan över dem
+
+**Problem och lösningar:**
+- 4 PRs krävdes för att lösa ett enda migrationsproblem pga att EF Core/Npgsql beter sig annorlunda än förväntat med SQLite-genererade migrationer mot PostgreSQL
+
+**Inga UI-ändringar** — hela sessionen var backend/migrationsfix
+
+**Next session (Session 20):**
+- Faktisk inloggning och kontoregistrering i UI: testa hela flödet login → register → lösenordsåterställning end-to-end
+- Koppla profilsidan (KontoInfo, LösenordByte) mot `GET/PUT /api/auth/me`
+- Ersätt `useSourceOrder` localStorage-hook med `GET/PUT /api/user/sources`
+- Synliga login/register-knappar i sidebaren när flödet känns stabilt
+- Planerad kodgenomgång: hela stacken, vad varje del gör och varför
+
+---
+
 ### Session 18 — 2026-06-30
 **What was done:**
 - SMHI Nyheter aktiverad (IsPublished=true) via admin — nu 6 aktiva källor live
