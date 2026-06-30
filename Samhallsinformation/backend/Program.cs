@@ -85,6 +85,9 @@ builder.Services.AddScoped<IIngestor, KrisinformationApiIngestor>();
 builder.Services.AddScoped<IIngestor, TrafikverketApiIngestor>();
 builder.Services.AddScoped<IIngestor, SmhiApiIngestor>();
 
+// E-posttjänst
+builder.Services.AddSingleton<IEmailService, ResendEmailService>();
+
 // Background service
 builder.Services.AddHostedService<IngestorBackgroundService>();
 
