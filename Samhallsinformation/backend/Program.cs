@@ -178,6 +178,139 @@ using (var scope = app.Services.CreateScope())
               END IF;
             END $$;
         ");
+
+        // EF Core använder Designer.cs-snapshot för att bestämma typer, inte Up()-metoden.
+        // SQLite-genererade migrationer har HasColumnType("TEXT") för uuid/bool/timestamp.
+        // Kör dessa manuellt som raw SQL med korrekta PostgreSQL-typer.
+        var pendingMigrations = (await db.Database.GetPendingMigrationsAsync()).ToHashSet();
+
+        if (pendingMigrations.Contains("20260630100030_AddUserSystem"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""CreatedAt"" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00+00'::timestamptz;
+
+                CREATE TABLE IF NOT EXISTS ""NotificationDeliveryLogs"" (
+                    ""Id""           uuid NOT NULL,
+                    ""UserId""       uuid NOT NULL,
+                    ""SourceId""     INTEGER,
+                    ""Channel""      TEXT NOT NULL,
+                    ""Recipient""    TEXT NOT NULL,
+                    ""Subject""      TEXT NOT NULL,
+                    ""Body""         TEXT NOT NULL,
+                    ""Status""       TEXT NOT NULL,
+                    ""ErrorMessage"" TEXT,
+                    ""SentAt""       timestamptz NOT NULL,
+                    CONSTRAINT ""PK_NotificationDeliveryLogs"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_NotificationDeliveryLogs_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS ""UserDevices"" (
+                    ""Id""           uuid NOT NULL,
+                    ""UserId""       uuid NOT NULL,
+                    ""Token""        TEXT NOT NULL,
+                    ""DeviceName""   TEXT NOT NULL,
+                    ""Platform""     TEXT NOT NULL,
+                    ""RegisteredAt"" timestamptz NOT NULL,
+                    ""LastSeenAt""   timestamptz NOT NULL,
+                    CONSTRAINT ""PK_UserDevices"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_UserDevices_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS ""UserDoNotDisturbSchedules"" (
+                    ""Id""        uuid NOT NULL,
+                    ""UserId""    uuid NOT NULL,
+                    ""IsEnabled"" BOOLEAN NOT NULL,
+                    ""StartTime"" TIME NOT NULL,
+                    ""EndTime""   TIME NOT NULL,
+                    CONSTRAINT ""PK_UserDoNotDisturbSchedules"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_UserDoNotDisturbSchedules_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS ""UserNotificationSettings"" (
+                    ""Id""           uuid NOT NULL,
+                    ""UserId""       uuid NOT NULL,
+                    ""SourceId""     INTEGER NOT NULL,
+                    ""PushEnabled""  BOOLEAN NOT NULL,
+                    ""EmailEnabled"" BOOLEAN NOT NULL,
+                    ""SmsEnabled""   BOOLEAN NOT NULL,
+                    CONSTRAINT ""PK_UserNotificationSettings"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_UserNotificationSettings_Sources_SourceId""
+                        FOREIGN KEY (""SourceId"") REFERENCES ""Sources"" (""Id"") ON DELETE CASCADE,
+                    CONSTRAINT ""FK_UserNotificationSettings_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS ""UserSettingAuditLogs"" (
+                    ""Id""         uuid NOT NULL,
+                    ""UserId""     uuid NOT NULL,
+                    ""Setting""    TEXT NOT NULL,
+                    ""OldValue""   TEXT,
+                    ""NewValue""   TEXT,
+                    ""ChangedBy""  TEXT NOT NULL,
+                    ""ChangedAt""  timestamptz NOT NULL,
+                    CONSTRAINT ""PK_UserSettingAuditLogs"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_UserSettingAuditLogs_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS ""UserSourcePreferences"" (
+                    ""Id""        uuid NOT NULL,
+                    ""UserId""    uuid NOT NULL,
+                    ""SourceId""  INTEGER NOT NULL,
+                    ""IsActive""  BOOLEAN NOT NULL,
+                    ""SortOrder"" INTEGER NOT NULL,
+                    CONSTRAINT ""PK_UserSourcePreferences"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_UserSourcePreferences_Sources_SourceId""
+                        FOREIGN KEY (""SourceId"") REFERENCES ""Sources"" (""Id"") ON DELETE CASCADE,
+                    CONSTRAINT ""FK_UserSourcePreferences_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE INDEX IF NOT EXISTS ""IX_NotificationDeliveryLogs_SentAt""       ON ""NotificationDeliveryLogs""  (""SentAt"");
+                CREATE INDEX IF NOT EXISTS ""IX_NotificationDeliveryLogs_UserId""        ON ""NotificationDeliveryLogs""  (""UserId"");
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_UserDevices_Token""               ON ""UserDevices""               (""Token"");
+                CREATE INDEX IF NOT EXISTS ""IX_UserDevices_UserId""                     ON ""UserDevices""               (""UserId"");
+                CREATE INDEX IF NOT EXISTS ""IX_UserDoNotDisturbSchedules_UserId""       ON ""UserDoNotDisturbSchedules"" (""UserId"");
+                CREATE INDEX IF NOT EXISTS ""IX_UserNotificationSettings_SourceId""      ON ""UserNotificationSettings""  (""SourceId"");
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_UserNotificationSettings_UserId_SourceId""
+                    ON ""UserNotificationSettings"" (""UserId"", ""SourceId"");
+                CREATE INDEX IF NOT EXISTS ""IX_UserSettingAuditLogs_ChangedAt""         ON ""UserSettingAuditLogs""      (""ChangedAt"");
+                CREATE INDEX IF NOT EXISTS ""IX_UserSettingAuditLogs_UserId""            ON ""UserSettingAuditLogs""      (""UserId"");
+                CREATE INDEX IF NOT EXISTS ""IX_UserSourcePreferences_SourceId""         ON ""UserSourcePreferences""     (""SourceId"");
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_UserSourcePreferences_UserId_SourceId""
+                    ON ""UserSourcePreferences"" (""UserId"", ""SourceId"");
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260630100030_AddUserSystem', '10.0.9')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
+        if (pendingMigrations.Contains("20260630104120_AddPasswordResetToken"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""PasswordResetTokens"" (
+                    ""Id""        uuid NOT NULL,
+                    ""UserId""    uuid NOT NULL,
+                    ""Token""     TEXT NOT NULL,
+                    ""ExpiresAt"" timestamptz NOT NULL,
+                    ""UsedAt""    timestamptz,
+                    CONSTRAINT ""PK_PasswordResetTokens"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_PasswordResetTokens_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PasswordResetTokens_Token""  ON ""PasswordResetTokens"" (""Token"");
+                CREATE INDEX IF NOT EXISTS ""IX_PasswordResetTokens_UserId""         ON ""PasswordResetTokens"" (""UserId"");
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260630104120_AddPasswordResetToken', '10.0.9')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 
