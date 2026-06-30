@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar/Sidebar'
 import NewsFeed from './components/NewsFeed/NewsFeed'
 import ProfilePage from './pages/ProfilePage'
 import AdminPage from './pages/AdminPage'
+import LoginPage from './pages/LoginPage'
 import CookieConsent from './components/CookieConsent/CookieConsent'
 import OmPage from './pages/OmPage'
 import UppdateringarPage from './pages/UppdateringarPage'
@@ -91,6 +92,7 @@ export default function App() {
       <ImpersonationBanner />
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/profil" element={<ProfilePage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/om" element={<OmPage />} />

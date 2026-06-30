@@ -54,8 +54,10 @@ export default function AdminPage() {
   const { isLoggedIn, roll, aktivVy, byttVy } = useAuth()
 
   useEffect(() => {
-    if (!isLoggedIn || (roll !== 'Admin' && roll !== 'Support')) {
-      navigate('/profil', { replace: true })
+    if (!isLoggedIn) {
+      navigate('/login?redirect=/admin', { replace: true })
+    } else if (roll !== 'Admin' && roll !== 'Support') {
+      navigate('/', { replace: true })
     }
   }, [isLoggedIn, roll, navigate])
 

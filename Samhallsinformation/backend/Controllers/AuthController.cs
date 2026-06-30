@@ -6,6 +6,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -39,6 +40,39 @@ public class AuthController : ControllerBase
         return Ok(new { token, name = user.Name, role = user.Role });
     }
 
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
+            return BadRequest(new { error = "Namn, e-post och lösenord krävs" });
+
+        if (await _db.Users.AnyAsync(u => u.Email == req.Email))
+            return Conflict(new { error = "E-postadressen används redan" });
+
+        var hasher = new PasswordHasher<User>();
+        var user   = new User { Name = req.Name, Email = req.Email };
+        user.PasswordHash = hasher.HashPassword(user, req.Password);
+
+        _db.Users.Add(user);
+
+        var sources = await _db.Sources.Where(s => s.IsPublished).OrderBy(s => s.Id).ToListAsync();
+        for (int i = 0; i < sources.Count; i++)
+        {
+            _db.UserSourcePreferences.Add(new UserSourcePreference
+            {
+                UserId    = user.Id,
+                SourceId  = sources[i].Id,
+                IsActive  = true,
+                SortOrder = i,
+            });
+        }
+
+        await _db.SaveChangesAsync();
+
+        var token = GenerateToken(user);
+        return Ok(new { token, name = user.Name, role = user.Role });
+    }
+
     [HttpGet("me")]
     [Authorize]
     public IActionResult Me()
@@ -49,6 +83,56 @@ public class AuthController : ControllerBase
         return Ok(new { email, name, role });
     }
 
+    [HttpPut("me")]
+    [Authorize]
+    public async Task<IActionResult> UpdateMe([FromBody] UpdateMeRequest req)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var user   = await _db.Users.FindAsync(userId);
+        if (user == null) return NotFound();
+
+        var oldName  = user.Name;
+        var oldEmail = user.Email;
+
+        if (!string.IsNullOrWhiteSpace(req.Name))  user.Name  = req.Name;
+        if (!string.IsNullOrWhiteSpace(req.Email))
+        {
+            if (await _db.Users.AnyAsync(u => u.Email == req.Email && u.Id != userId))
+                return Conflict(new { error = "E-postadressen används redan" });
+            user.Email = req.Email;
+        }
+
+        if (user.Name != oldName)
+            _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "name", OldValue = oldName, NewValue = user.Name });
+        if (user.Email != oldEmail)
+            _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "email", OldValue = oldEmail, NewValue = user.Email });
+
+        await _db.SaveChangesAsync();
+
+        var token = GenerateToken(user);
+        return Ok(new { token, name = user.Name, role = user.Role });
+    }
+
+    [HttpPut("me/password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var user   = await _db.Users.FindAsync(userId);
+        if (user == null) return NotFound();
+
+        var hasher = new PasswordHasher<User>();
+        if (hasher.VerifyHashedPassword(user, user.PasswordHash, req.CurrentPassword) == PasswordVerificationResult.Failed)
+            return Unauthorized(new { error = "Nuvarande lösenord stämmer inte" });
+
+        user.PasswordHash = hasher.HashPassword(user, req.NewPassword);
+
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "password", OldValue = null, NewValue = null, ChangedBy = "user" });
+
+        await _db.SaveChangesAsync();
+        return Ok(new { message = "Lösenordet är uppdaterat" });
+    }
+
     private string GenerateToken(User user)
     {
         var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
@@ -57,14 +141,15 @@ public class AuthController : ControllerBase
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub,   user.Id.ToString()),
+            new Claim(ClaimTypes.NameIdentifier,     user.Id.ToString()),
             new Claim(ClaimTypes.Email,              user.Email),
             new Claim("name",                        user.Name),
             new Claim("role",                        user.Role),
         };
 
         var token = new JwtSecurityToken(
-            claims:            claims,
-            expires:           DateTime.UtcNow.AddDays(30),
+            claims:             claims,
+            expires:            DateTime.UtcNow.AddDays(30),
             signingCredentials: creds
         );
 
@@ -73,3 +158,6 @@ public class AuthController : ControllerBase
 }
 
 public record LoginRequest(string Email, string Password);
+public record RegisterRequest(string Name, string Email, string Password);
+public record UpdateMeRequest(string? Name, string? Email);
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
