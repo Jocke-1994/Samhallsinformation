@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<UserDoNotDisturbSchedule>   UserDoNotDisturbSchedules => Set<UserDoNotDisturbSchedule>();
     public DbSet<UserSettingAuditLog>        UserSettingAuditLogs      => Set<UserSettingAuditLog>();
     public DbSet<NotificationDeliveryLog>    NotificationDeliveryLogs  => Set<NotificationDeliveryLog>();
+    public DbSet<PasswordResetToken>         PasswordResetTokens       => Set<PasswordResetToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -89,6 +90,14 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.SentAt);
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => e.UserId);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
         });
     }

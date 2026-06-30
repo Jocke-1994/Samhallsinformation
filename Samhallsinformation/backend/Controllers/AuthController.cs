@@ -10,18 +10,23 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
+using Samhallsinformation.Services;
 
 [ApiController]
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly AppDbContext _db;
-    private readonly string _jwtSecret;
+    private readonly AppDbContext  _db;
+    private readonly IEmailService _email;
+    private readonly string        _jwtSecret;
+    private readonly string        _frontendUrl;
 
-    public AuthController(AppDbContext db, IConfiguration config)
+    public AuthController(AppDbContext db, IEmailService email, IConfiguration config)
     {
-        _db        = db;
-        _jwtSecret = config["JWT_SECRET"] ?? "dev-secret-change-in-production-at-least-32-chars";
+        _db          = db;
+        _email       = email;
+        _jwtSecret   = config["JWT_SECRET"] ?? "dev-secret-change-in-production-at-least-32-chars";
+        _frontendUrl = config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
     }
 
     [HttpPost("login")]
@@ -69,8 +74,55 @@ public class AuthController : ControllerBase
 
         await _db.SaveChangesAsync();
 
+        _ = _email.SendWelcomeAsync(user.Email, user.Name);
+
         var token = GenerateToken(user);
         return Ok(new { token, name = user.Name, role = user.Role });
+    }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == req.Email);
+        if (user == null)
+            return Ok(new { message = "Om e-postadressen finns skickas ett återställningsmejl" });
+
+        var resetToken = new PasswordResetToken { UserId = user.Id };
+        _db.PasswordResetTokens.Add(resetToken);
+        await _db.SaveChangesAsync();
+
+        var resetLink = $"{_frontendUrl}/reset-password?token={resetToken.Token}";
+        _ = _email.SendPasswordResetAsync(user.Email, user.Name, resetLink);
+
+        return Ok(new { message = "Om e-postadressen finns skickas ett återställningsmejl" });
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req)
+    {
+        var resetToken = await _db.PasswordResetTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.Token == req.Token);
+
+        if (resetToken == null || resetToken.UsedAt != null || resetToken.ExpiresAt < DateTime.UtcNow)
+            return BadRequest(new { error = "Länken är ogiltig eller har gått ut" });
+
+        if (req.NewPassword.Length < 8)
+            return BadRequest(new { error = "Lösenordet måste vara minst 8 tecken" });
+
+        var hasher = new PasswordHasher<User>();
+        resetToken.User.PasswordHash = hasher.HashPassword(resetToken.User, req.NewPassword);
+        resetToken.UsedAt = DateTime.UtcNow;
+
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId    = resetToken.UserId,
+            Setting   = "password",
+            ChangedBy = "reset",
+        });
+
+        await _db.SaveChangesAsync();
+        return Ok(new { message = "Lösenordet är uppdaterat" });
     }
 
     [HttpGet("me")]
@@ -161,3 +213,5 @@ public record LoginRequest(string Email, string Password);
 public record RegisterRequest(string Name, string Email, string Password);
 public record UpdateMeRequest(string? Name, string? Email);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+public record ForgotPasswordRequest(string Email);
+public record ResetPasswordRequest(string Token, string NewPassword);
