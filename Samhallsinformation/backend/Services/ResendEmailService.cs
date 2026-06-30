@@ -27,6 +27,7 @@ public class ResendEmailService : IEmailService
                 Återställ lösenord
               </a>
               <p style="color:#64748b;font-size:13px">Länken är giltig i 1 timme. Om du inte begärde detta kan du ignorera mejlet.</p>
+              <p style="color:#64748b;font-size:13px">Har du frågor eller funderingar är du alltid välkommen att höra av dig till oss.</p>
               <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
               <p style="color:#94a3b8;font-size:12px">Samhällsinformation &mdash; opartisk myndighetsinformation</p>
             </div>
@@ -42,6 +43,7 @@ public class ResendEmailService : IEmailService
               <h2 style="color:#7c3aed;margin-bottom:8px">Välkommen till Samhällsinformation!</h2>
               <p style="color:#334155">Hej {toName},</p>
               <p style="color:#334155">Ditt konto är nu skapat. Du kan nu följa svenska myndigheter och hålla dig uppdaterad om viktig samhällsinformation.</p>
+              <p style="color:#334155">Har du frågor eller funderingar är du alltid välkommen att höra av dig till oss.</p>
               <a href="https://samhallsinformation.se" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
                 Gå till Samhällsinformation
               </a>
