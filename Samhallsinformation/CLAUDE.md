@@ -59,6 +59,49 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 18 — 2026-06-30
+**What was done:**
+- SMHI Nyheter aktiverad (IsPublished=true) via admin — nu 6 aktiva källor live
+- Genomgång av hela användarsystemet: beslutade tabellstruktur, auditlogg, notisleveranslogg, DB som enda källan till sanning (ingen localStorage för inställningar)
+- Resend uppsatt: domän `samhallsinformation.se` verifierad via Cloudflare auto-configure, API-nyckel skapad med Sending access, `RESEND_API_KEY` + `FRONTEND_URL` inlagda i Railway
+- PR #321 (feat/auth-login-register): fullt login/register-flöde med e-post och lösenordsåterställning
+
+**Backend (PR #321):**
+- `POST /api/auth/register` — skapar konto, hashar lösenord, seedar `UserSourcePreference` med alla aktiva källor, skickar välkomstmejl
+- `PUT /api/auth/me` + `/me/password` — uppdatera profil och byta lösenord, allt loggas i `UserSettingAuditLog`
+- `GET/PUT /api/user/sources` — källordning och aktiv/inaktiv per användare
+- `POST /api/auth/forgot-password` + `/reset-password` — återställningstoken (1 h giltighetstid), mejl via Resend
+- `IEmailService` + `ResendEmailService` — `noreply@samhallsinformation.se`, välkomst- och återställningsmejl
+- Nya modeller + migrationer: `UserDevice`, `UserSourcePreference`, `UserNotificationSetting`, `UserDoNotDisturbSchedule`, `UserSettingAuditLog`, `NotificationDeliveryLog`, `PasswordResetToken`
+
+**Frontend (PR #321):**
+- `/login` — inloggning med länk till register och glömt lösenord
+- `/register` — skapa konto med länk tillbaka till login
+- `/forgot-password` — ange e-post, visa bekräftelse
+- `/reset-password?token=` — sätt nytt lösenord, redirect till login efter 3 s
+- `register()` tillagd i `AuthContext`
+- `AdminPage` redirectar till `/login?redirect=/admin` om ej inloggad
+- Inga synliga knappar i UI — sidorna nås via direktlänk tills vidare
+
+**Problem och lösningar denna session:**
+- CI-fel: `FormEvent` måste importeras med `import { type FormEvent }` pga `verbatimModuleSyntax` — fixat i alla fyra auth-sidor
+
+**Etablerat mönster:**
+DB är källan till sanning för alla användarinställningar — ingen localStorage för inställningar. `UserSettingAuditLog` loggas automatiskt vid varje inställningsändring med tidsstämpel, gammalt/nytt värde och vem som ändrade.
+
+**E-posttjänst:**
+- Resend med domän `samhallsinformation.se` (eu-west-1, Cloudflare)
+- `noreply@samhallsinformation.se` för transaktionsmejl
+- `support@samhallsinformation.se` reserverad för framtida ticket-notiser
+
+**Next session (Session 19):**
+- Koppla profilsidan mot riktigt backend-data (KontoInfo, LösenordByte)
+- Koppla källordning (drag-and-drop) mot `GET/PUT /api/user/sources` istället för localStorage
+- Synliga knappar för login/register när flödet känns stabilt
+- Användare-sektionen i admin mot riktigt API
+
+---
+
 ### Session 17 — 2026-06-29
 **What was done:**
 - FAQ-admin kopplad mot användarsidan via delad localStorage (PR #317): ny `faqStorage.ts` med `laddaFaq()` / `sparaFaq()` + `INITIAL_FAQ`. `AdminFaq` initieras från localStorage och sparar vid varje toggle/spara/ta bort. `FaqKort` läser från samma `laddaFaq()` och renderar enbart frågor med `publicerad: true`.
