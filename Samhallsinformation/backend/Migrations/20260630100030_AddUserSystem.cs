@@ -38,8 +38,8 @@ namespace Samhallsinformation.Migrations
                 name: "NotificationDeliveryLogs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
                     SourceId = table.Column<int>(type: "INTEGER", nullable: true),
                     Channel = table.Column<string>(type: "TEXT", nullable: false),
                     Recipient = table.Column<string>(type: "TEXT", nullable: false),
@@ -64,8 +64,8 @@ namespace Samhallsinformation.Migrations
                 name: "UserDevices",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
                     Token = table.Column<string>(type: "TEXT", nullable: false),
                     DeviceName = table.Column<string>(type: "TEXT", nullable: false),
                     Platform = table.Column<string>(type: "TEXT", nullable: false),
@@ -87,8 +87,8 @@ namespace Samhallsinformation.Migrations
                 name: "UserDoNotDisturbSchedules",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
                     IsEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
                     StartTime = table.Column<TimeOnly>(type: "TEXT", nullable: false),
                     EndTime = table.Column<TimeOnly>(type: "TEXT", nullable: false)
@@ -108,8 +108,8 @@ namespace Samhallsinformation.Migrations
                 name: "UserNotificationSettings",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
                     SourceId = table.Column<int>(type: "INTEGER", nullable: false),
                     PushEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
                     EmailEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
@@ -136,8 +136,8 @@ namespace Samhallsinformation.Migrations
                 name: "UserSettingAuditLogs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
                     Setting = table.Column<string>(type: "TEXT", nullable: false),
                     OldValue = table.Column<string>(type: "TEXT", nullable: true),
                     NewValue = table.Column<string>(type: "TEXT", nullable: true),
@@ -159,8 +159,8 @@ namespace Samhallsinformation.Migrations
                 name: "UserSourcePreferences",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
                     SourceId = table.Column<int>(type: "INTEGER", nullable: false),
                     IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
                     SortOrder = table.Column<int>(type: "INTEGER", nullable: false)
