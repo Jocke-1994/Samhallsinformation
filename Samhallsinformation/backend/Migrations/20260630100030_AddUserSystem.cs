@@ -11,6 +11,22 @@ namespace Samhallsinformation.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Konverterar Users.Id från TEXT (SQLite-migration) till uuid så FK:er kan skapas
+            if (migrationBuilder.ActiveProvider == "Npgsql.EntityFrameworkCore.PostgreSQL")
+            {
+                migrationBuilder.Sql(@"
+                    DO $$
+                    BEGIN
+                      IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'Users' AND column_name = 'Id' AND data_type = 'text'
+                      ) THEN
+                        ALTER TABLE ""Users"" ALTER COLUMN ""Id"" TYPE uuid USING ""Id""::uuid;
+                      END IF;
+                    END $$;
+                ");
+            }
+
             migrationBuilder.AddColumn<DateTime>(
                 name: "CreatedAt",
                 table: "Users",
