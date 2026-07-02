@@ -15,6 +15,13 @@ interface Update {
 
 const UPDATES: Update[] = [
   {
+    title: 'Chatt-hjälp tillagd',
+    date: 'Juli 2026',
+    changes: [
+      { type: 'nytt', text: 'En chattfunktion för snabb hjälp har lagts till direkt på sajten' },
+    ],
+  },
+  {
     title: 'SMHI är tillagd som källa',
     date: 'Juni 2026',
     changes: [
