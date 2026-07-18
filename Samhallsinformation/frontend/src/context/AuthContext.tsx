@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 
 export type SystemRoll = 'Användare' | 'Support' | 'Admin'
 
@@ -12,21 +12,39 @@ interface AuthContextType {
   byttVy: (vy: SystemRoll) => void
 }
 
+interface TokenPair {
+  accessToken: string
+  refreshToken: string
+}
+
 const AuthContext = createContext<AuthContextType | null>(null)
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
-function parseRole(token: string): SystemRoll {
+// Hur lång tid innan access-token går ut som en ny hämtas
+const REFRESH_MARGIN_MS = 2 * 60 * 1000
+
+function decodePayload(token: string): Record<string, unknown> | null {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    const role = payload['role']
-    if (role === 'Admin') return 'Admin'
-    if (role === 'Support') return 'Support'
-  } catch { /* ignore */ }
+    return JSON.parse(atob(token.split('.')[1]))
+  } catch {
+    return null
+  }
+}
+
+function parseRole(token: string): SystemRoll {
+  const role = decodePayload(token)?.['role']
+  if (role === 'Admin') return 'Admin'
+  if (role === 'Support') return 'Support'
   return 'Användare'
 }
 
-async function authRequest(url: string, body: object): Promise<{ token: string; role: string; name: string }> {
+function decodeExp(token: string): number | null {
+  const exp = decodePayload(token)?.['exp']
+  return typeof exp === 'number' ? exp * 1000 : null
+}
+
+async function authRequest(url: string, body: object): Promise<TokenPair & { role: string; name: string }> {
   const res = await fetch(url, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -41,6 +59,7 @@ async function authRequest(url: string, body: object): Promise<{ token: string; 
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('si_token'))
+  const refreshTokenRef = useRef<string | null>(localStorage.getItem('si_refresh_token'))
 
   const isLoggedIn = token !== null
   const roll       = token ? parseRole(token) : 'Användare'
@@ -49,31 +68,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => (localStorage.getItem('si_aktiv_vy') as SystemRoll) ?? roll
   )
 
-  function applyToken(data: { token: string }) {
-    localStorage.setItem('si_token', data.token)
-    localStorage.setItem('si_logged_in', 'true')
-    setToken(data.token)
-    const newRoll = parseRole(data.token)
-    setAktivVy(newRoll)
-    localStorage.setItem('si_aktiv_vy', newRoll)
-  }
-
-  async function login(email: string, password: string): Promise<void> {
-    const data = await authRequest(`${API_BASE}/api/auth/login`, { email, password })
-    applyToken(data)
-  }
-
-  async function register(name: string, email: string, password: string): Promise<void> {
-    const data = await authRequest(`${API_BASE}/api/auth/register`, { name, email, password })
-    applyToken(data)
-  }
-
-  function logout() {
+  const clearSession = useCallback(() => {
+    refreshTokenRef.current = null
     localStorage.removeItem('si_token')
+    localStorage.removeItem('si_refresh_token')
     localStorage.removeItem('si_logged_in')
     localStorage.removeItem('si_aktiv_vy')
     setToken(null)
     setAktivVy('Användare')
+  }, [])
+
+  const applyTokens = useCallback((data: TokenPair) => {
+    localStorage.setItem('si_token', data.accessToken)
+    localStorage.setItem('si_refresh_token', data.refreshToken)
+    localStorage.setItem('si_logged_in', 'true')
+    refreshTokenRef.current = data.refreshToken
+    const newRoll = parseRole(data.accessToken)
+    localStorage.setItem('si_aktiv_vy', newRoll)
+    setAktivVy(newRoll)
+    setToken(data.accessToken)
+  }, [])
+
+  const doRefresh = useCallback(async () => {
+    const rt = refreshTokenRef.current
+    if (!rt) { clearSession(); return }
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ refreshToken: rt }),
+      })
+      if (!res.ok) { clearSession(); return }
+      applyTokens(await res.json())
+    } catch {
+      clearSession()
+    }
+  }, [applyTokens, clearSession])
+
+  // Schemalägg nästa refresh ~2 min innan access-token går ut. Körs om varje
+  // gång token ändras (login/register/refresh) så nästa refresh läggs på nytt.
+  useEffect(() => {
+    if (!token) return
+    const exp = decodeExp(token)
+    if (exp === null) return
+    const delay = Math.max(0, exp - Date.now() - REFRESH_MARGIN_MS)
+    const timer = setTimeout(doRefresh, delay)
+    return () => clearTimeout(timer)
+  }, [token, doRefresh])
+
+  async function login(email: string, password: string): Promise<void> {
+    const data = await authRequest(`${API_BASE}/api/auth/login`, { email, password })
+    applyTokens(data)
+  }
+
+  async function register(name: string, email: string, password: string): Promise<void> {
+    const data = await authRequest(`${API_BASE}/api/auth/register`, { name, email, password })
+    applyTokens(data)
+  }
+
+  function logout() {
+    const rt = refreshTokenRef.current
+    if (rt) {
+      fetch(`${API_BASE}/api/auth/logout`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ refreshToken: rt }),
+      }).catch(() => { /* best effort — sessionen rensas lokalt oavsett */ })
+    }
+    clearSession()
   }
 
   function byttVy(vy: SystemRoll) {
