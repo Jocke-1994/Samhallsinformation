@@ -59,6 +59,44 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 20 — 2026-07-18
+**What was done:**
+- Diskuterade om projektet borde byggas om till Clean Architecture — landade i en pragmatisk "CA-light"-ansats (lagerindelade mappar i samma projekt, inte separata assemblies) istället för fullskalig CA, given projektets storlek och att det är en ensam utvecklare
+- Gick igenom hela GH-backloggen (85 issues) och läste in full text på Sprint 5 "Auth & Settings" (FAS 1–5, #295–#299) för att förankra arkitekturbeslutet i faktisk kommande komplexitet
+- **FAS 1** (PR #336, mergad): backend-auth med refresh-tokens byggd som första CA-light-referensvertikal
+  - Nya mappar `Application/Auth/` (`IAuthService`, `AuthService`, `AuthResult`, `ITokenService`) och `Infrastructure/Auth/` (`JwtTokenService`)
+  - Ny `RefreshToken`-entitet + migration, SHA-256-hashad lagring, rotation vid varje `/api/auth/refresh`-anrop
+  - Access-token-livslängd 30 dagar → 15 minuter
+  - Nya endpoints: `POST /api/auth/refresh`, `POST /api/auth/logout`
+  - `AuthController` gjord tunn, `IPasswordHasher<User>` injiceras nu via DI istället för `new PasswordHasher<User>()`
+  - Nytt testprojekt `backend.Tests` (xUnit + NSubstitute + EF Core InMemory) — första testprojektet i repot, 8 tester för `AuthService`
+- **FAS 2** (PR #337, mergad): `AuthContext.tsx` uppdaterad för `accessToken`/`refreshToken`, schemalagd auto-refresh (~2 min innan access-token går ut), riktig `/api/auth/logout`-anrop vid utloggning
+  - Upptäckte att det mesta av Fas 2:s checklista (`/login`, `/register`, `/forgot-password`, `/reset-password`, logout-knapp, inline skyddad routing i `AdminPage`/`ProfilePage`) redan fanns sedan tidigare sessioner — bara `AuthContext` behövde fixas
+  - Skippade medvetet en formell `ProtectedRoute`-wrapper (fanns på #296:s checklista) — befintliga inline-guards fungerar redan
+- Mergade 5 öppna Dependabot-PR:ar (#328–#332): eslint, eslint-plugin-react-refresh, react-router-dom, @eslint/js, @tailwindcss/vite — alla patch/minor, grön CI
+- Städade bort 4 lokalt mergade branches (`feat/fas1-auth-refresh-tokens`, `feat/fas2-auth-token-refresh`, `feat/kundtjanstbot-widget`, `feat/nyheter-chatt-hjalp`)
+- Verifierade att inget annat är kritiskt: inga öppna `bug`-taggade issues, bara ett Dependabot-alert med low severity (`@babel/core`)
+
+**Problem och lösningar denna session:**
+- **Breaking change utan matchande frontend-fix:** Fas 1:s svarsfältbyte (`token` → `accessToken`/`refreshToken`) mergades separat från Fas 2 → admin-inloggningen bröts live i produktion. `AuthContext` läste `data.token` som blev `undefined`, vilket gjorde `isLoggedIn` sant (`undefined !== null`) trots trasig token, medan `parseRole` tyst föll tillbaka till `'Användare'`. Löst med akut-PR #337. Lärdom: släpp aldrig en backend-kontraktsändring utan den matchande minimala frontend-fixen samtidigt.
+- Samma SQLite-genererade `HasColumnType("TEXT")`-problem som i session 19 dök upp igen, nu för `AddRefreshTokens`-migrationen — löst med samma etablerade mönster (raw-SQL-block i `Program.cs` + markera migrationen som körd i `__EFMigrationsHistory` innan `MigrateAsync()`)
+- CORS blockerade test av produktions-API från en lokal dev-port (5183) som inte fanns i Railways `ALLOWED_ORIGINS` ("Failed to fetch") — löste genom att testa mot lokal backend istället för att ändra produktionens CORS-config
+- Lokal `ResendEmailService` kraschade vid varje auth-endpoint lokalt pga saknad `RESEND_API_KEY` — löst med en dummy-nyckel vid lokal körning
+- Kvarhängande dev-serverprocess höll kvar portarna 59848/59849 efter omstart, `pkill` matchade inte processen i Git Bash på Windows — löste genom att hitta PID via `netstat -ano` och döda den via PowerShell `Stop-Process`
+- Sedan tidigare oincheckad lokal drift i `package-lock.json` samt oincheckade `.vscode/`- och `backend/Properties/`-filer blockerade `git pull` efter Dependabot-mergeserna — löst med `git stash -u` (finns kvar i stash, inte borttaget)
+
+**Etablerat mönster:**
+CA-light-lagerindelning (`Application/<domän>/`, `Infrastructure/<domän>/` som mappar i samma .NET-projekt, inte separata assemblies) introducerad som mönster för nya verticaler, med Auth som referens. Vid nya EF Core-migrationer skapade lokalt mot SQLite: förvänta `HasColumnType("TEXT")` för Guid/DateTime-kolumner i snapshotten, och lägg alltid till ett matchande raw-SQL-block i `Program.cs` (samma mönster som `AddUserSystem`/`AddPasswordResetToken`/`AddRefreshTokens`) innan det når produktion.
+
+**Next session (Session 21):**
+- FAS 3: Google OAuth (#297) — beror på Fas 2 (klar)
+- FAS 4: Källprenumerationer + geografifilter per källa (#298) — uttryckligen "kärnan i kontokonceptet", beror på Fas 1–2 (klara)
+- FAS 5: Konto-sida, radera konto, GDPR-export (#299)
+- Eventuellt: bygg en formell `ProtectedRoute`-wrapper (skippad medvetet denna session) om det känns motiverat
+- Ta ställning till den stashade lokala `package-lock.json`-driften och `.vscode/`/`Properties/`-filerna (ligger i `git stash`)
+
+---
+
 ### Session 19 — 2026-06-30
 **What was done:**
 - Felsökte och åtgärdade PostgreSQL-krasch (42804) vid backend-start efter PR #321-merge
