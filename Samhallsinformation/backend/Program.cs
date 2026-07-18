@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
+using Samhallsinformation.Infrastructure.Auth;
 using Samhallsinformation.Ingestors;
 using Samhallsinformation.Models;
 using Samhallsinformation.Services;
@@ -87,6 +89,11 @@ builder.Services.AddScoped<IIngestor, SmhiApiIngestor>();
 
 // E-posttjänst
 builder.Services.AddSingleton<IEmailService, ResendEmailService>();
+
+// Auth
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<ITokenService, JwtTokenService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Background service
 builder.Services.AddHostedService<IngestorBackgroundService>();
@@ -308,6 +315,31 @@ using (var scope = app.Services.CreateScope())
 
                 INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
                 VALUES ('20260630104120_AddPasswordResetToken', '10.0.9')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
+        if (pendingMigrations.Contains("20260718181116_AddRefreshTokens"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""RefreshTokens"" (
+                    ""Id""                  uuid NOT NULL,
+                    ""UserId""              uuid NOT NULL,
+                    ""TokenHash""           TEXT NOT NULL,
+                    ""ExpiresAt""           timestamptz NOT NULL,
+                    ""CreatedAt""           timestamptz NOT NULL,
+                    ""RevokedAt""           timestamptz,
+                    ""ReplacedByTokenHash"" TEXT,
+                    CONSTRAINT ""PK_RefreshTokens"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_RefreshTokens_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_RefreshTokens_TokenHash"" ON ""RefreshTokens"" (""TokenHash"");
+                CREATE INDEX IF NOT EXISTS ""IX_RefreshTokens_UserId""           ON ""RefreshTokens"" (""UserId"");
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260718181116_AddRefreshTokens', '10.0.10')
                 ON CONFLICT DO NOTHING;
             ");
         }
