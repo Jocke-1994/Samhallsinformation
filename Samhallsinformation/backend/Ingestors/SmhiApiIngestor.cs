@@ -146,7 +146,7 @@ internal class SmhiWarning
 
 internal class SmhiWarningArea
 {
-    [JsonPropertyName("id")]               public string?                Id               { get; set; }
+    [JsonPropertyName("id")]               public int?                   Id               { get; set; }
     [JsonPropertyName("areaName")]         public SmhiLocalizedText?     AreaName         { get; set; }
     [JsonPropertyName("warningLevel")]     public SmhiWarningLevel?      WarningLevel     { get; set; }
     [JsonPropertyName("eventDescription")] public SmhiLocalizedText?     EventDescription { get; set; }
