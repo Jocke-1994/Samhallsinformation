@@ -1,5 +1,6 @@
 namespace Samhallsinformation.Ingestors;
 
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Samhallsinformation.Models;
@@ -10,7 +11,10 @@ public class SmhiApiIngestor : IIngestor
     private readonly HttpClient _httpClient;
     private readonly ILogger<SmhiApiIngestor> _logger;
 
-    private const string ApiUrl = "https://opendata-download-warnings.smhi.se/api/version/2/warnings.json";
+    private const string ApiUrl = "https://opendata-download-warnings.smhi.se/ibww/api/version/1/warning.json";
+
+    private static readonly CultureInfo SvCulture = new("sv-SE");
+    private static readonly TimeZoneInfo StockholmTz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm");
 
     public Source Source { get; } = new Source
     {
@@ -56,16 +60,30 @@ public class SmhiApiIngestor : IIngestor
                 var areaName  = area.AreaName?.Sv ?? "Sverige";
                 var eventType = area.EventDescription?.Sv ?? "Varning";
                 var levelCode = area.WarningLevel?.Code ?? "YELLOW";
-                var levelSv   = area.WarningLevel?.Sv ?? "Gul";
 
-                var title = $"{eventType} — {levelSv} varning";
+                var title = eventType;
 
-                var descParts = area.Descriptions?
-                    .Select(d => string.IsNullOrWhiteSpace(d.Title?.Sv)
+                var whenText = FormatPeriod(area.ApproximateStart, area.ApproximateEnd);
+
+                var descParts = new List<string>();
+                var whenInserted = whenText == null;
+                foreach (var d in area.Descriptions ?? [])
+                {
+                    if (!whenInserted && d.Title?.Code == "WHERE")
+                    {
+                        descParts.Add($"När?: {whenText}");
+                        whenInserted = true;
+                    }
+
+                    var part = string.IsNullOrWhiteSpace(d.Title?.Sv)
                         ? d.Text?.Sv
-                        : $"{d.Title.Sv}: {d.Text?.Sv}")
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .ToList() ?? [];
+                        : $"{d.Title.Sv}: {d.Text?.Sv}";
+                    if (!string.IsNullOrWhiteSpace(part))
+                        descParts.Add(part);
+                }
+                if (!whenInserted)
+                    descParts.Add($"När?: {whenText}");
+
                 var content = string.Join(" ", descParts);
 
                 var ev = new CanonicalEvent
@@ -95,6 +113,23 @@ public class SmhiApiIngestor : IIngestor
         return DateTimeOffset.TryParse(s, out var dto) ? dto.UtcDateTime : DateTime.UtcNow;
     }
 
+    private static string? FormatPeriod(string? startRaw, string? endRaw)
+    {
+        if (!DateTimeOffset.TryParse(startRaw, out var startUtc))
+            return null;
+
+        var start = TimeZoneInfo.ConvertTime(startUtc, StockholmTz);
+
+        if (!DateTimeOffset.TryParse(endRaw, out var endUtc))
+            return $"Från {start.ToString("d MMMM", SvCulture)} kl. {start:HH.mm}";
+
+        var end = TimeZoneInfo.ConvertTime(endUtc, StockholmTz);
+
+        return start.Date == end.Date
+            ? $"{start.ToString("d MMMM", SvCulture)} kl. {start:HH.mm}–{end:HH.mm}"
+            : $"{start.ToString("d MMMM", SvCulture)} kl. {start:HH.mm} – {end.ToString("d MMMM", SvCulture)} kl. {end:HH.mm}";
+    }
+
     private static string MapSeverity(string? code) => code?.ToUpperInvariant() switch
     {
         "RED"    => "Kritisk",
@@ -117,6 +152,7 @@ internal class SmhiWarningArea
     [JsonPropertyName("eventDescription")] public SmhiLocalizedText?     EventDescription { get; set; }
     [JsonPropertyName("descriptions")]     public List<SmhiDescription>? Descriptions     { get; set; }
     [JsonPropertyName("approximateStart")] public string?                ApproximateStart { get; set; }
+    [JsonPropertyName("approximateEnd")]   public string?                ApproximateEnd   { get; set; }
     [JsonPropertyName("published")]        public string?                Published        { get; set; }
 }
 
@@ -128,7 +164,8 @@ internal class SmhiWarningLevel
 
 internal class SmhiLocalizedText
 {
-    [JsonPropertyName("sv")] public string? Sv { get; set; }
+    [JsonPropertyName("sv")]   public string? Sv   { get; set; }
+    [JsonPropertyName("code")] public string? Code { get; set; }
 }
 
 internal class SmhiDescription
