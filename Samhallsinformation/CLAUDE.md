@@ -59,6 +59,32 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 21 — 2026-07-24
+**What was done:**
+- Såg över SMHI-källan på användarens begäran — upptäckte att `SmhiApiIngestor` (Id=10, vädervarningar) aldrig levererat data sedan den byggdes i session 12–13
+- Rotorsak: fel/utgången API-URL (`api/version/2/warnings.json`, hård 404 på hela subdomänen från Varnish) — inte "inga aktiva varningar" som antogs i session 15. Rätt endpoint hittad genom att prova varianter live: `https://opendata-download-warnings.smhi.se/ibww/api/version/1/warning.json` (200 OK)
+- Verifierade live mot skarp SMHI-data att JSON-strukturen matchar de befintliga DTO:erna nästan exakt, inkl. `descriptions[]` med `title.code` (INCIDENT/AFFECT/WHERE/COMMENTS) — precis det strukturerade "Vad ska jag tänka på?/Var?"-format användaren efterfrågade
+- PR #344 (`fix/smhi-warnings-api-url`): rättade URL:en, lade till `approximateEnd` i DTO:n och en genererad "När?"-rad (svensk tid, Europe/Stockholm, infogad före "Var?"), förenklade titeln till bara händelsenamnet (t.ex. "Risk för skogsbrand" istället för "... — Meddelande varning")
+- Testade ändringen mot ett fristående testprogram laddat med skarp SMHI-JSON — output matchade användarens exempel nästan ordagrant
+- Klargjorde för användaren varför två SMHI-källor finns: `SmhiApiIngestor` (strukturerade varningar) byggdes men fick aldrig rätt URL, så "SMHI Nyheter" (redaktionellt RSS-flöde, `smhi.se/rss/nyheter-fran-smhi`) lades till som stopgap i session 15 och publicerades i session 18. Bådas behålls (olika syften: kontext vs. åtgärdbar varning) — beslutat med användaren via fråga
+
+**Problem och lösningar denna session:**
+- Den ursprungliga slutsatsen i session 15 ("404 = inga aktiva varningar, sommar i Sverige") hade aldrig testats mot om *andra* paths på samma subdomän också 404:ar — de gjorde det, vilket avslöjade att det var fel URL, inte tomt resultat. Lärdom: ett 404 som tolkas som "korrekt tomt svar" bör verifieras mot leverantörens dokumentation eller alternativa endpoints innan det antas vara avsiktligt beteende
+- "Länken visar bara en pytteliten bild"-klagomålet på SMHI Nyheter visade sig bero på att SMHI:s egen artikel för den specifika vattenbrist-nyheten är tunn (mest ett diagram) — inget vi kan åtgärda utan att bryta grundprincipen "ingen tolkning, alltid länk till primärkälla"
+
+**Etablerat mönster:**
+Vid en källa som ger oväntat tomt resultat (404/tom lista): verifiera alltid mot flera paths på samma domän eller leverantörens dokumentation innan "tomt är korrekt" antas — annars kan en trasig URL gömma sig bakom antagandet i flera sessioner (skedde här i ~8 sessioner, 12→21).
+
+**Next session (Session 22):**
+- Verifiera SMHI-varningarna i sandlådan (Förhandsvisning i admin) mot Railway-backend, publicera källan (Id=10) när det ser bra ut
+- FAS 3: Google OAuth (#297) — beror på Fas 2 (klar)
+- FAS 4: Källprenumerationer + geografifilter per källa (#298) — uttryckligen "kärnan i kontokonceptet", beror på Fas 1–2 (klara)
+- FAS 5: Konto-sida, radera konto, GDPR-export (#299)
+- Eventuellt: bygg en formell `ProtectedRoute`-wrapper (skippad medvetet i session 20)
+- Ta ställning till den stashade lokala `package-lock.json`-driften och `.vscode/`/`Properties/`-filerna (ligger i `git stash` sedan session 20)
+
+---
+
 ### Session 20 — 2026-07-18
 **What was done:**
 - Diskuterade om projektet borde byggas om till Clean Architecture — landade i en pragmatisk "CA-light"-ansats (lagerindelade mappar i samma projekt, inte separata assemblies) istället för fullskalig CA, given projektets storlek och att det är en ensam utvecklare
