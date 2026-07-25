@@ -111,6 +111,32 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 22 — 2026-07-25
+**What was done:**
+- Akut produktionsincident: användaren rapporterade vit skärm på `samhallsinformation.se`
+- Felsökte utifrån (curl mot frontend/backend/assets — allt gav 200, uteslöt infra/deploy-fel), gick sedan igenom `AuthContext.tsx`/`ThemeContext.tsx` för riskabla `JSON.parse`/`localStorage`-lässtigar (inga hittades — redan skyddade med try/catch)
+- Upptäckte att lokal branch låg 58 commits efter `origin/main` — bl.a. Fas 1/2-auth-refresh (session 20) och en react-router v7→v8-migrering (PR #355) hade redan gått live utan att synas i den lokala historiken
+- Användaren delade webbläsarkonsolens faktiska fel (skärmdump): `Minified React error #527, args[19.2.8, 19.2.7]` — löste frågan direkt
+- Rotorsak: Dependabot-PR #342 bumpade `react` till `19.2.8` men missade `react-dom`, som blev kvar på `19.2.7`. React 19 kräver exakt matchande versioner mellan paketen — mismatchen kraschar hela render-trädet vid uppstart. Appen har ingen ErrorBoundary, så kraschen syntes bara som en tom `#root` i webbläsaren, inget synligt felmeddelande
+- Verifierade rotorsaken headless (Playwright/Chromium, `npx playwright install chromium`, körd mot en scratch-katalog för att inte påverka projektets `package-lock.json`): produktions-URL gav `#root` med 0 tecken + exakt samma `pageerror`; lokalt bygge med matchande versioner gav `#root` med ~37 000 tecken och inga fel
+- PR #358 (`fix/react-dom-version-mismatch`): `react-dom` → `^19.2.8` i `package.json` + `package-lock.json`, byggt och testat lokalt (`npm run build` + `npm run preview` + headless-verifiering) innan push. Mergad av användaren, verifierad live direkt efter (headless-koll mot produktion gav 48 772 tecken i `#root`, 0 fel)
+
+**Problem och lösningar denna session:**
+- En Dependabot-PR som bumpar `react` utan att samtidigt bumpa `react-dom` (eller tvärtom) ger inget CI-fel — `tsc -b && vite build` bryr sig inte om att versionerna matchar vid körning, bara vid rendering i webbläsaren. Lärdom: `react`/`react-dom`-par bör alltid bumpas ihop; överväg att slå ihop dem till en enda Dependabot-grupp
+- Ingen ErrorBoundary i appen gjorde diagnosen svårare rent externt (curl visar alltid 200 och giltig HTML/JS oavsett klientkrasch) — webbläsarkonsolen var enda källan till den faktiska felsignaturen
+- Lokal branch hade tappat kontakt med `main` i 58 commits (senast synkad vid session 19) — gjorde första felsökningsrundan onödigt lång innan avvikelsen upptäcktes
+
+**Etablerat mönster:**
+Vid "vit skärm"-rapporter: servern/CDN:n kan vara helt frisk (200 överallt) medan felet ändå är en klientkrasch under rendering. Fråga alltid efter webbläsarkonsolens faktiska felmeddelande tidigt — det är snabbaste vägen till rotorsaken, särskilt utan ErrorBoundary. Headless-verifiering (Playwright i en scratch-katalog, `--no-save`) är ett bra sätt att bekräfta både att felet reproduceras i produktion och att fixen faktiskt löser det, utan att röra projektets egna beroenden.
+
+**Next session (Session 23):**
+- Överväg en ErrorBoundary runt `<App />` i `main.tsx` så framtida renderingskrascher ger ett användarvänligt felmeddelande istället för vit skärm
+- Överväg att gruppera `react`/`react-dom` i samma Dependabot-uppdatering (`.github/dependabot.yml`) för att förhindra framtida versions-mismatch
+- Synka lokal arbetsbranch mot `main` oftare — 58 commits efter innebar att flera redan lösta saker (Fas 1/2-auth, react-router v8) undersöktes på nytt i onödan
+- Övrigt från session 21 kvarstår: SMHI-varningar publicera i sandlådan, FAS 3–5 (#297–#299), stashad lokal drift sedan session 20
+
+---
+
 ### Session 21 — 2026-07-24
 **What was done:**
 - Såg över SMHI-källan på användarens begäran — upptäckte att `SmhiApiIngestor` (Id=10, vädervarningar) aldrig levererat data sedan den byggdes i session 12–13
