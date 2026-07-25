@@ -1,0 +1,42 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Samhallsinformation/backend/**"
+      - "Samhallsinformation/backend.Tests/**"
+      - "Samhallsinformation/Samhallsinformation.slnx"
+  pull_request:
+    branches: [main]
+    paths:
+      - "Samhallsinformation/backend/**"
+      - "Samhallsinformation/backend.Tests/**"
+      - "Samhallsinformation/Samhallsinformation.slnx"
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          include-prerelease: true
+
+      - name: Restore
+        working-directory: Samhallsinformation
+        run: dotnet restore
+
+      - name: Build
+        working-directory: Samhallsinformation
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        working-directory: Samhallsinformation
+        run: dotnet test --no-build --configuration Release

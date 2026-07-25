@@ -23,6 +23,33 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
 }
 
+const contentP = 'text-sm text-slate-600 dark:text-slate-300 leading-relaxed'
+
+function ContentParagraph({ text }: { text: string }) {
+  const labelEnd = text.indexOf(': ')
+  if (labelEnd === -1) return <p className={contentP}>{text}</p>
+
+  return (
+    <p className={contentP}>
+      <strong className="font-semibold text-slate-900 dark:text-white">
+        {text.slice(0, labelEnd + 1)}
+      </strong>
+      {text.slice(labelEnd + 1)}
+    </p>
+  )
+}
+
+function EventContent({ content }: { content: string }) {
+  const paragraphs = content.split('\n\n')
+  if (paragraphs.length === 1) return <p className={contentP}>{content}</p>
+
+  return (
+    <div className="space-y-3">
+      {paragraphs.map((p, i) => <ContentParagraph key={i} text={p} />)}
+    </div>
+  )
+}
+
 export default function NewsItem({ event, isRead, sourceName }: Props) {
   const [expanded, setExpanded] = useState(false)
   const cfg = SEVERITY_CONFIG[event.severity]
@@ -75,9 +102,7 @@ export default function NewsItem({ event, isRead, sourceName }: Props) {
 
       {expanded && (
         <div className="px-4 pb-4 pt-3 border-t border-slate-100 dark:border-slate-700">
-          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            {event.content}
-          </p>
+          <EventContent content={event.content} />
           <a
             href={event.url}
             target="_blank"
