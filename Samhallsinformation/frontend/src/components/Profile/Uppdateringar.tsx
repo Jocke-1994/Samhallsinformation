@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import type { ChangeEntry, Release, KändBugg, KommandeVersion } from '../../types'
 import { useFlags } from '../../context/FeatureFlagsContext'
 

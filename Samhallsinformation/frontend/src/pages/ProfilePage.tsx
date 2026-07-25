@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router'
 import Sidebar from '../components/Sidebar/Sidebar'
 import { type ProfileSection } from '../types'
 import { useAuth } from '../context/AuthContext'

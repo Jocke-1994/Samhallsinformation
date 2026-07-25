@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTheme } from '../../context/ThemeContext'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router'
 import { fetchSources } from '../../api/sources'
 import SourceButton from './SourceButton'
 import SortableSourceButton from './SortableSourceButton'

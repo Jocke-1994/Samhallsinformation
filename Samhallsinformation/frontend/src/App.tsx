@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Routes, Route, useLocation, useSearchParams } from 'react-router-dom'
+import { Routes, Route, useLocation, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSwipeable } from 'react-swipeable'
 import Sidebar from './components/Sidebar/Sidebar'

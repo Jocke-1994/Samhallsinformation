@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router'
 import { KALLOR } from './kallorUtils'
 import LaggTillKort from './LaggTillKort'
 import AktivaKallorKort from './AktivaKallorKort'
