@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { BETA } from '../betaConfig'
 import { useQuery } from '@tanstack/react-query'
 import { type ProfileSection } from '../types'

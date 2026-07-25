@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router'
 import { makeField, type FormField } from './kontoTypes'
 import KontoInfo from './KontoInfo'
 import SparSamtycke from './SparSamtycke'

@@ -1,7 +1,7 @@
 import { Fragment } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { fetchEvents } from '../../api/events'
 import { getReadStatus, markAllAsRead } from '../../services/readState'
 import NewsItem from './NewsItem'

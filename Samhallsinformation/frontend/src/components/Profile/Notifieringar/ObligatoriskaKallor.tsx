@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import type { AllData, SektionKey } from './index'
 
 const KANAL_IKON:  Record<SektionKey, string> = { epost: '📧', sms: '📱', push: '🔔' }

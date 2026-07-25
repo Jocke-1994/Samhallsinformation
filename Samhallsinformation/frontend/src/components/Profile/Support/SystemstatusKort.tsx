@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router'
 import type { Tjanst, PlaneratUnderhall, NastaSteg } from '../../../types'
 
 const TJANSTER: Tjanst[] = [

@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: Samhallsinformation/frontend/package-lock.json
 
@@ -36,22 +36,4 @@ jobs:
 
       - name: Security audit
         working-directory: Samhallsinformation/frontend
-        run: |
-          AUDIT_OUTPUT=$(npm audit --omit=dev --audit-level=high 2>&1) || true
-          echo "$AUDIT_OUTPUT"
-
-          # Temporarily accepted: GHSA-qwww-vcr4-c8h2 (react-router, RSC Mode CSRF
-          # Bypass). This app is a client-side SPA and does not use React Router's
-          # RSC mode, so the vulnerable code path is not exercised. The real fix is
-          # a major-version upgrade to react-router-dom v8 (breaking change),
-          # tracked as a separate piece of work. Remove this exception once that
-          # upgrade lands.
-          HIGH_COUNT=$(echo "$AUDIT_OUTPUT" | grep -c "^Severity: high" || true)
-          KNOWN_COUNT=$(echo "$AUDIT_OUTPUT" | grep -c "GHSA-qwww-vcr4-c8h2" || true)
-
-          if [ "$HIGH_COUNT" -gt "$KNOWN_COUNT" ]; then
-            echo "Unexpected high-severity vulnerabilities found beyond the known react-router exception."
-            exit 1
-          fi
-
-          echo "No unexpected high-severity vulnerabilities (only the accepted react-router advisory, if present)."
+        run: npm audit --omit=dev --audit-level=high

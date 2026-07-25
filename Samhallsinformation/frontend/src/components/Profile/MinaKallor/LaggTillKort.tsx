@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router'
 import type { SparFilter, Kalla } from '../../../types'
 import { KALLOR, SPAR_FORSLAG, groupBy } from './kallorUtils'
 import SparModal from './SparModal'
