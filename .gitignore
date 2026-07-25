@@ -1,5 +1,5 @@
-# Claude Code
-.claude/
+# Claude Code — personliga inställningar ignoreras, agenter/skills delas med projektet
+.claude/settings.local.json
 
 # Design-skisser, diagram och lokala arbetsfiler
 images/
