@@ -68,30 +68,9 @@ public class IngestorBackgroundService : BackgroundService
             var sourceId = ingestor.Source.Id;
             try
             {
-                var events = await ingestor.FetchEventsAsync();
-                _logger.LogInformation("Fetched {Count} events from {Source}",
-                    events.Count, ingestor.Source.Name);
-
-                var externalIds = events.Select(e => e.ExternalId).ToList();
-                var existingIds = await db.Events
-                    .Where(e => externalIds.Contains(e.ExternalId))
-                    .Select(e => e.ExternalId)
-                    .ToListAsync(ct);
-
-                var newEvents = events
-                    .Where(e => !existingIds.Contains(e.ExternalId))
-                    .ToList();
-
-                if (newEvents.Count > 0)
-                {
-                    db.Events.AddRange(newEvents);
-                    _logger.LogInformation("Saved {Count} new events (skipped {Skipped} duplicates)",
-                        newEvents.Count, events.Count - newEvents.Count);
-                }
-                else
-                {
-                    _logger.LogInformation("No new events (all {Count} were duplicates)", events.Count);
-                }
+                var (inserted, _) = await EventSync.SyncAsync(db, ingestor, overwriteExisting: false, ct);
+                _logger.LogInformation("Saved {Count} new events for {Source}",
+                    inserted, ingestor.Source.Name);
 
                 var dbSource = await db.Sources.FindAsync([sourceId], ct);
                 if (dbSource != null)
