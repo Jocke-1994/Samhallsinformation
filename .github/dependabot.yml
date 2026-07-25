@@ -5,6 +5,13 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      # typescript-eslint@8.61.1 kräver peer typescript ">=4.8.4 <6.1.0".
+      # TS 7.0.2 (PR #341) krockar med detta och npm install failar (ERESOLVE).
+      # Ta bort denna rad när typescript-eslint släpper TS7-stöd, så plockar
+      # Dependabot upp major-bumpen igen automatiskt.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "nuget"
     directory: "/Samhallsinformation/backend"
