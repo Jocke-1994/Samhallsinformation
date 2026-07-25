@@ -4,17 +4,23 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
+using Samhallsinformation.Ingestors;
 using Samhallsinformation.Models;
+using Samhallsinformation.Services;
 
 [ApiController]
 [Route("api/[controller]")]
 public class SourcesController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IEnumerable<IIngestor> _dedicatedIngestors;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public SourcesController(AppDbContext db)
+    public SourcesController(AppDbContext db, IEnumerable<IIngestor> dedicatedIngestors, IHttpClientFactory httpClientFactory)
     {
         _db = db;
+        _dedicatedIngestors = dedicatedIngestors;
+        _httpClientFactory = httpClientFactory;
     }
 
     [HttpGet]
@@ -91,6 +97,41 @@ public class SourcesController : ControllerBase
 
         await _db.SaveChangesAsync();
         return Ok(source);
+    }
+
+    // Kör om källans ingestor och skriver över redan sparade händelser (matchar ExternalId)
+    // med nyss hämtad data — för att se ingestor-ändringar (t.ex. formatfixar) slå igenom
+    // på data som redan ligger i databasen, utan att vänta på att nya händelser dyker upp.
+    [HttpPost("/api/admin/sources/{id}/resync")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ResyncSource(int id)
+    {
+        var source = await _db.Sources.FindAsync(id);
+        if (source == null) return NotFound();
+
+        var ingestor = _dedicatedIngestors.FirstOrDefault(i => i.Source.Id == id);
+        if (ingestor == null)
+        {
+            if (source.Type != SourceType.RSS || string.IsNullOrWhiteSpace(source.Url))
+                return BadRequest(new { error = "Källan har ingen dedikerad ingestor och stöds inte av generisk RSS-resync" });
+
+            ingestor = new GenericRssIngestor(_httpClientFactory.CreateClient(), source);
+        }
+
+        try
+        {
+            var (inserted, updated) = await EventSync.SyncAsync(_db, ingestor, overwriteExisting: true);
+            source.LastFetchedAt  = DateTime.UtcNow;
+            source.LastFetchError = null;
+            await _db.SaveChangesAsync();
+            return Ok(new { inserted, updated });
+        }
+        catch (Exception ex)
+        {
+            source.LastFetchError = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+            await _db.SaveChangesAsync();
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     [HttpDelete("/api/admin/sources/{id}")]
