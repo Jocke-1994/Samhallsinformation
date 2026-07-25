@@ -84,7 +84,7 @@ public class SmhiApiIngestor : IIngestor
                 if (!whenInserted)
                     descParts.Add($"När?: {whenText}");
 
-                var content = string.Join(" ", descParts);
+                var content = string.Join("\n\n", descParts);
 
                 var ev = new CanonicalEvent
                 {
