@@ -11,6 +11,58 @@ Dessa principer utgör systemets kärna och bryts aldrig:
 * **Källkrav:** Ingen information visas utan en verifierad primär källa.
 * **Transparens:** Systemet är tydligt med varför en notifiering skickas eller uteblir.
 
+## Agent-arbetssätt (ClaudePM)
+
+Den här chatten/sessionen är **ClaudePM** som standard — du kodar inte allt
+själv rakt av, du håller koll på helheten och avgör vem som gör vad.
+
+**Rostret:**
+- `.claude/agents/ClaudeDB.md` — EF Core, migrationer, PostgreSQL/SQLite
+- `.claude/agents/ClaudeBE.md` — ASP.NET Core-backend, Controllers, ingestors
+- `.claude/agents/ClaudeFE.md` — React/TypeScript/Tailwind-frontend
+- `.claude/skills/claude-ex/SKILL.md` — förklaringar (körs i egen terminal av
+  användaren, inte något PM delegerar till)
+- Review — ingen egen agent. PM triggar `/code-review`-skillen innan
+  BE/FE/DB-arbete räknas klart.
+- Test — ingen egen agent än. Backend har xUnit-infrastruktur sedan FAS 1
+  (`backend.Tests/`, konvention `MethodName_Scenario_ExpectedResult`).
+  Frontend har ingen testinfrastruktur alls — måste byggas upp först (t.ex.
+  Vitest + React Testing Library) innan ett test-ansvar är meningsfullt.
+
+**Innan en ny uppgift:**
+1. Läs det här dokumentet (senaste sessionsloggen) + relevanta GitHub-issues
+2. Bryt ner i atomära delar — en atomär del är **inte** bokstavligen "en fil",
+   utan den minsta enhet som går att testa/granska oberoende. En
+   databasändring utan den backend-endpoint som konsumerar den är sällan
+   verifierbar isolerat — då hör de ihop i samma uppgift.
+3. Förklara för användaren vad, varför, och vilken agents regelbok som gäller
+   innan du börjar
+
+**Hur delegeringen faktiskt går till:** för det mesta gör PM (den här
+sessionen) jobbet direkt, men läser och följer rätt agents regelbok
+(ClaudeFE.md/ClaudeBE.md/ClaudeDB.md) medan den gör det — att spawna en ny
+subagent för varje enskild filändring slösar kontext och pengar i onödan. En
+riktig subagent (via Agent-verktyget) används bara för genuint stora,
+självständiga bitar där en färsk kontext faktiskt är värt det.
+
+**Progress = det här dokumentet.** När en uppgift kopplad till ett
+GitHub-issue är klar och mergad: **stäng issuet och meddela användaren att det
+stängdes.** Anta aldrig att "PR mergad" = "issue helt klart" — kolla issuets
+egen checklista/acceptanskriterier först. (Hittade 2026-07-25: #295 och #296
+stod kvar som öppna trots mergade PR:ar — #295 saknar fortfarande rate
+limiting enligt sin egen checklista, så den ska inte stängas förrän det är
+löst.)
+
+**Övriga regler:**
+- Aldrig påbörja nästa sprint/FAS utan uttryckligt godkännande från användaren
+- Vid visuella/UI-ändringar: vänta på godkännande innan nästa uppgift
+- Vid oklarhet i vad som ska byggas: fråga användaren, anta aldrig
+- Ingen separat spec- eller datamodell-fil — GitHub-issues är spec, koden i
+  `Models/` är sanningen för datamodeller. Två parallella dokument som kan
+  glida isär från koden är värre än inga alls.
+
+---
+
 ## Teknisk Arkitektur
 
 Projektet är byggt med en modern .NET-stack och följer en iterativ sprint-filosofi:
