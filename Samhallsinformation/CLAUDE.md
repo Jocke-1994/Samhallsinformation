@@ -111,6 +111,42 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 23 — 2026-07-26
+**What was done:**
+- **PWA-stöd (huvudapp):** `manifest.json` + genererade ikoner (192/512, maskable, apple-touch-icon) + `theme-color`/`mobile-web-app-capable`-metataggar i `index.html`. Verifierat på riktig Android-mobil via cloudflared-tunnel: installeras som egen app, eget namn, egen ikon, helskärmsläge (PR #363)
+- Under samma PR upptäcktes och fixades ännu en gång react/react-dom-versionsmismatch (`19.2.8` vs `19.2.7`) — se "Problem och lösningar" för varför den kom tillbaka
+- **PWA-identitet för adminsidan:** ny hook `usePwaIdentity` byter manifest/favicon/theme-color/apple-touch-icon/titel dynamiskt beroende på om man är på `/admin` eller inte, med separat `admin-manifest.json` och en egen ikonuppsättning (samma lila "S" + ett litet kugghjuls-badge i hörnet för att gå att skilja från huvudappen). Verifierat end-to-end på Android: separat installation bredvid huvudappen (PR #364). `id`-fält tillagt i båda manifesten på Chrome DevTools rekommendation
+- Upptäckt under testet: Chrome **desktop** erbjuder inte en fristående installation av admin-identiteten via adressfältet eftersom huvudappens `scope: "/"` redan "äger" `/admin` i webbläsarens ögon — en Chrome-specifik begränsning, inte ett fel i manifesten. Mobilen har inte samma begränsning
+- **SMHI-severity:** upptäckte vid granskning av redan publicerad källa (Id=10) att `MapSeverity` bara mappade RED/ORANGE, allt annat (inkl. `YELLOW` — en riktig officiell varningsnivå hos SMHI) hamnade i "Bra att veta" tillsammans med rena `MESSAGE`-meddelanden. Fixat: `YELLOW` → "Viktigt" (PR #365)
+- **"Synka om"-knapp i Källhantering:** upptäckte i samband med SMHI-fixen att `EventSync.SyncAsync` bara uppdaterar befintliga händelser vid `overwriteExisting=true` (admin-triggad), och att det endpointet (`POST /api/admin/sources/{id}/resync`, byggt i session 22) saknade UI — behövde köras via en manuell fetch i DevTools-konsolen. Byggde en riktig knapp per källrad i Källhantering (PR #366)
+- **AdminPage rules-of-hooks-bugg:** ett villkorligt `return null` (utloggad/redirect) satt mitt i komponenten, mellan de första hooksen och `useFeatureFlagsAdmin`/sju `useState`/ett andra `useEffect`/`useCallback` — bröt Reacts Rules of Hooks (olika antal hooks beroende på render). Flyttade samtliga hooks till att alltid köras, returnet efter dem istället (PR #367)
+- Tog bort "Senaste nyhet"-raden från Aktiva källor-kortet på profilsidan (bedömning: sällan efterfrågat) — städade även bort de nu oanvända `nyhetFarg`/`fmt`-hjälparna (PR #368)
+- Städade bort en övergiven `git stash` sen session 20 (lokal `package-lock.json`-drift) — testad och bekräftat stale/inte längre applicerbar, droppad
+- **FAS 4-designdiskussion (källprenumerationer, #298):** byggde en klickbar prototyp i `AktivaKallorKort.tsx` (kugghjulsikon per rad → fäller ut Geografi-/Severity-väljare, progressiv disclosure) för att visualisera ett UI-koncept, testade live i webbläsaren, rev sedan ut den igen på användarens begäran (för tidigt att skicka något icke-funktionellt till produktion). Diskussionen ledde till en viktig arkitekturinsikt (se "Etablerat mönster")
+- **Krisinformation-severity:** samma mönster som SMHI — `MapSeverity` läser nu av VMA ("Viktigt meddelande till allmänheten i ...") och Röd/Orange/Gul varning direkt ur rubriktexten, eftersom det är Krisinformations egna officiella termer (ingen egen severity-kod finns i API-svaret). Verifierat mot skarp data; hittade och fixade en bugg under verifieringen (källans rubriktext hade ibland dubbla mellanslag, `\s+` i regex istället för exakt mellanslag) (PR #369)
+- Grupperade `react`/`react-dom` i `.github/dependabot.yml` — samma versionsmismatch-bugg som session 22 löste (PR #358) kom tillbaka eftersom rekommendationen aldrig genomfördes (PR #370)
+
+**Problem och lösningar denna session:**
+- React/react-dom-mismatchen (session 22, PR #358) var tillbaka igen vid sessionsstart trots att den redan fixats en gång — rotorsaken (Dependabot kan bumpa endast det ena paketet) hade identifierats men aldrig åtgärdats. Löst permanent nu genom att faktiskt gruppera dem i Dependabot (PR #370), inte bara flagga det som en idé
+- Lokal testning av inloggningsflödet krockade med flera separata miljöproblem i rad: Vite dev-proxyn pekar mot `localhost:5000` (inget lyssnade där) → 500 pga saknad `RESEND_API_KEY` (samma kända problem som session 20) → 401 pga tom lokal SQLite-databas utan seedat konto. Löst genom att starta backend med `RESEND_API_KEY`+`ADMIN_EMAIL`+`ADMIN_PASSWORD` som miljövariabler vid lokal körning
+- Cloudflared-tunneln (för att testa PWA-installation på riktig mobil) blockerades först av Vites `allowedHosts`-säkerhetsspärr för okända domäner — löst med `allowedHosts: ['.trycloudflare.com']` i `vite.config.ts` (dev-only, påverkar inte produktionsbygget)
+- Chrome desktop visade "Öppna i [huvudappen]" istället för en installationsprompt när man försökte installera adminidentiteten, eftersom huvudappens `scope: "/"` redan matchar `/admin` i webbläsarens ögon — inte en bugg i vår kod, en plattformsbegränsning i Chromes UI-heuristik för "en app per scope". Fungerar som väntat på mobilen
+- Resync-knappen verkade inte fungera vid första anblick efter merge ("taggarna ligger kvar") — visade sig vara en cache/laddningsfördröjning i gränssnittet, en andra sidladdning visade rätt data
+- `EventSync`s begränsning (bara live/aktuell data i källans flöde kan rättas retroaktivt via resync, historik som redan lämnat RSS/API-flödet förblir orörd för alltid) upptäcktes och förklarades två gånger denna session (SMHI och Krisinformation) — värt att komma ihåg som en permanent begränsning, inte något att "fixa"
+
+**Etablerat mönster:**
+- **Severity-klassificering får bara läsa av officiella signaler som redan finns i källans egen data (SMHI:s RED/ORANGE/YELLOW, Krisinformations VMA-text/varningsnivåer) — aldrig uppfinna en egen rangordning** (t.ex. att ranka Polisens brottstyper efter allvarlighet). Det senare bryter mot grundprincipen "ingen tolkning". Tumregel: finns en officiell urgency-signal inbyggd i källans data → fixa severity-mappningen rakt av. Finns bara ett kategorinamn utan inbyggd rangordning → lämna severity orört, bygg istället användarstyrd filtrering (kryssrutor per kategori, inte ett systemvalt severity-tröskelvärde) ovanpå
+- PM byggde och testade en UI-prototyp direkt i webbläsaren (via `mcp__claude-in-chrome__*`-verktygen, inloggad lokal session) innan design diskuterades klart, och rev ut den igen på användarens begäran innan commit — bekräftar att experimentella UI-ändringar hålls utanför commits tills de är uttryckligen godkända, även efter att de redan visats upp och testats
+- Lokal fullstack-testning (frontend + backend + admin-inloggning) kräver tre saker varje gång: `dotnet run` med `RESEND_API_KEY`+`ADMIN_EMAIL`+`ADMIN_PASSWORD` satta, Vite dev-servern pekande via proxy mot `localhost:5000` (redan konfigurerat), och `allowedHosts` i `vite.config.ts` om man vill nå den via en publik tunnel för mobiltest
+
+**Next session (Session 24):**
+- **FAS 4, Polisen-delen:** extrahera händelsetyp (mittendelen av titeln, `"{tid}, {typ}, {ort}"`) till ett strukturerat fält — gemensam förutsättning oavsett om kryssruteidén byggs. Sen: kryssrutor per kategori + geografi (län→kommun-hierarki, ~21 län/~290 kommuner) istället för ett systemvalt severity-tröskelvärde. UI bör vara klickbara chips/pills, inte en dropdown eller hover-only-kugghjul (fungerar inte på touch/mobil)
+- FAS 3: Google OAuth (#297)
+- FAS 5: Konto-sida, radera konto, GDPR-export (#299) — obs: "Glömt lösenord"-punkten i issuet är troligen redan byggd (session 18), verifiera innan den räknas som kvarstående
+- Lågprioriterad lint-nit kvar i `AdminPage.tsx` (`react-hooks/set-state-in-effect`, rad ~83) — prestandanit, inte en korrekthetsrisk, `npm run lint` körs inte i CI
+
+---
+
 ### Session 22 — 2026-07-25
 **What was done:**
 - Akut produktionsincident: användaren rapporterade vit skärm på `samhallsinformation.se`
