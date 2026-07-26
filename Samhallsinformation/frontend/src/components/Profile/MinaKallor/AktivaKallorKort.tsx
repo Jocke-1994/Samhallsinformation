@@ -57,7 +57,7 @@ export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highl
   return (
     <div
       id="aktiva-kallor"
-      className={`bg-white rounded-2xl border border-slate-200 shadow-sm h-[523px] flex flex-col ${highlightId === 'aktiva-kallor' ? 'card-highlight' : ''}`}
+      className={`bg-white rounded-2xl border border-slate-200 shadow-sm h-auto sm:h-[523px] flex flex-col ${highlightId === 'aktiva-kallor' ? 'card-highlight' : ''}`}
     >
       <div style={{ padding: '1.5rem 2.5rem 1.25rem' }} className="border-b border-slate-100">
         <div className="flex items-center justify-center gap-3">
@@ -77,7 +77,7 @@ export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highl
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          <div className="grid grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
             <Kolumn typ="Nationell" sources={nationella}>
               {nationella.length === 0
                 ? <p className="text-xs text-slate-300 pt-2">Inga nationella källor</p>
