@@ -35,6 +35,7 @@ public static class EventSync
                 current.Url         = incoming.Url;
                 current.RawData     = incoming.RawData;
                 current.Geography   = incoming.Geography;
+                current.EventType   = incoming.EventType;
                 current.Severity    = incoming.Severity;
                 current.IsNational  = incoming.IsNational;
                 current.PublishedAt = incoming.PublishedAt;

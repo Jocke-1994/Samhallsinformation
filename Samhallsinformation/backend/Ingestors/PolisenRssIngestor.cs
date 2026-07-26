@@ -53,6 +53,7 @@ public class PolisenRssIngestor : IIngestor
                 Url = link,
                 RawData = rawTitle + " | " + (item.Summary?.Text ?? string.Empty),
                 Geography = ExtractGeographyFromTitle(rawTitle),
+                EventType = ExtractEventTypeFromTitle(rawTitle),
                 Severity = MetadataFallbacks.DefaultSeverity
             };
 
@@ -72,6 +73,23 @@ public class PolisenRssIngestor : IIngestor
         var parts = title.Split(',');
         if (parts.Length >= 3)
             return parts[^1].Trim();
+
+        return null;
+    }
+
+    // Polisens titlar följer mönstret "{tid}, {typ}, {ort}" — ibland med en
+    // extra kvalificerare mellan typ och ort (t.ex. "Misshandel, grov,
+    // Karlskrona" eller "Trafikolycka, singel, Strängnäs"). Allt mellan
+    // första och sista kommadelen räknas som händelsetypen, så kvalificeraren
+    // följer med istället för att tappas bort.
+    private static string? ExtractEventTypeFromTitle(string title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return null;
+
+        var parts = title.Split(',');
+        if (parts.Length >= 3)
+            return string.Join(",", parts[1..^1]).Trim();
 
         return null;
     }
