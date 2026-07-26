@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { useSwipeable } from 'react-swipeable'
 import Sidebar from '../components/Sidebar/Sidebar'
 import { type ProfileSection } from '../types'
 import { useAuth } from '../context/AuthContext'
@@ -35,6 +36,13 @@ export default function ProfilePage() {
     else setSearchParams({ section: s })
   }
 
+  const swipeHandlers = useSwipeable({
+    onSwipedRight: (e) => { if (e.initial[0] < 30) setSidebarOpen(true) },
+    onSwipedLeft:  ()  => setSidebarOpen(false),
+    preventScrollOnSwipe: true,
+    touchEventOptions: { passive: false },
+  })
+
   if (!isLoggedIn) {
     return (
       <div className="flex h-screen bg-slate-50">
@@ -54,18 +62,27 @@ export default function ProfilePage() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden" {...swipeHandlers}>
 
         {section === null ? (
           <ProfileLanding onSelect={setSection} />
         ) : (
           <div className="flex-1 overflow-y-auto">
-            <div className="bg-white border-b border-slate-200 px-10 py-10">
-              <h1 className="text-3xl font-bold text-slate-900 text-center">
+            <div className="bg-white border-b border-slate-200 px-4 md:px-10 py-5 md:py-10 relative">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="md:hidden absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+                aria-label="Öppna meny"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 text-center">
                 {SECTION_LABELS[section]}
               </h1>
             </div>
-            <div className="px-12 py-10">
+            <div className="px-4 md:px-12 py-6 md:py-10">
               <div className="max-w-7xl mx-auto">
                 {section === 'mina-kallor' && <MinaKallor />}
                 {section === 'notifieringar' && <Notifieringar />}
