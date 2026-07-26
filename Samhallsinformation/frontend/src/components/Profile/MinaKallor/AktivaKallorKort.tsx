@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import type { KallTyp, Kalla } from '../../../types'
-import { RUBRIK, TYPNAMN, nyhetFarg, fmt, groupBy } from './kallorUtils'
+import { RUBRIK, TYPNAMN, groupBy } from './kallorUtils'
 
 function KallaRad({ k, onRemove }: { k: Kalla; onRemove: (id: number) => void }) {
   const navigate = useNavigate()
@@ -14,17 +14,13 @@ function KallaRad({ k, onRemove }: { k: Kalla; onRemove: (id: number) => void })
     <div className="flex items-center justify-between py-2 group">
       <div className="min-w-0">
         <a href={k.url} target="_blank" rel="noreferrer" className="text-sm font-medium text-slate-800 hover:text-violet-600 hover:underline leading-snug transition-colors">{k.namn}</a>
-        {k.deprecated ? (
+        {k.deprecated && (
           <button
             onClick={gaTillSystemstatus}
             className="flex items-center gap-1 text-xs mt-0.5 text-amber-500 hover:text-amber-700 transition-colors"
           >
             ⚠️ Planerat underhåll — se systemstatus
           </button>
-        ) : (
-          <p className={`text-xs mt-0.5 whitespace-nowrap ${nyhetFarg(k.senasteNyhet)}`}>
-            Senaste nyhet: {fmt(k.senasteNyhet)}
-          </p>
         )}
       </div>
       <button

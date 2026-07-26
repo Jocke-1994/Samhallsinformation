@@ -62,20 +62,6 @@ export const TYPNAMN: Record<KallTyp, string> = {
   Kommunal:  'Kommunala',
 }
 
-export function nyhetFarg(iso: string): string {
-  const h = (Date.now() - new Date(iso).getTime()) / 3_600_000
-  if (h < 24)  return 'text-green-600'
-  if (h < 168) return 'text-orange-500'
-  return 'text-red-500'
-}
-
-export function fmt(iso: string): string {
-  return new Date(iso).toLocaleString('sv-SE', {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
-
 export function groupBy<T>(items: T[], key: (item: T) => string): Record<string, T[]> {
   return items.reduce<Record<string, T[]>>((acc, item) => {
     const k = key(item);
