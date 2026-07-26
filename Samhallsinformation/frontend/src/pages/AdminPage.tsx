@@ -64,10 +64,6 @@ export default function AdminPage() {
 
   usePwaIdentity(ADMIN_PWA_IDENTITET)
 
-  if (!isLoggedIn || (roll !== 'Admin' && roll !== 'Support')) return null
-
-  const adminRoll: AdminRoll = aktivVy === 'Support' ? 'Support' : 'Admin'
-
   const { flaggor, växlaFlagg, återställ } = useFeatureFlagsAdmin()
 
   const [section, setSection]             = useState<AdminSection>(
@@ -88,14 +84,20 @@ export default function AdminPage() {
     }
   }, [aktivVy, section])
 
+  const handlePendingNotiser = useCallback((items: PendingNotis[]) => {
+    setNotiser(items)
+  }, [])
+
+  // Alla hooks ovan måste köras oavsett inloggningsläge (Rules of Hooks) —
+  // därför kommer det villkorliga returnet först här, efter samtliga.
+  if (!isLoggedIn || (roll !== 'Admin' && roll !== 'Support')) return null
+
+  const adminRoll: AdminRoll = aktivVy === 'Support' ? 'Support' : 'Admin'
+
   function notisNyckel(n: PendingNotis) { return `${n.arendeId}-${n.typ}` }
   function markeraLäst(n: PendingNotis) { setLästaNyckar(prev => new Set([...prev, notisNyckel(n)])) }
   function taBortNotis(n: PendingNotis) { setBorttagnaNyckar(prev => new Set([...prev, notisNyckel(n)])) }
   function markeraAllaLästa() { setLästaNyckar(new Set(unikaNotiser.map(notisNyckel))) }
-
-  const handlePendingNotiser = useCallback((items: PendingNotis[]) => {
-    setNotiser(items)
-  }, [])
 
   function öppnaÄrende(arendeId: string) {
     setInboxOpenId(arendeId)
