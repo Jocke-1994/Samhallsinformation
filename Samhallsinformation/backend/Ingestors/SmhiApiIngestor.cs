@@ -134,7 +134,8 @@ public class SmhiApiIngestor : IIngestor
     {
         "RED"    => "Kritisk",
         "ORANGE" => "Viktigt",
-        _        => "Bra att veta", // YELLOW
+        "YELLOW" => "Viktigt",
+        _        => "Bra att veta", // MESSAGE m.fl. — rena informationsmeddelanden, ingen officiell varningsnivå
     };
 }
 
