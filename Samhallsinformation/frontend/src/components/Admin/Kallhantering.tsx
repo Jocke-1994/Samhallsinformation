@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchAdminSources, createAdminSource, updateAdminSource, deleteAdminSource } from '../../api/sources'
+import { fetchAdminSources, createAdminSource, updateAdminSource, deleteAdminSource, resyncAdminSource } from '../../api/sources'
 import type { AdminSource } from '../../types'
 
 type KällStatus      = 'OK' | 'Begränsad drift' | 'Nere' | 'Okänd'
@@ -259,6 +259,18 @@ export default function Kallhantering() {
     mutationFn: deleteAdminSource,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-sources'] }),
   })
+  const resyncMutation = useMutation({
+    mutationFn: resyncAdminSource,
+    onSuccess: (result, id) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-sources'] })
+      setResyncResultat({ id, text: `✓ ${result.updated} uppdaterade, ${result.inserted} nya` })
+      setTimeout(() => setResyncResultat(null), 4000)
+    },
+    onError: (err, id) => {
+      setResyncResultat({ id, text: err instanceof Error ? `✗ ${err.message}` : '✗ Misslyckades' })
+      setTimeout(() => setResyncResultat(null), 4000)
+    },
+  })
 
   const kallor: Källa[] = apiSources.map(s => toKälla(s))
 
@@ -268,6 +280,7 @@ export default function Kallhantering() {
   const [visaForm,    setVisaForm]    = useState(false)
   const [aktiverar,   setAktiverar]   = useState<Set<string>>(new Set())
   const [sparad,      setSparad]      = useState<number | null>(null)
+  const [resyncResultat, setResyncResultat] = useState<{ id: number; text: string } | null>(null)
   const [ändringar,   setÄndringar]   = useState<SchemalagdÄndring[]>(INITIAL_ÄNDRINGAR)
   const [visaÄndring,    setVisaÄndring]    = useState(false)
   const [nyÄndring,      setNyÄndring]      = useState<Omit<SchemalagdÄndring, 'id'>>({
@@ -548,6 +561,14 @@ export default function Kallhantering() {
                       {sparad === k.id && <span className="text-xs text-green-500 font-medium">✓</span>}
                       <span className="text-xs text-slate-400 tabular-nums">{k.senastKontroll}</span>
                       <button
+                        onClick={() => resyncMutation.mutate(k.id)}
+                        disabled={resyncMutation.isPending && resyncMutation.variables === k.id}
+                        title="Hämta om och skriv över redan sparade händelser med senaste ingestor-logiken"
+                        className="text-xs text-sky-600 hover:text-sky-800 font-medium opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+                      >
+                        {resyncMutation.isPending && resyncMutation.variables === k.id ? 'Synkar...' : 'Synka om'}
+                      </button>
+                      <button
                         onClick={() => setRedigerar(redigerar?.id === k.id ? null : { ...k })}
                         className="text-xs text-violet-600 hover:text-violet-800 font-medium opacity-0 group-hover:opacity-100 transition-all"
                       >
@@ -560,6 +581,11 @@ export default function Kallhantering() {
                         Ta bort
                       </button>
                     </div>
+                    {resyncResultat?.id === k.id && (
+                      <p className={`text-xs text-right mt-1 font-medium ${resyncResultat.text.startsWith('✗') ? 'text-red-500' : 'text-green-600'}`}>
+                        {resyncResultat.text}
+                      </p>
+                    )}
                     {k.fetchError && (
                       <p className="text-xs text-red-500 mt-1 text-right truncate max-w-[16rem] ml-auto" title={k.fetchError}>
                         {k.fetchError}
