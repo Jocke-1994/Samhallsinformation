@@ -77,7 +77,7 @@ export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highl
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             <Kolumn typ="Nationell" sources={nationella}>
               {nationella.length === 0
                 ? <p className="text-xs text-slate-300 pt-2">Inga nationella källor</p>
