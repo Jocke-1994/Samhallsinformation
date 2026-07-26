@@ -5,6 +5,14 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      # react/react-dom måste ha exakt matchande versioner (React 19 kraschar
+      # hela render-trädet annars, se session 22 PR #358 och session 23).
+      # Grupperat så Dependabot alltid bumpar båda i samma PR.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
     ignore:
       # typescript-eslint@8.61.1 kräver peer typescript ">=4.8.4 <6.1.0".
       # TS 7.0.2 (PR #341) krockar med detta och npm install failar (ERESOLVE).
