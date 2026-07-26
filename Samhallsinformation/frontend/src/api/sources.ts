@@ -54,3 +54,12 @@ export async function deleteAdminSource(id: number): Promise<void> {
   const res = await adminFetch(`/api/admin/sources/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(`deleteAdminSource: ${res.status}`)
 }
+
+export async function resyncAdminSource(id: number): Promise<{ inserted: number; updated: number }> {
+  const res = await adminFetch(`/api/admin/sources/${id}/resync`, { method: 'POST' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `resyncAdminSource: ${res.status}`)
+  }
+  return res.json()
+}
