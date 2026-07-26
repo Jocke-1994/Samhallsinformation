@@ -8,6 +8,9 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
+    // Tillåter tillfälliga cloudflared-tunnlar (trycloudflare.com) för att
+    // testa dev-servern på mobilen — påverkar bara lokal dev, inte bygget.
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
       '/api': {
         target: 'http://localhost:5000',

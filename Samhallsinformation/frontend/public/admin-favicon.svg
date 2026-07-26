@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="128" fill="#7c3aed"/>
+  <text x="256" y="360" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="336" font-weight="800" text-anchor="middle" fill="white">S</text>
+  <g>
+    <circle cx="370" cy="370" r="30" fill="white"/>
+    <g fill="#7c3aed">
+      <circle cx="370" cy="370" r="21"/>
+      <rect x="366" y="335" width="8" height="13"/>
+      <rect x="366" y="335" width="8" height="13" transform="rotate(60 370 370)"/>
+      <rect x="366" y="335" width="8" height="13" transform="rotate(120 370 370)"/>
+      <rect x="366" y="335" width="8" height="13" transform="rotate(180 370 370)"/>
+      <rect x="366" y="335" width="8" height="13" transform="rotate(240 370 370)"/>
+      <rect x="366" y="335" width="8" height="13" transform="rotate(300 370 370)"/>
+    </g>
+    <circle cx="370" cy="370" r="8" fill="white"/>
+  </g>
+</svg>
