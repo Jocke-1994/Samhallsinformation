@@ -52,7 +52,7 @@ public class KrisinformationApiIngestor : IIngestor
                 Url        = item.Web ?? string.Empty,
                 RawData    = item.Headline + " | " + item.Preamble,
                 Geography  = ExtractGeography(item.Area),
-                Severity   = MetadataFallbacks.DefaultSeverity
+                Severity   = MapSeverity(item.Headline)
             };
 
             MetadataFallbacks.ApplyAll(canonicalEvent);
@@ -61,6 +61,32 @@ public class KrisinformationApiIngestor : IIngestor
         }
 
         return events;
+    }
+
+    // Krisinformation har ingen egen severity-kod i API-svaret, men VMA
+    // ("Viktigt meddelande till allmänheten") och varningsnivåer (Röd/Orange/
+    // Gul) är officiella termer Krisinformation själva använder i rubriken —
+    // att läsa av dem är inte en egen bedömning, bara att sluta ignorera
+    // information som redan finns (samma princip som SMHI:s severity-koder).
+    // Mönstret "... i <plats>" krävs för VMA så att artiklar OM VMA-systemet
+    // (t.ex. "SE-Alert: Ny kanal för Viktigt meddelande till allmänheten")
+    // inte felaktigt räknas som en aktiv varning. \s+ istället för ett enda
+    // mellanslag eftersom källans egen rubriktext ibland har dubbla mellanslag
+    // (verifierat mot skarp data, t.ex. "allmänheten  i Hörby kommun").
+    private static readonly Regex VmaMönster = new(@"viktigt meddelande till allmänheten\s+i\s", RegexOptions.IgnoreCase);
+    private static readonly Regex RödVarningMönster = new(@"röd varning", RegexOptions.IgnoreCase);
+    private static readonly Regex OrangeGulVarningMönster = new(@"orange varning|gul varning", RegexOptions.IgnoreCase);
+
+    private static string MapSeverity(string? headline)
+    {
+        if (string.IsNullOrWhiteSpace(headline)) return MetadataFallbacks.DefaultSeverity;
+
+        if (VmaMönster.IsMatch(headline) || RödVarningMönster.IsMatch(headline))
+            return "Kritisk";
+        if (OrangeGulVarningMönster.IsMatch(headline))
+            return "Viktigt";
+
+        return MetadataFallbacks.DefaultSeverity;
     }
 
     private static string? ExtractGeography(List<KrisinformationArea>? areas)
