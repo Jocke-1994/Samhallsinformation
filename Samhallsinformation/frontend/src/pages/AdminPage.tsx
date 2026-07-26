@@ -15,6 +15,7 @@ import FeatureFlagsAdmin from '../components/Admin/FeatureFlagsAdmin'
 import Sandlada from '../components/Admin/Sandlada'
 import { useAuth, type SystemRoll } from '../context/AuthContext'
 import { useFeatureFlagsAdmin } from '../context/FeatureFlagsContext'
+import { usePwaIdentity, ADMIN_PWA_IDENTITET } from '../hooks/usePwaIdentity'
 
 const SECTION_LABELS: Record<AdminSection, string> = {
   'oversikt':       'Översikt',
@@ -60,6 +61,8 @@ export default function AdminPage() {
       navigate('/', { replace: true })
     }
   }, [isLoggedIn, roll, navigate])
+
+  usePwaIdentity(ADMIN_PWA_IDENTITET)
 
   if (!isLoggedIn || (roll !== 'Admin' && roll !== 'Support')) return null
 
