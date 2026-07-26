@@ -34,9 +34,9 @@ export default function MinaKallor() {
 
       {/* Övre rad: Lägg till + Aktiva */}
       {(flaggor.kallor_lagg_till || flaggor.kallor_aktiva) && (
-        <div className="flex gap-6 items-start">
+        <div className="flex flex-col sm:flex-row gap-6 items-stretch sm:items-start">
           {flaggor.kallor_lagg_till && (
-            <div className="w-80 shrink-0">
+            <div className="w-full sm:w-80 sm:shrink-0">
               <LaggTillKort activeIds={activeIds} onAdd={handleAdd} />
             </div>
           )}
@@ -55,7 +55,7 @@ export default function MinaKallor() {
 
       {/* Nedre rad: Rekommenderade + Alla */}
       {(flaggor.kallor_rekommenderade || flaggor.kallor_alla) && (
-        <div className="flex gap-6 items-start">
+        <div className="flex flex-col sm:flex-row gap-6 items-stretch sm:items-start">
           {flaggor.kallor_rekommenderade && (
             <div className="flex-1 min-w-0">
               <RekommenderadeKallorKort activeIds={activeIds} onAdd={handleAdd} />
