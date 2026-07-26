@@ -96,3 +96,13 @@ body {
 .banner-pulse {
   animation: banner-pulse 2s ease-out infinite;
 }
+
+/* Döljer en knapp tills man hovrar över .group — men bara på enheter som
+   faktiskt stöder hover (mus/pekplatta). På touch-skärmar finns ingen
+   hover, så knappen skulle bli osynlig men ändå klickbar (t.ex. en
+   raderingsknapp man kan trycka på utan att se den). Där förblir den
+   alltid synlig istället. */
+@media (hover: hover) {
+  .hover-reveal { opacity: 0; }
+  .group:hover .hover-reveal { opacity: 1; }
+}

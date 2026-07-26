@@ -173,7 +173,7 @@ export default function Mottagare({
                     {!sek.noAdd && (
                       <button
                         onClick={() => remove(sek.key, m.id)}
-                        className="opacity-0 group-hover:opacity-100 ml-2 shrink-0 px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-all"
+                        className="hover-reveal ml-2 shrink-0 px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-all"
                       >
                         - Ta bort
                       </button>
