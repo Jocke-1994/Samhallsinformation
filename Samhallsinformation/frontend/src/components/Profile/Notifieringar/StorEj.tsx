@@ -427,7 +427,7 @@ export default function StorEj() {
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5">
+                  <div className="hover-reveal flex items-center gap-2 transition-all shrink-0 mt-0.5">
                     <button onClick={() => { setEditSchemaId(s.id); setVisaSchemaForm(false) }} className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors">Ändra</button>
                     <button onClick={() => removeSchema(s.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-colors">- Ta bort</button>
                   </div>
@@ -512,7 +512,7 @@ export default function StorEj() {
                       Tystar: {r.kallor.join(', ')}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5">
+                  <div className="hover-reveal flex items-center gap-2 transition-all shrink-0 mt-0.5">
                     <button onClick={() => { setEditTillfId(r.id); setVisaTillfForm(false) }} className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors">Ändra</button>
                     <button onClick={() => removeTillfällig(r.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-colors">- Ta bort</button>
                   </div>

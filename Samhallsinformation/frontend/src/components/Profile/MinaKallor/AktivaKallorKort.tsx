@@ -25,7 +25,7 @@ function KallaRad({ k, onRemove }: { k: Kalla; onRemove: (id: number) => void })
       </div>
       <button
         onClick={() => onRemove(k.id)}
-        className="opacity-0 group-hover:opacity-100 ml-3 shrink-0 px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-all"
+        className="hover-reveal ml-3 shrink-0 px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-all"
       >- Ta bort</button>
     </div>
   )
