@@ -43,8 +43,9 @@ export async function fetchSearchableSources(): Promise<SearchableSource[]> {
   return res.json()
 }
 
-export async function fetchEventTypes(): Promise<string[]> {
-  const res = await adminFetch('/api/admin/events/types')
+export async function fetchEventTypes(sourceId?: number): Promise<string[]> {
+  const qs = sourceId ? `?sourceId=${sourceId}` : ''
+  const res = await adminFetch(`/api/admin/events/types${qs}`)
   if (!res.ok) throw new Error(`fetchEventTypes: ${res.status}`)
   return res.json()
 }

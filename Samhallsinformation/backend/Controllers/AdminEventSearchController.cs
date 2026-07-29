@@ -34,11 +34,18 @@ public class AdminEventSearchController : ControllerBase
 
     // Kända händelsetyper för filter-dropdownen — bara källor som fått sin
     // EventType extraherad (idag Polisen, PR #373) har något att välja här.
+    // Skopas till vald källa när sourceId anges, annars typer per alla
+    // källor blandat — annars kan man t.ex. välja "Misshandel" när Källa
+    // står på SMHI, vilket aldrig kan ge några träffar.
     [HttpGet("/api/admin/events/types")]
-    public async Task<IActionResult> Types()
+    public async Task<IActionResult> Types([FromQuery] int? sourceId)
     {
-        var types = await _db.Events
-            .Where(e => e.EventType != null)
+        var query = _db.Events.Where(e => e.EventType != null);
+
+        if (sourceId.HasValue)
+            query = query.Where(e => e.SourceId == sourceId.Value);
+
+        var types = await query
             .Select(e => e.EventType!)
             .Distinct()
             .OrderBy(t => t)

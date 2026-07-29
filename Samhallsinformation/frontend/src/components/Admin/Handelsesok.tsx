@@ -79,8 +79,8 @@ export default function Handelsesok() {
   })
 
   const { data: types } = useQuery({
-    queryKey: ['admin-event-search-types'],
-    queryFn:  fetchEventTypes,
+    queryKey: ['admin-event-search-types', sourceId],
+    queryFn:  () => fetchEventTypes(sourceId ? Number(sourceId) : undefined),
   })
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -129,7 +129,7 @@ export default function Handelsesok() {
             <label className="block text-xs font-medium text-slate-500 mb-1">Källa</label>
             <select
               value={sourceId}
-              onChange={e => setSourceId(e.target.value)}
+              onChange={e => { setSourceId(e.target.value); setEventType('') }}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
             >
               <option value="">Alla källor</option>
