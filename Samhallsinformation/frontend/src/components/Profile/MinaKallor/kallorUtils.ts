@@ -62,10 +62,122 @@ export const TYPNAMN: Record<KallTyp, string> = {
   Kommunal:  'Kommunala',
 }
 
+// PROTOTYP (FAS 4-diskussion) — kategorierna är hämtade från Polisens skarpa
+// RSS-flöde (26 juli 2026). Bara Polismyndigheten har kategorifilter
+// tillgängligt just nu, eftersom det är den enda källan som fått sina
+// händelsetyper extraherade (EventType, PR #373).
+export const POLISEN_KATEGORIER = [
+  'Trafikbrott', 'Trafikolycka', 'Trafikkontroll', 'Trafikhinder',
+  'Misshandel', 'Våldtäkt', 'Rån', 'Stöld', 'Narkotikabrott', 'Vapenlagen',
+  'Brand', 'Fjällräddning', 'Övrigt', 'Ofredande/förargelse',
+  'Sammanfattning natt', 'Sammanfattning kväll och natt',
+]
+
+// Sveriges 21 län och deras 290 kommuner. Samma tvåkolumns-mönster som
+// Arbetsförmedlingens platsval (klicka län till vänster, kryssa kommuner
+// till höger) — undviker en enda lång lista med alla 290 på en gång.
+export const LÄN_KOMMUNER: Record<string, string[]> = {
+  'Stockholms län': [
+    'Botkyrka', 'Danderyd', 'Ekerö', 'Haninge', 'Huddinge', 'Järfälla',
+    'Lidingö', 'Nacka', 'Norrtälje', 'Nykvarn', 'Nynäshamn', 'Salem',
+    'Sigtuna', 'Sollentuna', 'Solna', 'Stockholm', 'Sundbyberg', 'Södertälje',
+    'Tyresö', 'Täby', 'Upplands-Bro', 'Upplands Väsby', 'Vallentuna',
+    'Vaxholm', 'Värmdö', 'Österåker',
+  ],
+  'Uppsala län': ['Enköping', 'Heby', 'Håbo', 'Knivsta', 'Tierp', 'Uppsala', 'Älvkarleby', 'Östhammar'],
+  'Södermanlands län': ['Eskilstuna', 'Flen', 'Gnesta', 'Katrineholm', 'Nyköping', 'Oxelösund', 'Strängnäs', 'Trosa', 'Vingåker'],
+  'Östergötlands län': [
+    'Boxholm', 'Finspång', 'Kinda', 'Linköping', 'Mjölby', 'Motala',
+    'Norrköping', 'Söderköping', 'Vadstena', 'Valdemarsvik', 'Ydre',
+    'Åtvidaberg', 'Ödeshög',
+  ],
+  'Jönköpings län': [
+    'Aneby', 'Eksjö', 'Gislaved', 'Gnosjö', 'Habo', 'Jönköping', 'Mullsjö',
+    'Nässjö', 'Sävsjö', 'Tranås', 'Vaggeryd', 'Vetlanda', 'Värnamo',
+  ],
+  'Kronobergs län': ['Alvesta', 'Lessebo', 'Ljungby', 'Markaryd', 'Tingsryd', 'Uppvidinge', 'Växjö', 'Älmhult'],
+  'Kalmar län': [
+    'Borgholm', 'Emmaboda', 'Hultsfred', 'Högsby', 'Kalmar', 'Mönsterås',
+    'Mörbylånga', 'Nybro', 'Oskarshamn', 'Torsås', 'Vimmerby', 'Västervik',
+  ],
+  'Gotlands län': ['Gotland'],
+  'Blekinge län': ['Karlshamn', 'Karlskrona', 'Olofström', 'Ronneby', 'Sölvesborg'],
+  'Skåne län': [
+    'Bjuv', 'Bromölla', 'Burlöv', 'Båstad', 'Eslöv', 'Helsingborg', 'Hässleholm',
+    'Höganäs', 'Hörby', 'Höör', 'Klippan', 'Kristianstad', 'Kävlinge',
+    'Landskrona', 'Lomma', 'Lund', 'Malmö', 'Osby', 'Perstorp', 'Simrishamn',
+    'Sjöbo', 'Skurup', 'Staffanstorp', 'Svalöv', 'Svedala', 'Tomelilla',
+    'Trelleborg', 'Vellinge', 'Ystad', 'Åstorp', 'Ängelholm', 'Örkelljunga',
+    'Östra Göinge',
+  ],
+  'Hallands län': ['Falkenberg', 'Halmstad', 'Hylte', 'Kungsbacka', 'Laholm', 'Varberg'],
+  'Västra Götalands län': [
+    'Ale', 'Alingsås', 'Bengtsfors', 'Bollebygd', 'Borås', 'Dals-Ed', 'Essunga',
+    'Falköping', 'Färgelanda', 'Grästorp', 'Gullspång', 'Göteborg', 'Götene',
+    'Herrljunga', 'Hjo', 'Härryda', 'Karlsborg', 'Kungälv', 'Lerum', 'Lidköping',
+    'Lilla Edet', 'Lysekil', 'Mariestad', 'Mark', 'Mellerud', 'Munkedal',
+    'Mölndal', 'Orust', 'Partille', 'Skara', 'Skövde', 'Sotenäs', 'Stenungsund',
+    'Strömstad', 'Svenljunga', 'Tanum', 'Tibro', 'Tidaholm', 'Tjörn', 'Tranemo',
+    'Trollhättan', 'Töreboda', 'Uddevalla', 'Ulricehamn', 'Vara', 'Vårgårda',
+    'Vänersborg', 'Åmål', 'Öckerö',
+  ],
+  'Värmlands län': [
+    'Arvika', 'Eda', 'Filipstad', 'Forshaga', 'Grums', 'Hagfors', 'Hammarö',
+    'Karlstad', 'Kil', 'Kristinehamn', 'Munkfors', 'Storfors', 'Sunne',
+    'Säffle', 'Torsby', 'Årjäng',
+  ],
+  'Örebro län': [
+    'Askersund', 'Degerfors', 'Hallsberg', 'Hällefors', 'Karlskoga', 'Kumla',
+    'Laxå', 'Lekeberg', 'Lindesberg', 'Ljusnarsberg', 'Nora', 'Örebro',
+  ],
+  'Västmanlands län': [
+    'Arboga', 'Fagersta', 'Hallstahammar', 'Kungsör', 'Köping', 'Norberg',
+    'Sala', 'Skinnskatteberg', 'Surahammar', 'Västerås',
+  ],
+  'Dalarnas län': [
+    'Avesta', 'Borlänge', 'Falun', 'Gagnef', 'Hedemora', 'Leksand', 'Ludvika',
+    'Malung-Sälen', 'Mora', 'Orsa', 'Rättvik', 'Smedjebacken', 'Säter',
+    'Vansbro', 'Älvdalen',
+  ],
+  'Gävleborgs län': [
+    'Bollnäs', 'Gävle', 'Hofors', 'Hudiksvall', 'Ljusdal', 'Nordanstig',
+    'Ockelbo', 'Ovanåker', 'Sandviken', 'Söderhamn',
+  ],
+  'Västernorrlands län': ['Härnösand', 'Kramfors', 'Sollefteå', 'Sundsvall', 'Timrå', 'Ånge', 'Örnsköldsvik'],
+  'Jämtlands län': ['Berg', 'Bräcke', 'Härjedalen', 'Krokom', 'Ragunda', 'Strömsund', 'Åre', 'Östersund'],
+  'Västerbottens län': [
+    'Bjurholm', 'Dorotea', 'Lycksele', 'Malå', 'Nordmaling', 'Norsjö',
+    'Robertsfors', 'Skellefteå', 'Sorsele', 'Storuman', 'Umeå', 'Vilhelmina',
+    'Vindeln', 'Vännäs', 'Åsele',
+  ],
+  'Norrbottens län': [
+    'Arjeplog', 'Arvidsjaur', 'Boden', 'Gällivare', 'Haparanda', 'Jokkmokk',
+    'Kalix', 'Kiruna', 'Luleå', 'Pajala', 'Piteå', 'Älvsbyn', 'Överkalix',
+    'Övertorneå',
+  ],
+}
+
+export const SVENSKA_LÄN = Object.keys(LÄN_KOMMUNER)
+export const ALLA_KOMMUNER = Object.values(LÄN_KOMMUNER).flat()
+
 export function groupBy<T>(items: T[], key: (item: T) => string): Record<string, T[]> {
   return items.reduce<Record<string, T[]>>((acc, item) => {
     const k = key(item);
     (acc[k] ??= []).push(item)
     return acc
   }, {})
+}
+
+// PROTOTYP (FAS 4-diskussion, session 24) — bästa-försök-extraktion av
+// Polisens typ/område ur en händelse i flödet, för prenumerationsklockan.
+// Titeln följer mönstret "{Typ}, {Ort}" (samma mittendel som EventType i
+// PR #373). Träffar inte alla mock-händelser (t.ex. "Inbrott" finns inte i
+// den kuraterade kategorilistan) — de visar då ingen klocka för typ-delen.
+export function extraheraPolisenTyp(title: string): string | null {
+  return POLISEN_KATEGORIER.find(kat => title.startsWith(kat)) ?? null
+}
+
+export function extraheraPolisenOmrade(geography: string | null): string | null {
+  if (!geography) return null
+  return ALLA_KOMMUNER.includes(geography) ? geography : null
 }

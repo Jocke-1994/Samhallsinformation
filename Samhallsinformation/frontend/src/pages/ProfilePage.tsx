@@ -46,7 +46,7 @@ export default function ProfilePage() {
   if (!isLoggedIn) {
     return (
       <div className="flex h-screen bg-slate-50">
-        <Sidebar selectedShortName={null} onSelectSource={() => {}} unreadSourceIds={new Set()} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar selectedShortName={null} onSelectSource={() => {}} viewMode="Allt" onSelectViewMode={() => {}} unreadSourceIds={new Set()} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <GästProfil />
       </div>
     )
@@ -57,6 +57,8 @@ export default function ProfilePage() {
       <Sidebar
         selectedShortName={null}
         onSelectSource={() => {}}
+        viewMode="Allt"
+        onSelectViewMode={() => {}}
         unreadSourceIds={new Set()}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}

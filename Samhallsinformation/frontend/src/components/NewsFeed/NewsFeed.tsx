@@ -7,6 +7,8 @@ import { getReadStatus, markAllAsRead } from '../../services/readState'
 import NewsItem from './NewsItem'
 import type { CanonicalEvent, Source } from '../../types'
 import { useAuth } from '../../context/AuthContext'
+import { usePolisenFilter } from '../../context/PolisenFilterContext'
+import { extraheraPolisenTyp, extraheraPolisenOmrade } from '../Profile/MinaKallor/kallorUtils'
 
 type ViewMode = 'Allt' | 'Mitt'
 type SeverityFilter = 'Alla' | 'Kritisk' | 'Viktigt' | 'Bra att veta'
@@ -43,13 +45,16 @@ function formatDateLabel(iso: string): string {
 interface Props {
   shortName: string | null
   sources: Source[]
+  viewMode: ViewMode
+  onViewModeChange: (mode: ViewMode) => void
   onReadStatusChange: () => void
   onOpenSidebar: () => void
 }
 
-export default function NewsFeed({ shortName, sources, onReadStatusChange, onOpenSidebar }: Props) {
+export default function NewsFeed({ shortName, sources, viewMode, onViewModeChange, onReadStatusChange, onOpenSidebar }: Props) {
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()
+  const { valdaKategorier, valdaOmraden, harAnpassatTyp, harAnpassatOmrade } = usePolisenFilter()
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['events', shortName ?? 'all'],
@@ -59,11 +64,9 @@ export default function NewsFeed({ shortName, sources, onReadStatusChange, onOpe
   const events: CanonicalEvent[] = data?.events ?? []
 
   const [readMap, setReadMap] = useState<Record<string, boolean>>({})
-  const [viewMode, setViewMode] = useState<ViewMode>('Allt')
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('Alla')
 
   useEffect(() => { setSeverityFilter('Alla') }, [shortName])
-  useEffect(() => { if (!isLoggedIn) setViewMode('Allt') }, [isLoggedIn])
 
   useEffect(() => {
     if (events.length > 0) setReadMap(getReadStatus(events.map(e => e.id)))
@@ -92,6 +95,24 @@ export default function NewsFeed({ shortName, sources, onReadStatusChange, onOpe
     severityFilter === 'Alla' ? sortedEvents : sortedEvents.filter(e => e.severity === severityFilter),
     [sortedEvents, severityFilter]
   )
+
+  // Mitt-flödet: Polisen-händelser måste matcha valda typer/områden (om
+  // dimensionen faktiskt anpassats — annars är "allt" fortfarande standard).
+  // Ett tomt urval matchar ingenting, med avsikt (inte reset till "allt").
+  // Övriga källor har ingen filtermekanism än, de visas okritiskt.
+  const mittEvents = useMemo(() =>
+    sortedEvents.filter(event => {
+      if (sourceMap[event.sourceId] !== 'Polisen') return true
+      const typ    = extraheraPolisenTyp(event.title)
+      const omrade = extraheraPolisenOmrade(event.geography)
+      const typOk    = !harAnpassatTyp    || !typ    || valdaKategorier.has(typ)
+      const omradeOk = !harAnpassatOmrade || !omrade || valdaOmraden.has(omrade)
+      return typOk && omradeOk
+    }),
+    [sortedEvents, sourceMap, valdaKategorier, valdaOmraden, harAnpassatTyp, harAnpassatOmrade]
+  )
+
+  const visaEvents = viewMode === 'Allt' ? filteredEvents : mittEvents
 
   const hasUnread = sortedEvents.some(e => !readMap[e.id])
 
@@ -147,27 +168,6 @@ export default function NewsFeed({ shortName, sources, onReadStatusChange, onOpe
         )}
       </div>
 
-      {/* Allt / Mitt — visas bara när inloggad och inte i källvy */}
-      {isLoggedIn && shortName === null && (
-        <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 py-2.5 shrink-0">
-          <div className="max-w-3xl mx-auto flex items-center gap-1 w-fit">
-            {(['Allt', 'Mitt'] as ViewMode[]).map(mode => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors ${
-                  viewMode === mode
-                    ? 'bg-violet-600 text-white'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700'
-                }`}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Filter — visas bara om det finns minst 2 olika allvarlighetsgrader */}
       {showFilters && viewMode === 'Allt' && (
         <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 shrink-0">
@@ -204,22 +204,6 @@ export default function NewsFeed({ shortName, sources, onReadStatusChange, onOpe
       <div className="flex-1 overflow-y-auto px-4 md:px-10 py-4 md:py-6">
         <div className="max-w-3xl mx-auto flex flex-col gap-1.5">
 
-          {viewMode === 'Mitt' && (
-            <div className="flex flex-col items-center py-20 gap-4 text-center">
-              <span className="text-4xl">🗂️</span>
-              <p className="text-slate-700 dark:text-slate-200 font-semibold text-base">Ditt personliga flöde</p>
-              <p className="text-slate-400 text-sm max-w-xs leading-relaxed">
-                Här visas nyheter från de källor du väljer att följa. Lägg till källor i Mina källör för att komma igång.
-              </p>
-              <button
-                onClick={() => navigate('/profil?section=mina-kallor')}
-                className="mt-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-colors"
-              >
-                Gå till Mina källör
-              </button>
-            </div>
-          )}
-
           {viewMode === 'Allt' && sortedEvents.length === 0 && (
             <p className="text-slate-400 text-sm py-6 text-center">Inga händelser hittades.</p>
           )}
@@ -231,10 +215,34 @@ export default function NewsFeed({ shortName, sources, onReadStatusChange, onOpe
             </div>
           )}
 
-          {viewMode === 'Allt' && (() => {
+          {viewMode === 'Mitt' && mittEvents.length === 0 && (
+            <div className="flex flex-col items-center py-20 gap-4 text-center">
+              <span className="text-4xl">🗂️</span>
+              <p className="text-slate-700 dark:text-slate-200 font-semibold text-base">Inget matchar dina prenumerationer just nu</p>
+              <p className="text-slate-400 text-sm max-w-xs leading-relaxed">
+                Lägg till fler källor, typer eller områden i Mina källor — eller prenumerera direkt via klockan på en händelse i Alla händelser.
+              </p>
+              <div className="flex items-center gap-3 mt-1">
+                <button
+                  onClick={() => onViewModeChange('Allt')}
+                  className="px-4 py-2 bg-white border border-violet-200 text-violet-600 hover:bg-violet-50 text-sm font-semibold rounded-xl transition-colors"
+                >
+                  Visa Alla händelser
+                </button>
+                <button
+                  onClick={() => navigate('/profil?section=mina-kallor')}
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-colors"
+                >
+                  Gå till Mina källor
+                </button>
+              </div>
+            </div>
+          )}
+
+          {(() => {
             let readSepShown = false
-            return filteredEvents.map((event, i) => {
-              const prev = filteredEvents[i - 1]
+            return visaEvents.map((event, i) => {
+              const prev = visaEvents[i - 1]
               const dateChanged = !prev || toDateKey(event.publishedAt) !== toDateKey(prev.publishedAt)
               const readTransition = isLoggedIn && !!prev && !readMap[prev.id] && !!readMap[event.id]
               const showReadSep = readTransition && !dateChanged && !readSepShown
@@ -260,6 +268,8 @@ export default function NewsFeed({ shortName, sources, onReadStatusChange, onOpe
                     event={event}
                     isRead={!!readMap[event.id]}
                     sourceName={shortName === null ? sourceMap[event.sourceId] : undefined}
+                    sourceShortName={sourceMap[event.sourceId]}
+                    viewMode={viewMode === 'Allt' ? 'allt' : 'mitt'}
                   />
                 </Fragment>
               )
