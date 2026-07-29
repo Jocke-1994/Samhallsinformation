@@ -1,11 +1,9 @@
-import type { KallTyp, Kalla, SparFilter } from '../../../types'
+import type { KallTyp, Kalla } from '../../../types'
 
-export const NY_GRANS_DAGAR = 30
-
-export function arNy(k: Kalla): boolean {
-  return (Date.now() - new Date(k.tillagdISystem).getTime()) / 86_400_000 < NY_GRANS_DAGAR
-}
-
+// Används fortfarande av RekommenderadeKallorKort.tsx (avstängd via
+// kallor_rekommenderade-flaggan som standard, men koden är kvar orörd —
+// se docs/MINA_KALLOR_BORTTAGNA_FUNKTIONER.md för sammanhang kring vad
+// som togs bort samtidigt som Mina källor kopplades mot riktig backend).
 export const KALLOR: Kalla[] = [
   { id: 1,  namn: 'Göteborgs Stad',               typ: 'Kommunal',  region: 'Västra Götaland', ort: 'Göteborg',  senasteNyhet: '2026-03-20T08:00:00', url: 'https://goteborg.se',                    tillagdISystem: '2025-06-01' },
   { id: 2,  namn: 'Västra Götalandsregionen',      typ: 'Regional',  region: 'Västra Götaland',                  senasteNyhet: '2026-03-20T09:30:00', url: 'https://vgregion.se',                    tillagdISystem: '2025-06-01' },
@@ -23,12 +21,6 @@ export const KALLOR: Kalla[] = [
   { id: 14, namn: 'Malmö Stad',                    typ: 'Kommunal',  region: 'Skåne',           ort: 'Malmö',    senasteNyhet: '2026-03-19T15:00:00', url: 'https://malmo.se',                       tillagdISystem: '2026-03-15' },
   { id: 15, namn: 'Region Skåne',                  typ: 'Regional',  region: 'Skåne',                            senasteNyhet: '2026-03-18T09:00:00', url: 'https://skane.se',                       tillagdISystem: '2026-03-18' },
 ]
-
-export const SPAR_FORSLAG: Record<SparFilter, number[]> = {
-  Allt:       [1, 2, 5, 7, 13],
-  Regionalt:  [2, 5, 7],
-  Nationellt: [],
-}
 
 export const ORSAK: Record<number, string> = {
   3:  'Rekommenderas som nationell källa för trafikinformation.',
