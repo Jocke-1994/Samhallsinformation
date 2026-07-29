@@ -13,7 +13,7 @@ export default function AllaKallorKort({ sources, activeIds, onAdd }: {
   const visade    = trimmed ? sorterade.filter(k => k.name.toLowerCase().includes(trimmed)) : sorterade
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col max-h-[523px]">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-auto sm:h-[523px]">
       <div style={{ padding: '1.5rem 2.5rem 1.25rem' }} className="border-b border-slate-100">
         <div className="flex items-center justify-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xl shrink-0">🏛️</div>
