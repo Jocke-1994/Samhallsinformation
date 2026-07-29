@@ -59,6 +59,7 @@ public class AdminEventSearchController : ControllerBase
         [FromQuery] int? sourceId,
         [FromQuery] string? geography,
         [FromQuery] string? eventType,
+        [FromQuery] string? sokord,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         [FromQuery] int page = 1,
@@ -77,6 +78,9 @@ public class AdminEventSearchController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(eventType))
             query = query.Where(e => e.EventType == eventType);
+
+        if (!string.IsNullOrWhiteSpace(sokord))
+            query = query.Where(e => EF.Functions.Like(e.Title, $"%{sokord}%") || EF.Functions.Like(e.Content, $"%{sokord}%"));
 
         if (from.HasValue)
             query = query.Where(e => e.PublishedAt >= from.Value);

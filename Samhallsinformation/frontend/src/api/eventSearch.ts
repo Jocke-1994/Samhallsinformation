@@ -31,6 +31,7 @@ export interface SearchParams {
   sourceId?: number
   geography?: string
   eventType?: string
+  sokord?: string
   from?: string
   to?: string
   page?: number
@@ -55,6 +56,7 @@ export async function searchEvents(params: SearchParams): Promise<AdminSearchRes
   if (params.sourceId)  qs.set('sourceId', String(params.sourceId))
   if (params.geography) qs.set('geography', params.geography)
   if (params.eventType) qs.set('eventType', params.eventType)
+  if (params.sokord)    qs.set('sokord', params.sokord)
   if (params.from)      qs.set('from', params.from)
   if (params.to)        qs.set('to', params.to)
   qs.set('page', String(params.page ?? 1))

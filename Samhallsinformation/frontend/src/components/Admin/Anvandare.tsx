@@ -9,7 +9,7 @@ const INLOGGAD_NAMN = 'Joakim Rehn'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd'
-type DetaljFlik = 'oversikt' | 'notifinstallningar' | 'notishistorik' | 'aktivitet' | 'ärenden'
+export type DetaljFlik = 'oversikt' | 'notifinstallningar' | 'notishistorik' | 'aktivitet' | 'ärenden'
 type ArendeStatusMini = 'Öppet' | 'Under behandling' | 'Hanterat' | 'Stängt'
 interface ArendeMini { id: string; kategori: string; amne: string; status: ArendeStatusMini; skapat: string }
 type RollÄndringTyp = 'ersätt' | 'lägg-till'

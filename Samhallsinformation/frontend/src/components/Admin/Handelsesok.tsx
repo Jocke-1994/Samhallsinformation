@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchSearchableSources, fetchEventTypes, searchEvents, type SearchParams, type AdminSearchEvent } from '../../api/eventSearch'
 import NewsItem from '../NewsFeed/NewsItem'
-import { MOCK_ANVÄNDARE_LISTA } from '../../lib/mockAnvandare'
+import { MOCK_ANVÄNDARE_LISTA, type MockAnvändareMini } from '../../lib/mockAnvandare'
 import { laddaSparadeHandelser, sparaHandelseForAnvandare, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
 import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
 import { useAuth } from '../../context/AuthContext'
@@ -78,10 +78,15 @@ function BulkSparaKnapp({ handelser, onKlar }: { handelser: AdminSearchEvent[]; 
   )
 }
 
-export default function Handelsesok() {
+interface HandelsesokProps {
+  onÖppnaAnvändare?: (epost: string) => void
+}
+
+export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
   const [sourceId, setSourceId]   = useState<string>('')
   const [geography, setGeography] = useState('')
   const [eventType, setEventType] = useState('')
+  const [sokord, setSokord]       = useState('')
   const [from, setFrom]           = useState('')
   const [to, setTo]               = useState('')
   const [page, setPage]           = useState(1)
@@ -90,15 +95,15 @@ export default function Handelsesok() {
 
   const [activeParams, setActiveParams] = useState<SearchParams>({ page: 1, pageSize: SIDA_STORLEK })
 
-  // Omvänd karta: eventId → namn på alla användare som redan har det sparat —
-  // rent informativ badge, hindrar inte att samma händelse sparas till fler
+  // Omvänd karta: eventId → alla användare som redan har det sparat — rent
+  // informativ badge, hindrar inte att samma händelse sparas till fler
   const sparadeAvKarta = useMemo(() => {
-    const karta: Record<string, string[]> = {}
+    const karta: Record<string, MockAnvändareMini[]> = {}
     for (const [anvandareIdStr, lista] of Object.entries(sparade)) {
       const användare = MOCK_ANVÄNDARE_LISTA.find(u => u.id === Number(anvandareIdStr))
       if (!användare) continue
       for (const h of lista) {
-        (karta[h.eventId] ??= []).push(användare.namn)
+        (karta[h.eventId] ??= []).push(användare)
       }
     }
     return karta
@@ -135,6 +140,7 @@ export default function Handelsesok() {
       sourceId:  sourceId ? Number(sourceId) : undefined,
       geography: geography.trim() || undefined,
       eventType: eventType || undefined,
+      sokord:    sokord.trim() || undefined,
       from:      from || undefined,
       to:        to || undefined,
       page:      nyPage,
@@ -146,6 +152,7 @@ export default function Handelsesok() {
     setSourceId('')
     setGeography('')
     setEventType('')
+    setSokord('')
     setFrom('')
     setTo('')
     setPage(1)
@@ -153,20 +160,44 @@ export default function Handelsesok() {
     setActiveParams({ page: 1, pageSize: SIDA_STORLEK })
   }
 
-  const harFilter = !!(activeParams.sourceId || activeParams.geography || activeParams.eventType || activeParams.from || activeParams.to)
+  const harFilter = !!(activeParams.sourceId || activeParams.geography || activeParams.eventType || activeParams.sokord || activeParams.from || activeParams.to)
   const totalSidor = data ? Math.max(1, Math.ceil(data.total / SIDA_STORLEK)) : 1
+
+  const allaPåSidanMarkerade = !!data && data.events.length > 0 && data.events.every(e => markerade.has(e.id))
+
+  function toggleAllaPåSidan() {
+    if (!data) return
+    setMarkerade(prev => {
+      const ny = new Set(prev)
+      if (allaPåSidanMarkerade) data.events.forEach(e => ny.delete(e.id))
+      else data.events.forEach(e => ny.add(e.id))
+      return ny
+    })
+  }
 
   return (
     <div>
       <p className="text-sm text-slate-500 mb-6">
-        Sök bakåt i tiden bland alla ingestade händelser (oavsett publiceringsstatus) — källa, typ, plats och datumintervall.
+        Sök bakåt i tiden bland alla ingestade händelser (oavsett publiceringsstatus) — sökord (titel/innehåll), källa, typ, plats och datumintervall.
         Typ-filtret kräver att källan fått sina händelsetyper extraherade (idag bara Polisen).
         Hittar du något en användare frågar om kan du spara det direkt till deras konto (mockat tills riktiga användare finns).
       </p>
 
       {/* Filter */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Sökord</label>
+            <input
+              type="text"
+              value={sokord}
+              onChange={e => setSokord(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') sök() }}
+              placeholder="t.ex. rattfylleri"
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+            />
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Källa</label>
             <select
@@ -269,6 +300,13 @@ export default function Handelsesok() {
         ) : (
           <>
             <div className="flex items-center gap-3 mb-3 min-h-[28px]">
+              <input
+                type="checkbox"
+                checked={allaPåSidanMarkerade}
+                onChange={toggleAllaPåSidan}
+                title="Markera alla på sidan"
+                className="shrink-0 rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer"
+              />
               {markerade.size > 0 ? (
                 <>
                   <span className="text-xs font-medium text-violet-700">{markerade.size} markerade</span>
@@ -299,7 +337,20 @@ export default function Handelsesok() {
                       checkbox={{ checked: markerade.has(e.id), onChange: () => toggleMarkerad(e.id) }}
                     />
                     {sparadTill && (
-                      <p className="text-xs text-slate-400 px-1">📌 Sparad till {sparadTill.join(', ')}</p>
+                      <p className="text-xs text-slate-400 px-1">
+                        📌 Sparad till{' '}
+                        {sparadTill.map((u, i) => (
+                          <span key={u.id}>
+                            {i > 0 && ', '}
+                            <button
+                              onClick={() => onÖppnaAnvändare?.(u.epost)}
+                              className="hover:text-violet-600 hover:underline transition-colors"
+                            >
+                              {u.namn}
+                            </button>
+                          </span>
+                        ))}
+                      </p>
                     )}
                   </div>
                 )
