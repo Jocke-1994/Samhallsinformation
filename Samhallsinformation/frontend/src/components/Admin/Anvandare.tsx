@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
+import { laddaSparadeHandelser, taBortSparadHandelse, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd'
-type DetaljFlik = 'oversikt' | 'notifinstallningar' | 'notishistorik' | 'aktivitet' | 'ärenden'
+export type DetaljFlik = 'oversikt' | 'notifinstallningar' | 'notishistorik' | 'aktivitet' | 'ärenden'
 type ArendeStatusMini = 'Öppet' | 'Under behandling' | 'Hanterat' | 'Stängt'
 interface ArendeMini { id: string; kategori: string; amne: string; status: ArendeStatusMini; skapat: string }
 type RollÄndringTyp = 'ersätt' | 'lägg-till'
@@ -528,6 +529,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   const [enkildRadera, setEnkildRadera]         = useState<Användare | null>(null)
   const [enkildRollÄndring, setEnkildRollÄndring] = useState<Användare | null>(null)
   const [impersonationMål, setImpersonationMål]   = useState<Användare | null>(null)
+  const [sparadeHändelser, setSparadeHändelser]   = useState<SparadHandelseMini[]>([])
 
   const filtrerade = användare.filter(u => {
     if (rollFilter !== 'Alla' && !u.roller.includes(rollFilter)) return false
@@ -550,10 +552,24 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   useEffect(() => {
     if (!defaultÖppnaEpost) return
     const u = INITIAL_ANVÄNDARE.find(x => x.epost === defaultÖppnaEpost)
-    if (u) { setVald(u); setDetaljFlik(defaultFlik ?? 'notifinstallningar') }
+    if (u) {
+      setVald(u)
+      setDetaljFlik(defaultFlik ?? 'notifinstallningar')
+      setSparadeHändelser(laddaSparadeHandelser()[u.id] ?? [])
+    }
   }, [defaultÖppnaEpost, defaultFlik])
 
-  function öppnaDetalj(u: Användare) { setVald(u); setDetaljFlik('oversikt') }
+  function öppnaDetalj(u: Användare) {
+    setVald(u)
+    setDetaljFlik('oversikt')
+    setSparadeHändelser(laddaSparadeHandelser()[u.id] ?? [])
+  }
+
+  function taBortSparad(eventId: string) {
+    if (!vald) return
+    taBortSparadHandelse(vald.id, eventId)
+    setSparadeHändelser(prev => prev.filter(h => h.eventId !== eventId))
+  }
 
   function applicerapRoller(roller: Roll[], typ: RollÄndringTyp) {
     setAnvändare(prev => prev.map(u => {
@@ -880,6 +896,32 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                       </div>
                     )
                   })()}
+                </div>
+
+                {/* Sparat (#298, punkt 9) — mockad via delad localStorage-modul
+                    (sparadeHandelserStorage.ts), skrivs från Händelsesök */}
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Sparat</p>
+                  {sparadeHändelser.length === 0 ? (
+                    <p className="text-sm text-slate-400">Inga sparade händelser.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {sparadeHändelser.map(h => (
+                        <div key={h.eventId} className="flex items-start justify-between gap-2 text-sm">
+                          <div className="min-w-0">
+                            <p className="text-slate-700 truncate">{h.title}</p>
+                            <p className="text-xs text-slate-400">{h.sourceName} · sparad {h.sparadDatum}</p>
+                          </div>
+                          <button
+                            onClick={() => taBortSparad(h.eventId)}
+                            className="shrink-0 text-xs text-slate-400 hover:text-red-500 transition-colors"
+                          >
+                            Ta bort
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {vald.avstängtTill && (

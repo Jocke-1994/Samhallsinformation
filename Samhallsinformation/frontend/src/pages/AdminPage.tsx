@@ -4,7 +4,7 @@ import AdminSidebar, { type AdminSection, type AdminRoll } from '../components/A
 import Oversikt from '../components/Admin/Oversikt'
 import Kallhantering from '../components/Admin/Kallhantering'
 import Felsökning from '../components/Admin/Felsökning'
-import Anvandare from '../components/Admin/Anvandare'
+import Anvandare, { type DetaljFlik } from '../components/Admin/Anvandare'
 import SupportInbox, { type PendingNotis } from '../components/Admin/SupportInbox'
 import Rapporter from '../components/Admin/Rapporter'
 import Aktivitetslogg from '../components/Admin/Aktivitetslogg'
@@ -76,6 +76,7 @@ export default function AdminPage() {
   const [avatarDropdown, setAvatarDropdown] = useState(false)
   const [inboxOpenId, setInboxOpenId]     = useState<string | undefined>(undefined)
   const [öppnaAnvEpost, setÖppnaAnvEpost] = useState<string | undefined>(undefined)
+  const [öppnaAnvFlik, setÖppnaAnvFlik]   = useState<DetaljFlik | undefined>(undefined)
   const [lästaNyckar, setLästaNyckar]     = useState<Set<string>>(new Set())
   const [borttagnaNyckar, setBorttagnaNyckar] = useState<Set<string>>(new Set())
 
@@ -259,7 +260,7 @@ export default function AdminPage() {
                   setSection('support-inbox')
                 }}
                 defaultÖppnaEpost={öppnaAnvEpost}
-                defaultFlik="notifinstallningar"
+                defaultFlik={öppnaAnvFlik ?? 'notifinstallningar'}
                 key={öppnaAnvEpost}
               />
             )}
@@ -269,13 +270,22 @@ export default function AdminPage() {
                 defaultOpenId={inboxOpenId}
                 onÖppnaAnvändare={epost => {
                   setÖppnaAnvEpost(epost)
+                  setÖppnaAnvFlik('notifinstallningar')
                   setSection('anvandare')
                 }}
                 key={inboxOpenId}
               />
             )}
 
-            {section === 'handelsesok' && <Handelsesok />}
+            {section === 'handelsesok' && (
+              <Handelsesok
+                onÖppnaAnvändare={epost => {
+                  setÖppnaAnvEpost(epost)
+                  setÖppnaAnvFlik('oversikt')
+                  setSection('anvandare')
+                }}
+              />
+            )}
 
             {section === 'uppdateringar'  && <AdminUppdateringar />}
             {section === 'faq'            && <AdminFaq />}

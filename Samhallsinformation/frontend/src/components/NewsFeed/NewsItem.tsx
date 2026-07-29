@@ -12,6 +12,7 @@ interface Props {
   sourceName?: string
   sourceShortName?: string
   viewMode?: 'allt' | 'mitt'
+  checkbox?: { checked: boolean; onChange: () => void }
 }
 
 const SEVERITY_CONFIG = {
@@ -56,7 +57,7 @@ function EventContent({ content }: { content: string }) {
   )
 }
 
-export default function NewsItem({ event, isRead, sourceName, sourceShortName, viewMode = 'allt' }: Props) {
+export default function NewsItem({ event, isRead, sourceName, sourceShortName, viewMode = 'allt', checkbox }: Props) {
   const { isLoggedIn } = useAuth()
   const { sparade, toggleSparad } = useSavedEvents()
   const [expanded, setExpanded] = useState(false)
@@ -90,6 +91,16 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
         className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-2.5">
+          {checkbox && (
+            <input
+              type="checkbox"
+              checked={checkbox.checked}
+              onClick={e => e.stopPropagation()}
+              onChange={checkbox.onChange}
+              className="shrink-0 rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer"
+            />
+          )}
+
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${cfg.pill}`}>
             {event.severity}
           </span>
