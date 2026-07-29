@@ -8,6 +8,7 @@ export type AdminSection =
   | 'faq'
   | 'anvandare'
   | 'support-inbox'
+  | 'handelsesok'
   | 'aktivitetslogg'
   | 'rapporter'
   | 'felsökning'
@@ -24,6 +25,7 @@ const NAV: { key: AdminSection; label: string; ikon: string; roller: AdminRoll[]
   { key: 'faq',            label: 'FAQ-hantering',     ikon: '❓', roller: ['Admin'] },
   { key: 'anvandare',      label: 'Användare',         ikon: '👥', roller: ['Admin', 'Support'] },
   { key: 'support-inbox',  label: 'Support-inbox',     ikon: '🎫', roller: ['Admin', 'Support'] },
+  { key: 'handelsesok',    label: 'Händelsesök',       ikon: '🔍', roller: ['Admin', 'Support'] },
   { key: 'aktivitetslogg', label: 'Aktivitetslogg',    ikon: '📋', roller: ['Admin'] },
   { key: 'rapporter',      label: 'Rapporter',         ikon: '📊', roller: ['Admin'] },
   { key: 'felsökning',     label: 'Felsökning',        ikon: '🔧', roller: ['Admin'] },
