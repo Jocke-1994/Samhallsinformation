@@ -111,6 +111,44 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 24 — 2026-07-27
+**What was done:**
+- **FAS 4-filterprototyp (Polisen kategori/kommun, #298) klar och testad:** vidareutvecklade prototypen från session 23 (`KategoriFilterModal.tsx`, `AktivaKallorKort.tsx`, `kallorUtils.ts`) med en kontextuell **prenumerationsklocka** per händelse i flödet (`PrenumerationsKlocka.tsx`) — i Allt-flödet en "lägg till"-meny (visar bara det som inte redan är valt, döljs helt om allt redan valt), i Mitt-flödet en "ta bort"-meny. Delat state lyft till `PolisenFilterContext.tsx`. Modell: två oberoende mängder (Typ ∩ Område), första klicket smalnar av från default "allt" till bara det valda, tomt urval matchar ingenting (inte reset). En stacking-bugg (menyn klipptes av kortets `overflow-hidden`) löstes med samma `createPortal`-mönster som `FeedbackModal` (session 7)
+- **Allt/Mitt lyft från gömd pill-toggle till egna rader i sidomenyn** ("Alla händelser"/"Mitt flöde", namngivna efter diskussion), samt en ny **kollapsbar Inställningar-sektion** i sidomenyn (Adminpanel alltid synlig, resten fällbar, standard utfälld)
+- **FAS 4-backend byggt på riktigt:** ny modell `UserPolisenFilter` (migration `AddUserPolisenFilter`, null-fält = ej anpassat/allt) + `GET/PUT /api/user/polisen-filter`, `PolisenFilterContext` kopplad mot riktiga endpoints. **Registrerings-seedningen borttagen** (`AuthService.cs`) — nya konton får inte längre alla källor automatiskt, verifierat med testkonto
+- **Admin → Användarhantering fick en "Polisen-filter"-sektion** i Översikt-fliken (mockad — hela panelen visade sig vara 100% frikopplad från riktiga användare, ingen `GET /api/admin/users` finns). Mockdatan använder medvetet samma datastruktur som den riktiga endpointen, för smidig framtida koppling
+- **Onboarding-mockup** (artifact, punkt-wizard: Konto→Källor→Klart) itererad flera varv med användaren — labeled stegbubblor, adress/ort-fält, SPAR borttaget helt (kräver personnummer+BankID som inte finns), riktig sammanfattning i steg 3
+- **"Sparat"-funktion byggd:** ny modell `UserSavedEvent` (migration `AddUserSavedEvent`, unikt index förhindrar dubbelspar), `GET/POST/DELETE /api/user/saved-events`, `SavedEventsContext`, bokmärkesikon på alla källor i `NewsItem.tsx`, "Flöde/Sparat"-pill inuti Mitt flöde. Verifierat end-to-end mot riktig backend (curl) och i webbläsaren
+- Omfattande designdiskussion: notis-volym-modell fastslagen (subscribe = samtycke till volym, filter är frivillig finjustering, inte en spärr — via en YouTube-liknelse från användaren), Google-konto-skapande klargjort som samma jobb som Google-inloggning (FAS 3, ej byggd), Support-ärendesystemets omfattning diskuterad (smeknamn/primärnamn, bildbilagor — stort, eget spår), monetisering flaggad som framtida fråga
+
+**Problem och lösningar denna session:**
+- Missförstod användarens svenska ("klockan bör bli av" = "borde byggas", inte "borde tas bort") — korrigerade innan fel beslut sparades till minnet
+- CDP-skärmdumpar timeade ut sporadiskt vid artifact-testning (både på claude.ai/code/artifact och en lokal `serve`-server) — visade sig vara transient automationsflakighet, inte en bugg i koden; en kort väntan löste det varje gång
+- Artifact-menyns stäng-knappar (×/Avbryt) var bara kopplade via `querySelector` (bara första träffen av tre element med samma `data-action`) — fixat med `querySelectorAll`
+- Upptäckte att "Mina källor" (lägga till/ta bort myndigheter) fortfarande är 100% frikopplad från backend, trots att `GET/PUT /api/user/sources` finns sedan session 18 — ingen frontend-anropare någonsin byggd
+
+**Etablerat mönster:**
+- Notis-volym: att lägga till en källa är användarens samtycke till volymen från den — inga automatiska spärrar utöver att inget längre auto-seedas vid registrering. Typ/område-filtret är en frivillig finjustering, inte ett krav innan notiser får skickas
+- Vid onboarding/design som är svårt att beskriva i ord: bygg en klickbar artifact-mockup med verklig kopia av existerande komponenters stil (samma mönster som session 22:s jämförelse-artifact)
+- Ny backend-tabell som bara rör EN specifik källa (t.ex. Polisen): håll den källspecifik och enkel istället för ett generiskt "per källa, per dimension"-schema — billigare att generalisera senare om/när fler källor faktiskt behöver det, än att bygga generiskt i förväg
+- Innan admin-funktioner byggs mot "en användares data": verifiera att adminsidan faktiskt är kopplad mot riktiga användare — den var det inte (varken `Anvandare.tsx` eller källistan i `Mina källor`)
+
+**Allt overkommitterat på disk vid sessionens slut** — inga PR:ar, inga commits. Ändrade filer: `AuthService.cs`, `AppDbContext.cs`, `Program.cs`, `App.tsx`, `Anvandare.tsx`, `NewsFeed.tsx`, `NewsItem.tsx`, `AktivaKallorKort.tsx`, `kallorUtils.ts`, `Sidebar.tsx`, `main.tsx`, `OmPage.tsx`, `ProfilePage.tsx`, `UppdateringarPage.tsx`. Nya filer: `UserPolisenFilterController.cs`, `UserSavedEventsController.cs`, migrationerna för `AddUserPolisenFilter`/`AddUserSavedEvent`, `UserPolisenFilter.cs`, `UserSavedEvent.cs`, `polisenFilter.ts`, `savedEvents.ts`, `PrenumerationsKlocka.tsx`, `KategoriFilterModal.tsx`, `PolisenFilterContext.tsx`, `SavedEventsContext.tsx`.
+
+**Next session (Session 25), bestämd ordning:**
+1. Admin: "Sparat"-sektion i Användarhantering (samma plats/mönster som Polisen-filter) + fristående historisk händelsesökning (källa/tid/plats/datum) för admin+support
+2. Koppla "Mina källor" (källistan) mot riktig backend (`GET/PUT /api/user/sources` finns redan, bara aldrig anropad)
+3. Definiera V1-lanseringsscope (ingen sparad lista finns — gå igenom varje meny/kort och besluta in/ut, görs tidigt så resten av listan inte byggs i onödan)
+4. Support-ärendesystem, full ombyggnad (smeknamn/primärnamn med "primär"-val, bildbilagor, riktig backend istället för dagens mock) — aktuellt när fler än användaren själv agerar support
+5. Push-notiser (prioritera riktig push-notis, sen ev. e-post, SMS mycket senare) — `UserDevice`/`UserNotificationSetting`/`NotificationDeliveryLog` finns redan som oanvänd scaffolding sedan session 18
+6. Onboarding-wizarden byggd på riktigt i registreringsflödet (mockup klar)
+7. FAQ-innehållet rättat (två poster påstår idag att FAS 5 finns)
+8. FAS 3: Google-inloggning (#297) — löser även "skapa konto via Google" i samma veva
+9. Öppna login/registrering publikt (synliga knappar) — sist av allt
+- Monetisering/affärsmodell — flaggad, inte påbörjad, förtjänar ett eget samtal
+
+---
+
 ### Session 23 — 2026-07-26
 **What was done:**
 - **PWA-stöd (huvudapp):** `manifest.json` + genererade ikoner (192/512, maskable, apple-touch-icon) + `theme-color`/`mobile-web-app-capable`-metataggar i `index.html`. Verifierat på riktig Android-mobil via cloudflared-tunnel: installeras som egen app, eget namn, egen ikon, helskärmsläge (PR #363)
