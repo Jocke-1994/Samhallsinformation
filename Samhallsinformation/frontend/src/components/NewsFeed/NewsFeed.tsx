@@ -8,9 +8,11 @@ import NewsItem from './NewsItem'
 import type { CanonicalEvent, Source } from '../../types'
 import { useAuth } from '../../context/AuthContext'
 import { usePolisenFilter } from '../../context/PolisenFilterContext'
+import { useSavedEvents } from '../../context/SavedEventsContext'
 import { extraheraPolisenTyp, extraheraPolisenOmrade } from '../Profile/MinaKallor/kallorUtils'
 
 type ViewMode = 'Allt' | 'Mitt'
+type MittUnderflik = 'Flöde' | 'Sparat'
 type SeverityFilter = 'Alla' | 'Kritisk' | 'Viktigt' | 'Bra att veta'
 
 const FILTER_STYLES: Record<SeverityFilter, { active: string; activeBadge: string; inactiveBadge: string }> = {
@@ -55,6 +57,8 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()
   const { valdaKategorier, valdaOmraden, harAnpassatTyp, harAnpassatOmrade } = usePolisenFilter()
+  const { sparade } = useSavedEvents()
+  const [mittUnderflik, setMittUnderflik] = useState<MittUnderflik>('Flöde')
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['events', shortName ?? 'all'],
@@ -112,7 +116,15 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
     [sortedEvents, sourceMap, valdaKategorier, valdaOmraden, harAnpassatTyp, harAnpassatOmrade]
   )
 
-  const visaEvents = viewMode === 'Allt' ? filteredEvents : mittEvents
+  // Bara händelser som redan finns i det hämtade fönstret (senaste 50) kan
+  // visas här — en sparad händelse som fallit ur fönstret syns inte i listan
+  // just nu, en känd begränsning tills riktig paginering finns.
+  const sparadeEvents = useMemo(
+    () => sortedEvents.filter(e => sparade.has(e.id)),
+    [sortedEvents, sparade]
+  )
+
+  const visaEvents = viewMode === 'Allt' ? filteredEvents : mittUnderflik === 'Sparat' ? sparadeEvents : mittEvents
 
   const hasUnread = sortedEvents.some(e => !readMap[e.id])
 
@@ -168,6 +180,27 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
         )}
       </div>
 
+      {/* Flöde / Sparat — bara i Mitt flöde */}
+      {viewMode === 'Mitt' && (
+        <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 py-2.5 shrink-0">
+          <div className="max-w-3xl mx-auto flex items-center gap-1 w-fit">
+            {(['Flöde', 'Sparat'] as MittUnderflik[]).map(f => (
+              <button
+                key={f}
+                onClick={() => setMittUnderflik(f)}
+                className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors ${
+                  mittUnderflik === f
+                    ? 'bg-violet-600 text-white'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filter — visas bara om det finns minst 2 olika allvarlighetsgrader */}
       {showFilters && viewMode === 'Allt' && (
         <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 shrink-0">
@@ -215,7 +248,7 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
             </div>
           )}
 
-          {viewMode === 'Mitt' && mittEvents.length === 0 && (
+          {viewMode === 'Mitt' && mittUnderflik === 'Flöde' && mittEvents.length === 0 && (
             <div className="flex flex-col items-center py-20 gap-4 text-center">
               <span className="text-4xl">🗂️</span>
               <p className="text-slate-700 dark:text-slate-200 font-semibold text-base">Inget matchar dina prenumerationer just nu</p>
@@ -236,6 +269,16 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
                   Gå till Mina källor
                 </button>
               </div>
+            </div>
+          )}
+
+          {viewMode === 'Mitt' && mittUnderflik === 'Sparat' && sparadeEvents.length === 0 && (
+            <div className="flex flex-col items-center py-20 gap-4 text-center">
+              <span className="text-4xl">📑</span>
+              <p className="text-slate-700 dark:text-slate-200 font-semibold text-base">Inget sparat än</p>
+              <p className="text-slate-400 text-sm max-w-xs leading-relaxed">
+                Klicka på bokmärkes-ikonen på en händelse för att spara den och hitta den igen här senare.
+              </p>
             </div>
           )}
 

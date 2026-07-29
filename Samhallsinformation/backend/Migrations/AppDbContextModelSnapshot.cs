@@ -402,6 +402,31 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("UserPreferences");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.UserSavedEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("SavedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("UserId", "EventId")
+                        .IsUnique();
+
+                    b.ToTable("UserSavedEvents");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.UserSettingAuditLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -546,6 +571,25 @@ namespace Samhallsinformation.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.UserSavedEvent", b =>
+                {
+                    b.HasOne("Samhallsinformation.Models.CanonicalEvent", "Event")
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Samhallsinformation.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
 
                     b.Navigation("User");
                 });

@@ -8,6 +8,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
 import { FeatureFlagsProvider } from './context/FeatureFlagsContext'
 import { PolisenFilterProvider } from './context/PolisenFilterContext'
+import { SavedEventsProvider } from './context/SavedEventsContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,7 +27,9 @@ createRoot(document.getElementById('root')!).render(
           <FeatureFlagsProvider>
             <ThemeProvider>
               <PolisenFilterProvider>
-                <App />
+                <SavedEventsProvider>
+                  <App />
+                </SavedEventsProvider>
               </PolisenFilterProvider>
             </ThemeProvider>
           </FeatureFlagsProvider>
