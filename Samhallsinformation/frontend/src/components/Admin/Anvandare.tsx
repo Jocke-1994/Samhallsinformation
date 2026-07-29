@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react'
 import { laddaSparadeHandelser, taBortSparadHandelse, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
+import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
+import { useAuth } from '../../context/AuthContext'
+
+// Mockad inloggad admin/support-identitet — samma placeholder som resten av
+// admin-panelen (SupportInbox.INLOGGAD_AGENT, AdminPage-avataren)
+const INLOGGAD_NAMN = 'Joakim Rehn'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd'
@@ -517,6 +523,7 @@ interface AnvandareProps {
 }
 
 export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik }: AnvandareProps) {
+  const { aktivVy } = useAuth()
   const [användare, setAnvändare]               = useState<Användare[]>(INITIAL_ANVÄNDARE)
   const [rollFilter, setRollFilter]             = useState<Roll | 'Alla'>('Alla')
   const [statusFilter, setStatusFilter]         = useState<Status | 'Alla'>('Alla')
@@ -567,8 +574,19 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
 
   function taBortSparad(eventId: string) {
     if (!vald) return
+    const handelse = sparadeHändelser.find(h => h.eventId === eventId)
     taBortSparadHandelse(vald.id, eventId)
     setSparadeHändelser(prev => prev.filter(h => h.eventId !== eventId))
+    if (handelse) {
+      läggTillLoggpost({
+        tid:    new Date().toISOString(),
+        vem:    `${INLOGGAD_NAMN} (${aktivVy}-läge)`,
+        typ:    'Sparat: borttagen',
+        rubrik: `Tog bort sparad händelse från ${vald.namn}`,
+        detalj: `"${handelse.title}" (${handelse.sourceName}) borttagen från ${vald.namn}s konto.`,
+        ångraData: { anvandareId: vald.id, handelse, undoAction: 'lägg-till' },
+      })
+    }
   }
 
   function applicerapRoller(roller: Roll[], typ: RollÄndringTyp) {

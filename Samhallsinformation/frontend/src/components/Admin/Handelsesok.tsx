@@ -4,8 +4,14 @@ import { fetchSearchableSources, fetchEventTypes, searchEvents, type SearchParam
 import NewsItem from '../NewsFeed/NewsItem'
 import { MOCK_ANVÄNDARE_LISTA, type MockAnvändareMini } from '../../lib/mockAnvandare'
 import { laddaSparadeHandelser, sparaHandelseForAnvandare, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
+import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
+import { useAuth } from '../../context/AuthContext'
 
 const SIDA_STORLEK = 20
+
+// Mockad inloggad admin/support-identitet — samma placeholder som resten av
+// admin-panelen (SupportInbox.INLOGGAD_AGENT, AdminPage-avataren)
+const INLOGGAD_NAMN = 'Joakim Rehn'
 
 function formatDatum(iso: string): string {
   return new Date(iso).toLocaleDateString('sv-SE', { year: 'numeric', month: 'numeric', day: 'numeric' })
@@ -13,16 +19,27 @@ function formatDatum(iso: string): string {
 
 function BulkSparaKnapp({ handelser, onKlar }: { handelser: AdminSearchEvent[]; onKlar: () => void }) {
   const [öppen, setÖppen] = useState(false)
+  const { aktivVy } = useAuth()
 
-  function spara(anvandareId: number) {
-    const nu = formatDatum(new Date().toISOString())
+  function spara(anvandareId: number, anvandareNamn: string) {
+    const nuIso = new Date().toISOString()
+    const nu    = formatDatum(nuIso)
     for (const h of handelser) {
-      sparaHandelseForAnvandare(anvandareId, {
+      const handelse: SparadHandelseMini = {
         eventId:     h.id,
         title:       h.title,
         sourceName:  h.sourceName,
         publishedAt: h.publishedAt,
         sparadDatum: nu,
+      }
+      sparaHandelseForAnvandare(anvandareId, handelse)
+      läggTillLoggpost({
+        tid:    nuIso,
+        vem:    `${INLOGGAD_NAMN} (${aktivVy}-läge)`,
+        typ:    'Sparat: tillagd',
+        rubrik: `Sparade händelse till ${anvandareNamn}`,
+        detalj: `"${h.title}" (${h.sourceName}) kopplad till ${anvandareNamn}s konto.`,
+        ångraData: { anvandareId, handelse, undoAction: 'ta-bort' },
       })
     }
     setÖppen(false)
@@ -45,7 +62,7 @@ function BulkSparaKnapp({ handelser, onKlar }: { handelser: AdminSearchEvent[]; 
               {MOCK_ANVÄNDARE_LISTA.map(u => (
                 <li key={u.id}>
                   <button
-                    onClick={() => spara(u.id)}
+                    onClick={() => spara(u.id, u.namn)}
                     className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                   >
                     {u.namn}
