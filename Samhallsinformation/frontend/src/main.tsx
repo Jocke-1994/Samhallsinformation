@@ -7,6 +7,7 @@ import App from './App.tsx'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
 import { FeatureFlagsProvider } from './context/FeatureFlagsContext'
+import { PolisenFilterProvider } from './context/PolisenFilterContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,7 +25,9 @@ createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <FeatureFlagsProvider>
             <ThemeProvider>
-              <App />
+              <PolisenFilterProvider>
+                <App />
+              </PolisenFilterProvider>
             </ThemeProvider>
           </FeatureFlagsProvider>
         </AuthProvider>

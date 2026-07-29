@@ -1,11 +1,16 @@
 import { useState } from 'react'
 import type { CanonicalEvent } from '../../types'
 import { markAsRead } from '../../services/readState'
+import { extraheraPolisenTyp, extraheraPolisenOmrade } from '../Profile/MinaKallor/kallorUtils'
+import PrenumerationsKlocka from './PrenumerationsKlocka'
+import { useAuth } from '../../context/AuthContext'
 
 interface Props {
   event: CanonicalEvent
   isRead: boolean
   sourceName?: string
+  sourceShortName?: string
+  viewMode?: 'allt' | 'mitt'
 }
 
 const SEVERITY_CONFIG = {
@@ -50,7 +55,8 @@ function EventContent({ content }: { content: string }) {
   )
 }
 
-export default function NewsItem({ event, isRead, sourceName }: Props) {
+export default function NewsItem({ event, isRead, sourceName, sourceShortName, viewMode = 'allt' }: Props) {
+  const { isLoggedIn } = useAuth()
   const [expanded, setExpanded] = useState(false)
   const cfg = SEVERITY_CONFIG[event.severity]
 
@@ -61,6 +67,10 @@ export default function NewsItem({ event, isRead, sourceName }: Props) {
   const showGeography = !!event.geography &&
     !event.title.toLowerCase().includes(event.geography.toLowerCase())
 
+  const ärPolisen = isLoggedIn && sourceShortName === 'Polisen'
+  const polisenTyp    = ärPolisen ? extraheraPolisenTyp(event.title) : null
+  const polisenOmrade = ärPolisen ? extraheraPolisenOmrade(event.geography) : null
+
   function handleToggle() {
     if (!isRead) markAsRead(event.id)
     setExpanded(prev => !prev)
@@ -69,9 +79,12 @@ export default function NewsItem({ event, isRead, sourceName }: Props) {
   return (
     <div className={`rounded-xl border border-slate-200 dark:border-slate-700 border-l-4 ${borderClass} bg-white dark:bg-slate-800 shadow-sm overflow-hidden`}>
 
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={handleToggle}
-        className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors"
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleToggle() }}
+        className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-2.5">
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${cfg.pill}`}>
@@ -94,11 +107,17 @@ export default function NewsItem({ event, isRead, sourceName }: Props) {
 
           <span className="text-xs text-slate-400 shrink-0">{formatTime(event.publishedAt)}</span>
 
+          {(polisenTyp || polisenOmrade) && (
+            <div onClick={e => e.stopPropagation()}>
+              <PrenumerationsKlocka polisenTyp={polisenTyp} polisenOmrade={polisenOmrade} mode={viewMode} />
+            </div>
+          )}
+
           <span className={`text-slate-300 text-xs shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}>
             ▾
           </span>
         </div>
-      </button>
+      </div>
 
       {expanded && (
         <div className="px-4 pb-4 pt-3 border-t border-slate-100 dark:border-slate-700">

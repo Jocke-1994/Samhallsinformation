@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Routes, Route, useLocation, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSwipeable } from 'react-swipeable'
@@ -16,15 +16,23 @@ import UppdateringarPage from './pages/UppdateringarPage'
 import WelcomeModal from './components/WelcomeModal/WelcomeModal'
 import { fetchSources } from './api/sources'
 import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
+import { useAuth } from './context/AuthContext'
 import type { Source } from './types'
 
 function HomePage() {
   const location = useLocation()
+  const { isLoggedIn } = useAuth()
   const [selectedShortName, setSelectedShortName] = useState<string | null>(
     (location.state as { shortName?: string } | null)?.shortName ?? null
   )
+  const [viewMode, setViewMode] = useState<'Allt' | 'Mitt'>('Allt')
   const [readTrigger, setReadTrigger] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Allt/Mitt är bara meningsfullt i det kombinerade flödet för inloggade —
+  // annars filtrerar ett kvarhängande "Mitt"-läge tyst en enskild källas vy.
+  useEffect(() => { if (!isLoggedIn) setViewMode('Allt') }, [isLoggedIn])
+  useEffect(() => { if (selectedShortName !== null) setViewMode('Allt') }, [selectedShortName])
 
   const { data: sources = [] } = useQuery<Source[]>({
     queryKey: ['sources'],
@@ -49,6 +57,8 @@ function HomePage() {
       <Sidebar
         selectedShortName={selectedShortName}
         onSelectSource={setSelectedShortName}
+        viewMode={viewMode}
+        onSelectViewMode={setViewMode}
         unreadSourceIds={unreadSourceIds}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -58,6 +68,8 @@ function HomePage() {
         <NewsFeed
           shortName={selectedShortName}
           sources={sources}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
           onReadStatusChange={handleReadStatusChange}
           onOpenSidebar={() => setSidebarOpen(true)}
         />

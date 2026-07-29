@@ -17,6 +17,8 @@ import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-ki
 interface Props {
   selectedShortName: string | null
   onSelectSource: (shortName: string | null) => void
+  viewMode: 'Allt' | 'Mitt'
+  onSelectViewMode: (mode: 'Allt' | 'Mitt') => void
   unreadSourceIds: Set<number>
   isOpen: boolean
   onClose: () => void
@@ -43,15 +45,7 @@ const TILLÅTNA_VYN: Record<SystemRoll, SystemRoll[]> = {
 }
 
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center py-3">
-      {children}
-    </p>
-  )
-}
-
-export default function Sidebar({ selectedShortName, onSelectSource, unreadSourceIds, isOpen, onClose }: Props) {
+export default function Sidebar({ selectedShortName, onSelectSource, viewMode, onSelectViewMode, unreadSourceIds, isOpen, onClose }: Props) {
   const navigate  = useNavigate()
   const location  = useLocation()
   const { isLoggedIn, roll, aktivVy, logout, byttVy } = useAuth()
@@ -61,6 +55,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
   const [dropdownÖppen, setDropdownÖppen] = useState(false)
   const [feedbackÖppen, setFeedbackÖppen] = useState(false)
   const [sorteraAktiv, setSorteraAktiv] = useState(false)
+  const [inställningarÖppen, setInställningarÖppen] = useState(true)
 
   const { data: sources = [] } = useQuery<Source[]>({
     queryKey: ['sources'],
@@ -138,7 +133,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
       <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700 flex items-center">
         <div className="w-8 shrink-0" />
         <button
-          onClick={() => { onSelectSource(null); navigate('/'); onClose() }}
+          onClick={() => { onSelectSource(null); onSelectViewMode('Allt'); navigate('/'); onClose() }}
           className={`flex-1 text-center text-lg font-extrabold tracking-tight transition-colors ${
             selectedShortName === null && !isProfilePage
               ? 'text-violet-700 dark:text-violet-400'
@@ -172,9 +167,20 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
         {/* Inställningar — endast för inloggade */}
         {isLoggedIn && (
           <>
-            <SectionLabel>Inställningar</SectionLabel>
+            <button
+              onClick={() => setInställningarÖppen(v => !v)}
+              className="w-full flex items-center justify-center gap-1.5 py-3 text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            >
+              Inställningar
+              <svg
+                className={`w-3 h-3 shrink-0 transition-transform ${inställningarÖppen ? '' : '-rotate-90'}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
             <div className="flex flex-col gap-0.5">
-              {synligaSektioner.map(s => {
+              {inställningarÖppen && synligaSektioner.map(s => {
                 const isActive = activeSection === s.id
                 return (
                   <button
@@ -227,6 +233,31 @@ export default function Sidebar({ selectedShortName, onSelectSource, unreadSourc
           )}
         </div>
         <div className="flex flex-col gap-0.5">
+          <SourceButton
+            label="Alla händelser"
+            active={selectedShortName === null && !isProfilePage && viewMode === 'Allt'}
+            hasUnread={false}
+            onClick={() => {
+              onSelectSource(null)
+              onSelectViewMode('Allt')
+              navigate('/')
+              onClose()
+            }}
+          />
+          {isLoggedIn && (
+            <SourceButton
+              label="Mitt flöde"
+              active={selectedShortName === null && !isProfilePage && viewMode === 'Mitt'}
+              hasUnread={false}
+              onClick={() => {
+                onSelectSource(null)
+                onSelectViewMode('Mitt')
+                navigate('/')
+                onClose()
+              }}
+            />
+          )}
+          <div className="border-t border-slate-100 dark:border-slate-800 my-1" />
           {isLoggedIn ? (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={orderedNames} strategy={verticalListSortingStrategy}>
