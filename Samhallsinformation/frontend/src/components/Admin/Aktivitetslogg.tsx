@@ -72,10 +72,16 @@ const STATUS_PRICK: Record<LoggStatus, string> = {
   Misslyckad: 'bg-red-500',
 }
 
+// Använder verklig aktuell tid, inte ett fast datum — nödvändigt sedan
+// Kontoåtgärder (riktiga, tidsstämplade poster) blandades in med den
+// statiska Ingestor/Notis/Fel-mocken. Konsekvens: mock-raderna (frusna vid
+// 2026-05-17/18) syns numera bara under "Alla", inte "Idag"/"7 dagar"/
+// "30 dagar" — förväntat, inte en bugg, eftersom de faktiskt ligger
+// månader tillbaka i tiden jämfört med verkligt idag.
 function datumGräns(filter: TidsFilter): string | null {
   if (filter === 'Alla') return null
-  const d = new Date('2026-05-18')
-  if (filter === 'Idag')    return '2026-05-18'
+  const d = new Date()
+  if (filter === 'Idag')    return d.toISOString().slice(0, 10)
   if (filter === '7 dagar') { d.setDate(d.getDate() - 7);  return d.toISOString().slice(0, 10) }
   if (filter === '30 dagar'){ d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10) }
   return null
@@ -98,8 +104,8 @@ function postTillRad(p: LoggPost): LoggRad {
 }
 
 function exporteraCsv(rader: LoggRad[]) {
-  const huvud  = ['Datum', 'Tid', 'Typ', 'Rubrik', 'Detalj', 'Status']
-  const rader_ = rader.map(r => [r.datum, r.tid, r.typ, `"${r.rubrik}"`, `"${r.detalj}"`, r.status])
+  const huvud  = ['Datum', 'Tid', 'Typ', 'Rubrik', 'Detalj', 'Status', 'Vem']
+  const rader_ = rader.map(r => [r.datum, r.tid, r.typ, `"${r.rubrik}"`, `"${r.detalj}"`, r.status, r.vem ?? ''])
   const csv    = [huvud, ...rader_].map(r => r.join(';')).join('\n')
   const blob   = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
   const url    = URL.createObjectURL(blob)
@@ -117,6 +123,7 @@ export default function Aktivitetslogg() {
   const [visaAntal,   setVisaAntal]   = useState(SIDA_STORLEK)
   const [expandadId,  setExpandadId]  = useState<string | null>(null)
   const [kontoLogg,   setKontoLogg]   = useState<LoggPost[]>(laddaLogg)
+  const [väntarÅngra, setVäntarÅngra] = useState<string | null>(null)
 
   // Kontoåtgärder (Sparat-ändringar m.m.) skrivna av admin/support i
   // Användarhantering — riktiga, tidsstämplade poster. Slås ihop med den
@@ -157,11 +164,16 @@ export default function Aktivitetslogg() {
 
   function ångra(rad: LoggRad) {
     if (!rad.ångraData) return
+    if (väntarÅngra !== rad.id) {
+      setVäntarÅngra(rad.id)
+      return
+    }
     const { anvandareId, handelse, undoAction } = rad.ångraData
     if (undoAction === 'lägg-till') sparaHandelseForAnvandare(anvandareId, handelse)
     else taBortSparadHandelse(anvandareId, handelse.eventId)
     markeraÅngrad(rad.id)
     setKontoLogg(laddaLogg())
+    setVäntarÅngra(null)
   }
 
   const filterAktivt = typFilter !== 'Alla' || tidsFilter !== 'Alla' || sökning !== ''
@@ -278,7 +290,7 @@ export default function Aktivitetslogg() {
               {visade.map(rad => (
                 <div key={rad.id}>
                   <button
-                    onClick={() => setExpandadId(expandadId === rad.id ? null : rad.id)}
+                    onClick={() => { setExpandadId(expandadId === rad.id ? null : rad.id); setVäntarÅngra(null) }}
                     className="w-full flex items-center gap-4 px-6 py-3.5 hover:bg-slate-50 transition-colors text-left"
                   >
                     <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_PRICK[rad.status]}`} />
@@ -309,13 +321,27 @@ export default function Aktivitetslogg() {
                         {rad.datum} {rad.tid}{rad.vem && ` · ${rad.vem}`}
                       </p>
                       {rad.ångraData && (
-                        <button
-                          onClick={() => ångra(rad)}
-                          disabled={rad.ångrad}
-                          className="mt-2 text-xs font-medium px-3 py-1.5 rounded-lg border border-violet-200 text-violet-700 hover:bg-violet-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                        >
-                          {rad.ångrad ? 'Redan ångrad' : '↩ Ångra'}
-                        </button>
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            onClick={() => ångra(rad)}
+                            disabled={rad.ångrad}
+                            className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
+                              väntarÅngra === rad.id
+                                ? 'border-red-200 text-red-700 hover:bg-red-50'
+                                : 'border-violet-200 text-violet-700 hover:bg-violet-50'
+                            }`}
+                          >
+                            {rad.ångrad ? 'Redan ångrad' : väntarÅngra === rad.id ? 'Bekräfta ångra?' : '↩ Ångra'}
+                          </button>
+                          {väntarÅngra === rad.id && !rad.ångrad && (
+                            <button
+                              onClick={() => setVäntarÅngra(null)}
+                              className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                              Avbryt
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
