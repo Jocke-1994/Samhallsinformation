@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<NotificationDeliveryLog>    NotificationDeliveryLogs  => Set<NotificationDeliveryLog>();
     public DbSet<PasswordResetToken>         PasswordResetTokens       => Set<PasswordResetToken>();
     public DbSet<RefreshToken>               RefreshTokens             => Set<RefreshToken>();
+    public DbSet<UserPolisenFilter>          UserPolisenFilters        => Set<UserPolisenFilter>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -107,6 +108,12 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.TokenHash).IsUnique();
             entity.HasIndex(e => e.UserId);
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserPolisenFilter>(entity =>
+        {
+            entity.HasKey(e => e.UserId);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
         });
     }

@@ -357,6 +357,22 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("UserNotificationSettings");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.UserPolisenFilter", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("KategorierJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OmradenJson")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserPolisenFilters");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.UserPreference", b =>
                 {
                     b.Property<Guid>("Id")
@@ -519,6 +535,17 @@ namespace Samhallsinformation.Migrations
                         .IsRequired();
 
                     b.Navigation("Source");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.UserPolisenFilter", b =>
+                {
+                    b.HasOne("Samhallsinformation.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

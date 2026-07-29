@@ -37,18 +37,10 @@ public class AuthService : IAuthService
         user.PasswordHash = _hasher.HashPassword(user, password);
         _db.Users.Add(user);
 
-        var sources = await _db.Sources.Where(s => s.IsPublished).OrderBy(s => s.Id).ToListAsync();
-        for (int i = 0; i < sources.Count; i++)
-        {
-            _db.UserSourcePreferences.Add(new UserSourcePreference
-            {
-                UserId    = user.Id,
-                SourceId  = sources[i].Id,
-                IsActive  = true,
-                SortOrder = i,
-            });
-        }
-
+        // Nya konton börjar utan källor — ingen auto-seed av alla publicerade
+        // källor. Annars riskerar en användare som hoppar över källval att
+        // drunkna i notiser från allt, istället för att aktivt välja vad de
+        // vill följa (session 24, #298).
         await _db.SaveChangesAsync();
 
         _ = _email.SendWelcomeAsync(user.Email, user.Name);

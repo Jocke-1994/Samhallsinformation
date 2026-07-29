@@ -343,6 +343,24 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        if (pendingMigrations.Contains("20260727131818_AddUserPolisenFilter"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""UserPolisenFilters"" (
+                    ""UserId""         uuid NOT NULL,
+                    ""KategorierJson"" TEXT,
+                    ""OmradenJson""    TEXT,
+                    CONSTRAINT ""PK_UserPolisenFilters"" PRIMARY KEY (""UserId""),
+                    CONSTRAINT ""FK_UserPolisenFilters_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260727131818_AddUserPolisenFilter', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 
