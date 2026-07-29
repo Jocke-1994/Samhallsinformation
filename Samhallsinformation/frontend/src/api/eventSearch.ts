@@ -30,6 +30,7 @@ export interface AdminSearchResult {
 export interface SearchParams {
   sourceId?: number
   geography?: string
+  eventType?: string
   from?: string
   to?: string
   page?: number
@@ -42,10 +43,17 @@ export async function fetchSearchableSources(): Promise<SearchableSource[]> {
   return res.json()
 }
 
+export async function fetchEventTypes(): Promise<string[]> {
+  const res = await adminFetch('/api/admin/events/types')
+  if (!res.ok) throw new Error(`fetchEventTypes: ${res.status}`)
+  return res.json()
+}
+
 export async function searchEvents(params: SearchParams): Promise<AdminSearchResult> {
   const qs = new URLSearchParams()
   if (params.sourceId)  qs.set('sourceId', String(params.sourceId))
   if (params.geography) qs.set('geography', params.geography)
+  if (params.eventType) qs.set('eventType', params.eventType)
   if (params.from)      qs.set('from', params.from)
   if (params.to)        qs.set('to', params.to)
   qs.set('page', String(params.page ?? 1))

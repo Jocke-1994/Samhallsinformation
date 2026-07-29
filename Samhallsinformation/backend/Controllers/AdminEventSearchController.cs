@@ -32,10 +32,26 @@ public class AdminEventSearchController : ControllerBase
         return Ok(sources);
     }
 
+    // Kända händelsetyper för filter-dropdownen — bara källor som fått sin
+    // EventType extraherad (idag Polisen, PR #373) har något att välja här.
+    [HttpGet("/api/admin/events/types")]
+    public async Task<IActionResult> Types()
+    {
+        var types = await _db.Events
+            .Where(e => e.EventType != null)
+            .Select(e => e.EventType!)
+            .Distinct()
+            .OrderBy(t => t)
+            .ToListAsync();
+
+        return Ok(types);
+    }
+
     [HttpGet("/api/admin/events/search")]
     public async Task<IActionResult> Search(
         [FromQuery] int? sourceId,
         [FromQuery] string? geography,
+        [FromQuery] string? eventType,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         [FromQuery] int page = 1,
@@ -51,6 +67,9 @@ public class AdminEventSearchController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(geography))
             query = query.Where(e => e.Geography != null && EF.Functions.Like(e.Geography, $"%{geography}%"));
+
+        if (!string.IsNullOrWhiteSpace(eventType))
+            query = query.Where(e => e.EventType == eventType);
 
         if (from.HasValue)
             query = query.Where(e => e.PublishedAt >= from.Value);

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { fetchSearchableSources, searchEvents, type SearchParams } from '../../api/eventSearch'
+import { fetchSearchableSources, fetchEventTypes, searchEvents, type SearchParams } from '../../api/eventSearch'
 import NewsItem from '../NewsFeed/NewsItem'
 
 const SIDA_STORLEK = 20
@@ -8,6 +8,7 @@ const SIDA_STORLEK = 20
 export default function Handelsesok() {
   const [sourceId, setSourceId]   = useState<string>('')
   const [geography, setGeography] = useState('')
+  const [eventType, setEventType] = useState('')
   const [from, setFrom]           = useState('')
   const [to, setTo]               = useState('')
   const [page, setPage]           = useState(1)
@@ -17,6 +18,11 @@ export default function Handelsesok() {
   const { data: sources } = useQuery({
     queryKey: ['admin-event-search-sources'],
     queryFn:  fetchSearchableSources,
+  })
+
+  const { data: types } = useQuery({
+    queryKey: ['admin-event-search-types'],
+    queryFn:  fetchEventTypes,
   })
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -29,6 +35,7 @@ export default function Handelsesok() {
     setActiveParams({
       sourceId:  sourceId ? Number(sourceId) : undefined,
       geography: geography.trim() || undefined,
+      eventType: eventType || undefined,
       from:      from || undefined,
       to:        to || undefined,
       page:      nyPage,
@@ -39,25 +46,27 @@ export default function Handelsesok() {
   function nollställ() {
     setSourceId('')
     setGeography('')
+    setEventType('')
     setFrom('')
     setTo('')
     setPage(1)
     setActiveParams({ page: 1, pageSize: SIDA_STORLEK })
   }
 
-  const harFilter = !!(activeParams.sourceId || activeParams.geography || activeParams.from || activeParams.to)
+  const harFilter = !!(activeParams.sourceId || activeParams.geography || activeParams.eventType || activeParams.from || activeParams.to)
   const totalSidor = data ? Math.max(1, Math.ceil(data.total / SIDA_STORLEK)) : 1
 
   return (
     <div>
       <p className="text-sm text-slate-500 mb-6">
-        Sök bakåt i tiden bland alla ingestade händelser (oavsett publiceringsstatus) — källa, plats och datumintervall.
+        Sök bakåt i tiden bland alla ingestade händelser (oavsett publiceringsstatus) — källa, typ, plats och datumintervall.
+        Typ-filtret kräver att källan fått sina händelsetyper extraherade (idag bara Polisen).
         Fristående verktyg, inte kopplat till en specifik användares sparade lista.
       </p>
 
       {/* Filter */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Källa</label>
             <select
@@ -68,6 +77,22 @@ export default function Handelsesok() {
               <option value="">Alla källor</option>
               {sources?.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Typ</label>
+            <select
+              value={eventType}
+              onChange={e => setEventType(e.target.value)}
+              disabled={!types || types.length === 0}
+              title={!types || types.length === 0 ? 'Ingen källa har kategoriserade typer ännu' : undefined}
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">Alla typer</option>
+              {types?.map(t => (
+                <option key={t} value={t}>{t}</option>
               ))}
             </select>
           </div>
