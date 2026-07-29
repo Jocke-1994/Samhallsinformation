@@ -79,11 +79,12 @@ function KallaRad({ k, onRemove }: { k: Source; onRemove: (id: number) => void }
   )
 }
 
-export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highlightId }: {
-  sources:     Source[]
-  onRemove:    (id: number) => void
-  onDeleteAll: () => void
-  highlightId: string | null
+export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highlightId, harLaggTillKort }: {
+  sources:          Source[]
+  onRemove:         (id: number) => void
+  onDeleteAll:      () => void
+  highlightId:      string | null
+  harLaggTillKort:  boolean
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const sorterade = [...sources].sort((a, b) => a.name.localeCompare(b.name, 'sv'))
@@ -107,7 +108,9 @@ export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highl
         <div className="px-6 py-12 text-center">
           <p className="text-3xl mb-3">📭</p>
           <p className="text-sm font-medium text-slate-700">Inga aktiva källor</p>
-          <p className="text-xs text-slate-400 mt-1">Lägg till källor via kortet till vänster</p>
+          <p className="text-xs text-slate-400 mt-1">
+            {harLaggTillKort ? 'Lägg till källor via kortet till vänster' : 'Lägg till källor via Alla källor till höger'}
+          </p>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto px-6 py-5">

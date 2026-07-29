@@ -61,8 +61,16 @@ export default function MinaKallor() {
   return (
     <div className="flex flex-col gap-6 mt-6">
 
-      {/* Övre rad: Lägg till + Aktiva */}
-      {(flaggor.kallor_lagg_till || flaggor.kallor_aktiva) && (
+      {/* En rad: alla aktiverade kort bredvid varandra. kallor_lagg_till är av
+          live just nu (för smalt kort, lämnade ett tomt hål bredvid Aktiva
+          källor) — Aktiva källor och Alla källor flyter då ihop till en rad
+          istället. kallor_rekommenderade är av som standard (se
+          lib/featureFlags.ts): RekommenderadeKallorKort använder fortfarande
+          mock-KALLOR-ID:n som inte finns som riktiga Source-rader, så "+ Lägg
+          till" där skulle ge ett backend-fel (FK-brott) om flaggan slås på.
+          Rörs inte förrän kortet antingen kopplas mot riktig data eller byggs
+          om i grunden. */}
+      {(flaggor.kallor_lagg_till || flaggor.kallor_aktiva || flaggor.kallor_rekommenderade || flaggor.kallor_alla) && (
         <div className="flex flex-col lg:flex-row gap-6 items-stretch lg:items-start">
           {flaggor.kallor_lagg_till && (
             <div className="w-full lg:w-80 lg:shrink-0">
@@ -76,20 +84,10 @@ export default function MinaKallor() {
                 onRemove={handleRemove}
                 onDeleteAll={handleDeleteAll}
                 highlightId={highlightId}
+                harLaggTillKort={flaggor.kallor_lagg_till}
               />
             </div>
           )}
-        </div>
-      )}
-
-      {/* Nedre rad: Rekommenderade + Alla */}
-      {/* OBS: kallor_rekommenderade är av som standard (se lib/featureFlags.ts) —
-          RekommenderadeKallorKort använder fortfarande mock-KALLOR-ID:n som inte
-          finns som riktiga Source-rader, så "+ Lägg till" där skulle ge ett
-          backend-fel (FK-brott) om flaggan slås på. Rörs inte förrän kortet
-          antingen kopplas mot riktig data eller byggs om i grunden. */}
-      {(flaggor.kallor_rekommenderade || flaggor.kallor_alla) && (
-        <div className="flex flex-col lg:flex-row gap-6 items-stretch lg:items-start">
           {flaggor.kallor_rekommenderade && (
             <div className="flex-1 min-w-0">
               <RekommenderadeKallorKort activeIds={activeIds} onAdd={handleAdd} />
