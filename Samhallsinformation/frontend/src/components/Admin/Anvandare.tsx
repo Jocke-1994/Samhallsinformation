@@ -195,6 +195,17 @@ const MOCK_AKTIVITET: Record<number, AktivitetRad[]> = {
   ],
 }
 
+// Samma datastruktur som riktiga GET /api/user/polisen-filter (UserPolisenFilterController):
+// null = ej anpassat (allt), en array = explicit valt urval (kan vara tom = matchar inget).
+// Mockad tills det finns riktiga användare att lista (steg 4, #298).
+interface PolisenFilterMini { kategorier: string[] | null; omraden: string[] | null }
+
+const MOCK_POLISEN_FILTER: Record<number, PolisenFilterMini> = {
+  3: { kategorier: ['Skottlossning', 'Explosion', 'Misshandel'], omraden: ['Norrköping', 'Göteborg'] },
+  6: { kategorier: ['Rån', 'Brand'],                             omraden: ['Göteborg', 'Malmö']     },
+  1: { kategorier: null,                                         omraden: null                       },
+}
+
 const MOCK_ÄRENDEN: Record<number, ArendeMini[]> = {
   2: [ // Anna Svensson
     { id: 'SUP-0031', kategori: 'Konto',          amne: 'Vill ta bort mitt konto',                         status: 'Hanterat',         skapat: '2026-03-01' },
@@ -837,6 +848,38 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* Polisen-filter (FAS 4, #298) — mockad tills riktiga användare finns, se
+                    MOCK_POLISEN_FILTER-kommentaren för datastrukturen som redan är på riktigt */}
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Polisen-filter</p>
+                  {(() => {
+                    const filter = MOCK_POLISEN_FILTER[vald.id]
+                    if (!filter) return <p className="text-sm text-slate-400">Följer inte Polisen som källa.</p>
+                    if (filter.kategorier === null && filter.omraden === null)
+                      return <p className="text-sm text-slate-500">Inget anpassat filter — får allt från Polisen.</p>
+                    return (
+                      <div className="flex flex-col gap-2">
+                        <div>
+                          <p className="text-xs text-slate-400 mb-1">Typer</p>
+                          <div className="flex flex-wrap gap-1">
+                            {(filter.kategorier ?? []).length > 0
+                              ? filter.kategorier!.map(k => <span key={k} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k}</span>)
+                              : <span className="text-xs text-slate-400">Alla</span>}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 mb-1">Områden</p>
+                          <div className="flex flex-wrap gap-1">
+                            {(filter.omraden ?? []).length > 0
+                              ? filter.omraden!.map(o => <span key={o} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{o}</span>)
+                              : <span className="text-xs text-slate-400">Alla</span>}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {vald.avstängtTill && (
