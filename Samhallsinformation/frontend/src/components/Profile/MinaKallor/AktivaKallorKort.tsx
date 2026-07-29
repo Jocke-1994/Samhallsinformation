@@ -1,18 +1,16 @@
-import { useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router'
-import type { KallTyp, Kalla } from '../../../types'
-import { RUBRIK, TYPNAMN, groupBy, SVENSKA_LÄN, LÄN_KOMMUNER } from './kallorUtils'
+import { useState } from 'react'
+import type { Source } from '../../../types'
+import { SVENSKA_LÄN, LÄN_KOMMUNER } from './kallorUtils'
 import KategoriFilterModal from './KategoriFilterModal'
 import { usePolisenFilter } from '../../../context/PolisenFilterContext'
 
-// PROTOTYP (FAS 4-diskussion) — bara Polismyndigheten har kategorifilter
-// tillgängligt just nu, eftersom det är den enda källan som fått sina
-// händelsetyper extraherade (EventType, PR #373). Övriga källor visar ingen
-// filterkontroll alls — "allt" är redan rätt standard för dem.
-const HAR_KATEGORIFILTER = new Set(['Polismyndigheten'])
+// PROTOTYP (FAS 4-diskussion) — bara Polisen har kategorifilter tillgängligt
+// just nu, eftersom det är den enda källan som fått sina händelsetyper
+// extraherade (EventType, PR #373). Övriga källor visar ingen filterkontroll
+// alls — "allt" är redan rätt standard för dem.
+const HAR_KATEGORIFILTER = new Set(['Polisen'])
 
-function KallaRad({ k, onRemove }: { k: Kalla; onRemove: (id: number) => void }) {
-  const navigate = useNavigate()
+function KallaRad({ k, onRemove }: { k: Source; onRemove: (id: number) => void }) {
   const [visaFilter, setVisaFilter] = useState(false)
   const {
     valdaKategorier, valdaOmraden, harAnpassatFilter,
@@ -28,25 +26,13 @@ function KallaRad({ k, onRemove }: { k: Kalla; onRemove: (id: number) => void })
   const filterEtikett = `${typerValda} typ${typerValda === 1 ? '' : 'er'}, ${länAktiva} län`
   const filterKnappText = harAnpassatFilter ? `Filter · ${filterEtikett}` : 'Filter'
 
-  function gaTillSystemstatus() {
-    navigate('?section=support', { state: { highlightNamn: k.deprecatedAnledning } })
-  }
-
-  const harFilterKnapp = HAR_KATEGORIFILTER.has(k.namn)
+  const harFilterKnapp = HAR_KATEGORIFILTER.has(k.shortName)
 
   return (
     <div className="py-2 group">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <a href={k.url} target="_blank" rel="noreferrer" className="text-sm font-medium text-slate-800 hover:text-violet-600 hover:underline leading-snug transition-colors">{k.namn}</a>
-          {k.deprecated && (
-            <button
-              onClick={gaTillSystemstatus}
-              className="flex items-center gap-1 text-xs mt-0.5 text-amber-500 hover:text-amber-700 transition-colors"
-            >
-              ⚠️ Planerat underhåll — se systemstatus
-            </button>
-          )}
+          <a href={k.url ?? k.baseUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-slate-800 hover:text-violet-600 hover:underline leading-snug transition-colors">{k.name}</a>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {harFilterKnapp && !harAnpassatFilter && (
@@ -75,7 +61,7 @@ function KallaRad({ k, onRemove }: { k: Kalla; onRemove: (id: number) => void })
       )}
       {visaFilter && (
         <KategoriFilterModal
-          kallNamn={k.namn}
+          kallNamn={k.name}
           valdaKategorier={valdaKategorier}
           onToggleKategori={toggleKategori}
           onVäljAllaKategorier={väljAllaKategorier}
@@ -93,28 +79,15 @@ function KallaRad({ k, onRemove }: { k: Kalla; onRemove: (id: number) => void })
   )
 }
 
-function Kolumn({ typ, children }: { typ: KallTyp; sources?: Kalla[]; children: ReactNode }) {
-  return (
-    <div className="flex flex-col">
-      <div className="pb-2.5 mb-1 border-b border-slate-100">
-        <p className={`text-xs font-bold uppercase tracking-wider ${RUBRIK[typ]}`}>{TYPNAMN[typ]}</p>
-      </div>
-      {children}
-    </div>
-  )
-}
-
-export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highlightId }: {
-  sources:     Kalla[]
-  onRemove:    (id: number) => void
-  onDeleteAll: () => void
-  highlightId: string | null
+export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highlightId, harLaggTillKort }: {
+  sources:          Source[]
+  onRemove:         (id: number) => void
+  onDeleteAll:      () => void
+  highlightId:      string | null
+  harLaggTillKort:  boolean
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const nationella        = sources.filter(k => k.typ === 'Nationell')
-  const regionala         = sources.filter(k => k.typ === 'Regional')
-  const kommunala         = sources.filter(k => k.typ === 'Kommunal')
-  const regionalaByRegion = groupBy(regionala, k => k.region ?? 'Övrigt')
+  const sorterade = [...sources].sort((a, b) => a.name.localeCompare(b.name, 'sv'))
 
   return (
     <div
@@ -131,45 +104,23 @@ export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highl
         </div>
       </div>
 
-      {sources.length === 0 ? (
+      {sorterade.length === 0 ? (
         <div className="px-6 py-12 text-center">
           <p className="text-3xl mb-3">📭</p>
           <p className="text-sm font-medium text-slate-700">Inga aktiva källor</p>
-          <p className="text-xs text-slate-400 mt-1">Lägg till källor via kortet till vänster</p>
+          <p className="text-xs text-slate-400 mt-1">
+            {harLaggTillKort ? 'Lägg till källor via kortet till vänster' : 'Lägg till källor via Alla källor till höger'}
+          </p>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-            <Kolumn typ="Nationell" sources={nationella}>
-              {nationella.length === 0
-                ? <p className="text-xs text-slate-300 pt-2">Inga nationella källor</p>
-                : nationella.map(k => <KallaRad key={k.id} k={k} onRemove={onRemove} />)
-              }
-            </Kolumn>
-
-            <Kolumn typ="Regional" sources={regionala}>
-              {regionala.length === 0
-                ? <p className="text-xs text-slate-300 pt-2">Inga regionala källor</p>
-                : Object.entries(regionalaByRegion).map(([reg, kallor]) => (
-                    <div key={reg} className="mb-3 last:mb-0">
-                      <p className="text-xs text-slate-400 font-medium mb-1">{reg}</p>
-                      {kallor.map(k => <KallaRad key={k.id} k={k} onRemove={onRemove} />)}
-                    </div>
-                  ))
-              }
-            </Kolumn>
-
-            <Kolumn typ="Kommunal" sources={kommunala}>
-              {kommunala.length === 0
-                ? <p className="text-xs text-slate-300 pt-2">Inga kommunala källor</p>
-                : kommunala.map(k => <KallaRad key={k.id} k={k} onRemove={onRemove} />)
-              }
-            </Kolumn>
+          <div className="flex flex-col">
+            {sorterade.map(k => <KallaRad key={k.id} k={k} onRemove={onRemove} />)}
           </div>
         </div>
       )}
 
-      {sources.length > 0 && (
+      {sorterade.length > 0 && (
         <div className="px-6 py-3 border-t border-slate-100 flex justify-end">
           {!showDeleteConfirm ? (
             <button
