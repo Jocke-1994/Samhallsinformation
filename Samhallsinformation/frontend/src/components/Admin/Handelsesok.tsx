@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchSearchableSources, fetchEventTypes, searchEvents, type SearchParams, type AdminSearchEvent } from '../../api/eventSearch'
 import NewsItem from '../NewsFeed/NewsItem'
 import { MOCK_ANVÄNDARE_LISTA } from '../../lib/mockAnvandare'
-import { sparaHandelseForAnvandare } from '../../lib/sparadeHandelserStorage'
+import { laddaSparadeHandelser, sparaHandelseForAnvandare, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
 
 const SIDA_STORLEK = 20
 
@@ -11,43 +11,41 @@ function formatDatum(iso: string): string {
   return new Date(iso).toLocaleDateString('sv-SE', { year: 'numeric', month: 'numeric', day: 'numeric' })
 }
 
-function SparaTillAnvändare({ handelse }: { handelse: AdminSearchEvent }) {
-  const [öppen, setÖppen]           = useState(false)
-  const [sparadTill, setSparadTill] = useState<string | null>(null)
+function BulkSparaKnapp({ handelser, onKlar }: { handelser: AdminSearchEvent[]; onKlar: () => void }) {
+  const [öppen, setÖppen] = useState(false)
 
-  function spara(id: number, namn: string) {
-    sparaHandelseForAnvandare(id, {
-      eventId:     handelse.id,
-      title:       handelse.title,
-      sourceName:  handelse.sourceName,
-      publishedAt: handelse.publishedAt,
-      sparadDatum: formatDatum(new Date().toISOString()),
-    })
-    setSparadTill(namn)
+  function spara(anvandareId: number) {
+    const nu = formatDatum(new Date().toISOString())
+    for (const h of handelser) {
+      sparaHandelseForAnvandare(anvandareId, {
+        eventId:     h.id,
+        title:       h.title,
+        sourceName:  h.sourceName,
+        publishedAt: h.publishedAt,
+        sparadDatum: nu,
+      })
+    }
     setÖppen(false)
-  }
-
-  if (sparadTill) {
-    return <p className="text-xs text-slate-400 px-1">Sparad till {sparadTill} ✓</p>
+    onKlar()
   }
 
   return (
-    <div className="relative w-fit px-1">
+    <div className="relative">
       <button
         onClick={() => setÖppen(v => !v)}
-        className="text-xs text-slate-400 hover:text-violet-600 transition-colors"
+        className="text-xs font-medium px-3 py-1.5 rounded-lg border border-violet-200 text-violet-700 hover:bg-violet-50 transition-colors"
       >
-        👤 Spara till användare
+        👤 Spara till användare ▾
       </button>
       {öppen && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setÖppen(false)} />
-          <div className="absolute left-0 top-6 z-40 w-56 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+          <div className="absolute left-0 top-8 z-40 w-56 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
             <ul className="max-h-64 overflow-y-auto py-1">
               {MOCK_ANVÄNDARE_LISTA.map(u => (
                 <li key={u.id}>
                   <button
-                    onClick={() => spara(u.id, u.namn)}
+                    onClick={() => spara(u.id)}
                     className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                   >
                     {u.namn}
@@ -70,8 +68,33 @@ export default function Handelsesok() {
   const [from, setFrom]           = useState('')
   const [to, setTo]               = useState('')
   const [page, setPage]           = useState(1)
+  const [markerade, setMarkerade] = useState<Set<string>>(new Set())
+  const [sparade, setSparade]     = useState<Record<number, SparadHandelseMini[]>>(laddaSparadeHandelser)
 
   const [activeParams, setActiveParams] = useState<SearchParams>({ page: 1, pageSize: SIDA_STORLEK })
+
+  // Omvänd karta: eventId → namn på alla användare som redan har det sparat —
+  // rent informativ badge, hindrar inte att samma händelse sparas till fler
+  const sparadeAvKarta = useMemo(() => {
+    const karta: Record<string, string[]> = {}
+    for (const [anvandareIdStr, lista] of Object.entries(sparade)) {
+      const användare = MOCK_ANVÄNDARE_LISTA.find(u => u.id === Number(anvandareIdStr))
+      if (!användare) continue
+      for (const h of lista) {
+        (karta[h.eventId] ??= []).push(användare.namn)
+      }
+    }
+    return karta
+  }, [sparade])
+
+  function toggleMarkerad(id: string) {
+    setMarkerade(prev => {
+      const ny = new Set(prev)
+      if (ny.has(id)) ny.delete(id)
+      else ny.add(id)
+      return ny
+    })
+  }
 
   const { data: sources } = useQuery({
     queryKey: ['admin-event-search-sources'],
@@ -90,6 +113,7 @@ export default function Handelsesok() {
 
   function sök(nyPage = 1) {
     setPage(nyPage)
+    setMarkerade(new Set())
     setActiveParams({
       sourceId:  sourceId ? Number(sourceId) : undefined,
       geography: geography.trim() || undefined,
@@ -108,6 +132,7 @@ export default function Handelsesok() {
     setFrom('')
     setTo('')
     setPage(1)
+    setMarkerade(new Set())
     setActiveParams({ page: 1, pageSize: SIDA_STORLEK })
   }
 
@@ -226,14 +251,45 @@ export default function Handelsesok() {
           </div>
         ) : (
           <>
-            <p className="text-xs text-slate-400 mb-3">{data.total} träffar</p>
+            <div className="flex items-center gap-3 mb-3 min-h-[28px]">
+              {markerade.size > 0 ? (
+                <>
+                  <span className="text-xs font-medium text-violet-700">{markerade.size} markerade</span>
+                  <BulkSparaKnapp
+                    handelser={data.events.filter(e => markerade.has(e.id))}
+                    onKlar={() => { setSparade(laddaSparadeHandelser()); setMarkerade(new Set()) }}
+                  />
+                  <button
+                    onClick={() => setMarkerade(new Set())}
+                    className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    ✕ Avmarkera
+                  </button>
+                </>
+              ) : (
+                <p className="text-xs text-slate-400">{data.total} träffar</p>
+              )}
+            </div>
             <div className="flex flex-col gap-2 mb-6">
-              {data.events.map(e => (
-                <div key={e.id} className="flex flex-col gap-1">
-                  <NewsItem event={e} isRead sourceName={e.sourceName} />
-                  <SparaTillAnvändare handelse={e} />
-                </div>
-              ))}
+              {data.events.map(e => {
+                const sparadTill = sparadeAvKarta[e.id]
+                return (
+                  <div key={e.id} className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={markerade.has(e.id)}
+                      onChange={() => toggleMarkerad(e.id)}
+                      className="mt-4 shrink-0 rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer"
+                    />
+                    <div className="flex-1 min-w-0 flex flex-col gap-1">
+                      <NewsItem event={e} isRead sourceName={e.sourceName} />
+                      {sparadTill && (
+                        <p className="text-xs text-slate-400 px-1">📌 Sparad till {sparadTill.join(', ')}</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
 
             {totalSidor > 1 && (
