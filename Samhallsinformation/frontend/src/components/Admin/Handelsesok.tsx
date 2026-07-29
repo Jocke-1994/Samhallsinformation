@@ -1,11 +1,71 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { fetchSearchableSources, fetchEventTypes, searchEvents, type SearchParams } from '../../api/eventSearch'
+import { fetchSearchableSources, fetchEventTypes, searchEvents, type SearchParams, type AdminSearchEvent } from '../../api/eventSearch'
 import NewsItem from '../NewsFeed/NewsItem'
+import { MOCK_ANVÄNDARE_LISTA, type MockAnvändareMini } from '../../lib/mockAnvandare'
+import { laddaSparadeHandelser, sparaHandelseForAnvandare, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
 
 const SIDA_STORLEK = 20
 
-export default function Handelsesok() {
+function formatDatum(iso: string): string {
+  return new Date(iso).toLocaleDateString('sv-SE', { year: 'numeric', month: 'numeric', day: 'numeric' })
+}
+
+function BulkSparaKnapp({ handelser, onKlar }: { handelser: AdminSearchEvent[]; onKlar: () => void }) {
+  const [öppen, setÖppen] = useState(false)
+
+  function spara(anvandareId: number) {
+    const nu = formatDatum(new Date().toISOString())
+    for (const h of handelser) {
+      sparaHandelseForAnvandare(anvandareId, {
+        eventId:     h.id,
+        title:       h.title,
+        sourceName:  h.sourceName,
+        publishedAt: h.publishedAt,
+        sparadDatum: nu,
+      })
+    }
+    setÖppen(false)
+    onKlar()
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setÖppen(v => !v)}
+        className="text-xs font-medium px-3 py-1.5 rounded-lg border border-violet-200 text-violet-700 hover:bg-violet-50 transition-colors"
+      >
+        👤 Spara till användare ▾
+      </button>
+      {öppen && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setÖppen(false)} />
+          <div className="absolute left-0 top-8 z-40 w-56 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+            <ul className="max-h-64 overflow-y-auto py-1">
+              {MOCK_ANVÄNDARE_LISTA.map(u => (
+                <li key={u.id}>
+                  <button
+                    onClick={() => spara(u.id)}
+                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    {u.namn}
+                    <span className="block text-xs text-slate-400">{u.epost}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+interface HandelsesokProps {
+  onÖppnaAnvändare?: (epost: string) => void
+}
+
+export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
   const [sourceId, setSourceId]   = useState<string>('')
   const [geography, setGeography] = useState('')
   const [eventType, setEventType] = useState('')
@@ -13,8 +73,33 @@ export default function Handelsesok() {
   const [from, setFrom]           = useState('')
   const [to, setTo]               = useState('')
   const [page, setPage]           = useState(1)
+  const [markerade, setMarkerade] = useState<Set<string>>(new Set())
+  const [sparade, setSparade]     = useState<Record<number, SparadHandelseMini[]>>(laddaSparadeHandelser)
 
   const [activeParams, setActiveParams] = useState<SearchParams>({ page: 1, pageSize: SIDA_STORLEK })
+
+  // Omvänd karta: eventId → alla användare som redan har det sparat — rent
+  // informativ badge, hindrar inte att samma händelse sparas till fler
+  const sparadeAvKarta = useMemo(() => {
+    const karta: Record<string, MockAnvändareMini[]> = {}
+    for (const [anvandareIdStr, lista] of Object.entries(sparade)) {
+      const användare = MOCK_ANVÄNDARE_LISTA.find(u => u.id === Number(anvandareIdStr))
+      if (!användare) continue
+      for (const h of lista) {
+        (karta[h.eventId] ??= []).push(användare)
+      }
+    }
+    return karta
+  }, [sparade])
+
+  function toggleMarkerad(id: string) {
+    setMarkerade(prev => {
+      const ny = new Set(prev)
+      if (ny.has(id)) ny.delete(id)
+      else ny.add(id)
+      return ny
+    })
+  }
 
   const { data: sources } = useQuery({
     queryKey: ['admin-event-search-sources'],
@@ -33,6 +118,7 @@ export default function Handelsesok() {
 
   function sök(nyPage = 1) {
     setPage(nyPage)
+    setMarkerade(new Set())
     setActiveParams({
       sourceId:  sourceId ? Number(sourceId) : undefined,
       geography: geography.trim() || undefined,
@@ -53,17 +139,31 @@ export default function Handelsesok() {
     setFrom('')
     setTo('')
     setPage(1)
+    setMarkerade(new Set())
     setActiveParams({ page: 1, pageSize: SIDA_STORLEK })
   }
 
   const harFilter = !!(activeParams.sourceId || activeParams.geography || activeParams.eventType || activeParams.sokord || activeParams.from || activeParams.to)
   const totalSidor = data ? Math.max(1, Math.ceil(data.total / SIDA_STORLEK)) : 1
 
+  const allaPåSidanMarkerade = !!data && data.events.length > 0 && data.events.every(e => markerade.has(e.id))
+
+  function toggleAllaPåSidan() {
+    if (!data) return
+    setMarkerade(prev => {
+      const ny = new Set(prev)
+      if (allaPåSidanMarkerade) data.events.forEach(e => ny.delete(e.id))
+      else data.events.forEach(e => ny.add(e.id))
+      return ny
+    })
+  }
+
   return (
     <div>
       <p className="text-sm text-slate-500 mb-6">
         Sök bakåt i tiden bland alla ingestade händelser (oavsett publiceringsstatus) — sökord (titel/innehåll), källa, typ, plats och datumintervall.
         Typ-filtret kräver att källan fått sina händelsetyper extraherade (idag bara Polisen).
+        Hittar du något en användare frågar om kan du spara det direkt till deras konto (mockat tills riktiga användare finns).
       </p>
 
       {/* Filter */}
@@ -182,11 +282,62 @@ export default function Handelsesok() {
           </div>
         ) : (
           <>
-            <p className="text-xs text-slate-400 mb-3">{data.total} träffar</p>
+            <div className="flex items-center gap-3 mb-3 min-h-[28px]">
+              <input
+                type="checkbox"
+                checked={allaPåSidanMarkerade}
+                onChange={toggleAllaPåSidan}
+                title="Markera alla på sidan"
+                className="shrink-0 rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer"
+              />
+              {markerade.size > 0 ? (
+                <>
+                  <span className="text-xs font-medium text-violet-700">{markerade.size} markerade</span>
+                  <BulkSparaKnapp
+                    handelser={data.events.filter(e => markerade.has(e.id))}
+                    onKlar={() => { setSparade(laddaSparadeHandelser()); setMarkerade(new Set()) }}
+                  />
+                  <button
+                    onClick={() => setMarkerade(new Set())}
+                    className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    ✕ Avmarkera
+                  </button>
+                </>
+              ) : (
+                <p className="text-xs text-slate-400">{data.total} träffar</p>
+              )}
+            </div>
             <div className="flex flex-col gap-2 mb-6">
-              {data.events.map(e => (
-                <NewsItem key={e.id} event={e} isRead sourceName={e.sourceName} />
-              ))}
+              {data.events.map(e => {
+                const sparadTill = sparadeAvKarta[e.id]
+                return (
+                  <div key={e.id} className="flex flex-col gap-1">
+                    <NewsItem
+                      event={e}
+                      isRead
+                      sourceName={e.sourceName}
+                      checkbox={{ checked: markerade.has(e.id), onChange: () => toggleMarkerad(e.id) }}
+                    />
+                    {sparadTill && (
+                      <p className="text-xs text-slate-400 px-1">
+                        📌 Sparad till{' '}
+                        {sparadTill.map((u, i) => (
+                          <span key={u.id}>
+                            {i > 0 && ', '}
+                            <button
+                              onClick={() => onÖppnaAnvändare?.(u.epost)}
+                              className="hover:text-violet-600 hover:underline transition-colors"
+                            >
+                              {u.namn}
+                            </button>
+                          </span>
+                        ))}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
             </div>
 
             {totalSidor > 1 && (
