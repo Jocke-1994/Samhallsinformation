@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<PasswordResetToken>         PasswordResetTokens       => Set<PasswordResetToken>();
     public DbSet<RefreshToken>               RefreshTokens             => Set<RefreshToken>();
     public DbSet<UserPolisenFilter>          UserPolisenFilters        => Set<UserPolisenFilter>();
+    public DbSet<UserSavedEvent>             UserSavedEvents           => Set<UserSavedEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -115,6 +116,14 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.UserId);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserSavedEvent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.UserId, e.EventId }).IsUnique();
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Event).WithMany().HasForeignKey(e => e.EventId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -361,6 +361,29 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        if (pendingMigrations.Contains("20260727214406_AddUserSavedEvent"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""UserSavedEvents"" (
+                    ""Id""      uuid NOT NULL,
+                    ""UserId""  uuid NOT NULL,
+                    ""EventId"" uuid NOT NULL,
+                    ""SavedAt"" timestamptz NOT NULL,
+                    CONSTRAINT ""PK_UserSavedEvents"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_UserSavedEvents_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE,
+                    CONSTRAINT ""FK_UserSavedEvents_Events_EventId""
+                        FOREIGN KEY (""EventId"") REFERENCES ""Events"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_UserSavedEvents_UserId_EventId"" ON ""UserSavedEvents"" (""UserId"", ""EventId"");
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260727214406_AddUserSavedEvent', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 

@@ -4,6 +4,7 @@ import { markAsRead } from '../../services/readState'
 import { extraheraPolisenTyp, extraheraPolisenOmrade } from '../Profile/MinaKallor/kallorUtils'
 import PrenumerationsKlocka from './PrenumerationsKlocka'
 import { useAuth } from '../../context/AuthContext'
+import { useSavedEvents } from '../../context/SavedEventsContext'
 
 interface Props {
   event: CanonicalEvent
@@ -57,7 +58,9 @@ function EventContent({ content }: { content: string }) {
 
 export default function NewsItem({ event, isRead, sourceName, sourceShortName, viewMode = 'allt' }: Props) {
   const { isLoggedIn } = useAuth()
+  const { sparade, toggleSparad } = useSavedEvents()
   const [expanded, setExpanded] = useState(false)
+  const ärSparad = sparade.has(event.id)
   const cfg = SEVERITY_CONFIG[event.severity]
 
   const borderClass = sourceName
@@ -111,6 +114,19 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
             <div onClick={e => e.stopPropagation()}>
               <PrenumerationsKlocka polisenTyp={polisenTyp} polisenOmrade={polisenOmrade} mode={viewMode} />
             </div>
+          )}
+
+          {isLoggedIn && (
+            <button
+              onClick={e => { e.stopPropagation(); toggleSparad(event.id) }}
+              title={ärSparad ? 'Ta bort från Sparat' : 'Spara den här händelsen'}
+              aria-label={ärSparad ? 'Ta bort från Sparat' : 'Spara'}
+              className={`p-1.5 rounded-full shrink-0 transition-colors ${
+                ärSparad ? 'text-amber-500 hover:text-amber-600' : 'text-slate-300 hover:text-slate-500 dark:hover:text-slate-300'
+              }`}
+            >
+              <span className="text-base leading-none">{ärSparad ? '🔖' : '📑'}</span>
+            </button>
           )}
 
           <span className={`text-slate-300 text-xs shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}>
