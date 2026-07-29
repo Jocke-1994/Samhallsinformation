@@ -291,19 +291,16 @@ export default function Handelsesok() {
               {data.events.map(e => {
                 const sparadTill = sparadeAvKarta[e.id]
                 return (
-                  <div key={e.id} className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      checked={markerade.has(e.id)}
-                      onChange={() => toggleMarkerad(e.id)}
-                      className="mt-4 shrink-0 rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer"
+                  <div key={e.id} className="flex flex-col gap-1">
+                    <NewsItem
+                      event={e}
+                      isRead
+                      sourceName={e.sourceName}
+                      checkbox={{ checked: markerade.has(e.id), onChange: () => toggleMarkerad(e.id) }}
                     />
-                    <div className="flex-1 min-w-0 flex flex-col gap-1">
-                      <NewsItem event={e} isRead sourceName={e.sourceName} />
-                      {sparadTill && (
-                        <p className="text-xs text-slate-400 px-1">📌 Sparad till {sparadTill.join(', ')}</p>
-                      )}
-                    </div>
+                    {sparadTill && (
+                      <p className="text-xs text-slate-400 px-1">📌 Sparad till {sparadTill.join(', ')}</p>
+                    )}
                   </div>
                 )
               })}
