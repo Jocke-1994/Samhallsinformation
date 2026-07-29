@@ -1,9 +1,67 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { fetchSearchableSources, fetchEventTypes, searchEvents, type SearchParams } from '../../api/eventSearch'
+import { fetchSearchableSources, fetchEventTypes, searchEvents, type SearchParams, type AdminSearchEvent } from '../../api/eventSearch'
 import NewsItem from '../NewsFeed/NewsItem'
+import { MOCK_ANVÄNDARE_LISTA } from '../../lib/mockAnvandare'
+import { sparaHandelseForAnvandare } from '../../lib/sparadeHandelserStorage'
 
 const SIDA_STORLEK = 20
+
+function formatDatum(iso: string): string {
+  return new Date(iso).toLocaleDateString('sv-SE', { year: 'numeric', month: 'numeric', day: 'numeric' })
+}
+
+function SparaTillAnvändare({ handelse }: { handelse: AdminSearchEvent }) {
+  const [öppen, setÖppen]           = useState(false)
+  const [sparadTill, setSparadTill] = useState<string | null>(null)
+
+  function spara(id: number, namn: string) {
+    sparaHandelseForAnvandare(id, {
+      eventId:     handelse.id,
+      title:       handelse.title,
+      sourceName:  handelse.sourceName,
+      publishedAt: handelse.publishedAt,
+      sparadDatum: formatDatum(new Date().toISOString()),
+    })
+    setSparadTill(namn)
+    setÖppen(false)
+  }
+
+  if (sparadTill) {
+    return <p className="text-xs text-slate-400 px-1">Sparad till {sparadTill} ✓</p>
+  }
+
+  return (
+    <div className="relative w-fit px-1">
+      <button
+        onClick={() => setÖppen(v => !v)}
+        className="text-xs text-slate-400 hover:text-violet-600 transition-colors"
+      >
+        👤 Spara till användare
+      </button>
+      {öppen && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setÖppen(false)} />
+          <div className="absolute left-0 top-6 z-40 w-56 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+            <ul className="max-h-64 overflow-y-auto py-1">
+              {MOCK_ANVÄNDARE_LISTA.map(u => (
+                <li key={u.id}>
+                  <button
+                    onClick={() => spara(u.id, u.namn)}
+                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    {u.namn}
+                    <span className="block text-xs text-slate-400">{u.epost}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 export default function Handelsesok() {
   const [sourceId, setSourceId]   = useState<string>('')
@@ -61,7 +119,7 @@ export default function Handelsesok() {
       <p className="text-sm text-slate-500 mb-6">
         Sök bakåt i tiden bland alla ingestade händelser (oavsett publiceringsstatus) — källa, typ, plats och datumintervall.
         Typ-filtret kräver att källan fått sina händelsetyper extraherade (idag bara Polisen).
-        Fristående verktyg, inte kopplat till en specifik användares sparade lista.
+        Hittar du något en användare frågar om kan du spara det direkt till deras konto (mockat tills riktiga användare finns).
       </p>
 
       {/* Filter */}
@@ -171,7 +229,10 @@ export default function Handelsesok() {
             <p className="text-xs text-slate-400 mb-3">{data.total} träffar</p>
             <div className="flex flex-col gap-2 mb-6">
               {data.events.map(e => (
-                <NewsItem key={e.id} event={e} isRead sourceName={e.sourceName} />
+                <div key={e.id} className="flex flex-col gap-1">
+                  <NewsItem event={e} isRead sourceName={e.sourceName} />
+                  <SparaTillAnvändare handelse={e} />
+                </div>
               ))}
             </div>
 
