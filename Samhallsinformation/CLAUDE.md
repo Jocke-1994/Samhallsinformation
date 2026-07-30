@@ -111,6 +111,39 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 25 — 2026-07-29 / 2026-07-30
+**What was done:**
+- **Händelsesök/Aktivitetslogg-polish** (PR:ar #383–#385, mergade): Idag-filter-bugg fixad (jämförde mot ett hårdkodat datum istället för `new Date()`), sökord-fritextsök, "markera alla på sidan", klickbar "Sparad till X"-badge med navigering till Användarhantering, CSV fick en "Vem"-kolumn, två-stegs bekräftelse innan Ångra. Checkbox flyttad in i händelsekortet (låg utanför, användarrapporterad bugg)
+- **Mina källor kopplat mot riktig backend** (PR #386): `GET/PUT /api/user/sources` (funnits sedan session 18, aldrig anropad) kopplad via ny `api/userSources.ts`. Nationell/Regional/Kommunal-gruppering plattades ut (backend har bara 8 riktiga källor, alla nationella idag). SPAR-adressförslag, "Nya"-fliken och "Planerat underhåll"-varningen togs bort — samtliga mockdata-bara, ingen motsvarighet i backend. Fullständig spec över de tre borttagna funktionerna sparad i `docs/MINA_KALLOR_BORTTAGNA_FUNKTIONER.md` (uttryckligt krav från användaren: inget raderas utan att sparas ner för framtida återuppbyggnad)
+- **Mina källor-layout itererad efter merge:** Lägg till källa-kortet stängdes av live (för smalt, gav ett tomt hål) → Aktiva källor/Alla källor slogs ihop till en gemensam rad med låst, matchande höjd (523px) istället för fast/max-height-blandning
+- **V1-lanseringsscope-genomgång** (hela Profil + Admin, kort för kort):
+  - **Konto:** Datahantering ("Radera konto"/GDPR-export gjorde bokstavligen ingenting vid klick, bara en tom bekräftelse), Tvåfaktor (togglade "på" helt lokalt, inget i `AuthService` bryr sig) och Sessioner (payhittade enheter/platser, inkl. en fejkad misslyckad inloggning från Amsterdam) stängdes av som farliga/vilseledande. KontoInfo/LösenordByte lämnas kvar men **behöver kopplas mot befintlig `PUT /api/auth/me`/`/me/password`** (ej gjort). Övriga kort redan rätt av som standard
+  - **Notifieringar-sektionen** redan helt dold (alla 5 flaggor av) — inget att ändra
+  - **Support:** FAQ accepterad som är (kod+deploy för innehåll ok för V1), Systemstatus av, **Ärendehantering pausad på användarens uttryckliga begäran** — vill behålla den påkostade mock-varianten, inte skala ner. Löstes senare: appen har redan två riktiga kontaktkanalar (Feedback-knappen/Formspree, och en kundtjänstbot-widget i `index.html` sedan session 20) — ingen brådska med en tredje
+  - **Viktig arkitekturupptäckt:** feature-flaggorna (`lib/featureFlags.ts`) är per webbläsare (localStorage), INTE en global backend-inställning — `defaultAktiv` i koden är den enda sanningen för vad riktiga besökare ser. `kallor_lagg_till` och `konto_datahantering` hade fel `defaultAktiv` i koden trots att admin trodde de redan var avstängda live (PR #389)
+  - **Uppdateringar:** "Nyheter" (publik) ska bara synas utloggad, "Uppdateringar" (profil) bara inloggad — fixat (PR #388). `AdminUppdateringar` (changelog-redigeraren) visade sig vara 100% dekorativ — sparar bara till lokalt React-state, når varken Nyheter eller profil-Uppdateringar. Pausad i väntan på Push-samtalet, eftersom en hel spec för schemalagd publicering + push + djuplänkning + schemalagd källaktivering + förhandsprenumeration hänger ihop med den
+  - **Admin Översikt** var 100% påhittad (bl.a. "1284 användare", källan "Regeringen.se" som inte finns, nedräkningsklockor som aldrig räknade ner) — Aktiva källor/Systemhälsa/Källstatus kopplade mot riktig `GET /api/admin/sources`-data, övriga fick MOCK-badge. "Kommande kontroller"s två påhittade jobbtyper (Event-drivet, Fullständigt flödestest) borttagna men fullspecade i `docs/OVERSIKT_KOMMANDE_KONTROLLER_BORTTAGNA.md` (PR #390)
+- **Push-notiser (punkt 8) scopad, INGET byggt än** — fullständig teknisk + produktplan sparad i `.claude/plans/warm-rolling-penguin.md` för nästa session: Web Push/VAPID (gratis, kräver PWA-installation för att fungera på iPhone), trigger = nya händelser från valda källor, batching = en push per källa per ingestor-körning, innehåll = bara antal+källnamn (inget känsligt på låsskärmen), ingen severity-gating, ingen tyst-period-logik för V1. Ett separat framtida diagnosverktyg (upprepade testpushar till en specifik användare för att felsöka leveransproblem) specad men inte påbörjat
+
+**Problem och lösningar denna session:**
+- Feature-flaggarnas faktiska räckvidd missförstods av användaren (trodde admin-panelens toggle påverkade alla besökare) — upptäcktes när `kallor_lagg_till` skulle stängas av på riktigt och det visade sig bara vara satt i användarens egen localStorage. Löst genom att alltid uppdatera `defaultAktiv` i koden vid den här typen av beslut framöver, inte bara toggla i panelen
+- Höll på att bygga en enkel Formspree-baserad "skalad ner"-ersättning för Ärendehantering innan användaren stoppade det ("jag är stolt över den, låt mig fundera") — filen återställdes till originalet direkt. Lärdom: fråga innan en uppskattad, redan byggd komponent görs om, även när den är mockad
+- Glömde initialt att koda push-planeringsarbetet på en egen branch — gjorde flera oberoende V1-scope-ändringar direkt på `main` innan de commitades. Löst genom att dela upp i tre separata branches/PRs (#388, #389, #390) i efterhand istället för en enda blandad commit
+
+**Etablerat mönster:**
+- Innan en känslig UI-komponent (bekräftelsedialoger, "detta kan inte ångras"-knappar) antas vara klar: kontrollera om den faktiskt gör något vid klick, inte bara att den ser klar ut. Flera kort i Konto (Datahantering, Tvåfaktor, Sessioner) hade fullt utbyggd bekräftelse-UI utan någon backend-koppling alls
+- Vid borttagning av mockdata-bara funktioner: spara alltid en fullständig spec (vad den gjorde, hur den såg ut, vad som krävs för att bygga den på riktigt) i `docs/`, aldrig bara radera — mönster etablerat med Mina källor (SPAR/Nya-fliken/Planerat underhåll) och återanvänt för Admin Översikts "Kommande kontroller"
+- Feature-flaggar i det här projektet är en per-webbläsare-preferens, inte en produktionsbrytare — ett beslut om att stänga av något för riktiga användare måste alltid landa som en kodändring (`defaultAktiv`), aldrig bara en admin-panelstoggle
+- Vid en stor ny funktion (push-notiser): utforska befintlig scaffolding/kodmönster grundligt FÖRE planering (här: fyra redan existerande men helt oanvända DB-tabeller sedan session 18), gå igenom både tekniska beslut (leveransmekanism, batching) OCH vardagliga produktbeslut (notisinnehåll, severity-gating, tysta timmar) innan kod skrivs — en ren teknisk plan är inte tillräcklig
+
+**Next session:**
+- Verifiera att PR #389 och #390 är mergade (öppna vid sessionens slut)
+- Bygg push-notiser enligt den sparade planen i `.claude/plans/warm-rolling-penguin.md`, börja med backend-infrastrukturen (migration för `UserDevice`, `WebPush`-paket, `EventSync.SyncAsync`-utökning för att returnera faktiska inlagda händelser)
+- Koppla KontoInfo/LösenordByte mot befintlig `PUT /api/auth/me`/`/me/password` (upptäckt under V1-scope, inte gjort än)
+- Ärendehanterings öde — användaren funderar fortfarande, inget beslut
+
+---
+
 ### Session 24 — 2026-07-27
 **What was done:**
 - **FAS 4-filterprototyp (Polisen kategori/kommun, #298) klar och testad:** vidareutvecklade prototypen från session 23 (`KategoriFilterModal.tsx`, `AktivaKallorKort.tsx`, `kallorUtils.ts`) med en kontextuell **prenumerationsklocka** per händelse i flödet (`PrenumerationsKlocka.tsx`) — i Allt-flödet en "lägg till"-meny (visar bara det som inte redan är valt, döljs helt om allt redan valt), i Mitt-flödet en "ta bort"-meny. Delat state lyft till `PolisenFilterContext.tsx`. Modell: två oberoende mängder (Typ ∩ Område), första klicket smalnar av från default "allt" till bara det valda, tomt urval matchar ingenting (inte reset). En stacking-bugg (menyn klipptes av kortets `overflow-hidden`) löstes med samma `createPortal`-mönster som `FeedbackModal` (session 7)
