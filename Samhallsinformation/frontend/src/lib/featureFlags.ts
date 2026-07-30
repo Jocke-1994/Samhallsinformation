@@ -45,7 +45,7 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
     label: 'Mina källor',
     ikon: '🗂️',
     flaggor: [
-      { key: 'kallor_lagg_till',      label: 'Lägg till källa',        beskrivning: 'Möjlighet att lägga till nya källor',             defaultAktiv: true },
+      { key: 'kallor_lagg_till',      label: 'Lägg till källa',        beskrivning: 'Möjlighet att lägga till nya källor',             defaultAktiv: false },
       { key: 'kallor_aktiva',         label: 'Aktiva källor',          beskrivning: 'Visa användarens aktiva och prenumererade källor', defaultAktiv: true },
       { key: 'kallor_rekommenderade', label: 'Rekommenderade källor',  beskrivning: 'Visa rekommenderade källor baserat på profil',     defaultAktiv: false },
       { key: 'kallor_alla',           label: 'Alla källor',            beskrivning: 'Bläddra bland samtliga tillgängliga källor',       defaultAktiv: true },
@@ -75,7 +75,7 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
       { key: 'konto_sessioner',      label: 'Sessioner',         beskrivning: 'Visa och avsluta aktiva inloggningar',           defaultAktiv: false },
       { key: 'konto_aktivitetslogg', label: 'Aktivitetslogg',    beskrivning: 'Visa inloggningshistorik och kontoaktivitet',    defaultAktiv: false },
       { key: 'konto_samtycke',       label: 'Spara samtycke',    beskrivning: 'Hantera samtycken för datalagring',              defaultAktiv: false },
-      { key: 'konto_datahantering',  label: 'Datahantering',     beskrivning: 'Exportera eller radera kontodata',               defaultAktiv: true },
+      { key: 'konto_datahantering',  label: 'Datahantering',     beskrivning: 'Exportera eller radera kontodata',               defaultAktiv: false },
       { key: 'konto_tema',           label: 'Tema',              beskrivning: 'Växla mellan ljust och mörkt läge',              defaultAktiv: true },
     ],
   },
