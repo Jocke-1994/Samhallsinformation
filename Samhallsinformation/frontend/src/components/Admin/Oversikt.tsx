@@ -1,20 +1,17 @@
+import { useQuery } from '@tanstack/react-query'
 import type { AdminSection } from './AdminSidebar'
+import { fetchAdminSources } from '../../api/sources'
+import { deriveStatus, STATUS_DOT } from './Kallhantering'
 
 interface StatKort {
-  label:   string
-  value:   string | number
-  sub?:    string
-  color:   string
-  ikon:    string
+  label:    string
+  value:    string | number
+  sub?:     string
+  color:    string
+  ikon:     string
   sektion?: AdminSection
+  mock?:    boolean
 }
-
-const STAT_KORT: StatKort[] = [
-  { label: 'Användare',       value: 1284,  sub: '+12 senaste 7 dagarna',  color: 'text-violet-600', ikon: '👥', sektion: 'anvandare'      },
-  { label: 'Öppna ärenden',   value: 3,     sub: '1 under behandling',     color: 'text-amber-600',  ikon: '🎫', sektion: 'support-inbox'  },
-  { label: 'Aktiva källor',   value: 18,    sub: '2 med varningar',        color: 'text-sky-600',    ikon: '📡', sektion: 'kallor'         },
-  { label: 'Systemhälsa',     value: '94%', sub: 'API + Datainsamling OK', color: 'text-green-600',  ikon: '✅', sektion: 'felsökning'     },
-]
 
 const SENASTE_HÄNDELSER = [
   { tid: '10:42', typ: 'Användare',  text: 'Ny registrering — anna.svensson@mail.se',        färg: 'bg-violet-100 text-violet-700' },
@@ -25,15 +22,29 @@ const SENASTE_HÄNDELSER = [
   { tid: '2026-03-20', typ: 'Användare', text: 'Konto raderat på begäran — GDPR art. 17',    färg: 'bg-red-100 text-red-700'       },
 ]
 
-const KALLSTATUS = [
-  { namn: 'Polisen',        status: 'OK',             färg: 'bg-green-100 text-green-700',  dot: 'bg-green-500'  },
-  { namn: 'SMHI',           status: 'Begränsad drift', färg: 'bg-amber-100 text-amber-700',  dot: 'bg-amber-400'  },
-  { namn: 'MSB',            status: 'OK',             färg: 'bg-green-100 text-green-700',  dot: 'bg-green-500'  },
-  { namn: 'Trafikverket',   status: 'OK',             färg: 'bg-green-100 text-green-700',  dot: 'bg-green-500'  },
-  { namn: 'Krisinformation',status: 'OK',             färg: 'bg-green-100 text-green-700',  dot: 'bg-green-500'  },
-]
+function MockBadge() {
+  return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">MOCK</span>
+}
 
 export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection) => void }) {
+  const { data: sources = [] } = useQuery({
+    queryKey: ['admin-sources'],
+    queryFn:  fetchAdminSources,
+  })
+
+  const aktivaKallor = sources.filter(s => s.isActive)
+  const kallorMedFel  = aktivaKallor.filter(s => s.lastFetchError !== null)
+  const systemhälsaProcent = aktivaKallor.length > 0
+    ? Math.round(((aktivaKallor.length - kallorMedFel.length) / aktivaKallor.length) * 100)
+    : 100
+
+  const STAT_KORT: StatKort[] = [
+    { label: 'Användare',       value: 1284,  sub: '+12 senaste 7 dagarna',                          color: 'text-violet-600', ikon: '👥', sektion: 'anvandare',     mock: true },
+    { label: 'Öppna ärenden',   value: 3,     sub: 'Ärendehantering avstängd',                       color: 'text-amber-600',  ikon: '🎫', sektion: 'support-inbox', mock: true },
+    { label: 'Aktiva källor',   value: aktivaKallor.length, sub: `${kallorMedFel.length} med varningar`, color: 'text-sky-600',    ikon: '📡', sektion: 'kallor' },
+    { label: 'Systemhälsa',     value: `${systemhälsaProcent}%`, sub: `${aktivaKallor.length - kallorMedFel.length}/${aktivaKallor.length} källor utan fel`, color: 'text-green-600', ikon: '✅', sektion: 'felsökning' },
+  ]
+
   return (
     <div className="flex flex-col gap-6">
 
@@ -54,6 +65,7 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
             <div className="flex items-center gap-2">
               <span className="text-2xl">{k.ikon}</span>
               <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">{k.label}</span>
+              {k.mock && <MockBadge />}
             </div>
             <p className={`text-4xl font-bold ${k.color}`}>{k.value}</p>
             {k.sub && <p className="text-xs text-slate-400 text-center">{k.sub}</p>}
@@ -66,9 +78,12 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
 
         {/* Senaste händelser */}
         <div className="lg:col-span-2 lg:row-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h3 className="text-base font-semibold text-slate-900">Senaste händelser</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Aktivitet i systemet de senaste 24 timmarna</p>
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Senaste händelser</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Aktivitet i systemet de senaste 24 timmarna</p>
+            </div>
+            <MockBadge />
           </div>
           <div className="divide-y divide-slate-50">
             {SENASTE_HÄNDELSER.map((h, i) => (
@@ -93,7 +108,7 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <h3 className="text-base font-semibold text-slate-900">Kommande kontroller</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Närmast i tid</p>
+            <p className="text-xs text-slate-400 mt-0.5">Schemalagd datainsamling</p>
           </div>
           <div className="divide-y divide-slate-50">
             <div className="flex items-center justify-between px-6 py-3">
@@ -102,28 +117,7 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
                 <p className="text-xs text-slate-400">Alla aktiva källor</p>
               </div>
               <div className="text-right">
-                <p className="text-sm font-mono text-slate-700">19:10</p>
-                <p className="text-xs text-slate-400">om 4 min</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between px-6 py-3">
-              <div>
-                <p className="text-sm font-medium text-amber-600">Event-drivet</p>
-                <p className="text-xs text-slate-400">Polisen, Trafikverket</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-mono text-slate-700">19:07</p>
-                <p className="text-xs text-amber-500">2 i kö</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between px-6 py-3">
-              <div>
-                <p className="text-sm font-medium text-slate-700">Fullständigt flödestest</p>
-                <p className="text-xs text-slate-400">Alla aktiva källor</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-mono text-slate-700">04:00</p>
-                <p className="text-xs text-slate-400">om 8 h 53 min</p>
+                <p className="text-sm text-slate-700">Var 5:e minut</p>
               </div>
             </div>
           </div>
@@ -141,18 +135,23 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <h3 className="text-base font-semibold text-slate-900">Källstatus</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Senast kontrollerad 10:00</p>
+            <p className="text-xs text-slate-400 mt-0.5">{aktivaKallor.length} aktiva källor</p>
           </div>
           <div className="divide-y divide-slate-50">
-            {KALLSTATUS.map(k => (
-              <div key={k.namn} className="flex items-center justify-between px-6 py-3">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${k.dot}`} />
-                  <span className="text-sm text-slate-700 font-medium">{k.namn}</span>
+            {aktivaKallor.length === 0 ? (
+              <p className="px-6 py-4 text-sm text-slate-400 text-center">Inga aktiva källor.</p>
+            ) : aktivaKallor.map(s => {
+              const status = deriveStatus(s)
+              return (
+                <div key={s.id} className="flex items-center justify-between px-6 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
+                    <span className="text-sm text-slate-700 font-medium">{s.shortName}</span>
+                  </div>
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{status}</span>
                 </div>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${k.färg}`}>{k.status}</span>
-              </div>
-            ))}
+              )
+            })}
           </div>
           <div className="px-6 py-3 border-t border-slate-100">
             <button

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchAdminSources, createAdminSource, updateAdminSource, deleteAdminSource, resyncAdminSource } from '../../api/sources'
 import type { AdminSource } from '../../types'
 
-type KällStatus      = 'OK' | 'Begränsad drift' | 'Nere' | 'Okänd'
+export type KällStatus = 'OK' | 'Begränsad drift' | 'Nere' | 'Okänd'
 type Kategori        = 'Nationell' | 'Regional' | 'Kommunal' | 'Transport' | 'Väder'
 type ÄndringTyp      = 'Underhåll' | 'Inaktivering' | 'Aktivering' | 'Källbyte'
 type FlödesStatus    = 'OK' | 'Planerat underhåll' | 'Driftstörning'
@@ -194,7 +194,7 @@ interface Källa {
   händelser:      number
 }
 
-const STATUS_DOT: Record<KällStatus, string> = {
+export const STATUS_DOT: Record<KällStatus, string> = {
   'OK':              'bg-green-500',
   'Begränsad drift': 'bg-amber-400',
   'Nere':            'bg-red-500',
@@ -213,7 +213,7 @@ function relativeTime(iso: string | null): string {
   return `${Math.floor(hrs / 24)} d sedan`
 }
 
-function deriveStatus(s: AdminSource): KällStatus {
+export function deriveStatus(s: AdminSource): KällStatus {
   if (!s.isActive) return 'Okänd'
   if (s.lastFetchError) return 'Nere'
   if (!s.lastFetchedAt) return 'Okänd'
