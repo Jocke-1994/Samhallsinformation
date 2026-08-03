@@ -77,6 +77,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+// VAPID-nycklar för Web Push — dev-nycklar som fallback, samma mönster som
+// JWT_SECRET. MÅSTE sättas som riktiga env vars i Railway för produktion.
+builder.Configuration["VAPID_PUBLIC_KEY"]  ??= "BK2R_L5jWNIL18xz26s9jNiZ3wh5utgTgjjzaLUlXDcT55R2UPSm36Qn5t0LmQLbeUUoNzDsRXEFDy5qqOW7wRk";
+builder.Configuration["VAPID_PRIVATE_KEY"] ??= "qyZcpirOyAymG5l8fbpPQ5hYP3UzrZglMgQ9u3gWVi0";
+
 // HTTP client for ingestors
 builder.Services.AddHttpClient<PolisenRssIngestor>();
 builder.Services.AddHttpClient<KrisinformationApiIngestor>();
@@ -89,6 +94,9 @@ builder.Services.AddScoped<IIngestor, SmhiApiIngestor>();
 
 // E-posttjänst
 builder.Services.AddSingleton<IEmailService, ResendEmailService>();
+
+// Push-notiser (Web Push/VAPID)
+builder.Services.AddSingleton<IPushNotificationService, WebPushNotificationService>();
 
 // Auth
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
