@@ -240,7 +240,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
             onClick={() => {
               onSelectSource(null)
               onSelectViewMode('Allt')
-              navigate('/')
+              navigate('/', { state: { shortName: null, viewMode: 'Allt' } })
               onClose()
             }}
           />
@@ -252,7 +252,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
               onClick={() => {
                 onSelectSource(null)
                 onSelectViewMode('Mitt')
-                navigate('/')
+                navigate('/', { state: { shortName: null, viewMode: 'Mitt' } })
                 onClose()
               }}
             />
