@@ -25,7 +25,9 @@ function HomePage() {
   const [selectedShortName, setSelectedShortName] = useState<string | null>(
     (location.state as { shortName?: string } | null)?.shortName ?? null
   )
-  const [viewMode, setViewMode] = useState<'Allt' | 'Mitt'>('Allt')
+  const [viewMode, setViewMode] = useState<'Allt' | 'Mitt'>(
+    (location.state as { viewMode?: 'Allt' | 'Mitt' } | null)?.viewMode ?? 'Allt'
+  )
   const [readTrigger, setReadTrigger] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
