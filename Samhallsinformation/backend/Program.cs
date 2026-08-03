@@ -105,6 +105,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Background service
 builder.Services.AddHostedService<IngestorBackgroundService>();
+builder.Services.AddHostedService<SupportScheduledActionService>();
 
 // Controllers
 builder.Services.AddControllers();
@@ -481,20 +482,6 @@ using (var scope = app.Services.CreateScope())
                 CREATE INDEX IF NOT EXISTS        ""IX_SupportTicketScheduledActions_CreatedByUserId"" ON ""SupportTicketScheduledActions"" (""CreatedByUserId"");
                 CREATE INDEX IF NOT EXISTS        ""IX_SupportTicketScheduledActions_ReassignToUserId"" ON ""SupportTicketScheduledActions"" (""ReassignToUserId"");
                 CREATE INDEX IF NOT EXISTS        ""IX_SupportTicketScheduledActions_Executed_ScheduledAt"" ON ""SupportTicketScheduledActions"" (""Executed"", ""ScheduledAt"");
-
-                -- TicketNumber ska auto-inkrementera precis som Sources.Id (samma fix som session 9 —
-                -- SQLite:s autoincrement-annotation ignoreras av Postgres, en riktig sequence krävs).
-                DO $$
-                BEGIN
-                  IF NOT EXISTS (
-                    SELECT 1 FROM information_schema.sequences
-                    WHERE sequence_name = 'SupportTickets_TicketNumber_seq'
-                  ) THEN
-                    CREATE SEQUENCE ""SupportTickets_TicketNumber_seq"";
-                    PERFORM setval('""SupportTickets_TicketNumber_seq""', COALESCE((SELECT MAX(""TicketNumber"") FROM ""SupportTickets""), 0) + 1, false);
-                    ALTER TABLE ""SupportTickets"" ALTER COLUMN ""TicketNumber"" SET DEFAULT nextval('""SupportTickets_TicketNumber_seq""');
-                  END IF;
-                END $$;
 
                 INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
                 VALUES ('20260803131738_AddSupportTickets', '10.0.10')
