@@ -109,7 +109,7 @@ export interface AdminTicketDetailDto {
 export interface NotisDto {
   ticketId: string
   amne: string
-  typ: 'tilldelad' | 'paminnelse'
+  typ: 'tilldelad' | 'påminnelse'
   notering?: string | null
 }
 

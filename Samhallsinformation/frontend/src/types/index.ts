@@ -99,25 +99,6 @@ export interface KommandeVersion {
   plannedDate: string
 }
 
-// Support
-export type ArendeStatus = 'Öppet' | 'Under behandling' | 'Hanterat' | 'Stängt'
-
-export interface Meddelande {
-  fran: 'du' | 'support'
-  text: string
-  tid: string
-}
-
-export interface Arende {
-  id: string
-  kategori: string
-  amne: string
-  status: ArendeStatus
-  skapat: string
-  uppdaterat: string
-  meddelanden: Meddelande[]
-}
-
 export interface NastaSteg {
   typ: 'ersattare' | 'borttagning'
   datum: string

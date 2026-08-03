@@ -1,83 +1,19 @@
 import { useState } from 'react'
-import type { Arende, ArendeStatus } from '../../../types'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { createTicket, fetchMyTicket, fetchMyTickets, replyToTicket, type MyTicketDto } from '../../../api/support'
 import { BETA } from '../../../betaConfig'
 
 type SortField = 'status' | 'skapat' | 'uppdaterat' | null
 type SortDir = 'asc' | 'desc'
 
-const INITIAL_ARENDEN: Arende[] = [
-  {
-    id: 'SUP-0042',
-    kategori: 'Notifieringar',
-    amne: 'Får inte notiser från Polisen trots att det är inställt',
-    status: 'Under behandling',
-    skapat: '2026-03-15',
-    uppdaterat: '2026-03-17',
-    meddelanden: [
-      { fran: 'du', text: 'Hej! Jag har ställt in notiser från Polisen under Notifieringar men får ändå ingenting. Har testat att logga ut och in utan resultat.', tid: '2026-03-15 09:14' },
-      { fran: 'support', text: 'Hej! Tack för att du hör av dig. Vi har tagit emot ditt ärende och tittar på det. Kan du bekräfta vilken e-postadress du har registrerad?', tid: '2026-03-16 11:30' },
-      { fran: 'du', text: 'Det är exempel@mail.se', tid: '2026-03-16 12:05' },
-      { fran: 'support', text: 'Tack! Vi ser en konfigurationsavvikelse och jobbar på en lösning. Vi återkommer inom 24 timmar.', tid: '2026-03-17 09:00' },
-    ],
-  },
-  {
-    id: 'SUP-0038',
-    kategori: 'Tekniskt fel',
-    amne: 'Källknappen för SMHI visas inte i menyn',
-    status: 'Öppet',
-    skapat: '2026-03-10',
-    uppdaterat: '2026-03-10',
-    meddelanden: [
-      { fran: 'du', text: 'SMHI-knappen i sidomenyn har försvunnit efter senaste uppdateringen. Kan inte navigera till SMHI-nyheter längre.', tid: '2026-03-10 14:22' },
-    ],
-  },
-  {
-    id: 'SUP-0031',
-    kategori: 'Konto',
-    amne: 'Vill ta bort mitt konto',
-    status: 'Hanterat',
-    skapat: '2026-03-01',
-    uppdaterat: '2026-03-03',
-    meddelanden: [
-      { fran: 'du', text: 'Jag vill radera mitt konto och all min data enligt GDPR.', tid: '2026-03-01 10:00' },
-      { fran: 'support', text: 'Hej! Vi har tagit emot din begäran. Ditt konto och all tillhörande data kommer att raderas inom 30 dagar enligt GDPR artikel 17.', tid: '2026-03-02 09:15' },
-      { fran: 'support', text: 'Kontot är nu raderat. Ärendet stängs.', tid: '2026-03-03 11:00' },
-    ],
-  },
-  {
-    id: 'SUP-0028',
-    kategori: 'GDPR & uppgifter',
-    amne: 'Fråga om GDPR och vilken data som sparas',
-    status: 'Stängt',
-    skapat: '2026-02-20',
-    uppdaterat: '2026-02-21',
-    meddelanden: [
-      { fran: 'du', text: 'Vilken data sparar ni om mig som användare?', tid: '2026-02-20 16:45' },
-      { fran: 'support', text: 'Vi sparar: namn, e-postadress, dina valda källor och notifieringsinställningar. Ingen annan data. Du kan ladda ner allt under Konto → Exportera din data.', tid: '2026-02-21 10:20' },
-    ],
-  },
-  {
-    id: 'SUP-0019',
-    kategori: 'Notifieringar',
-    amne: 'Notifieringar skickas vid fel tidpunkt',
-    status: 'Hanterat',
-    skapat: '2026-02-10',
-    uppdaterat: '2026-02-14',
-    meddelanden: [
-      { fran: 'du', text: 'Jag har ställt in daglig sammanfattning kl 07:00 men får den vid midnatt istället.', tid: '2026-02-10 08:30' },
-      { fran: 'support', text: 'Tack för rapporten! Det var ett fel i tidszonshanteringen. Vi har åtgärdat det i version 0.3.1.', tid: '2026-02-14 14:00' },
-    ],
-  },
-]
-
-const STATUS_STYLES: Record<ArendeStatus, string> = {
+const STATUS_STYLES: Record<string, string> = {
   'Öppet':            'bg-blue-50 text-blue-700 border border-blue-200',
   'Under behandling': 'bg-amber-50 text-amber-700 border border-amber-200',
   'Hanterat':             'bg-green-50 text-green-700 border border-green-200',
   'Stängt':           'bg-slate-100 text-slate-500 border border-slate-200',
 }
 
-const STATUS_ORDER: ArendeStatus[] = ['Öppet', 'Under behandling', 'Hanterat', 'Stängt']
+const STATUS_ORDER = ['Öppet', 'Under behandling', 'Hanterat', 'Stängt']
 
 const KATEGORIER = [
   'Notifieringar',
@@ -90,6 +26,18 @@ const KATEGORIER = [
   'Annat',
 ]
 
+function ticketNr(t: { ticketNumber: number }) {
+  return `SUP-${String(t.ticketNumber).padStart(4, '0')}`
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('sv-SE')
+}
+
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' })
+}
+
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-10 flex flex-col items-center gap-2">
@@ -99,27 +47,42 @@ function StatCard({ label, value, color }: { label: string; value: number; color
   )
 }
 
-function SortIcon({ field: _field, active, dir }: { field: string; active: boolean; dir: SortDir }) {
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   if (!active) return <span className="ml-1 text-slate-300">↕</span>
   return <span className="ml-1 text-violet-600">{dir === 'asc' ? '↑' : '↓'}</span>
 }
 
 function ArendeRad({
-  arende,
+  ticket,
   expanded,
   pinned,
   onToggle,
   onTogglePin,
 }: {
-  arende: Arende
+  ticket: MyTicketDto
   expanded: boolean
   pinned: boolean
   onToggle: () => void
   onTogglePin: (e: React.MouseEvent) => void
 }) {
   const [svar, setSvar] = useState('')
-  const [skickat, setSkickat] = useState(false)
-  const kanSvara = arende.status === 'Öppet' || arende.status === 'Under behandling'
+  const queryClient = useQueryClient()
+  const kanSvara = ticket.status === 'Öppet' || ticket.status === 'Under behandling'
+
+  const { data: detail, isLoading } = useQuery({
+    queryKey: ['my-ticket', ticket.id],
+    queryFn: () => fetchMyTicket(ticket.id),
+    enabled: expanded,
+  })
+
+  const replyMutation = useMutation({
+    mutationFn: () => replyToTicket(ticket.id, svar),
+    onSuccess: () => {
+      setSvar('')
+      queryClient.invalidateQueries({ queryKey: ['my-ticket', ticket.id] })
+      queryClient.invalidateQueries({ queryKey: ['my-tickets'] })
+    },
+  })
 
   return (
     <>
@@ -137,18 +100,18 @@ function ArendeRad({
             )}
           </button>
         </td>
-        <td className="pl-4 pr-8 py-4 font-mono text-xs text-slate-400">{arende.id}</td>
+        <td className="pl-4 pr-8 py-4 font-mono text-xs text-slate-400">{ticketNr(ticket)}</td>
         <td className="px-4 py-4">
-          <span className="text-xs font-medium text-slate-400 bg-slate-100 px-3 py-1 rounded-full mb-1 inline-block">{arende.kategori}</span>
-          <p className="text-slate-700 font-medium">{arende.amne}</p>
+          <span className="text-xs font-medium text-slate-400 bg-slate-100 px-3 py-1 rounded-full mb-1 inline-block">{ticket.category}</span>
+          <p className="text-slate-700 font-medium">{ticket.subject}</p>
         </td>
         <td className="px-4 py-4">
-          <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${STATUS_STYLES[arende.status]}`}>
-            {arende.status}
+          <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${STATUS_STYLES[ticket.status]}`}>
+            {ticket.status}
           </span>
         </td>
-        <td className="px-4 py-4 text-slate-400 text-xs">{arende.skapat}</td>
-        <td className="pl-6 pr-4 py-4 text-slate-400 text-xs">{arende.uppdaterat}</td>
+        <td className="px-4 py-4 text-slate-400 text-xs">{formatDate(ticket.createdAt)}</td>
+        <td className="pl-6 pr-4 py-4 text-slate-400 text-xs">{formatDate(ticket.updatedAt)}</td>
         <td className="pr-4 py-4 text-slate-400 text-xs text-right">
           <span className={`transition-transform inline-block ${expanded ? 'rotate-180' : ''}`}>▾</span>
         </td>
@@ -160,20 +123,21 @@ function ArendeRad({
             <div className="px-8 py-6 flex flex-col gap-6">
               <div className="flex flex-col gap-3">
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Historik</p>
-                {arende.meddelanden.map((m, i) => (
+                {isLoading && <p className="text-sm text-slate-400">Laddar...</p>}
+                {detail?.messages.map(m => (
                   <div
-                    key={i}
-                    className={`flex flex-col gap-1 max-w-2xl ${m.fran === 'du' ? 'self-end items-end' : 'self-start items-start'}`}
+                    key={m.id}
+                    className={`flex flex-col gap-1 max-w-2xl ${m.senderType === 'user' ? 'self-end items-end' : 'self-start items-start'}`}
                   >
                     <div className={`px-4 py-3 rounded-xl text-sm leading-relaxed ${
-                      m.fran === 'du'
+                      m.senderType === 'user'
                         ? 'bg-violet-600 text-white rounded-br-sm'
                         : 'bg-white border border-slate-200 text-slate-700 rounded-bl-sm'
                     }`}>
                       {m.text}
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      {m.fran === 'du' ? 'Du' : 'Support'} · {m.tid}
+                      {m.senderType === 'user' ? 'Du' : 'Support'} · {formatDateTime(m.createdAt)}
                     </p>
                   </div>
                 ))}
@@ -182,7 +146,7 @@ function ArendeRad({
               {kanSvara && (
                 <div className="flex flex-col gap-3 border-t border-slate-200 pt-4">
                   <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Svara</p>
-                  {skickat ? (
+                  {replyMutation.isSuccess ? (
                     <p className="text-sm text-green-600">Ditt svar har skickats.</p>
                   ) : (
                     <>
@@ -195,13 +159,11 @@ function ArendeRad({
                       />
                       <div className="flex items-center gap-3">
                         <button
-                          onClick={() => { if (svar.trim()) setSkickat(true) }}
-                          className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
+                          onClick={() => { if (svar.trim()) replyMutation.mutate() }}
+                          disabled={replyMutation.isPending}
+                          className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
                         >
-                          Skicka svar
-                        </button>
-                        <button className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-600 text-sm rounded-lg transition-colors">
-                          Stäng ärende
+                          {replyMutation.isPending ? 'Skickar...' : 'Skicka svar'}
                         </button>
                       </div>
                     </>
@@ -211,7 +173,7 @@ function ArendeRad({
 
               {!kanSvara && (
                 <p className="text-xs text-slate-400 border-t border-slate-200 pt-4">
-                  Det här ärendet är {arende.status.toLowerCase()} och kan inte längre besvaras.
+                  Det här ärendet är {ticket.status.toLowerCase()} och kan inte längre besvaras.
                 </p>
               )}
             </div>
@@ -223,7 +185,9 @@ function ArendeRad({
 }
 
 export default function ArendehanteringKort() {
-  const [arenden, setArenden] = useState<Arende[]>(INITIAL_ARENDEN)
+  const queryClient = useQueryClient()
+  const { data: tickets = [] } = useQuery({ queryKey: ['my-tickets'], queryFn: fetchMyTickets })
+
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set())
   const [sortField, setSortField] = useState<SortField>(null)
@@ -232,14 +196,23 @@ export default function ArendehanteringKort() {
   const [kategori, setKategori] = useState('')
   const [amne, setAmne] = useState('')
   const [meddelande, setMeddelande] = useState('')
-  const [skickat, setSkickat] = useState(false)
-  const [nyttId, setNyttId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
-  const totalt   = arenden.length
-  const oppna    = arenden.filter(a => a.status === 'Öppet').length
-  const underBeh = arenden.filter(a => a.status === 'Under behandling').length
-  const losta    = arenden.filter(a => a.status === 'Hanterat').length
+  const createMutation = useMutation({
+    mutationFn: () => createTicket({ subject: amne.trim(), category: kategori, message: meddelande, channel: 'arendehantering' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-tickets'] })
+      setKategori('')
+      setAmne('')
+      setMeddelande('')
+      setError('')
+    },
+  })
+
+  const totalt   = tickets.length
+  const oppna    = tickets.filter(a => a.status === 'Öppet').length
+  const underBeh = tickets.filter(a => a.status === 'Under behandling').length
+  const losta    = tickets.filter(a => a.status === 'Hanterat').length
 
   function toggleSort(field: SortField) {
     if (sortField === field) {
@@ -258,38 +231,14 @@ export default function ArendehanteringKort() {
     })
   }
 
-  function generateId(): string {
-    const nums = arenden.map(a => parseInt(a.id.split('-')[1]))
-    const max = Math.max(...nums)
-    return `SUP-${String(max + 1).padStart(4, '0')}`
-  }
-
   function handleSkicka() {
     if (!kategori)                     { setError('Välj en kategori.'); return }
     if (!amne.trim())                  { setError('Ange ett ämne.'); return }
     if (meddelande.trim().length < 10) { setError('Beskriv ditt ärende lite mer.'); return }
-    const id = generateId()
-    const today = new Date().toISOString().split('T')[0]
-    const tid = new Date().toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' })
-    const nyttArende: Arende = {
-      id,
-      kategori,
-      amne: amne.trim(),
-      status: 'Öppet',
-      skapat: today,
-      uppdaterat: today,
-      meddelanden: [{ fran: 'du', text: meddelande, tid }],
-    }
-    setArenden(prev => [nyttArende, ...prev])
-    setNyttId(id)
-    setSkickat(true)
-    setKategori('')
-    setAmne('')
-    setMeddelande('')
-    setError('')
+    createMutation.mutate()
   }
 
-  const sorted = [...arenden].sort((a, b) => {
+  const sorted = [...tickets].sort((a, b) => {
     const aPinned = pinnedIds.has(a.id)
     const bPinned = pinnedIds.has(b.id)
     if (aPinned && !bPinned) return -1
@@ -297,8 +246,8 @@ export default function ArendehanteringKort() {
     if (!sortField) return 0
     let cmp = 0
     if (sortField === 'status')      cmp = STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)
-    if (sortField === 'skapat')      cmp = a.skapat.localeCompare(b.skapat)
-    if (sortField === 'uppdaterat')  cmp = a.uppdaterat.localeCompare(b.uppdaterat)
+    if (sortField === 'skapat')      cmp = a.createdAt.localeCompare(b.createdAt)
+    if (sortField === 'uppdaterat')  cmp = a.updatedAt.localeCompare(b.updatedAt)
     return sortDir === 'asc' ? cmp : -cmp
   })
 
@@ -324,9 +273,9 @@ export default function ArendehanteringKort() {
           <p className="text-sm text-slate-400 mt-0.5">Vi svarar inom 1–3 vardagar</p>
         </div>
         <div className="px-6 pt-6 pb-0 flex flex-col gap-5">
-          {skickat && nyttId && (
+          {createMutation.isSuccess && createMutation.data && (
             <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
-              Ditt ärende har skickats och tilldelats nummer <span className="font-mono font-semibold">{nyttId}</span>. Vi återkommer inom 1–3 vardagar.
+              Ditt ärende har skickats och tilldelats nummer <span className="font-mono font-semibold">{ticketNr(createMutation.data)}</span>. Vi återkommer inom 1–3 vardagar.
             </div>
           )}
           <div className="flex flex-col gap-1.5">
@@ -336,7 +285,6 @@ export default function ArendehanteringKort() {
               onChange={e => {
                 const val = e.target.value
                 setKategori(val)
-                setSkickat(false)
                 setError('')
                 if (val === 'Testare' && BETA.mall) setMeddelande(BETA.mall)
                 else if (val !== 'Testare') setMeddelande('')
@@ -352,7 +300,7 @@ export default function ArendehanteringKort() {
             <input
               type="text"
               value={amne}
-              onChange={e => { setAmne(e.target.value); setSkickat(false); setError('') }}
+              onChange={e => { setAmne(e.target.value); setError('') }}
               placeholder="Beskriv kortfattat vad det gäller..."
               className="bg-white text-slate-900 text-sm px-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-violet-500 placeholder-slate-400"
             />
@@ -361,7 +309,7 @@ export default function ArendehanteringKort() {
             <label className="text-sm font-medium text-slate-700">Beskriv ditt ärende</label>
             <textarea
               value={meddelande}
-              onChange={e => { setMeddelande(e.target.value); setSkickat(false); setError('') }}
+              onChange={e => { setMeddelande(e.target.value); setError('') }}
               rows={5}
               placeholder="Berätta vad som hänt eller vad du behöver hjälp med..."
               className="bg-white text-slate-900 text-sm px-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-violet-500 placeholder-slate-400 resize-none"
@@ -372,9 +320,10 @@ export default function ArendehanteringKort() {
         <div className="flex justify-center py-5">
           <button
             onClick={handleSkicka}
-            className="px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
+            disabled={createMutation.isPending}
+            className="px-6 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            Skicka ärende
+            {createMutation.isPending ? 'Skickar...' : 'Skicka ärende'}
           </button>
         </div>
       </div>
@@ -396,19 +345,19 @@ export default function ArendehanteringKort() {
                   className={`px-4 w-40 cursor-pointer hover:text-slate-700 ${thClass}`}
                   onClick={() => toggleSort('status')}
                 >
-                  Status <SortIcon field="status" active={sortField === 'status'} dir={sortDir} />
+                  Status <SortIcon active={sortField === 'status'} dir={sortDir} />
                 </th>
                 <th
                   className={`px-4 w-28 cursor-pointer hover:text-slate-700 ${thClass}`}
                   onClick={() => toggleSort('skapat')}
                 >
-                  Skapat <SortIcon field="skapat" active={sortField === 'skapat'} dir={sortDir} />
+                  Skapat <SortIcon active={sortField === 'skapat'} dir={sortDir} />
                 </th>
                 <th
                   className={`pl-6 pr-4 w-40 cursor-pointer hover:text-slate-700 ${thClass}`}
                   onClick={() => toggleSort('uppdaterat')}
                 >
-                  Senast uppdaterat <SortIcon field="uppdaterat" active={sortField === 'uppdaterat'} dir={sortDir} />
+                  Senast uppdaterat <SortIcon active={sortField === 'uppdaterat'} dir={sortDir} />
                 </th>
                 <th className="w-8" />
               </tr>
@@ -417,7 +366,7 @@ export default function ArendehanteringKort() {
               {sorted.map(a => (
                 <ArendeRad
                   key={a.id}
-                  arende={a}
+                  ticket={a}
                   expanded={expandedId === a.id}
                   pinned={pinnedIds.has(a.id)}
                   onToggle={() => setExpandedId(expandedId === a.id ? null : a.id)}

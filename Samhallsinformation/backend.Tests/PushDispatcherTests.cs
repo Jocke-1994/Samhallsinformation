@@ -149,4 +149,93 @@ public class PushDispatcherTests
         var log = Assert.Single(db.NotificationDeliveryLogs);
         Assert.Equal("failed", log.Status);
     }
+
+    private static (User Admin, UserDevice Device) SeedAdminWithDevice(AppDbContext db, bool pushEnabled = true, string role = "Admin")
+    {
+        var admin = new User
+        {
+            Name         = "Joakim",
+            Email        = $"{Guid.NewGuid()}@example.com",
+            PasswordHash = "x",
+            Role         = role,
+            PushEnabled  = pushEnabled,
+        };
+        db.Users.Add(admin);
+        db.SaveChanges();
+
+        var device = new UserDevice
+        {
+            UserId   = admin.Id,
+            Endpoint = "https://push.example/admin-ep",
+            P256dh   = "p256dh-key",
+            Auth     = "auth-secret",
+        };
+        db.UserDevices.Add(device);
+        db.SaveChanges();
+
+        return (admin, device);
+    }
+
+    private static SupportTicket NewTicket(string channel = "arendehantering") => new()
+    {
+        TicketNumber = 1,
+        Subject      = "Testärende",
+        Category     = "Tekniskt fel",
+        Channel      = channel,
+    };
+
+    [Fact]
+    public async Task DispatchNewTicketAsync_AdminWithDevice_SendsPush()
+    {
+        using var db = NewDb();
+        var (_, device) = SeedAdminWithDevice(db);
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewTicketAsync(db, push, "https://test.local", NewTicket());
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DispatchNewTicketAsync_AdminHasPushMuted_SendsNothing()
+    {
+        using var db = NewDb();
+        SeedAdminWithDevice(db, pushEnabled: false);
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewTicketAsync(db, push, "https://test.local", NewTicket());
+
+        await push.DidNotReceiveWithAnyArgs().SendAsync(default!, default!, default!, default, default);
+    }
+
+    [Fact]
+    public async Task DispatchNewTicketAsync_RegularUserOnly_SendsNothing()
+    {
+        using var db = NewDb();
+        var (user, _, _) = SeedSubscriber(db);
+        db.UserDevices.Add(new UserDevice { UserId = user.Id, Endpoint = "https://push.example/user-ep", P256dh = "p", Auth = "a" });
+        db.SaveChanges();
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewTicketAsync(db, push, "https://test.local", NewTicket());
+
+        await push.DidNotReceiveWithAnyArgs().SendAsync(default!, default!, default!, default, default);
+    }
+
+    [Fact]
+    public async Task DispatchNewTicketAsync_FeedbackChannel_UsesFeedbackTitle()
+    {
+        using var db = NewDb();
+        SeedAdminWithDevice(db);
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewTicketAsync(db, push, "https://test.local", NewTicket(channel: "feedback"));
+
+        await push.Received(1).SendAsync(
+            Arg.Any<UserDevice>(),
+            Arg.Is<string>(t => t!.Contains("feedback", StringComparison.OrdinalIgnoreCase)),
+            Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+    }
 }
