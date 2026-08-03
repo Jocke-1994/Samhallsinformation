@@ -10,16 +10,19 @@ public class IngestorBackgroundService : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<IngestorBackgroundService> _logger;
+    private readonly IConfiguration _config;
     private readonly TimeSpan _interval = TimeSpan.FromMinutes(5);
 
     public IngestorBackgroundService(
         IServiceScopeFactory scopeFactory,
         IHttpClientFactory httpClientFactory,
-        ILogger<IngestorBackgroundService> logger)
+        ILogger<IngestorBackgroundService> logger,
+        IConfiguration config)
     {
         _scopeFactory = scopeFactory;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _config = config;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -49,7 +52,9 @@ public class IngestorBackgroundService : BackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
         var db        = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var push      = scope.ServiceProvider.GetRequiredService<IPushNotificationService>();
         var dedicated = scope.ServiceProvider.GetRequiredService<IEnumerable<IIngestor>>().ToList();
+        var frontendUrl = _config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
 
         var dedicatedIds = dedicated.Select(i => i.Source.Id).ToHashSet();
 
@@ -80,6 +85,16 @@ public class IngestorBackgroundService : BackgroundService
                 }
 
                 await db.SaveChangesAsync(ct);
+
+                try
+                {
+                    await PushDispatcher.DispatchNewEventsAsync(db, push, frontendUrl, sourceId, inserted, ct);
+                }
+                catch (Exception ex)
+                {
+                    // Push-fel ska aldrig markera källan som trasig — bara loggas.
+                    _logger.LogError(ex, "Push dispatch failed for {Source}", ingestor.Source.Name);
+                }
             }
             catch (Exception ex)
             {
