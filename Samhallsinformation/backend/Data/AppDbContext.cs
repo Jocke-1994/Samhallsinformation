@@ -21,6 +21,9 @@ public class AppDbContext : DbContext
     public DbSet<RefreshToken>               RefreshTokens             => Set<RefreshToken>();
     public DbSet<UserPolisenFilter>          UserPolisenFilters        => Set<UserPolisenFilter>();
     public DbSet<UserSavedEvent>             UserSavedEvents           => Set<UserSavedEvent>();
+    public DbSet<SupportTicket>              SupportTickets            => Set<SupportTicket>();
+    public DbSet<SupportTicketMessage>       SupportTicketMessages     => Set<SupportTicketMessage>();
+    public DbSet<SupportTicketScheduledAction> SupportTicketScheduledActions => Set<SupportTicketScheduledAction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -125,6 +128,35 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => new { e.UserId, e.EventId }).IsUnique();
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Event).WithMany().HasForeignKey(e => e.EventId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SupportTicket>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.TicketNumber).IsUnique();
+            entity.HasIndex(e => e.CreatedByUserId);
+            entity.HasIndex(e => e.AssignedToUserId);
+            entity.HasIndex(e => e.Status);
+            entity.HasOne(e => e.CreatedByUser).WithMany().HasForeignKey(e => e.CreatedByUserId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(e => e.AssignedToUser).WithMany().HasForeignKey(e => e.AssignedToUserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SupportTicketMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.TicketId);
+            entity.HasOne(e => e.Ticket).WithMany().HasForeignKey(e => e.TicketId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.AuthorUser).WithMany().HasForeignKey(e => e.AuthorUserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SupportTicketScheduledAction>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.TicketId);
+            entity.HasIndex(e => new { e.Executed, e.ScheduledAt });
+            entity.HasOne(e => e.Ticket).WithMany().HasForeignKey(e => e.TicketId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.CreatedByUser).WithMany().HasForeignKey(e => e.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.ReassignToUser).WithMany().HasForeignKey(e => e.ReassignToUserId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

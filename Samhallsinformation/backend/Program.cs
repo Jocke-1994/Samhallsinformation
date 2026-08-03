@@ -410,6 +410,97 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        if (pendingMigrations.Contains("20260803131738_AddSupportTickets"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""SupportTickets"" (
+                    ""Id""               uuid NOT NULL,
+                    ""TicketNumber""     integer NOT NULL,
+                    ""Subject""          TEXT NOT NULL,
+                    ""Category""         TEXT NOT NULL,
+                    ""Status""           TEXT NOT NULL,
+                    ""Channel""          TEXT NOT NULL,
+                    ""CreatedByUserId""  uuid,
+                    ""ContactName""      TEXT,
+                    ""ContactEmail""     TEXT,
+                    ""AssignedToUserId"" uuid,
+                    ""ReminderAt""       timestamptz,
+                    ""ReminderNote""     TEXT,
+                    ""CreatedAt""        timestamptz NOT NULL,
+                    ""UpdatedAt""        timestamptz NOT NULL,
+                    CONSTRAINT ""PK_SupportTickets"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_SupportTickets_Users_CreatedByUserId""
+                        FOREIGN KEY (""CreatedByUserId"") REFERENCES ""Users"" (""Id"") ON DELETE SET NULL,
+                    CONSTRAINT ""FK_SupportTickets_Users_AssignedToUserId""
+                        FOREIGN KEY (""AssignedToUserId"") REFERENCES ""Users"" (""Id"") ON DELETE SET NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS ""SupportTicketMessages"" (
+                    ""Id""           uuid NOT NULL,
+                    ""TicketId""     uuid NOT NULL,
+                    ""SenderType""   TEXT NOT NULL,
+                    ""AuthorUserId"" uuid,
+                    ""Text""         TEXT NOT NULL,
+                    ""IsInternal""   boolean NOT NULL,
+                    ""CreatedAt""    timestamptz NOT NULL,
+                    CONSTRAINT ""PK_SupportTicketMessages"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_SupportTicketMessages_SupportTickets_TicketId""
+                        FOREIGN KEY (""TicketId"") REFERENCES ""SupportTickets"" (""Id"") ON DELETE CASCADE,
+                    CONSTRAINT ""FK_SupportTicketMessages_Users_AuthorUserId""
+                        FOREIGN KEY (""AuthorUserId"") REFERENCES ""Users"" (""Id"") ON DELETE SET NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS ""SupportTicketScheduledActions"" (
+                    ""Id""               uuid NOT NULL,
+                    ""TicketId""         uuid NOT NULL,
+                    ""Type""             TEXT NOT NULL,
+                    ""ScheduledAt""      timestamptz NOT NULL,
+                    ""CreatedByUserId""  uuid NOT NULL,
+                    ""Text""             TEXT,
+                    ""ReassignToUserId"" uuid,
+                    ""Instruction""      TEXT,
+                    ""Executed""         boolean NOT NULL,
+                    ""ExecutedAt""       timestamptz,
+                    CONSTRAINT ""PK_SupportTicketScheduledActions"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_SupportTicketScheduledActions_SupportTickets_TicketId""
+                        FOREIGN KEY (""TicketId"") REFERENCES ""SupportTickets"" (""Id"") ON DELETE CASCADE,
+                    CONSTRAINT ""FK_SupportTicketScheduledActions_Users_CreatedByUserId""
+                        FOREIGN KEY (""CreatedByUserId"") REFERENCES ""Users"" (""Id"") ON DELETE RESTRICT,
+                    CONSTRAINT ""FK_SupportTicketScheduledActions_Users_ReassignToUserId""
+                        FOREIGN KEY (""ReassignToUserId"") REFERENCES ""Users"" (""Id"") ON DELETE SET NULL
+                );
+
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_SupportTickets_TicketNumber""              ON ""SupportTickets""              (""TicketNumber"");
+                CREATE INDEX IF NOT EXISTS        ""IX_SupportTickets_CreatedByUserId""            ON ""SupportTickets""              (""CreatedByUserId"");
+                CREATE INDEX IF NOT EXISTS        ""IX_SupportTickets_AssignedToUserId""           ON ""SupportTickets""              (""AssignedToUserId"");
+                CREATE INDEX IF NOT EXISTS        ""IX_SupportTickets_Status""                     ON ""SupportTickets""              (""Status"");
+                CREATE INDEX IF NOT EXISTS        ""IX_SupportTicketMessages_TicketId""             ON ""SupportTicketMessages""       (""TicketId"");
+                CREATE INDEX IF NOT EXISTS        ""IX_SupportTicketMessages_AuthorUserId""         ON ""SupportTicketMessages""       (""AuthorUserId"");
+                CREATE INDEX IF NOT EXISTS        ""IX_SupportTicketScheduledActions_TicketId""     ON ""SupportTicketScheduledActions"" (""TicketId"");
+                CREATE INDEX IF NOT EXISTS        ""IX_SupportTicketScheduledActions_CreatedByUserId"" ON ""SupportTicketScheduledActions"" (""CreatedByUserId"");
+                CREATE INDEX IF NOT EXISTS        ""IX_SupportTicketScheduledActions_ReassignToUserId"" ON ""SupportTicketScheduledActions"" (""ReassignToUserId"");
+                CREATE INDEX IF NOT EXISTS        ""IX_SupportTicketScheduledActions_Executed_ScheduledAt"" ON ""SupportTicketScheduledActions"" (""Executed"", ""ScheduledAt"");
+
+                -- TicketNumber ska auto-inkrementera precis som Sources.Id (samma fix som session 9 —
+                -- SQLite:s autoincrement-annotation ignoreras av Postgres, en riktig sequence krävs).
+                DO $$
+                BEGIN
+                  IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.sequences
+                    WHERE sequence_name = 'SupportTickets_TicketNumber_seq'
+                  ) THEN
+                    CREATE SEQUENCE ""SupportTickets_TicketNumber_seq"";
+                    PERFORM setval('""SupportTickets_TicketNumber_seq""', COALESCE((SELECT MAX(""TicketNumber"") FROM ""SupportTickets""), 0) + 1, false);
+                    ALTER TABLE ""SupportTickets"" ALTER COLUMN ""TicketNumber"" SET DEFAULT nextval('""SupportTickets_TicketNumber_seq""');
+                  END IF;
+                END $$;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260803131738_AddSupportTickets', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 
