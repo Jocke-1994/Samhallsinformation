@@ -8,6 +8,7 @@ export type FlagKey =
   | 'notif_stor_ej'
   | 'notif_leveranslage'
   | 'notif_historik'
+  | 'notif_push'
   | 'konto_info'
   | 'konto_losenord'
   | 'konto_tvafaktor'
@@ -61,6 +62,7 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
       { key: 'notif_stor_ej',       label: 'Stör ej',              beskrivning: 'Tysta notifieringar under valda tider',           defaultAktiv: false },
       { key: 'notif_leveranslage',  label: 'Leveransläge',         beskrivning: 'Ställ in hur och när notifieringar levereras',    defaultAktiv: false },
       { key: 'notif_historik',      label: 'Notishistorik',        beskrivning: 'Visa tidigare skickade notifieringar',            defaultAktiv: false },
+      { key: 'notif_push',         label: 'Push-notiser',         beskrivning: 'Aktivera riktiga push-notiser i webbläsaren',     defaultAktiv: false },
     ],
   },
   {
