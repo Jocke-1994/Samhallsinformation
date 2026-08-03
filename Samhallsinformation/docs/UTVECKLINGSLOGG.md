@@ -13,6 +13,64 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## fix: DateTime tappade UTC-markering vid läsning från SQLite (2026-08-03)
+
+**Mål:** Ingen ny funktion — ett bugfix upptäckt av användaren direkt efter att
+ha testat den nya SupportInbox: ett svar visades med tiden 15:55 fast klockan
+faktiskt var 17:58.
+
+**Vad hände på vägen:** Kollade rådata direkt (`curl` mot admin-API:t) istället
+för att gissa i frontend-koden. Svaret innehöll
+`"createdAt":"2026-08-03T15:45:33.6432707"` — **ingen `Z` i slutet, ingen
+tidszon alls**. UTC-klockan var samtidigt faktiskt 15:58, så det lagrade värdet
+var korrekt (15:45 UTC = 17:45 svensk sommartid) — problemet satt i hur det
+serialiserades, inte i vad som lagrats.
+
+- **Uteslutningsmetod:** Två möjliga förklaringar — antingen sparas fel
+  klockslag i databasen, eller så är klockslaget rätt men taggen som säger
+  "det här är UTC" försvinner på vägen ut. `curl`-svaret avgjorde det direkt:
+  15:45 UTC stämmer exakt med den faktiska tiden minus två timmar (svensk
+  sommartid, UTC+2) — värdet var alltså korrekt hela vägen, bara
+  UTC-markeringen (`Z`) saknades i JSON-strängen.
+- **Grundorsak:** Ett känt beteende i EF Core mot SQLite — `DateTime.UtcNow`
+  sparas korrekt taggad som UTC (`DateTimeKind.Utc`), men SQLite har ingen
+  egen datatyp för det, så vid **läsning** tillbaka från databasen returnerar
+  EF Core:s SQLite-provider datumet som `DateTimeKind.Unspecified` (taggen
+  tappas, värdet i sig är oförändrat). `System.Text.Json` skriver då ut
+  strängen UTAN `Z`, och webbläsarens `new Date(...)` tolkar en sträng utan
+  tidszon som redan-lokal-tid istället för att konvertera från UTC — fel
+  klockslag visas.
+- **Omfattning:** Inte bara Ärendehanteringen — det här gäller VARJE
+  `DateTime`-fält i hela appen som lästs från en lokal SQLite-databas.
+  Upptäcktes bara nu för att Ärendehanteringen är första gången exakta
+  klockslag ner på minuten visas så tydligt i gränssnittet.
+- **Lösning:** En global EF Core-konverterare (`ConfigureConventions` i
+  `AppDbContext`, ny fil `Data/UtcDateTimeConverter.cs`) som tvingar
+  `DateTimeKind.Utc` på varje `DateTime`/`DateTime?`-fält vid läsning, oavsett
+  vilken databas som används. Ingen ny migration behövdes — bekräftat med
+  `dotnet ef migrations has-pending-model-changes` ("No changes have been
+  made to the model") eftersom det bara är en CLR-sidans tolkning, inte en
+  ändring av den faktiska kolumntypen.
+- **Andra möjliga lösningar, inte valda:**
+  - Kunnat fixa det bara i frontend (t.ex. lägga till `Z` manuellt på varje
+    datumsträng innan `new Date(...)`) — avfärdat, hade krävt att komma ihåg
+    det på varje enskilt ställe datum formateras, och löser inte grundorsaken
+    för framtida kod.
+  - Kunnat fixa det fält för fält i varje entitet — avfärdat, en global
+    konverterare via `ConfigureConventions` täcker alla nuvarande OCH
+    framtida `DateTime`-fält automatiskt, en enda plats att underhålla.
+  - Övervägde att detta kanske bara är ett lokalt SQLite-problem (Postgres
+    `timestamptz`-kolumner brukar bevara UTC-taggen korrekt) och att
+    produktion redan kunde vara opåverkad — men fixen är ofarlig och
+    korrekt oavsett databas (att tvinga UTC på ett värde som redan är UTC är
+    en no-op), så samma fix gäller båda utan att behöva bevisa vilken databas
+    som faktiskt hade problemet.
+- **Verifiering:** `dotnet build`/`dotnet test` (29/29 gröna, ingen ny
+  migration), sedan `curl` igen mot samma endpoint efter omstart — samma
+  ärende visar nu `"createdAt":"2026-08-03T15:45:33.6432707Z"`, med `Z`.
+
+---
+
 ## Del 4 — Ärendehantering/SupportInbox omkopplade mot riktig data (2026-08-03)
 
 **Mål:** Sista delen av fyra — koppla `ArendehanteringKort.tsx` (användarsidan) och
