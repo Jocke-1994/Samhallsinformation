@@ -13,6 +13,48 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## PR #400 — Feedback-knappen bort från Formspree (2026-08-03)
+
+**Mål:** Del 3 av 4 — koppla om Feedback-knappen till det nya, riktiga
+support-API:t (#398) istället för Formspree, som har ett hårt inskickstak
+(50/månad, delat med andra projekt) som var hela anledningen till att bygga
+det här. Den mest akuta biten av de fyra delarna.
+
+**Vad hände på vägen:** Rak omkoppling — `FeedbackModal` anropade tidigare
+`fetch` direkt mot `https://formspree.io/f/xpqeyzjj`. Bytte till en ny
+`createTicket()`-wrapper i en ny `src/api/support.ts` (samma mönster som alla
+andra `api/*.ts`-filer redan använder). Ingen bugg den här gången, men ett
+medvetet beteendeval behövde göras: Formspree accepterade feedback helt utan
+e-post, men backend kräver `ContactEmail` för anonyma ärenden — annars finns
+inget sätt att veta vem som skickade det eller svara. Löste det genom att
+göra e-postfältet obligatoriskt (`required`) bara när man INTE är inloggad
+(`useAuth().isLoggedIn`) — inloggade slipper ange e-post eftersom kontots
+e-post redan finns i biljetten.
+
+**Verifiering — ärligt om vad som inte gjordes:** Kunde inte klicka igenom
+flödet live den här gången — webbläsarverktygets anslutning till fliken
+tappades upprepade gånger (samma kända, transienta CDP-flakighet som noterats
+i tidigare sessioner, t.ex. session 24s skärmdumpsproblem), oberoende av om
+någon bytte flik eller inte. Efter några förnyade försök (enligt praxis: ge
+inte upp direkt, men fortsätt inte heller i all oändlighet på något som
+upprepat felar) föll jag tillbaka på kodgranskning istället: läste igenom hela
+den ändrade filen, och jämförde det exakta anropsformatet
+(`message`/`channel`/`contactEmail`) mot samma kontrakt som redan
+livetestades framgångsrikt i PR #398 (anonym ärendeskapelse med e-post gav då
+en riktig biljett). Inte samma sak som ett riktigt klicktest, och det
+kommunicerades tydligt i PR-beskrivningen istället för att låtsas att det
+gjordes.
+
+**Andra möjliga vägar, inte valda:**
+- Kunnat behålla Formspree som reserv/fallback om det nya API:t skulle
+  misslyckas — avfärdat direkt, hela poängen var att komma bort från
+  inskickstaket, en fallback hade bara återinfört samma beroende i tysthet.
+- Kunnat kräva e-post av ALLA (även inloggade) för enkelhetens skull — avfärdat
+  eftersom kontots e-post redan är känd data för inloggade användare; att
+  fråga igen hade varit onödig friktion.
+
+---
+
 ## PR #398 — Support-API, admin-inkorg och riktig bakgrundstjänst (2026-08-03)
 
 **Mål:** Bygga backend-delen (kontrollers + en riktig bakgrundstjänst) för det

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-
-const FORMSPREE_ID = 'xpqeyzjj'
+import { createTicket } from '../../api/support'
+import { useAuth } from '../../context/AuthContext'
 
 type Status = 'idle' | 'sending' | 'success' | 'error'
 
@@ -11,6 +11,7 @@ interface Props {
 }
 
 export function FeedbackModal({ open, onClose }: Props) {
+  const { isLoggedIn } = useAuth()
   const [message, setMessage] = useState('')
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
@@ -21,12 +22,12 @@ export function FeedbackModal({ open, onClose }: Props) {
     e.preventDefault()
     setStatus('sending')
     try {
-      const res = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ message, email: email || undefined }),
+      await createTicket({
+        message,
+        channel: 'feedback',
+        contactEmail: email || undefined,
       })
-      setStatus(res.ok ? 'success' : 'error')
+      setStatus('success')
     } catch {
       setStatus('error')
     }
@@ -95,10 +96,13 @@ export function FeedbackModal({ open, onClose }: Props) {
 
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                E-post <span className="text-slate-400 font-normal">(valfritt, om du vill ha svar)</span>
+                E-post {isLoggedIn
+                  ? <span className="text-slate-400 font-normal">(valfritt, om du vill ha svar)</span>
+                  : <span className="text-red-500">*</span>}
               </label>
               <input
                 type="email"
+                required={!isLoggedIn}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="din@email.se"
