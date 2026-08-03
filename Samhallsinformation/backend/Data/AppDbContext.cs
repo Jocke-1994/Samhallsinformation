@@ -25,6 +25,12 @@ public class AppDbContext : DbContext
     public DbSet<SupportTicketMessage>       SupportTicketMessages     => Set<SupportTicketMessage>();
     public DbSet<SupportTicketScheduledAction> SupportTicketScheduledActions => Set<SupportTicketScheduledAction>();
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<NullableUtcDateTimeConverter>();
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CanonicalEvent>(entity =>
