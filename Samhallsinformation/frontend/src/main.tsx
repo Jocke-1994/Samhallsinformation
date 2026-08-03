@@ -10,6 +10,12 @@ import { FeatureFlagsProvider } from './context/FeatureFlagsContext'
 import { PolisenFilterProvider } from './context/PolisenFilterContext'
 import { SavedEventsProvider } from './context/SavedEventsContext'
 
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch((err) => {
+    console.error('Service worker-registrering misslyckades', err)
+  })
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
