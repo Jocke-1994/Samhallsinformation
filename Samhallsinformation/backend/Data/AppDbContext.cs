@@ -47,13 +47,14 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Email).IsUnique();
+            entity.Property(e => e.PushEnabled).HasDefaultValue(true);
         });
 
         modelBuilder.Entity<UserDevice>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.UserId);
-            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => e.Endpoint).IsUnique();
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 

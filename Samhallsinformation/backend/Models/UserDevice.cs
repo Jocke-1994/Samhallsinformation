@@ -4,7 +4,9 @@ public class UserDevice
 {
     public Guid     Id          { get; set; } = Guid.NewGuid();
     public Guid     UserId      { get; set; }
-    public string   Token       { get; set; } = string.Empty;
+    public string   Endpoint    { get; set; } = string.Empty;
+    public string   P256dh      { get; set; } = string.Empty;
+    public string   Auth        { get; set; } = string.Empty;
     public string   DeviceName  { get; set; } = string.Empty;
     public string   Platform    { get; set; } = string.Empty;
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;

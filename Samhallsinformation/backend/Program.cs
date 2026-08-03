@@ -384,6 +384,24 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        if (pendingMigrations.Contains("20260803031558_AddPushSupport"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                DROP INDEX IF EXISTS ""IX_UserDevices_Token"";
+                ALTER TABLE ""UserDevices"" DROP COLUMN IF EXISTS ""Token"";
+                ALTER TABLE ""UserDevices"" ADD COLUMN IF NOT EXISTS ""Endpoint"" TEXT NOT NULL DEFAULT '';
+                ALTER TABLE ""UserDevices"" ADD COLUMN IF NOT EXISTS ""P256dh""   TEXT NOT NULL DEFAULT '';
+                ALTER TABLE ""UserDevices"" ADD COLUMN IF NOT EXISTS ""Auth""     TEXT NOT NULL DEFAULT '';
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_UserDevices_Endpoint"" ON ""UserDevices"" (""Endpoint"");
+
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PushEnabled"" boolean NOT NULL DEFAULT true;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260803031558_AddPushSupport', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 
