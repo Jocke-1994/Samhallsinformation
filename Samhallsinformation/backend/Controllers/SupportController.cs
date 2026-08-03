@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
+using Samhallsinformation.Services;
 
 // Ersätter Formspree (50/inskick-tak) och den gamla mockade Ärendehanteringen —
 // samma tabell tar emot både inloggade användares ärenden och anonyma
@@ -15,8 +16,15 @@ using Samhallsinformation.Models;
 public class SupportController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IPushNotificationService _push;
+    private readonly IConfiguration _config;
 
-    public SupportController(AppDbContext db) => _db = db;
+    public SupportController(AppDbContext db, IPushNotificationService push, IConfiguration config)
+    {
+        _db     = db;
+        _push   = push;
+        _config = config;
+    }
 
     private Guid? CurrentUserId =>
         User.Identity?.IsAuthenticated == true
@@ -61,6 +69,18 @@ public class SupportController : ControllerBase
         });
 
         await _db.SaveChangesAsync();
+
+        try
+        {
+            var frontendUrl = _config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
+            await PushDispatcher.DispatchNewTicketAsync(_db, _push, frontendUrl, ticket);
+        }
+        catch (Exception)
+        {
+            // Push-fel ska aldrig fela ärendeskapelsen — samma princip som
+            // IngestorBackgroundService redan använder runt PushDispatcher.
+        }
+
         return Ok(new { ticket.Id, ticket.TicketNumber });
     }
 

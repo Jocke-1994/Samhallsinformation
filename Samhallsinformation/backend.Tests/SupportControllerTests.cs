@@ -6,9 +6,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using NSubstitute;
 using Samhallsinformation.Controllers;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
+using Samhallsinformation.Services;
 using Xunit;
 
 public class SupportControllerTests
@@ -26,10 +29,15 @@ public class SupportControllerTests
     private static ClaimsPrincipal Authenticated(Guid userId) => new(
         new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }, "TestAuth"));
 
-    private static SupportController NewController(AppDbContext db, ClaimsPrincipal user) => new(db)
+    private static SupportController NewController(AppDbContext db, ClaimsPrincipal user)
     {
-        ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } },
-    };
+        var push = Substitute.For<IPushNotificationService>();
+        var config = Substitute.For<IConfiguration>();
+        return new SupportController(db, push, config)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } },
+        };
+    }
 
     [Fact]
     public async Task Create_AnonymousWithoutContactEmail_ReturnsBadRequest()

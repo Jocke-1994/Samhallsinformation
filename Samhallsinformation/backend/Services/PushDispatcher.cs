@@ -47,6 +47,41 @@ public static class PushDispatcher
             : $"{insertedCount} nya händelser från {source.Name}";
         var url = $"{frontendUrl.TrimEnd('/')}/?shortName={Uri.EscapeDataString(source.ShortName)}";
 
+        await SendToDevicesAsync(db, push, devices, title, body, url, sourceId, ct);
+    }
+
+    // Notifierar alla Admin-användare när ETT NYTT supportärende/feedback-inskick
+    // skapas (oavsett kanal — båda är lika viktiga att veta om direkt). Kompletterar
+    // DispatchNewEventsAsync ovan, som bara rör källhändelser.
+    public static async Task DispatchNewTicketAsync(
+        AppDbContext db, IPushNotificationService push, string frontendUrl,
+        SupportTicket ticket, CancellationToken ct = default)
+    {
+        var adminIds = await db.Users
+            .Where(u => (u.Role == "Admin" || u.Role == "Support") && u.PushEnabled)
+            .Select(u => u.Id)
+            .ToListAsync(ct);
+
+        if (adminIds.Count == 0) return;
+
+        var devices = await db.UserDevices
+            .Where(d => adminIds.Contains(d.UserId))
+            .ToListAsync(ct);
+
+        if (devices.Count == 0) return;
+
+        var kanalNamn = ticket.Channel == "feedback" ? "Ny feedback" : "Nytt supportärende";
+        var title = kanalNamn;
+        var body  = ticket.Subject;
+        var url   = $"{frontendUrl.TrimEnd('/')}/admin";
+
+        await SendToDevicesAsync(db, push, devices, title, body, url, sourceId: null, ct);
+    }
+
+    private static async Task SendToDevicesAsync(
+        AppDbContext db, IPushNotificationService push, List<UserDevice> devices,
+        string title, string body, string url, int? sourceId, CancellationToken ct)
+    {
         foreach (var device in devices)
         {
             var log = new NotificationDeliveryLog

@@ -226,7 +226,7 @@ public class AdminSupportController : ControllerBase
         {
             notiser.Add(new { TicketId = t.Id, Amne = t.Subject, Typ = "tilldelad", Notering = (string?)null });
             if (t.ReminderAt != null && t.ReminderAt <= now)
-                notiser.Add(new { TicketId = t.Id, Amne = t.Subject, Typ = "paminnelse", Notering = t.ReminderNote });
+                notiser.Add(new { TicketId = t.Id, Amne = t.Subject, Typ = "påminnelse", Notering = t.ReminderNote });
         }
 
         return Ok(notiser);
