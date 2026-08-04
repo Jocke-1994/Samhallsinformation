@@ -32,7 +32,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req) =>
-        ToActionResult(await _auth.RegisterAsync(req.Name, req.Email, req.Password));
+        ToActionResult(await _auth.RegisterAsync(req.Name, req.Email, req.Password, req.AcceptedTerms));
 
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshRequest req) =>
@@ -128,7 +128,7 @@ public class AuthController : ControllerBase
 }
 
 public record LoginRequest(string Email, string Password);
-public record RegisterRequest(string Name, string Email, string Password);
+public record RegisterRequest(string Name, string Email, string Password, bool AcceptedTerms);
 public record RefreshRequest(string RefreshToken);
 public record UpdateMeRequest(string? Name, string? Email);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
