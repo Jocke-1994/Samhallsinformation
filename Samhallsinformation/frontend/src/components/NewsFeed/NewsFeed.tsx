@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext'
 import { usePolisenFilter } from '../../context/PolisenFilterContext'
 import { useSavedEvents } from '../../context/SavedEventsContext'
 import { extraheraPolisenTyp, extraheraPolisenOmrade } from '../Profile/MinaKallor/kallorUtils'
+import { useFlags } from '../../context/FeatureFlagsContext'
 
 type ViewMode = 'Allt' | 'Mitt'
 type MittUnderflik = 'Flöde' | 'Sparat'
@@ -56,6 +57,7 @@ interface Props {
 export default function NewsFeed({ shortName, sources, viewMode, onViewModeChange, onReadStatusChange, onOpenSidebar }: Props) {
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()
+  const flaggor = useFlags()
   const { valdaKategorier, valdaOmraden, harAnpassatTyp, harAnpassatOmrade } = usePolisenFilter()
   const { sparade } = useSavedEvents()
   const [mittUnderflik, setMittUnderflik] = useState<MittUnderflik>('Flöde')
@@ -165,7 +167,7 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
           </svg>
         </button>
         <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white text-center">{title}</h1>
-        {isLoggedIn && hasUnread && (
+        {flaggor.flode_olasta_badge && isLoggedIn && hasUnread && (
           <div className="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 flex items-center gap-3">
             <button
               onClick={handleMarkAllRead}
@@ -181,7 +183,7 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
       </div>
 
       {/* Flöde / Sparat — bara i Mitt flöde */}
-      {viewMode === 'Mitt' && (
+      {flaggor.flode_sparat && viewMode === 'Mitt' && (
         <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 py-2.5 shrink-0">
           <div className="max-w-3xl mx-auto flex items-center gap-1 w-fit">
             {(['Flöde', 'Sparat'] as MittUnderflik[]).map(f => (
