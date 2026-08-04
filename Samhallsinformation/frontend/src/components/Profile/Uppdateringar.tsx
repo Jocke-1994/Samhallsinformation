@@ -315,7 +315,7 @@ export default function Uppdateringar() {
   const synligaKort = [kortSenaste, kortPagang, kortKanda, kortHistorik].filter(Boolean)
 
   return (
-    <div className="grid grid-cols-2 gap-6 mt-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
       {synligaKort.map((kort, i) => (
         <div key={i}>{kort}</div>
       ))}

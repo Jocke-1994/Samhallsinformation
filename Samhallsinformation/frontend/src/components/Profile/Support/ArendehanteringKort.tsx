@@ -256,7 +256,7 @@ export default function ArendehanteringKort() {
   return (
     <>
       {/* Statistik */}
-      <div className="grid grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard label="Alla ärenden"              value={totalt}   color="text-slate-900" />
         <StatCard label="Öppna ärenden"            value={oppna}    color="text-blue-600"  />
         <StatCard label="Ärenden under behandling" value={underBeh} color="text-amber-600" />
@@ -264,10 +264,10 @@ export default function ArendehanteringKort() {
       </div>
 
       {/* Skicka ärende + Ärendetabell */}
-      <div className="grid grid-cols-4 gap-6">
+      <div className="flex flex-col lg:flex-row gap-6 items-stretch lg:items-start">
 
       {/* Skicka nytt ärende */}
-      <div className="col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden self-start">
+      <div className="w-full lg:w-80 lg:shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden self-start">
         <div className="px-6 py-4 border-b border-slate-200">
           <h2 className="text-base font-semibold text-slate-900">Skicka nytt ärende</h2>
           <p className="text-sm text-slate-400 mt-0.5">Vi svarar inom 1–3 vardagar</p>
@@ -329,7 +329,7 @@ export default function ArendehanteringKort() {
       </div>
 
       {/* Ärendetabell */}
-      <div className="col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col max-h-[640px]">
+      <div className="flex-1 min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col max-h-[640px]">
         <div className="px-6 py-4 border-b border-slate-200 text-center shrink-0">
           <h2 className="text-xl font-semibold text-slate-900">Mina ärenden</h2>
           <p className="text-sm text-slate-400 mt-0.5">Klicka på ett ärende för att se historik och svara</p>
