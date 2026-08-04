@@ -13,49 +13,39 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
-## feat: deaktiverade Olästa-badge och Sparat (2026-08-04)
+## fix: e-post ska aldrig krävas för att skicka in feedback (2026-08-04)
 
-**Mål:** Användaren testade PR #403 på riktig telefon och skickade skärmdumpar
-av tre kvarstående mobilproblem som det kodbaserade auditet missade (flex-
-layoutproblem, inte grid — grep:et hittade bara `grid-cols`). Bad om att bara
-en av dem åtgärdas nu (Olästa-badgen), och passade på att be om att Sparat
-läggs vilande för en framtida funktionslansering samtidigt, eftersom
-bokmärkesikonen är en av flera ikoner som trängs i samma rad som orsakar en av
-de andra skärmdumparnas problem.
+**Mål:** Användaren läste igenom kunskapsbas-underlaget för kundtjänstboten
+och var oense med en policy jag skrivit in: att e-post krävs för anonyma
+inskick. Rätt princip: e-post behövs bara om avsändaren vill ha svar, aldrig
+för att skicka in något överhuvudtaget.
 
-**Vad hände på vägen:** Läste skärmdumparna noga innan något kodades. Tre
-distinkta fel: (1) FAQ:ns kategoriflikar rinner ihop och klipps av till höger
-(flex-rad utan `flex-wrap`/gap-hantering, inte rörd av det här), (2)
-sidhuvudets "50 olästa"-badge är absolutpositionerad ovanpå den centrerade
-`<h1>`-titeln och krockar med den när titeln blir lång, (3) händelseraderna
-har en rad ikoner (klocka + bokmärke + chevron, alla `shrink-0`) som inte får
-plats bredvid lång platstext och klipps av vid skärmkanten.
+**Vad hände på vägen:** `SupportController.Create` hade sedan PR #398 en
+explicit kontroll — `if (userId == null && ContactEmail saknas) return
+BadRequest(...)`. Togs bort helt. `ContactEmail`/`ContactName` var redan
+nullable i datamodellen (`SupportTicket.cs`), så ingen migration behövdes —
+det här var en ren policyändring i valideringslogiken, inte ett
+schemaproblem.
 
-**Lösning:** Två nya feature flags i en ny grupp "Flöde" (`flode_olasta_badge`,
-`flode_sparat`), båda `defaultAktiv: false` — matchar exakt samma mönster som
-redan används för alla andra funktioner som ska kunna slås på/av utan
-kodändring (`lib/featureFlags.ts`). `NewsFeed.tsx`s hela flytande badge-block
-(inkl. den redan-skrivbords-bara "Markera alla som lästa"-länken) gated bakom
-`flode_olasta_badge`. Flöde/Sparat-flikraden i `NewsFeed.tsx` och
-bokmärkesknappen i `NewsItem.tsx` gated bakom `flode_sparat` — tar automatiskt
-bort en av de trängande ikonerna från problem (3) som en bonus, utan att lösa
-hela layoutproblemet (kvarstår för senare).
+**Följdändringar:** `FeedbackButton.tsx` hade fått ett `required={!isLoggedIn}`
+på e-postfältet i PR #400, exakt den policyn som nu är fel — togs bort, fältet
+är nu alltid frivilligt (`useAuth`-importen blev därmed oanvänd, städad bort).
+Testet `Create_AnonymousWithoutContactEmail_ReturnsBadRequest` bytte namn och
+mening till `Create_AnonymousWithoutContactEmail_StillCreatesTicket` (verifierar
+nu motsatsen), och ett nytt test lades till för det som faktiskt fortfarande
+ska ge `400`: ett helt tomt meddelande. Båda kundtjänstbot-dokumenten
+(`docs/K_BOT/`) uppdaterades i samma veva så de inte längre motsäger den
+rättade policyn.
 
 **Andra möjliga lösningar, inte valda:**
-- Kunnat ta bort koden helt istället för att flagg-styra den — avfärdat
-  eftersom användaren uttryckligen vill kunna slå på Sparat igen som en
-  "ny funktion"-lansering senare (kopplar till en tidigare sparad idé om att
-  pushnotiser vid funktionslanseringar ska djuplänka rakt till funktionen).
-  En flagga kostar nästan ingenting och gör återaktivering till en admin-
-  panelklick istället för en ny kodändring.
-- Kunnat bara dölja badge-texten men behålla "Markera alla som lästa"-länken
-  — avfärdat: den är redan `hidden md:block` (bara synlig på desktop), så den
-  bidrog inte till det mobila krockproblemet som faktiskt rapporterades,
-  och att särskilja dem hade varit onödig komplexitet för samma resultat.
+- Kunnat behålla kravet men bara för `channel: "feedback"` (inte för
+  `arendehantering`, som ändå bara är tillgängligt för inloggade med redan
+  känd e-post) — onödigt, `arendehantering` kräver redan inloggning i
+  praktiken (`ArendehanteringKort.tsx` är bara nåbar via Profil), så
+  channel-specifik logik hade inte tillfört något.
 
-**Verifiering:** `npm run build` grönt. FAQ-flikproblemet och ikon-
-klippningen (utöver bokmärkesikonens bidrag) är INTE åtgärdade — uttryckligen
-sparade till senare enligt användarens egen prioritering.
+**Verifiering:** `dotnet build`/`dotnet test` (30/30 gröna, inkl. det
+omdöpta och det nya testet), `npm run build` grönt.
 
 ---
 
