@@ -13,6 +13,48 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## fix: läsbara användar-nummer + riktig notisstatistik i Rapporter (2026-08-05)
+
+**Mål:** Två uppföljningsfrågor efter förra postens PR-genomgång.
+
+**1. Läsbara ID:n i Användarhantering.** Admin frågade om GUID:et kunde bytas
+mot enkla nummer (1, 2, 3...). Beslutat: behåll GUID som primärnyckel
+(används redan konsekvent som PK/FK i hela schemat — att byta hade krävt en
+invasiv migrering genom ~10 tabeller för en ren kosmetisk vinst), men visa
+ett separat, rent presentations-nummer baserat på registreringsordning.
+`Anvandare.tsx` sorterar den hämtade listan på `createdAt` (äldst → nyast)
+och tilldelar `1, 2, 3...` som `joinNr`, oberoende av GUID:et. Sökfältet
+matchar nu mot `joinNr` istället för att substrängsöka i ett GUID ingen kan
+komma ihåg.
+
+**2. "Notifieringar per kanal" i Rapporter — mock → riktig data.** Push-
+leveranser loggas redan till `NotificationDeliveryLog` (`PushDispatcher.cs`,
+`Channel="push"`) sedan push byggdes, men Rapporter-kortet visade
+fortfarande påhittade siffror (35 200 e-post, 6 980 push). Ny
+`NotificationsByChannel`-gruppering i `StatsController.GetStats`, kortet
+kopplat till den och bytt från MOCK- till LIVE-badge. E-post/SMS-rader visar
+"Ej byggt än" (ingen av de kanalerna existerar som notissystem — e-post
+byggs bara för transaktionsmejl via Resend, aldrig loggat hit), Push visar
+sitt riktiga antal rakt av — även om det är 0.
+
+**Explicit kvar som mock, ingen ändring:** "Besökare & trafik" (korrekt
+länkad till GA4, inte en riktig lucka), "Fel i datainsamling" (7-dagars-
+trenden kräver en felhistorik-tabell som inte finns — bara senaste felet
+per källa sparas idag). Impersonation-sektionen övervägdes men bedömdes
+vara samma omfattning som hela Användarhanterings-ombyggnaden (egen
+GUID→number-problematik, en `telefon`-sökning och `BankID`/`Betatestare`
+som inte finns i det riktiga schemat) — inte en snabb fix, sparas som egen
+framtida uppgift.
+
+**Verifiering:** `tsc -b --noEmit`/`npm run build` gröna, `dotnet test`
+66/66. End-to-end mot lokal backend: registrerade två konton efter
+adminkontot, bekräftade ordningen 1/2/3 i `GET /api/admin/users`-svaret
+matchar `createdAt`-ordningen; bekräftade `GET /api/admin/stats` returnerar
+`notificationsByChannel: []` innan någon push skickats (stämmer med att
+admin själv ännu inte fått en push-notis).
+
+---
+
 ## fix: Översikt-kortet "Användare" kopplat mot riktig data (2026-08-05)
 
 **Mål:** Efter att `GET /api/admin/users` byggdes (PR 2/5, session tidigare

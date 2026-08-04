@@ -7,6 +7,7 @@ export interface AdminStats {
   eventsByDay:      { date: string; count: number }[]
   eventsBySource:   { sourceId: number; sourceName: string; count: number }[]
   eventsBySeverity: { severity: string; count: number }[]
+  notificationsByChannel: { channel: string; count: number }[]
 }
 
 export async function fetchAdminStats(): Promise<AdminStats> {
