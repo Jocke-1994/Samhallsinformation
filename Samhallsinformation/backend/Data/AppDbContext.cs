@@ -24,6 +24,9 @@ public class AppDbContext : DbContext
     public DbSet<SupportTicket>              SupportTickets            => Set<SupportTicket>();
     public DbSet<SupportTicketMessage>       SupportTicketMessages     => Set<SupportTicketMessage>();
     public DbSet<SupportTicketScheduledAction> SupportTicketScheduledActions => Set<SupportTicketScheduledAction>();
+    public DbSet<FeatureIdea>                FeatureIdeas              => Set<FeatureIdea>();
+    public DbSet<FeatureIdeaTester>          FeatureIdeaTesters        => Set<FeatureIdeaTester>();
+    public DbSet<FeatureIdeaChecklistItem>   FeatureIdeaChecklistItems => Set<FeatureIdeaChecklistItem>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -163,6 +166,33 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Ticket).WithMany().HasForeignKey(e => e.TicketId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.CreatedByUser).WithMany().HasForeignKey(e => e.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.ReassignToUser).WithMany().HasForeignKey(e => e.ReassignToUserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<FeatureIdea>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.IdeaNumber).IsUnique();
+            entity.HasIndex(e => e.Stage);
+            entity.HasIndex(e => e.SourceTicketId);
+            entity.HasIndex(e => e.CreatedByUserId);
+            entity.HasOne(e => e.SourceTicket).WithMany().HasForeignKey(e => e.SourceTicketId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(e => e.CreatedByUser).WithMany().HasForeignKey(e => e.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<FeatureIdeaTester>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.FeatureIdeaId, e.UserId }).IsUnique();
+            entity.HasOne(e => e.Idea).WithMany().HasForeignKey(e => e.FeatureIdeaId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FeatureIdeaChecklistItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.FeatureIdeaId);
+            entity.HasOne(e => e.Idea).WithMany().HasForeignKey(e => e.FeatureIdeaId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.DoneByUser).WithMany().HasForeignKey(e => e.DoneByUserId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

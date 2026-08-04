@@ -12,6 +12,7 @@ import Impersonation from '../components/Admin/Impersonation'
 import AdminUppdateringar from '../components/Admin/AdminUppdateringar'
 import AdminFaq from '../components/Admin/AdminFaq'
 import FeatureFlagsAdmin from '../components/Admin/FeatureFlagsAdmin'
+import FunktionsIdePipeline from '../components/Admin/FunktionsIdePipeline'
 import Sandlada from '../components/Admin/Sandlada'
 import Handelsesok from '../components/Admin/Handelsesok'
 import { useAuth, type SystemRoll } from '../context/AuthContext'
@@ -32,6 +33,7 @@ const SECTION_LABELS: Record<AdminSection, string> = {
   'felsökning':     'Felsökning',
   'impersonation':  'Impersonation',
   'feature-flags':  'Feature flags',
+  'funktionsideer': 'Funktionsidéer',
 }
 
 const NOTIS_LABELS: Record<PendingNotis['typ'], string> = {
@@ -299,8 +301,9 @@ export default function AdminPage() {
                 onÅterställ={återställ}
               />
             )}
+            {section === 'funktionsideer' && <FunktionsIdePipeline onÖppnaÄrende={öppnaÄrende} />}
 
-            {section !== 'oversikt' && section !== 'kallor' && section !== 'sandlada' && section !== 'uppdateringar' && section !== 'faq' && section !== 'felsökning' && section !== 'anvandare' && section !== 'support-inbox' && section !== 'handelsesok' && section !== 'rapporter' && section !== 'aktivitetslogg' && section !== 'impersonation' && section !== 'feature-flags' && (
+            {section !== 'oversikt' && section !== 'kallor' && section !== 'sandlada' && section !== 'uppdateringar' && section !== 'faq' && section !== 'felsökning' && section !== 'anvandare' && section !== 'support-inbox' && section !== 'handelsesok' && section !== 'rapporter' && section !== 'aktivitetslogg' && section !== 'impersonation' && section !== 'feature-flags' && section !== 'funktionsideer' && (
               <div className="flex flex-col items-center justify-center py-32 text-center">
                 <p className="text-4xl mb-4">🚧</p>
                 <p className="text-lg font-semibold text-slate-700">{SECTION_LABELS[section]}</p>

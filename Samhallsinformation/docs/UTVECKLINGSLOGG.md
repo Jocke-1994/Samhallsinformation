@@ -13,6 +13,150 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: Funktionsidé-pipeline-UI i admin (2026-08-04, PR 3/3)
+
+**Mål:** Del 3 av 3, den sista biten i idé-pipelinen (se PR 1–2 för
+datamodell/API). Bygger själva adminsidan: en flikfiltrerad lista
+(Brainstorm/Triage/Bygger/Testar/Lanseringsklar/Avslutade) plus en
+detaljmodal per idé (stadie-växlare, triage, testare, lanseringschecklista).
+
+**Genomförande, allt återanvänt mönster, inget nytt uppfunnet:**
+- `api/featureIdeas.ts` — exakt samma form som `api/support.ts`
+- `FunktionsIdePipeline.tsx` — flikfilter (samma mönster som
+  `SupportInbox.tsx`s Alla/Ärenden/Feedback), tabell + "Ny idé"-inline-formulär
+- `IdeDetaljModal.tsx` — `createPortal`-modal (samma mönster som
+  `FeedbackButton.tsx`, valt istället för `SupportInbox`s inline-variant
+  eftersom idékorten ligger i en tabellrad som annars kan klippas av)
+- Stadie-växlaren är en fri knapprad (alla sju stadier alltid klickbara),
+  INTE en låst linjär "nästa steg"-knapp — riktigt arbete går fram och
+  tillbaka (t.ex. testas → byggs igen vid en upptäckt bugg under test)
+- Ny "💡 Skapa idé av det här ärendet"-knapp i `SupportInbox.tsx`s
+  ärendemodal — kopplar ihop Feedback-inkorgen med idé-pipelinen: skapar en
+  idé med `källaTyp: 'feedback'` och `sourceTicketId` satt till ärendet,
+  förifylld med ärendets ämne och första meddelande
+  - Idé-detaljen visar i sin tur en länk tillbaka till käll-ärendet
+    (`onÖppnaÄrende`-prop, samma callback-mönster som redan finns för
+    `Anvandare.tsx`/`Handelsesok.tsx` i `AdminPage.tsx`) — full cirkel utan
+    att duplicera data mellan de två systemen
+- Ny adminsektion `funktionsideer` i `AdminSidebar.tsx`/`AdminPage.tsx`,
+  samma wiring-mönster som `kommande-funktioner` (egen branch, ej mergad än)
+
+**Verifiering:** `npm run build` grönt. Backend-API:t redan fullt
+curl-verifierat i PR 2/3 (skapa/lista/triage/stadiebyte/checklista-seedning/
+testare/behörighet). **Kunde INTE verifieras visuellt i webbläsaren** —
+`mcp__claude-in-chrome`-verktygen var instabila hela försöket (samma kända
+transienta problem som återkommit flera gånger denna session: tabbar
+byter ID/tabGroupId mellan anrop, verktyg svarar inte i tid). Efter ~5
+försök med olika verktyg (navigate/screenshot/get_page_text) gavs
+webbläsarverifieringen upp och lokala servrar (backend :5000, frontend
+:5175) lämnades igång åt användaren att testa manuellt istället för att
+låtsas att det verifierats.
+
+**Andra vägar som hade kunnat fungera:** en riktig drag-and-drop-kanban
+istället för flikfiltrerad lista — avfärdat i planeringsfasen, se
+plan-dokumentet: mer kod, nytt beroende, och löser inget som flikarna inte
+redan löser för en ensam admin-användare.
+
+---
+
+## feat: AdminFeatureIdeaController — API för idé-pipelinen (2026-08-04, PR 2/3)
+
+**Mål:** Del 2 av 3 (se PR 1/3 ovan för datamodellen och det fulla
+designresonemanget). Bygger det faktiska API:et ovanpå `FeatureIdea`-
+modellerna: lista/skapa/detalj/uppdatera/stage/triage/testare/checklista.
+
+**Genomförande:** `AdminFeatureIdeaController` (`api/admin/feature-ideas`,
+`[Authorize(Roles = "Admin")]`), samma struktur som `AdminSupportController`
+rakt av — inga nya mönster uppfanns. Enda logiken utöver ren CRUD: när
+`PUT .../stage` sätter `Stage` till `"lanseringsklar"` för första gången
+seedas fyra standardchecklista-poster ("FAQ uppdaterad", "Kundtjänstbotens
+kunskapsbas uppdaterad", "Push-notis förberedd", "Flagga aktiverad i kod")
+— men bara om idén saknar checklista sedan innan, så att flytta fram och
+tillbaka mellan stadier (t.ex. tillbaka till "byggs" och sedan fram igen)
+inte duplicerar posterna eller nollställer redan avbockade items.
+
+13 nya xUnit-tester i `AdminFeatureIdeaControllerTests.cs`, samma
+InMemory-DB-mönster som `SupportControllerTests`: `IdeaNumber` ökar
+korrekt via MAX+1, triage sätter alla tre fält, lanseringsklar-seedning
+sker exakt en gång även vid upprepade stadiebyten, testare läggs till via
+e-postuppslagning (okänd e-post → 404, redan tillagd → 409), checklista-
+items kan bockas av (sätter `DoneAt`/`DoneByUserId`) och tas bort,
+Admin-only bekräftat via samma reflektions-test som `AdminSupportController`
+redan använder.
+
+**Verifiering:** `dotnet build` grönt, `dotnet test` grönt — 43/43 (30
+tidigare + 13 nya), inga regressioner.
+
+**Andra vägar som hade kunnat fungera:** validera `Stage`-värdet mot en
+fast lista server-side istället för att acceptera vilken sträng som helst
+— avfärdat för konsekvens med `SupportTicket.Status`, som redan accepterar
+fri text utan whitelist. Om ogiltiga stadienamn blir ett verkligt problem
+i praktiken är det enkelt att lägga till senare utan att bryta något.
+
+---
+
+## feat: FeatureIdea-datamodell för idé-pipelinen (2026-08-04, PR 1/3)
+
+**Mål:** Efter "Kommande funktioner" föreslog användaren en betydligt större
+idé: ett enda ställe i admin som täcker en funktions HELA livscykel —
+brainstorm → triage (kan/bör-bedömning) → bygg → test (med utvalda testare)
+→ lanseringsklar (checklista: FAQ, kundtjänstbot, push, flagga) → lanserad.
+Planerades i ett eget plan-läge-pass (två parallella Explore-agenter mot
+backend-auth/SupportTicket-mönster respektive frontend-admin-mönster) innan
+någon kod skrevs, eftersom det är ett helt nytt backend-domän. Detta är del
+1 av 3 planerade PR:ar — bara datamodellen.
+
+**Designbeslut som drevs av kodsökning, inte gissning:**
+- **Ingen global "Tester"-roll.** `User.Role` är bara en fri sträng
+  (`"Admin"/"Support"/"Användare"`), och sökning bekräftade att ingen
+  per-record multi-user-koppling finns någonstans i kodbasen sedan
+  tidigare (`SupportTicket.AssignedToUserId` är en enda FK, inte en lista).
+  En global testroll hade blandat ihop "kan testa vissa funktioner" med en
+  systemomfattande behörighetsnivå. Löst med en egen kopplingstabell
+  (`FeatureIdeaTester`) istället — matchar hur varje annan relation i
+  schemat redan är byggd (riktiga FK-tabeller, aldrig JSON-listor av ID:n).
+- **`IdeaNumber` tilldelas i applikationskod (MAX+1), inte en DB-sekvens** —
+  exakt samma medvetna val som `SupportTicket.TicketNumber` gjorde (portabelt
+  mellan SQLite lokalt och Postgres i produktion utan en till
+  sekvens-specialfix i `Program.cs`).
+- **Triage är två nullable booleans + en motivering-textsträng**
+  (`TriageKanGoras`/`TriageBorGoras`/`TriageMotivering`), inte en egen enum
+  eller fyra separata statusvärden — täcker användarens fyra kombinationer
+  (kan+bör=godkänd, alla andra=inte godkänd) utan att uppfinna en ny
+  statustyp när kodbasen redan konsekvent använder fria strängar för den
+  typen av fält (`Status`/`Channel`/`SenderType` på `SupportTicket`).
+- **Ingen `GET /api/admin/users`-lista finns** (bekräftat: `Anvandare.tsx`
+  är fortfarande 100% mock) — att bygga hela användarlistnings-API:et hör
+  inte hemma i den här funktionen. Löst med en minimal
+  `GET /api/admin/users/lookup?email=` i en ny `AdminUsersController.cs`,
+  räcker för att lägga till en specifik testare via e-post utan att bygga
+  ett helt nytt, större API i förbigående.
+
+**Genomförande:** `FeatureIdea`/`FeatureIdeaTester`/`FeatureIdeaChecklistItem`
+i `backend/Models/`, konfigurerade i `AppDbContext.OnModelCreating` med
+samma FK/index-mönster som `SupportTicket`-familjen. Migration genererad med
+`dotnet ef migrations add AddFeatureIdeas` (id
+`20260804145629_AddFeatureIdeas`), följt av det etablerade
+raw-SQL-Postgres-blocket i `Program.cs` (uuid/timestamptz/boolean/TEXT-typer,
+`ON CONFLICT DO NOTHING`-insert i `__EFMigrationsHistory`) — exakt samma
+mönster som `AddSupportTickets`.
+
+**Verifiering:** `dotnet build` grönt, alla 30 befintliga backend-tester
+gröna (inga regressioner), `dotnet ef migrations has-pending-model-changes`
+bekräftar att modellen och migrationen stämmer exakt överens, och
+`dotnet ef database update` applicerade migrationen mot den lokala
+SQLite-databasen utan fel (verifierar den faktiska SQL:en, inte bara att
+koden kompilerar). Postgres-grenen av migrationen kan inte testas lokalt
+(ingen lokal Postgres-instans), men följer syntaxen från `AddSupportTickets`
+som redan är bevisat fungerande i produktion.
+
+**Andra vägar som hade kunnat fungera:** en riktig `[Authorize(Roles =
+"Tester")]`-roll hade varit enklare kod men fel modell — skulle krävt att
+varje testare fick en global rollhöjning bara för att testa EN funktion,
+och skulle inte gått att ge olika testare till olika idéer samtidigt.
+
+---
+
 ## fix: NewsItem-radlayout (titelklämning) + tyst fel vid Spara-klick (2026-08-04)
 
 **Mål:** Två buggar hittade av användaren under manuell verifiering av

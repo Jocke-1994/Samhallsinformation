@@ -488,6 +488,72 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        if (pendingMigrations.Contains("20260804145629_AddFeatureIdeas"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""FeatureIdeas"" (
+                    ""Id""               uuid NOT NULL,
+                    ""IdeaNumber""       integer NOT NULL,
+                    ""Title""            TEXT NOT NULL,
+                    ""Description""      TEXT NOT NULL,
+                    ""Stage""            TEXT NOT NULL,
+                    ""TriageKanGoras""   boolean,
+                    ""TriageBorGoras""   boolean,
+                    ""TriageMotivering"" TEXT,
+                    ""KällaTyp""         TEXT NOT NULL,
+                    ""SourceTicketId""   uuid,
+                    ""FlagKey""          TEXT,
+                    ""CreatedByUserId""  uuid NOT NULL,
+                    ""CreatedAt""        timestamptz NOT NULL,
+                    ""UpdatedAt""        timestamptz NOT NULL,
+                    CONSTRAINT ""PK_FeatureIdeas"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_FeatureIdeas_SupportTickets_SourceTicketId""
+                        FOREIGN KEY (""SourceTicketId"") REFERENCES ""SupportTickets"" (""Id"") ON DELETE SET NULL,
+                    CONSTRAINT ""FK_FeatureIdeas_Users_CreatedByUserId""
+                        FOREIGN KEY (""CreatedByUserId"") REFERENCES ""Users"" (""Id"") ON DELETE RESTRICT
+                );
+
+                CREATE TABLE IF NOT EXISTS ""FeatureIdeaChecklistItems"" (
+                    ""Id""            uuid NOT NULL,
+                    ""FeatureIdeaId"" uuid NOT NULL,
+                    ""Label""         TEXT NOT NULL,
+                    ""Done""          boolean NOT NULL,
+                    ""DoneAt""        timestamptz,
+                    ""DoneByUserId""  uuid,
+                    CONSTRAINT ""PK_FeatureIdeaChecklistItems"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_FeatureIdeaChecklistItems_FeatureIdeas_FeatureIdeaId""
+                        FOREIGN KEY (""FeatureIdeaId"") REFERENCES ""FeatureIdeas"" (""Id"") ON DELETE CASCADE,
+                    CONSTRAINT ""FK_FeatureIdeaChecklistItems_Users_DoneByUserId""
+                        FOREIGN KEY (""DoneByUserId"") REFERENCES ""Users"" (""Id"") ON DELETE SET NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS ""FeatureIdeaTesters"" (
+                    ""Id""            uuid NOT NULL,
+                    ""FeatureIdeaId"" uuid NOT NULL,
+                    ""UserId""        uuid NOT NULL,
+                    ""AddedAt""       timestamptz NOT NULL,
+                    CONSTRAINT ""PK_FeatureIdeaTesters"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_FeatureIdeaTesters_FeatureIdeas_FeatureIdeaId""
+                        FOREIGN KEY (""FeatureIdeaId"") REFERENCES ""FeatureIdeas"" (""Id"") ON DELETE CASCADE,
+                    CONSTRAINT ""FK_FeatureIdeaTesters_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_FeatureIdeas_IdeaNumber""                        ON ""FeatureIdeas""               (""IdeaNumber"");
+                CREATE INDEX IF NOT EXISTS        ""IX_FeatureIdeas_Stage""                             ON ""FeatureIdeas""               (""Stage"");
+                CREATE INDEX IF NOT EXISTS        ""IX_FeatureIdeas_SourceTicketId""                    ON ""FeatureIdeas""               (""SourceTicketId"");
+                CREATE INDEX IF NOT EXISTS        ""IX_FeatureIdeas_CreatedByUserId""                   ON ""FeatureIdeas""               (""CreatedByUserId"");
+                CREATE INDEX IF NOT EXISTS        ""IX_FeatureIdeaChecklistItems_FeatureIdeaId""        ON ""FeatureIdeaChecklistItems""  (""FeatureIdeaId"");
+                CREATE INDEX IF NOT EXISTS        ""IX_FeatureIdeaChecklistItems_DoneByUserId""         ON ""FeatureIdeaChecklistItems""  (""DoneByUserId"");
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_FeatureIdeaTesters_FeatureIdeaId_UserId""         ON ""FeatureIdeaTesters""         (""FeatureIdeaId"", ""UserId"");
+                CREATE INDEX IF NOT EXISTS        ""IX_FeatureIdeaTesters_UserId""                      ON ""FeatureIdeaTesters""         (""UserId"");
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260804145629_AddFeatureIdeas', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 

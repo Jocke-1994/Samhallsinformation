@@ -76,6 +76,125 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("Events");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.FeatureIdea", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FlagKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("IdeaNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("KällaTyp")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("SourceTicketId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool?>("TriageBorGoras")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool?>("TriageKanGoras")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TriageMotivering")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("IdeaNumber")
+                        .IsUnique();
+
+                    b.HasIndex("SourceTicketId");
+
+                    b.HasIndex("Stage");
+
+                    b.ToTable("FeatureIdeas");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.FeatureIdeaChecklistItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Done")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("DoneAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("DoneByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("FeatureIdeaId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DoneByUserId");
+
+                    b.HasIndex("FeatureIdeaId");
+
+                    b.ToTable("FeatureIdeaChecklistItems");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.FeatureIdeaTester", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("FeatureIdeaId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("FeatureIdeaId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("FeatureIdeaTesters");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.NotificationDeliveryLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -646,6 +765,61 @@ namespace Samhallsinformation.Migrations
                         .IsUnique();
 
                     b.ToTable("UserSourcePreferences");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.FeatureIdea", b =>
+                {
+                    b.HasOne("Samhallsinformation.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Samhallsinformation.Models.SupportTicket", "SourceTicket")
+                        .WithMany()
+                        .HasForeignKey("SourceTicketId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("SourceTicket");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.FeatureIdeaChecklistItem", b =>
+                {
+                    b.HasOne("Samhallsinformation.Models.User", "DoneByUser")
+                        .WithMany()
+                        .HasForeignKey("DoneByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Samhallsinformation.Models.FeatureIdea", "Idea")
+                        .WithMany()
+                        .HasForeignKey("FeatureIdeaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DoneByUser");
+
+                    b.Navigation("Idea");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.FeatureIdeaTester", b =>
+                {
+                    b.HasOne("Samhallsinformation.Models.FeatureIdea", "Idea")
+                        .WithMany()
+                        .HasForeignKey("FeatureIdeaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Samhallsinformation.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Idea");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Samhallsinformation.Models.NotificationDeliveryLog", b =>

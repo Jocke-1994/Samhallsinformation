@@ -6,6 +6,7 @@ import {
   addScheduledAction, cancelScheduledAction,
   type AdminTicketListItemDto, type AdminScheduledActionDto, type AdminAgentDto,
 } from '../../api/support'
+import { createFeatureIdea } from '../../api/featureIdeas'
 
 // ---------------------------------------------------------------------------
 // Typer
@@ -124,6 +125,16 @@ function ArendeModal({
   const reminderMutation   = useMutation({ mutationFn: (p: { reminderAt: string | null; reminderNote: string | null }) => setTicketReminder(ticketId, p.reminderAt, p.reminderNote), onSuccess: invalidateAll })
   const addScheduleMutation = useMutation({ mutationFn: (p: Parameters<typeof addScheduledAction>[1]) => addScheduledAction(ticketId, p), onSuccess: invalidateAll })
   const cancelScheduleMutation = useMutation({ mutationFn: (actionId: string) => cancelScheduledAction(actionId), onSuccess: invalidateAll })
+  const [idéSkapad, setIdéSkapad] = useState(false)
+  const skapaIdéMutation = useMutation({
+    mutationFn: () => createFeatureIdea({
+      title: data!.ticket.subject,
+      description: data!.messages[0]?.text,
+      källaTyp: 'feedback',
+      sourceTicketId: ticketId,
+    }),
+    onSuccess: () => setIdéSkapad(true),
+  })
 
   const [flik, setFlik]                     = useState<SvarFlik>('svar')
   const [text, setText]                     = useState('')
@@ -313,6 +324,17 @@ function ArendeModal({
                   className="mt-3 text-xs text-violet-600 hover:text-violet-500 font-medium flex items-center gap-1 transition-colors"
                 >
                   Notifieringsinställningar →
+                </button>
+              )}
+              {idéSkapad ? (
+                <p className="mt-3 text-xs text-green-600 font-medium">✓ Idé skapad</p>
+              ) : (
+                <button
+                  onClick={() => skapaIdéMutation.mutate()}
+                  disabled={skapaIdéMutation.isPending}
+                  className="mt-3 text-xs text-violet-600 hover:text-violet-500 font-medium flex items-center gap-1 transition-colors disabled:opacity-50"
+                >
+                  💡 Skapa idé av det här ärendet
                 </button>
               )}
             </div>
