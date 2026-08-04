@@ -131,6 +131,25 @@ public class AuthServiceTests
     }
 
     [Fact]
+    public async Task LoginAsync_SuspendedAccount_ReturnsForbidden()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "hashed", IsActive = false };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var hasher = Substitute.For<IPasswordHasher<User>>();
+        hasher.VerifyHashedPassword(user, "hashed", "correct-pw").Returns(PasswordVerificationResult.Success);
+
+        var service = NewService(db, hasher: hasher);
+
+        var result = await service.LoginAsync("ada@example.com", "correct-pw");
+
+        Assert.False(result.Success);
+        Assert.Equal(403, result.StatusCode);
+    }
+
+    [Fact]
     public async Task RefreshAsync_ValidToken_RotatesAndReturnsNewPair()
     {
         using var db = NewDb();
@@ -161,6 +180,35 @@ public class AuthServiceTests
         Assert.NotNull(oldToken.RevokedAt);
         Assert.Equal("new-hash", oldToken.ReplacedByTokenHash);
         Assert.Equal(2, await db.RefreshTokens.CountAsync());
+    }
+
+    [Fact]
+    public async Task RefreshAsync_SuspendedAccount_ReturnsForbidden()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "hashed", IsActive = false };
+        db.Users.Add(user);
+        db.RefreshTokens.Add(new RefreshToken
+        {
+            UserId    = user.Id,
+            TokenHash = "suspended-hash",
+            ExpiresAt = DateTime.UtcNow.AddDays(1),
+        });
+        await db.SaveChangesAsync();
+
+        var tokens = Substitute.For<ITokenService>();
+        tokens.HashToken("suspended-raw").Returns("suspended-hash");
+
+        var service = NewService(db, tokens);
+
+        var result = await service.RefreshAsync("suspended-raw");
+
+        Assert.False(result.Success);
+        Assert.Equal(403, result.StatusCode);
+        // Ingen ny token ska ha utfärdats eller den gamla rullats
+        Assert.Single(db.RefreshTokens);
+        var untouched = await db.RefreshTokens.FirstAsync();
+        Assert.Null(untouched.RevokedAt);
     }
 
     [Fact]
