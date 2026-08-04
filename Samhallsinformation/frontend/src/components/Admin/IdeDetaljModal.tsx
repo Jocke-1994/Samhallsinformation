@@ -7,6 +7,16 @@ import {
   deleteFeatureIdea, type IdeaStage,
 } from '../../api/featureIdeas'
 import { STAGE_LABELS, STAGE_ORDER } from './FunktionsIdePipeline'
+import { FLAG_DEFINITIONER } from '../../lib/featureFlags'
+
+const GITHUB_REPO = 'https://github.com/Jocke-1994/Samhallsinformation'
+const VÄNTAT_VARNING_DAGAR = 21
+
+function dagarSedan(iso: string): number {
+  const då = new Date(iso + 'T00:00:00Z').getTime()
+  const nu = Date.now()
+  return Math.floor((nu - då) / (1000 * 60 * 60 * 24))
+}
 
 interface Props {
   ideaId: string
@@ -46,6 +56,9 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
 
   if (!data) return null
   const { idea, testers, checklist } = data
+
+  const länkadFlagg = idea.flagKey ? FLAG_DEFINITIONER.find(f => f.key === idea.flagKey) : undefined
+  const flaggDagar   = länkadFlagg?.roadmapSedan ? dagarSedan(länkadFlagg.roadmapSedan) : null
 
   function börjaRedigera() {
     setTitel(idea.title)
@@ -145,7 +158,39 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
               <>
                 <p className="text-sm text-slate-600 whitespace-pre-wrap">{idea.description || '—'}</p>
                 {idea.flagKey && (
-                  <p className="text-xs font-mono text-slate-400 mt-2">Flagga: {idea.flagKey}</p>
+                  länkadFlagg?.roadmap ? (
+                    <div className="mt-2 bg-slate-50 rounded-lg px-3 py-2.5 flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-mono text-slate-500">{idea.flagKey}</span>
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Väntar på lansering</span>
+                        {flaggDagar !== null && (
+                          <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                            flaggDagar >= VÄNTAT_VARNING_DAGAR ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            Väntat {flaggDagar} {flaggDagar === 1 ? 'dag' : 'dagar'}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-600">{länkadFlagg.roadmap}</p>
+                      {länkadFlagg.roadmapPrNummer && länkadFlagg.roadmapPrNummer.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {länkadFlagg.roadmapPrNummer.map(pr => (
+                            <a
+                              key={pr}
+                              href={`${GITHUB_REPO}/pull/${pr}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors"
+                            >
+                              PR #{pr}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs font-mono text-slate-400 mt-2">Flagga: {idea.flagKey}</p>
+                  )
                 )}
               </>
             )}

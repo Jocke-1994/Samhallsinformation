@@ -33,6 +33,17 @@ export interface FlagDefinition {
   label: string
   beskrivning: string
   defaultAktiv: boolean
+  /**
+   * Sätts bara på flaggor som är avstängda i väntan på ett lanseringsbeslut,
+   * INTE på funktioner som stängts av permanent/farligt (t.ex. mock-UI utan
+   * backend). Visas i idé-pipelinens detaljvy när en idé länkas till den
+   * här flaggan via FlagKey.
+   */
+  roadmap?: string
+  /** ISO-datum (YYYY-MM-DD) för när funktionen blev "klar, väntar på beslut". */
+  roadmapSedan?: string
+  /** PR-nummer som byggde funktionen, länkas till GitHub i idé-detaljvyn. */
+  roadmapPrNummer?: number[]
 }
 
 export interface FlagGrupp {
@@ -49,7 +60,9 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
     ikon: '📰',
     flaggor: [
       { key: 'flode_olasta_badge', label: 'Olästa-badge',   beskrivning: 'Visa antal olästa händelser i huvudrubriken',        defaultAktiv: false },
-      { key: 'flode_sparat',       label: 'Sparat',         beskrivning: 'Bokmärk händelser och bläddra bland sparade senare', defaultAktiv: false },
+      { key: 'flode_sparat',       label: 'Sparat',         beskrivning: 'Bokmärk händelser och bläddra bland sparade senare', defaultAktiv: false,
+        roadmap: 'Fullt byggd (backend + UI), medvetet vilande för en framtida funktionslansering.',
+        roadmapSedan: '2026-08-04', roadmapPrNummer: [380, 384, 385] },
     ],
   },
   {
@@ -73,7 +86,9 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
       { key: 'notif_stor_ej',       label: 'Stör ej',              beskrivning: 'Tysta notifieringar under valda tider',           defaultAktiv: false },
       { key: 'notif_leveranslage',  label: 'Leveransläge',         beskrivning: 'Ställ in hur och när notifieringar levereras',    defaultAktiv: false },
       { key: 'notif_historik',      label: 'Notishistorik',        beskrivning: 'Visa tidigare skickade notifieringar',            defaultAktiv: false },
-      { key: 'notif_push',         label: 'Push-notiser',         beskrivning: 'Aktivera riktiga push-notiser i webbläsaren',     defaultAktiv: false },
+      { key: 'notif_push',         label: 'Push-notiser',         beskrivning: 'Aktivera riktiga push-notiser i webbläsaren',     defaultAktiv: false,
+        roadmap: 'Byggd och verifierad end-to-end i produktion (grundpushen). Väntar bara på ett produktbeslut om lansering.',
+        roadmapSedan: '2026-08-03', roadmapPrNummer: [392, 393, 394, 395] },
     ],
   },
   {
@@ -108,7 +123,9 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
     label: 'Support',
     ikon: '💬',
     flaggor: [
-      { key: 'support_arenden',      label: 'Ärendehantering', beskrivning: 'Skapa och följa upp supportärenden',    defaultAktiv: false },
+      { key: 'support_arenden',      label: 'Ärendehantering', beskrivning: 'Skapa och följa upp supportärenden',    defaultAktiv: false,
+        roadmap: 'Riktigt backend med tilldelning, påminnelser och schemalagda åtgärder. Väntar på ett lanseringsbeslut.',
+        roadmapSedan: '2026-08-03', roadmapPrNummer: [397, 398, 400, 401, 402] },
       { key: 'support_systemstatus', label: 'Systemstatus',    beskrivning: 'Visa aktuell driftstatus för systemet', defaultAktiv: false },
       { key: 'support_faq',          label: 'FAQ',             beskrivning: 'Vanliga frågor och svar',               defaultAktiv: true },
     ],
