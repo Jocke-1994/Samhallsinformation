@@ -13,6 +13,63 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: Användarhantering kopplad mot riktig admin-användarlista (PR 5/5) (2026-08-04)
+
+**Mål:** Sista biten av den fyra-punkts pre-launch-planen — `Anvandare.tsx`
+har varit 100% mockdata sedan den byggdes, ingen anslutning till
+`GET /api/admin/users`/`PUT /api/admin/users/{id}/status` (PR 2/5) fanns.
+Scope uttryckligen begränsat till listan + stäng av/aktivera-knapparna —
+Polisen-filter-vyn och supportärende-fliken skulle INTE röras.
+
+**Genomförande:** Ny `api/adminUsers.ts` (samma `adminFetch`-mönster som
+`polisenFilter.ts`). `Användare.id` bytt från `number` till `string`
+eftersom riktiga användar-ID:n är GUID:er — det tvingade en mindre
+typ-genomgång av filen (`Record<number, ...>` → `Record<string, ...>` för
+de fem MOCK_*-detaljregistren, som ändå aldrig kommer matcha en riktig
+användares ID). En ny `mapAdminUser()`-funktion översätter API-svaret till
+den befintliga `Användare`-formen; `INITIAL_ANVÄNDARE`-mockarrayen (10
+påhittade konton) togs bort helt och ersattes med `useQuery(fetchAdminUsers)`.
+
+**Medvetet beslut utöver den bokstavliga uppgiften:** `StängAvModal` frågade
+tidigare efter en avstängningsperiod ("1 dag"/"Tills vidare" osv.) och
+visade "Kontot aktiveras automatiskt igen [datum]" — men riktiga
+`PUT .../status` stödjer bara en fri textanledning och permanent avstängning
+tills en admin manuellt återaktiverar. Att återanvända den gamla modalen
+oförändrad hade ljugit för admin om vad som faktiskt skulle hända. Bytte
+modalen till ett anledningsfält istället för datumknapparna. Av samma skäl
+inaktiverades (inte togs bort) "Ändra roller" (bulk + enskild) och
+"Radera konto (GDPR)"/bulk-Radera — ingen av dem har en backend-endpoint,
+och att låta dem fortsätta uppdatera lokalt state hade sett ut som att en
+riktig kontoåtgärd lyckades när den inte gjorde något alls mot databasen.
+Bulk-"Stäng av" kopplades däremot till riktiga anrop (en `PUT` per markerat
+ID) eftersom det är exakt samma handling som radens egen knapp, bara på
+flera konton samtidigt.
+
+**Kvarstående, medvetet mock:** Notifieringsinställningar/-historik,
+Aktivitetslogg, Polisen-filter och Supportärenden i detaljpanelen är
+fortfarande knutna till de gamla mock-ID:na (1–10) och kommer därför visa
+sina tomma "inget än"-lägen för alla riktiga användare — ingen regression,
+de var redan bara presentationsmock innan den här PR:en, och en riktig
+koppling kräver egna beslut (se `[[project_admin_anvandare]]`). "Sparat"-
+lagringen (`lib/sparadeHandelserStorage.ts`, delad med Händelsesök/
+Aktivitetslogg) är fortfarande nyckad på nummer — lämnad orörd, bara
+typkonverterad (`Number(u.id)`, blir alltid `NaN` mot en GUID) så den
+fortsätter kompilera utan att låtsas fungera.
+
+**Verifiering:** `tsc -b --noEmit` och `npm run build` gröna. Backend:
+`dotnet test` (43/43, ingen ny testkod krävdes — ren frontend-PR).
+End-to-end mot lokal backend via `curl` (webbläsarautomatiseringen var
+instabil den här sessionen — tabb-ID:n blev ogiltiga mellan anrop, samma
+kända flakighet som tidigare sessioner, gav upp efter ~5 försök och föll
+tillbaka på `curl` + statisk typkontroll): registrerade ett testkonto,
+hämtade `GET /api/admin/users` och bekräftade att JSON-formen matchar
+`AdminUserDto` exakt (camelCase, alla fält), stängde av kontot via
+`PUT .../status`, bekräftade `403` vid inloggningsförsök med rätt
+felmeddelande, återaktiverade, bekräftade `isActive:true`/`suspendedAt:null`
+igen.
+
+---
+
 ## feat: kontospärrning + riktig admin-användarlista (PR 2/5) (2026-08-04)
 
 **Mål:** Del 2 av 5 (se PR 1/5 för fälten). Gör `IsActive`-fältet

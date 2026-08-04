@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { laddaSparadeHandelser, taBortSparadHandelse, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
 import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
 import { useAuth } from '../../context/AuthContext'
+import { fetchAdminUsers, setAdminUserStatus, type AdminUserDto } from '../../api/adminUsers'
 
 // Mockad inloggad admin/support-identitet — samma placeholder som resten av
 // admin-panelen (SupportInbox.INLOGGAD_AGENT, AdminPage-avataren)
@@ -25,7 +27,7 @@ interface Kontaktuppgift {
 }
 
 interface Användare {
-  id:               number
+  id:               string
   namn:             string
   epost:            string         // spegling av primär e-post, för tabellvisning
   roller:           Roll[]
@@ -62,111 +64,42 @@ interface NotifKälla {
 }
 
 // ---------------------------------------------------------------------------
-// Mock-data
+// Mappning från riktig backend-data (GET /api/admin/users)
 // ---------------------------------------------------------------------------
 
-const INITIAL_ANVÄNDARE: Användare[] = [
-  {
-    id: 1, namn: 'Joakim Rehn', epost: 'joakim@example.com',
-    roller: ['Admin', 'Support', 'Användare'], status: 'Aktiv',
-    registrerad: '2026-01-15', senastAktiv: 'Idag 10:42',
-    inloggningsmetod: 'E-post',
-    kontaktuppgifter: [
-      { id: 101, typ: 'E-post', värde: 'joakim@example.com',  verifierad: true,  primär: true  },
-      { id: 102, typ: 'E-post', värde: 'joakim@work.se',      verifierad: true,  primär: false },
-      { id: 103, typ: 'SMS',    värde: '+46 70 123 45 67',    verifierad: true,  primär: true  },
-    ],
-  },
-  {
-    id: 2, namn: 'Anna Svensson', epost: 'anna.svensson@mail.se',
-    roller: ['Support', 'Användare'], status: 'Aktiv',
-    registrerad: '2026-02-03', senastAktiv: 'Idag 09:15',
-    inloggningsmetod: 'Google',
-    kontaktuppgifter: [
-      { id: 201, typ: 'E-post', värde: 'anna.svensson@mail.se', verifierad: true,  primär: true  },
-      { id: 202, typ: 'SMS',    värde: '+46 73 234 56 78',      verifierad: true,  primär: true  },
-    ],
-  },
-  {
-    id: 3, namn: 'Erik Lindqvist', epost: 'erik.l@gmail.com',
-    roller: ['Betatestare', 'Användare'], status: 'Aktiv',
-    registrerad: '2026-03-10', senastAktiv: 'Igår 18:30',
-    inloggningsmetod: 'Google',
-    kontaktuppgifter: [
-      { id: 301, typ: 'E-post', värde: 'erik.l@gmail.com',    verifierad: true,  primär: true  },
-      { id: 302, typ: 'E-post', värde: 'erik@arbete.se',      verifierad: false, primär: false },
-      { id: 303, typ: 'SMS',    värde: '+46 76 345 67 89',    verifierad: true,  primär: true  },
-    ],
-  },
-  {
-    id: 4, namn: 'Maria Johansson', epost: 'maria.j@outlook.com',
-    roller: ['Betatestare', 'Användare'], status: 'Aktiv',
-    registrerad: '2026-03-12', senastAktiv: 'Igår 14:05',
-    inloggningsmetod: 'E-post',
-    kontaktuppgifter: [
-      { id: 401, typ: 'E-post', värde: 'maria.j@outlook.com', verifierad: true,  primär: true  },
-    ],
-  },
-  {
-    id: 5, namn: 'Lars Petersson', epost: 'lars.p@hotmail.com',
-    roller: ['Användare'], status: 'Aktiv',
-    registrerad: '2026-03-18', senastAktiv: '2026-03-30',
-    inloggningsmetod: 'E-post',
-    kontaktuppgifter: [
-      { id: 501, typ: 'E-post', värde: 'lars.p@hotmail.com',  verifierad: false, primär: true  },
-    ],
-  },
-  {
-    id: 6, namn: 'Sofia Nilsson', epost: 'sofia.n@gmail.com',
-    roller: ['Betatestare', 'Användare'], status: 'Aktiv',
-    registrerad: '2026-03-20', senastAktiv: 'Idag 08:50',
-    inloggningsmetod: 'Google',
-    kontaktuppgifter: [
-      { id: 601, typ: 'E-post', värde: 'sofia.n@gmail.com',   verifierad: true,  primär: true  },
-      { id: 602, typ: 'SMS',    värde: '+46 72 456 78 90',    verifierad: true,  primär: true  },
-    ],
-  },
-  {
-    id: 7, namn: 'Johan Karlsson', epost: 'johan.k@company.se',
-    roller: ['Användare'], status: 'Inaktiv',
-    registrerad: '2026-03-22', senastAktiv: '2026-03-25',
-    inloggningsmetod: 'E-post',
-    kontaktuppgifter: [
-      { id: 701, typ: 'E-post', värde: 'johan.k@company.se',  verifierad: false, primär: true  },
-    ],
-  },
-  {
-    id: 8, namn: 'Karin Andersson', epost: 'karin.a@mail.se',
-    roller: ['Användare'], status: 'Aktiv',
-    registrerad: '2026-03-25', senastAktiv: 'Idag 11:20',
-    inloggningsmetod: 'BankID',
-    kontaktuppgifter: [
-      { id: 801, typ: 'E-post', värde: 'karin.a@mail.se',     verifierad: true,  primär: true  },
-      { id: 802, typ: 'SMS',    värde: '+46 70 567 89 01',    verifierad: true,  primär: true  },
-    ],
-  },
-  {
-    id: 9, namn: 'Magnus Bergström', epost: 'magnus.b@gmail.com',
-    roller: ['Betatestare', 'Användare'], status: 'Avstängd', avstängtTill: '2026-04-09',
-    registrerad: '2026-03-26', senastAktiv: '2026-03-28',
-    inloggningsmetod: 'E-post',
-    kontaktuppgifter: [
-      { id: 901, typ: 'E-post', värde: 'magnus.b@gmail.com',  verifierad: true,  primär: true  },
-    ],
-  },
-  {
-    id: 10, namn: 'Lena Holm', epost: 'lena.h@outlook.com',
-    roller: ['Användare'], status: 'Aktiv',
-    registrerad: '2026-03-28', senastAktiv: 'Igår 21:10',
-    inloggningsmetod: 'BankID',
-    kontaktuppgifter: [
-      { id: 1001, typ: 'E-post', värde: 'lena.h@outlook.com', verifierad: true,  primär: true  },
-      { id: 1002, typ: 'SMS',    värde: '+46 73 678 90 12',   verifierad: true,  primär: true  },
-    ],
-  },
-]
+function normaliseraRoll(roll: string): Roll {
+  return (['Admin', 'Support', 'Betatestare', 'Användare'] as const).includes(roll as Roll)
+    ? roll as Roll
+    : 'Användare'
+}
 
-const MOCK_NOTISER: Record<number, NotisRad[]> = {
+function mapAdminUser(dto: AdminUserDto): Användare {
+  return {
+    id:               dto.id,
+    namn:             dto.name,
+    epost:            dto.email,
+    roller:           [normaliseraRoll(dto.role)],
+    status:           dto.isActive ? 'Aktiv' : 'Avstängd',
+    registrerad:      new Date(dto.createdAt).toLocaleDateString('sv-SE'),
+    senastAktiv:      '—', // ingen inloggningsspårning implementerad än
+    avstängtTill:     undefined, // backend stödjer inte schemalagd återaktivering, bara manuell
+    inloggningsmetod: dto.authProvider === 'google' ? 'Google' : 'E-post',
+    kontaktuppgifter: [
+      { id: 1, typ: 'E-post', värde: dto.email, verifierad: true, primär: true },
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mock-data — detaljvyer (notiser/aktivitet/Polisen-filter/ärenden) har ingen
+// backend-motsvarighet än, se `[[project_admin_anvandare]]`. Nycklarna nedan
+// (1, 2, 3...) matchar inga riktiga användar-ID:n (nu riktiga GUID:er) — de
+// visas därför bara som tomma "inget än"-lägen tills de kopplas mot riktig
+// data i en framtida omgång, precis som Polisen-filter-vyn/supportärende-
+// fliken redan var explicit undantagna från den här PR:en.
+// ---------------------------------------------------------------------------
+
+const MOCK_NOTISER: Record<string, NotisRad[]> = {
   3: [
     { tid: '2026-04-02 10:30', kanal: 'E-post', källa: 'Polisen', rubrik: 'Skottlossning, Norrköping',                   skickatTill: 'erik.l@gmail.com',  status: 'Levererad'  },
     { tid: '2026-04-01 18:15', kanal: 'SMS',    källa: 'Polisen', rubrik: 'Explosion, Göteborg',                         skickatTill: '+46 76 345 67 89', status: 'Levererad'  },
@@ -186,7 +119,7 @@ const MOCK_NOTISER: Record<number, NotisRad[]> = {
   ],
 }
 
-const MOCK_AKTIVITET: Record<number, AktivitetRad[]> = {
+const MOCK_AKTIVITET: Record<string, AktivitetRad[]> = {
   3: [
     { tid: 'Idag 10:42',   händelse: 'Loggade in'                            },
     { tid: 'Idag 10:43',   händelse: 'Öppnade Polisen-källan'                },
@@ -207,13 +140,13 @@ const MOCK_AKTIVITET: Record<number, AktivitetRad[]> = {
 // Mockad tills det finns riktiga användare att lista (steg 4, #298).
 interface PolisenFilterMini { kategorier: string[] | null; omraden: string[] | null }
 
-const MOCK_POLISEN_FILTER: Record<number, PolisenFilterMini> = {
+const MOCK_POLISEN_FILTER: Record<string, PolisenFilterMini> = {
   3: { kategorier: ['Skottlossning', 'Explosion', 'Misshandel'], omraden: ['Norrköping', 'Göteborg'] },
   6: { kategorier: ['Rån', 'Brand'],                             omraden: ['Göteborg', 'Malmö']     },
   1: { kategorier: null,                                         omraden: null                       },
 }
 
-const MOCK_ÄRENDEN: Record<number, ArendeMini[]> = {
+const MOCK_ÄRENDEN: Record<string, ArendeMini[]> = {
   2: [ // Anna Svensson
     { id: 'SUP-0031', kategori: 'Konto',          amne: 'Vill ta bort mitt konto',                         status: 'Hanterat',         skapat: '2026-03-01' },
   ],
@@ -238,7 +171,7 @@ const ARENDE_STATUS_CLS: Record<ArendeStatusMini, string> = {
   'Stängt':           'bg-slate-100 text-slate-500 border border-slate-200',
 }
 
-const MOCK_NOTIF: Record<number, NotifKälla[]> = {
+const MOCK_NOTIF: Record<string, NotifKälla[]> = {
   3: [
     { källNamn: 'Polisen',         aktiv: true,  kanaler: ['E-post', 'SMS'], kontaktuppgiftIds: [301, 303], geografier: ['Norrköping', 'Göteborg', 'Nationellt'], kategorier: ['Brott', 'Trafikhändelse']             },
     { källNamn: 'SMHI',            aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [301],       geografier: ['Västra Götaland', 'Nationellt'],        kategorier: ['Vädervarning']                        },
@@ -267,15 +200,6 @@ const MOCK_NOTIF: Record<number, NotifKälla[]> = {
 // ---------------------------------------------------------------------------
 
 const ALLA_ROLLER_LIST: Roll[] = ['Admin', 'Support', 'Betatestare', 'Användare']
-
-const TIDSGRÄNSER: { label: string; dagar: number | null }[] = [
-  { label: '1 dag',        dagar: 1    },
-  { label: '3 dagar',      dagar: 3    },
-  { label: '1 vecka',      dagar: 7    },
-  { label: '2 veckor',     dagar: 14   },
-  { label: '1 månad',      dagar: 30   },
-  { label: 'Tills vidare', dagar: null },
-]
 
 const ROLL_CLS: Record<Roll, string> = {
   'Admin':       'bg-red-100 text-red-700 border border-red-200',
@@ -318,12 +242,6 @@ const ALLA_STATUSAR: Array<Status | 'Alla'> = ['Alla', 'Aktiv', 'Inaktiv', 'Avst
 
 function initialer(namn: string) {
   return namn.split(' ').map(n => n[0]).join('').slice(0, 2)
-}
-
-function addDagar(dagar: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() + dagar)
-  return d.toISOString().split('T')[0]
 }
 
 // ---------------------------------------------------------------------------
@@ -387,11 +305,10 @@ function RollModal({ antal, initialRoller, onSpara, onStäng }: {
 
 function StängAvModal({ antal, onSpara, onStäng }: {
   antal: number
-  onSpara: (till: string | null) => void
+  onSpara: (anledning: string) => void
   onStäng: () => void
 }) {
-  const [vald, setVald] = useState<number>(7)
-  const slutdatum = vald !== -1 ? addDagar(vald) : null
+  const [anledning, setAnledning] = useState('')
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
@@ -404,23 +321,20 @@ function StängAvModal({ antal, onSpara, onStäng }: {
           <button onClick={onStäng} className="text-amber-200 hover:text-white transition-colors">✕</button>
         </div>
         <div className="px-6 py-5 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-2">
-            {TIDSGRÄNSER.map(t => (
-              <button key={t.label} onClick={() => setVald(t.dagar ?? -1)}
-                className={`py-2 rounded-xl text-sm font-medium border transition-colors ${
-                  (t.dagar === vald || (t.dagar === null && vald === -1))
-                    ? 'bg-amber-100 text-amber-700 border-amber-200'
-                    : 'text-slate-500 border-slate-200 hover:bg-slate-50'
-                }`}>
-                {t.label}
-              </button>
-            ))}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+              Anledning <span className="normal-case text-slate-400 font-normal">(frivillig, syns för andra admins)</span>
+            </label>
+            <textarea
+              rows={3}
+              value={anledning}
+              onChange={e => setAnledning(e.target.value)}
+              placeholder="T.ex. 'Missbrukade feedback-kanalen för spam'"
+              className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 resize-none placeholder:text-slate-300"
+            />
           </div>
-          {slutdatum
-            ? <p className="text-xs text-slate-500 bg-slate-50 rounded-xl px-4 py-3">Kontot aktiveras automatiskt igen <span className="font-semibold text-slate-700">{slutdatum}</span></p>
-            : <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-4 py-3">Kontot förblir avstängt tills en admin aktiverar det manuellt.</p>
-          }
-          <button onClick={() => onSpara(slutdatum)}
+          <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-4 py-3">Kontot förblir avstängt tills en admin aktiverar det manuellt igen — ingen automatisk återaktivering.</p>
+          <button onClick={() => onSpara(anledning)}
             className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold rounded-xl transition-colors">
             Stäng av
           </button>
@@ -524,13 +438,17 @@ interface AnvandareProps {
 
 export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik }: AnvandareProps) {
   const { aktivVy } = useAuth()
-  const [användare, setAnvändare]               = useState<Användare[]>(INITIAL_ANVÄNDARE)
+  const { data: adminUsers, isLoading: laddar, isError: laddningFel, refetch } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn:  fetchAdminUsers,
+  })
+  const [användare, setAnvändare]               = useState<Användare[]>([])
   const [rollFilter, setRollFilter]             = useState<Roll | 'Alla'>('Alla')
   const [statusFilter, setStatusFilter]         = useState<Status | 'Alla'>('Alla')
   const [sökning, setSökning]                   = useState('')
   const [vald, setVald]                         = useState<Användare | null>(null)
   const [detaljFlik, setDetaljFlik]             = useState<DetaljFlik>('oversikt')
-  const [markerade, setMarkerade]               = useState<Set<number>>(new Set())
+  const [markerade, setMarkerade]               = useState<Set<string>>(new Set())
   const [modal, setModal]                       = useState<'roller' | 'stäng-av' | 'radera' | null>(null)
   const [enkildStängAv, setEnkildStängAv]       = useState<Användare | null>(null)
   const [enkildRadera, setEnkildRadera]         = useState<Användare | null>(null)
@@ -547,7 +465,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     return true
   })
 
-  function toggleMarkerad(e: React.MouseEvent, id: number) {
+  function toggleMarkerad(e: React.MouseEvent, id: string) {
     e.stopPropagation()
     setMarkerade(prev => { const ny = new Set(prev); ny.has(id) ? ny.delete(id) : ny.add(id); return ny })
   }
@@ -557,25 +475,33 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   }
 
   useEffect(() => {
+    if (adminUsers) setAnvändare(adminUsers.map(mapAdminUser))
+  }, [adminUsers])
+
+  useEffect(() => {
     if (!defaultÖppnaEpost) return
-    const u = INITIAL_ANVÄNDARE.find(x => x.epost === defaultÖppnaEpost)
+    const u = användare.find(x => x.epost === defaultÖppnaEpost)
     if (u) {
       setVald(u)
       setDetaljFlik(defaultFlik ?? 'notifinstallningar')
-      setSparadeHändelser(laddaSparadeHandelser()[u.id] ?? [])
+      // Sparat-lagringen (lib/sparadeHandelserStorage.ts) är fortfarande
+      // nyckad på gamla mock-numeriska ID:n (delad med Händelsesök/
+      // Aktivitetslogg, ej del av den här PR:ns scope) — riktiga GUID-ID:n
+      // matchar aldrig något, `Number(u.id)` blir NaN och ger alltid tomt.
+      setSparadeHändelser(laddaSparadeHandelser()[Number(u.id)] ?? [])
     }
-  }, [defaultÖppnaEpost, defaultFlik])
+  }, [defaultÖppnaEpost, defaultFlik, användare])
 
   function öppnaDetalj(u: Användare) {
     setVald(u)
     setDetaljFlik('oversikt')
-    setSparadeHändelser(laddaSparadeHandelser()[u.id] ?? [])
+    setSparadeHändelser(laddaSparadeHandelser()[Number(u.id)] ?? [])
   }
 
   function taBortSparad(eventId: string) {
     if (!vald) return
     const handelse = sparadeHändelser.find(h => h.eventId === eventId)
-    taBortSparadHandelse(vald.id, eventId)
+    taBortSparadHandelse(Number(vald.id), eventId)
     setSparadeHändelser(prev => prev.filter(h => h.eventId !== eventId))
     if (handelse) {
       läggTillLoggpost({
@@ -584,7 +510,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
         typ:    'Sparat: borttagen',
         rubrik: `Tog bort sparad händelse från ${vald.namn}`,
         detalj: `"${handelse.title}" (${handelse.sourceName}) borttagen från ${vald.namn}s konto.`,
-        ångraData: { anvandareId: vald.id, handelse, undoAction: 'lägg-till' },
+        ångraData: { anvandareId: Number(vald.id), handelse, undoAction: 'lägg-till' },
       })
     }
   }
@@ -604,28 +530,26 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     setEnkildRollÄndring(null)
   }
 
-  function stängAv(till: string | null) {
-    setAnvändare(prev => prev.map(u => !markerade.has(u.id) ? u : { ...u, status: 'Avstängd', avstängtTill: till ?? undefined }))
-    if (vald && markerade.has(vald.id))
-      setVald(prev => prev ? { ...prev, status: 'Avstängd', avstängtTill: till ?? undefined } : null)
+  async function stängAv(anledning: string) {
+    await Promise.all([...markerade].map(id => setAdminUserStatus(id, false, anledning || undefined)))
+    await refetch()
     setMarkerade(new Set()); setModal(null)
   }
 
   function raderaMarkerade() {
-    setAnvändare(prev => prev.filter(u => !markerade.has(u.id)))
-    if (vald && markerade.has(vald.id)) setVald(null)
-    setMarkerade(new Set()); setModal(null)
+    // Inget backend-stöd för att radera konton än (#299, GDPR-export/radering)
+    // — bulk-raderaknappen är avsiktligt inaktiverad, se knappens title-attribut.
   }
 
-  function stängAvEnkild(u: Användare, till: string | null) {
-    setAnvändare(prev => prev.map(x => x.id === u.id ? { ...x, status: 'Avstängd', avstängtTill: till ?? undefined } : x))
-    setVald(prev => prev?.id === u.id ? { ...prev, status: 'Avstängd', avstängtTill: till ?? undefined } : prev)
+  async function stängAvEnkild(u: Användare, anledning: string) {
+    await setAdminUserStatus(u.id, false, anledning || undefined)
+    await refetch()
     setEnkildStängAv(null)
   }
 
-  function aktiveraEnkild(u: Användare) {
-    setAnvändare(prev => prev.map(x => x.id === u.id ? { ...x, status: 'Aktiv', avstängtTill: undefined } : x))
-    setVald(prev => prev?.id === u.id ? { ...prev, status: 'Aktiv', avstängtTill: undefined } : prev)
+  async function aktiveraEnkild(u: Användare) {
+    await setAdminUserStatus(u.id, true)
+    await refetch()
   }
 
   const antal = {
@@ -697,9 +621,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
             <>
               <span className="text-sm font-medium text-violet-700">{markerade.size} markerade</span>
               <div className="flex gap-2 ml-auto">
-                <button onClick={() => setModal('roller')}   className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">Ändra roller</button>
+                <button disabled title="Inte kopplat mot backend än — ingen endpoint för att ändra roll"
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 cursor-not-allowed">Ändra roller</button>
                 <button onClick={() => setModal('stäng-av')} className="text-xs font-medium px-3 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors">Stäng av</button>
-                <button onClick={() => setModal('radera')}   className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Radera</button>
+                <button disabled title="Inte kopplat mot backend än — ingen endpoint för att radera konton (#299)"
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-100 text-red-300 cursor-not-allowed">Radera</button>
                 <button onClick={() => setMarkerade(new Set())} className="text-xs font-medium px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">✕ Avmarkera</button>
               </div>
             </>
@@ -780,7 +706,13 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                 </td>
               </tr>
             ))}
-            {filtrerade.length === 0 && (
+            {laddar && (
+              <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-slate-400">Laddar användare…</td></tr>
+            )}
+            {laddningFel && (
+              <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-red-500">Kunde inte hämta användarlistan. Försök ladda om sidan.</td></tr>
+            )}
+            {!laddar && !laddningFel && filtrerade.length === 0 && (
               <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-slate-400">Inga användare matchar filtret.</td></tr>
             )}
           </tbody>
@@ -954,8 +886,8 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               {/* Åtgärder */}
               <div className="flex flex-col gap-3">
                 <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">Åtgärder</p>
-                <button onClick={() => setEnkildRollÄndring(vald)}
-                  className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
+                <button disabled title="Inte kopplat mot backend än — ingen endpoint för att ändra roll"
+                  className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-300 cursor-not-allowed">
                   Ändra roller
                 </button>
                 <button className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
@@ -974,11 +906,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                 ) : (
                   <button onClick={() => setEnkildStängAv(vald)}
                     className="text-left px-4 py-2.5 rounded-xl border border-amber-200 text-sm text-amber-700 hover:bg-amber-50 transition-colors">
-                    Stäng av konto tillfälligt
+                    Stäng av konto
                   </button>
                 )}
-                <button onClick={() => setEnkildRadera(vald)}
-                  className="text-left px-4 py-2.5 rounded-xl border border-red-200 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                <button disabled title="Inte kopplat mot backend än — ingen endpoint för att radera konton (#299)"
+                  className="text-left px-4 py-2.5 rounded-xl border border-red-100 text-red-300 cursor-not-allowed">
                   Radera konto (GDPR)
                 </button>
               </div>
