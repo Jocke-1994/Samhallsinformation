@@ -25,15 +25,18 @@ public class AuthService : IAuthService
         _frontendUrl = config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
     }
 
-    public async Task<AuthResult> RegisterAsync(string name, string email, string password)
+    public async Task<AuthResult> RegisterAsync(string name, string email, string password, bool acceptedTerms)
     {
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             return AuthResult.Fail(400, "Namn, e-post och lösenord krävs");
 
+        if (!acceptedTerms)
+            return AuthResult.Fail(400, "Du måste godkänna användarvillkoren");
+
         if (await _db.Users.AnyAsync(u => u.Email == email))
             return AuthResult.Fail(409, "E-postadressen används redan");
 
-        var user = new User { Name = name, Email = email };
+        var user = new User { Name = name, Email = email, TermsAcceptedAt = DateTime.UtcNow };
         user.PasswordHash = _hasher.HashPassword(user, password);
         _db.Users.Add(user);
 
