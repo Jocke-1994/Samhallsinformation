@@ -153,6 +153,79 @@ bekräftade fälten rensades och inloggning fungerade igen.
 
 ---
 
+## feat: rate limiting på /api/auth/* (PR 4/5) (2026-08-04)
+
+**Mål:** Sista kvarstående punkten på issue `#295`s egen checklista — inget
+skydd mot upprepade snabba anrop mot inloggning/registrering/refresh, alltså
+öppet för brute force mot lösenord eller för att spamma nya konton. Del av
+den fyra-PR-plan som beslutades efter en genomgång av `User`-modellens
+attribut (se `[[project_...]]`-minnena för PR 1–3).
+
+**Genomförande:** Inbyggd `Microsoft.AspNetCore.RateLimiting` (finns sedan
+.NET 7, inget nytt paket). En namngiven policy `"auth"` i `Program.cs`,
+partitionerad per IP (`RateLimitPartition.GetFixedWindowLimiter` nyckad på
+`RemoteIpAddress`) — **viktigt val:** `AddFixedWindowLimiter` utan
+partitionering delar en enda räknare mellan ALLA anropare oavsett IP, vilket
+hade gjort hela tjänsten otillgänglig för alla efter fem inloggningar totalt
+från vem som helst. Gräns satt till 5 försök/minut, matchar exakt vad
+`#295`s checklista själv föreslog. `[EnableRateLimiting("auth")]` på hela
+`AuthController` (alla dess endpoints, inte bara login) — `OnRejected`
+skriver ett eget 429-svar med samma `{ error: "..." }`-format som resten av
+auth-felen använder, så frontend inte behöver ett specialfall.
+
+Byggd oberoende av PR 1–3 (ren `Program.cs`/`AuthController.cs`-ändring,
+rör ingen datamodell) — grenad direkt av `main`, inte av
+`feat/wizard-deferred-registration`.
+
+**Verifiering:** `dotnet build`/`dotnet test` gröna (43/43, main saknar
+ännu PR 1–3:s nya testfall). Lokal end-to-end: sex snabba
+`POST /api/auth/login`-anrop med fel lösenord → fem `401` följt av `429`
+med rätt felmeddelande. Bekräftade samtidigt att en obesläktad route
+(`GET /api/sources`) fortsatt gav `200` — begränsningen är faktiskt
+scopad till auth-rutterna, inte global.
+
+---
+
+## feat: villkorsgodkännande vid registrering (PR 3/5) (2026-08-04)
+
+**Mål:** Del 3 av 5. Gör `TermsAcceptedAt`-fältet (PR 1/5) faktiskt
+verksamt — registrering ska kräva ett uttryckligt godkännande av
+användarvillkor/integritetspolicy, och inget sådant innehåll fanns
+skrivet alls sedan tidigare (bekräftat via kodsökning innan planeringen
+började).
+
+**Genomförande:** `RegisterAsync` fick en ny obligatorisk parameter
+`acceptedTerms` — `false` → 400 "Du måste godkänna användarvillkoren"
+innan kontot ens skapas, `true` → `TermsAcceptedAt` sätts av servern
+(inte klienten, `DateTime.UtcNow`) på det nya kontot. Kryssrutan
+placerades i wizardens steg 1 (`OnboardingPage.tsx`, ihopslagen med
+registreringsformuläret sedan förra PR:en) — samma lokala
+valideringsmönster som namn/lösenord redan har, länken öppnas i ny flik
+till en ny `/villkor`-sida.
+
+**Villkorsinnehållet är ett konkret UTKAST jag skrivit, inte juridisk
+rådgivning** — täcker ärligt vad tjänsten faktiskt gör (källaggregering,
+ingen tolkning), vilka uppgifter som samlas in vid registrering och
+under användning, cookies/analys (matchar redan befintlig
+Om-sidans text), att inga uppgifter säljs/delas, användarens rättigheter
+(radering hanteras manuellt via kontakt tills en självbetjänings-lösning
+finns — INTE påstått som redan automatiserad, eftersom GDPR-radering
+fortfarande är mockad UI enligt tidigare sessioners upptäckt),
+kontoavstängningspolicy (kopplar till PR 2/5), och kontaktväg. Användaren
+bör läsa igenom och redigera innan detta räknas som launch-klart.
+
+**Verifiering:** `dotnet build`/`dotnet test` gröna (44/44, 1 ny —
+resten av PR 2/5s suspension-tester finns inte på den här grenen
+eftersom bara PR 1/5 slogs samman hit, inte PR 2/5, exakt enligt planen).
+`npm run build` grönt. Manuellt mot lokal backend: registrering utan
+godkännande → 400 med rätt felmeddelande, med godkännande → 200 och
+kontot skapas. `TermsAcceptedAt`-sättningen bekräftas redan av
+`RegisterAsync_CreatesUser_AndReturnsTokens`s direkta DB-assert —
+mer exakt än att försöka läsa av det via ett admin-listnings-API som
+inte ens finns på den här grenen än (det hör till PR 2/5).
+
+---
+
 ## feat: fyra pre-launch-fält på User (PR 1/5) (2026-08-04)
 
 **Mål:** Under granskning av registreringsflödet identifierade
@@ -185,6 +258,70 @@ en enkel `AuthProvider`-sträng — avfärdat som för tidigt eftersom ingen
 Google-inloggning finns att koppla mot än; en sträng är tillräcklig
 förberedelse, och en riktig tabell kan läggas till senare utan att
 detta fältet blir i vägen.
+
+---
+
+## feat: skjut upp kontoskapande till sista steget i wizarden (2026-08-04)
+
+**Mål:** Användaren pekade ut att "Ditt konto är skapat" på wizardens
+första steg kändes fel — kontot borde inte kännas klart förrän man
+faktiskt klickar "Gå till mitt flöde". Stämde inte tekniskt heller:
+`POST /api/auth/register` skedde redan när formuläret skickades in,
+INNAN wizarden ens visades. Samma problem gjorde en efterfrågad
+"Avbryt"-knapp missvisande — kontot fanns redan i databasen vid det
+laget, Avbryt kunde bara logga ut, inte ångra skapandet.
+
+**Beslutad lösning (uttryckligt vägval mot en mindre, kosmetisk fix):**
+`RegisterPage.tsx` och `OnboardingPage.tsx` slogs ihop till EN sida.
+Namn/e-post/lösenord (steg 1) och källval (steg 2) lever nu bara i
+wizardens lokala React-state — inget skickas till backend förrän sista
+klicket. "Gå till mitt flöde" gör det faktiska arbetet i sekvens:
+`register(...)` (skapar kontot + loggar in), sedan — om källor valts —
+ett icke-blockerande `saveUserSources(...)`-anrop (kontot är redan
+riktigt och fungerande även om det här skulle misslyckas). "Avbryt" på
+steg 1 är nu en genuint sann avbrytning: bara `navigate('/')`, inget
+API-anrop existerar överhuvudtaget innan sista steget (verifierat genom
+att grep:a filen efter varje `await`/API-anrop — bara två finns, båda
+inuti knapphandlern för "Gå till mitt flöde").
+
+**Sidoeffekter av omstruktureringen:**
+- `/register`-routen renderar nu `OnboardingPage` direkt,
+  `RegisterPage.tsx` och `/onboarding`-routen är borttagna helt — inget
+  länkade till `/onboarding` separat längre
+  - Auth-guard vänd om: sidan omdirigerar nu BORT en redan inloggad
+    besökare (samma princip som `/login`), istället för att kräva
+    inloggning
+  - Steg 2:s källhantering kopplades om från `fetchUserSources`/
+    `saveUserSources` (kräver autentiserad session) till rent lokalt
+    `Set<number>`-state — bara `fetchSources()` (publik, okrypterad
+    endpoint) används för att lista valbara källor under wizarden
+  - Global "Hoppa över introduktionen"-länk togs bort — den saknade
+    längre en sammanhängande betydelse innan ett konto ens finns att
+    hoppa förbi
+  - **Genuin fördel med omstruktureringen, inte bara kosmetisk:** ett
+    dubblettmejl (409 "E-postadressen används redan") upptäcks
+    fortfarande innan något skickas iväg för riktigt — felet visas nu på
+    sista steget med möjlighet att gå "Tillbaka" och rätta e-posten,
+    istället för att som tidigare bara kunna hända direkt vid
+    formulärinlämning
+
+**Verifiering:** `npm run build` grönt. Kunde inte klicka igenom hela
+flödet i webbläsaren pga upprepad browser-automation-instabilitet (samma
+återkommande problem denna session — flera nya försök gjordes, gav upp
+efter att ha nått samma tröskel som tidigare gånger). Kompenserade med
+två saker istället: (1) statisk kodgranskning — `grep` efter varje
+`await`/API-anrop i filen bekräftar att bara `register()` och
+`saveUserSources()` finns, båda i "Gå till mitt flöde"-handlern, inget
+annat ställe gör nätverksanrop; (2) `curl`-verifiering av exakt samma
+anropssekvens mot en riktig lokal backend — registrering följt av
+direkt källsparning fungerar, dubblettmejl ger korrekt 409 med samma
+felmeddelande som visas i UI:t. Upptäckte och löste under tiden ett
+separat, orelaterat testmiljöproblem: en gammal, låst bakgrundsprocess
+fick de första `dotnet run`-försöken att tyst misslyckas, vilket gjorde
+att tidiga `curl`-anrop av misstag träffade en helt annan, förlegad
+backend-process — upptäckt genom att en `emailVerified`-JWT-claim (hör
+till en annan, ännu inte mergad gren) dök upp i svaret trots att den
+här grenen inte har den koden alls.
 
 ---
 
