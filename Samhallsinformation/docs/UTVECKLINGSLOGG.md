@@ -13,39 +13,73 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
-## fix: e-post ska aldrig krävas för att skicka in feedback (2026-08-04)
+## fix: NewsItem-radlayout (titelklämning) + tyst fel vid Spara-klick (2026-08-04)
 
-**Mål:** Användaren läste igenom kunskapsbas-underlaget för kundtjänstboten
-och var oense med en policy jag skrivit in: att e-post krävs för anonyma
-inskick. Rätt princip: e-post behövs bara om avsändaren vill ha svar, aldrig
-för att skicka in något överhuvudtaget.
+**Mål:** Två buggar hittade av användaren under manuell verifiering av
+Sparat-funktionen i Chrome DevTools innan PR #404 (som stänger av Sparat
+bakom en flagga) mergades. Behövde fixas innan Sparat kunde bedömas som
+"snyggt nog att stänga av tills vidare" — dvs. innan funktionen läggs på is
+ska den inte lämnas i ett trasigt skick.
 
-**Vad hände på vägen:** `SupportController.Create` hade sedan PR #398 en
-explicit kontroll — `if (userId == null && ContactEmail saknas) return
-BadRequest(...)`. Togs bort helt. `ContactEmail`/`ContactName` var redan
-nullable i datamodellen (`SupportTicket.cs`), så ingen migration behövdes —
-det här var en ren policyändring i valideringslogiken, inte ett
-schemaproblem.
+**Bugg 1: händelsetiteln klämdes till ett ord per rad.** En skärmdump visade
+"Ökad spridning av kikhosta i Sverige" (Folkhälsomyndigheten) radbruten
+till nästan ett ord per rad i den hopfällda radvyn.
 
-**Följdändringar:** `FeedbackButton.tsx` hade fått ett `required={!isLoggedIn}`
-på e-postfältet i PR #400, exakt den policyn som nu är fel — togs bort, fältet
-är nu alltid frivilligt (`useAuth`-importen blev därmed oanvänd, städad bort).
-Testet `Create_AnonymousWithoutContactEmail_ReturnsBadRequest` bytte namn och
-mening till `Create_AnonymousWithoutContactEmail_StillCreatesTicket` (verifierar
-nu motsatsen), och ett nytt test lades till för det som faktiskt fortfarande
-ska ge `400`: ett helt tomt meddelande. Båda kundtjänstbot-dokumenten
-(`docs/K_BOT/`) uppdaterades i samma veva så de inte längre motsäger den
-rättade policyn.
+- **Grundorsak:** `NewsItem.tsx`s hopfällda rad var EN flex-rad där titeln
+  (`flex-1`) fick konkurrera om bredd med severity-badge, checkbox,
+  källnamn, geografi, klockslag, prenumerationsklocka, bokmärkesikon och
+  chevron — samtliga `shrink-0`. Med en lång källa (lång ShortName) och en
+  lång titel samtidigt blev titelns tillgängliga bredd så smal att varje ord
+  fick sin egen rad.
+- **Uteslutningsmetod:** bekräftat genom att läsa layoutens JSX rad för rad
+  (rad 90–149) — inget CSS-fel, bara för många `shrink-0`-syskon som
+  strukturellt konkurrerade om samma rad som titeln.
+- **Lösning:** raden delades i två — rad 1: checkbox + severity-badge +
+  titel (`flex-1 min-w-0`, nu ensam om utrymmet) + chevron. Rad 2 (mindre
+  text, `flex-wrap`, `mt-1`): källnamn, geografi, klockslag,
+  prenumerationsklocka, bokmärkesikon. Följer användarens egen instinkt
+  ("källnamnet ovanför händelsenamnet") snarare än att bara krympa
+  textstorleken, vilket bara hade skjutit samma problem till en mindre
+  brytpunkt.
+- **Andra vägar som hade kunnat fungera:** (a) trunkera långa titlar med
+  ellipsis (`truncate`) — avfärdat, döljer information användaren
+  uttryckligen vill se i en nyhetslista; (b) krympa textstorleken på lång
+  källa/titel — användarens egen alternativa förslag, men löser bara
+  symptomet vid en specifik brytpunkt snarare än att ta bort den strukturella
+  konkurrensen om bredd.
 
-**Andra möjliga lösningar, inte valda:**
-- Kunnat behålla kravet men bara för `channel: "feedback"` (inte för
-  `arendehantering`, som ändå bara är tillgängligt för inloggade med redan
-  känd e-post) — onödigt, `arendehantering` kräver redan inloggning i
-  praktiken (`ArendehanteringKort.tsx` är bara nåbar via Profil), så
-  channel-specifik logik hade inte tillfört något.
+**Bugg 2: 400 Bad Request vid klick på Spara-ikonen, ingen rollback i UI.**
 
-**Verifiering:** `dotnet build`/`dotnet test` (30/30 gröna, inkl. det
-omdöpta och det nya testet), `npm run build` grönt.
+- **Vad hände:** Användaren fick ett 400-fel i nätverksfliken vid klick på
+  bokmärkesikonen, men ikonen visade ändå "sparad" i gränssnittet.
+- **Uteslutningsmetod:** reproducerade `POST /api/user/saved-events` via
+  curl med ett riktigt GUID-event-ID — gav 200 OK, alltså inget fel i
+  backend-endpointen i sig. Kontrollerade sedan `.env.local`:
+  `VITE_USE_MOCK=true` gör att lokal dev visar `MOCK_EVENTS` (hårdkodade
+  icke-GUID-ID:n som `'fhm-002'`) — ett sådant ID skickat till en `Guid`-
+  bindad `[FromBody]`-DTO ger automatiskt 400 från ASP.NET Cores
+  modellbindning, innan koden ens når controllerns egen logik. Detta är en
+  ren lokal-dev-artefakt (produktion kör `VITE_USE_MOCK=false`), inte en
+  riktig backend-bugg.
+- **Den riktiga buggen som 400:an avslöjade:** `SavedEventsContext.tsx`s
+  `toggleSparad` uppdaterade UI-state optimistiskt (innan svar från
+  backend) men fångade upp ett misslyckat API-anrop med en tom
+  `.catch(() => {})` — ingen rollback. Ikonen kunde alltså visa "sparad"
+  permanent även när backend faktiskt avvisat anropet, med data som tyst
+  hamnat i ett osynkat tillstånd mellan klient och server.
+- **Lösning:** `.catch()` rullar nu tillbaka exakt den optimistiska
+  ändringen (lägger tillbaka eller tar bort samma ID igen) om anropet
+  misslyckas, så ikonen alltid speglar vad som faktiskt sparats i backend.
+- **Andra vägar som hade kunnat fungera:** en fullständig refetch av
+  `fetchSavedEventIds()` vid fel istället för en riktad rollback — avfärdat
+  som onödigt tungt (en extra nätverksrunda) för att korrigera en enda
+  boolean-toggle vars före/efter-tillstånd redan är kända lokalt.
+
+**Verifiering:** `npm run build` grönt. Bytte branch innan commit — arbetet
+hade av misstag skett direkt på `docs/kundtjanstbot-kunskapsbas-och-integration`
+(PR #405s branch), overrelaterat till dessa två UI/UX-fixar. Flyttat till en
+egen branch (`git stash push` på bara de två filerna, `checkout main`,
+`checkout -b`, `stash pop`) innan commit, för att hålla PR:arna atomära.
 
 ---
 

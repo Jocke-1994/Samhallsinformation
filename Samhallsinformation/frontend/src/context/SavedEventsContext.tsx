@@ -24,11 +24,24 @@ export function SavedEventsProvider({ children }: { children: ReactNode }) {
   }, [isLoggedIn])
 
   function toggleSparad(eventId: string) {
+    const tarBort = sparade.has(eventId)
+
     setSparade(prev => {
       const n = new Set(prev)
-      if (n.has(eventId)) { n.delete(eventId); unsaveEvent(eventId).catch(() => {}) }
-      else { n.add(eventId); saveEvent(eventId).catch(() => {}) }
+      tarBort ? n.delete(eventId) : n.add(eventId)
       return n
+    })
+
+    const anrop = tarBort ? unsaveEvent(eventId) : saveEvent(eventId)
+    anrop.catch(() => {
+      // Misslyckades på riktigt (t.ex. nätverksfel) — rulla tillbaka den
+      // optimistiska uppdateringen så ikonen inte ljuger om vad som faktiskt
+      // sparats i backend.
+      setSparade(prev => {
+        const n = new Set(prev)
+        tarBort ? n.add(eventId) : n.delete(eventId)
+        return n
+      })
     })
   }
 
