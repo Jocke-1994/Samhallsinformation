@@ -37,8 +37,9 @@ const SECTION_LABELS: Record<AdminSection, string> = {
 }
 
 const NOTIS_LABELS: Record<PendingNotis['typ'], string> = {
-  'påminnelse': 'Påminnelse',
-  'tilldelad':  'Tilldelad till dig',
+  'påminnelse':     'Påminnelse',
+  'tilldelad':      'Tilldelad till dig',
+  'kontospärrning': 'Kontospärrning',
 }
 
 const ROLL_FÄRG: Record<AdminRoll, string> = {
@@ -110,6 +111,18 @@ export default function AdminPage() {
     setNotisDropdown(false)
   }
 
+  function öppnaNotis(n: PendingNotis) {
+    markeraLäst(n)
+    if (n.typ === 'kontospärrning' && n.epost) {
+      setÖppnaAnvEpost(n.epost)
+      setÖppnaAnvFlik('oversikt')
+      setSection('anvandare')
+      setNotisDropdown(false)
+    } else {
+      öppnaÄrende(n.arendeId)
+    }
+  }
+
   function välj(vy: SystemRoll) {
     byttVy(vy)
     setAvatarDropdown(false)
@@ -169,12 +182,12 @@ export default function AdminPage() {
                           return (
                             <li key={i} className={`flex items-start gap-2 px-4 py-3 ${läst ? 'opacity-50' : 'bg-slate-50/60'}`}>
                               <button
-                                onClick={() => { markeraLäst(n); öppnaÄrende(n.arendeId) }}
+                                onClick={() => öppnaNotis(n)}
                                 className="flex-1 text-left flex flex-col gap-0.5 hover:opacity-80 transition-opacity"
                               >
                                 <div className="flex items-center gap-2">
-                                  <span>{n.typ === 'påminnelse' ? '⏰' : '👤'}</span>
-                                  <span className={`text-xs font-medium ${läst ? 'text-slate-400' : n.typ === 'påminnelse' ? 'text-red-600' : 'text-violet-600'}`}>
+                                  <span>{n.typ === 'påminnelse' || n.typ === 'kontospärrning' ? '⏰' : '👤'}</span>
+                                  <span className={`text-xs font-medium ${läst ? 'text-slate-400' : n.typ === 'påminnelse' || n.typ === 'kontospärrning' ? 'text-red-600' : 'text-violet-600'}`}>
                                     {NOTIS_LABELS[n.typ]}
                                   </span>
                                   <span className="font-mono text-xs text-slate-400 ml-auto">{n.arendeId}</span>
@@ -261,6 +274,7 @@ export default function AdminPage() {
                   setInboxOpenId(id)
                   setSection('support-inbox')
                 }}
+                onPendingNotiser={handlePendingNotiser}
                 defaultÖppnaEpost={öppnaAnvEpost}
                 defaultFlik={öppnaAnvFlik ?? 'notifinstallningar'}
                 key={öppnaAnvEpost}

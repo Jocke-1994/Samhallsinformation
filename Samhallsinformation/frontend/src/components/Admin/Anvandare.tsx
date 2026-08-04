@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { laddaSparadeHandelser, taBortSparadHandelse, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
 import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
 import { useAuth } from '../../context/AuthContext'
-import { fetchAdminUsers, setAdminUserStatus, type AdminUserDto } from '../../api/adminUsers'
+import { fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, type AdminUserDto } from '../../api/adminUsers'
+import type { PendingNotis } from '../../types/adminNotis'
 
 // Mockad inloggad admin/support-identitet — samma placeholder som resten av
 // admin-panelen (SupportInbox.INLOGGAD_AGENT, AdminPage-avataren)
@@ -34,7 +35,8 @@ interface Användare {
   status:           Status
   registrerad:      string
   senastAktiv:      string
-  avstängtTill?:    string
+  paminnelseAt?:    string
+  paminnelseNotering?: string
   inloggningsmetod: Inloggningsmetod
   kontaktuppgifter: Kontaktuppgift[]
 }
@@ -82,7 +84,8 @@ function mapAdminUser(dto: AdminUserDto): Användare {
     status:           dto.isActive ? 'Aktiv' : 'Avstängd',
     registrerad:      new Date(dto.createdAt).toLocaleDateString('sv-SE'),
     senastAktiv:      '—', // ingen inloggningsspårning implementerad än
-    avstängtTill:     undefined, // backend stödjer inte schemalagd återaktivering, bara manuell
+    paminnelseAt:       dto.suspensionReminderAt ? new Date(dto.suspensionReminderAt).toLocaleDateString('sv-SE') : undefined,
+    paminnelseNotering: dto.suspensionReminderNote ?? undefined,
     inloggningsmetod: dto.authProvider === 'google' ? 'Google' : 'E-post',
     kontaktuppgifter: [
       { id: 1, typ: 'E-post', värde: dto.email, verifierad: true, primär: true },
@@ -303,12 +306,21 @@ function RollModal({ antal, initialRoller, onSpara, onStäng }: {
   )
 }
 
+const PÅMINNELSE_VAL: { label: string; dagar: number | null }[] = [
+  { label: '3 dagar',        dagar: 3    },
+  { label: '1 vecka',        dagar: 7    },
+  { label: '2 veckor',       dagar: 14   },
+  { label: '1 månad',        dagar: 30   },
+  { label: 'Ingen påminnelse', dagar: null },
+]
+
 function StängAvModal({ antal, onSpara, onStäng }: {
   antal: number
-  onSpara: (anledning: string) => void
+  onSpara: (anledning: string, paminnelseOm: number | null) => void
   onStäng: () => void
 }) {
   const [anledning, setAnledning] = useState('')
+  const [paminnelseDagar, setPaminnelseDagar] = useState<number | null>(7)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
@@ -333,8 +345,27 @@ function StängAvModal({ antal, onSpara, onStäng }: {
               className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 resize-none placeholder:text-slate-300"
             />
           </div>
-          <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-4 py-3">Kontot förblir avstängt tills en admin aktiverar det manuellt igen — ingen automatisk återaktivering.</p>
-          <button onClick={() => onSpara(anledning)}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Påminn mig om</label>
+            <div className="grid grid-cols-2 gap-2">
+              {PÅMINNELSE_VAL.map(v => (
+                <button key={v.label} onClick={() => setPaminnelseDagar(v.dagar)}
+                  className={`py-2 rounded-xl text-sm font-medium border transition-colors ${
+                    v.dagar === paminnelseDagar
+                      ? 'bg-amber-100 text-amber-700 border-amber-200'
+                      : 'text-slate-500 border-slate-200 hover:bg-slate-50'
+                  }`}>
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-4 py-3">
+            {paminnelseDagar
+              ? 'Kontot förblir avstängt tills en admin aktiverar det manuellt — men klockan i adminpanelen påminner om att titta på fallet igen.'
+              : 'Kontot förblir avstängt tills en admin aktiverar det manuellt. Ingen påminnelse sätts.'}
+          </p>
+          <button onClick={() => onSpara(anledning, paminnelseDagar)}
             className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold rounded-xl transition-colors">
             Stäng av
           </button>
@@ -434,9 +465,10 @@ interface AnvandareProps {
   onÖppnaÄrende?:     (arendeId: string) => void
   defaultÖppnaEpost?: string
   defaultFlik?:       DetaljFlik
+  onPendingNotiser?:  (items: PendingNotis[]) => void
 }
 
-export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik }: AnvandareProps) {
+export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onPendingNotiser }: AnvandareProps) {
   const { aktivVy } = useAuth()
   const { data: adminUsers, isLoading: laddar, isError: laddningFel, refetch } = useQuery({
     queryKey: ['admin-users'],
@@ -477,6 +509,19 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   useEffect(() => {
     if (adminUsers) setAnvändare(adminUsers.map(mapAdminUser))
   }, [adminUsers])
+
+  const { data: kontoNotiser = [] } = useQuery({
+    queryKey: ['user-notifications'],
+    queryFn:  fetchUserNotifications,
+    refetchInterval: 30_000,
+  })
+
+  useEffect(() => {
+    if (!onPendingNotiser) return
+    onPendingNotiser(kontoNotiser.map(n => ({
+      arendeId: n.userId, amne: n.namn, typ: 'kontospärrning' as const, notering: n.notering, epost: n.epost,
+    })))
+  }, [kontoNotiser, onPendingNotiser])
 
   useEffect(() => {
     if (!defaultÖppnaEpost) return
@@ -530,8 +575,16 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     setEnkildRollÄndring(null)
   }
 
-  async function stängAv(anledning: string) {
-    await Promise.all([...markerade].map(id => setAdminUserStatus(id, false, anledning || undefined)))
+  function beräknaPåminnelse(dagar: number | null): string | null {
+    if (dagar === null) return null
+    const d = new Date()
+    d.setDate(d.getDate() + dagar)
+    return d.toISOString()
+  }
+
+  async function stängAv(anledning: string, påminnelseOm: number | null) {
+    const reminderAt = beräknaPåminnelse(påminnelseOm)
+    await Promise.all([...markerade].map(id => setAdminUserStatus(id, false, anledning || undefined, reminderAt)))
     await refetch()
     setMarkerade(new Set()); setModal(null)
   }
@@ -541,8 +594,8 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     // — bulk-raderaknappen är avsiktligt inaktiverad, se knappens title-attribut.
   }
 
-  async function stängAvEnkild(u: Användare, anledning: string) {
-    await setAdminUserStatus(u.id, false, anledning || undefined)
+  async function stängAvEnkild(u: Användare, anledning: string, påminnelseOm: number | null) {
+    await setAdminUserStatus(u.id, false, anledning || undefined, beräknaPåminnelse(påminnelseOm))
     await refetch()
     setEnkildStängAv(null)
   }
@@ -579,7 +632,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           onStäng={() => setEnkildRollÄndring(null)} />
       )}
       {enkildStängAv && (
-        <StängAvModal antal={1} onSpara={till => stängAvEnkild(enkildStängAv, till)} onStäng={() => setEnkildStängAv(null)} />
+        <StängAvModal antal={1} onSpara={(anledning, påminnelseOm) => stängAvEnkild(enkildStängAv, anledning, påminnelseOm)} onStäng={() => setEnkildStängAv(null)} />
       )}
       {impersonationMål && (
         <ImpersonationModal
@@ -696,7 +749,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                       <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[u.status]}`} />
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_CLS[u.status]}`}>{u.status}</span>
                     </div>
-                    {u.avstängtTill && <p className="text-xs text-slate-400 pl-4">till {u.avstängtTill}</p>}
+                    {u.paminnelseAt && <p className="text-xs text-amber-500 pl-4">⏰ påminnelse {u.paminnelseAt}</p>}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-slate-500">{u.registrerad}</td>
@@ -874,10 +927,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   )}
                 </div>
 
-                {vald.avstängtTill && (
+                {vald.paminnelseAt && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                    <p className="text-xs font-medium text-amber-700">Avstängd till {vald.avstängtTill}</p>
-                    <p className="text-xs text-amber-600 mt-0.5">Kontot aktiveras automatiskt detta datum.</p>
+                    <p className="text-xs font-medium text-amber-700">⏰ Påminnelse satt till {vald.paminnelseAt}</p>
+                    {vald.paminnelseNotering && <p className="text-xs text-amber-600 mt-0.5">{vald.paminnelseNotering}</p>}
+                    <p className="text-xs text-amber-600 mt-0.5">Kontot återaktiveras inte automatiskt — det här är bara en påminnelse att titta på fallet igen.</p>
                   </div>
                 )}
 

@@ -7,6 +7,7 @@ import {
   type AdminTicketListItemDto, type AdminScheduledActionDto, type AdminAgentDto,
 } from '../../api/support'
 import { createFeatureIdea } from '../../api/featureIdeas'
+import type { PendingNotis } from '../../types/adminNotis'
 
 // ---------------------------------------------------------------------------
 // Typer
@@ -15,12 +16,7 @@ import { createFeatureIdea } from '../../api/featureIdeas'
 type ArendeStatus = 'Öppet' | 'Under behandling' | 'Hanterat' | 'Stängt'
 type SchemaTyp = 'svar' | 'intern' | 'tilldela'
 
-export interface PendingNotis {
-  arendeId:  string
-  amne:      string
-  typ:       'påminnelse' | 'tilldelad'
-  notering?: string | null
-}
+export type { PendingNotis }
 
 type SortField    = 'status' | 'skapat' | 'uppdaterat' | null
 type SortDir       = 'asc' | 'desc'

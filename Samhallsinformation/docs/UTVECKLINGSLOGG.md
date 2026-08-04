@@ -13,6 +13,54 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: påminnelse vid kontospärrning istället för schemalagd återaktivering (2026-08-05)
+
+**Mål:** Uppföljning på PR 5/5 — användaren påpekade att en avstängning utan
+någon typ av uppföljning riskerar att glömmas bort permanent. Två alternativ
+diskuterades: (a) en påminnelse i adminpanelen om att titta på fallet igen,
+eller (b) automatisk återaktivering efter en satt tid. Valde (a): ingen
+bakgrundstjänst krävs, inget autonomt tillstånds­byte som kan överraska en
+admin som glömt att den satte ett datum, och — viktigast — det återanvänder
+ett redan byggt, redan testat mönster rakt av.
+
+**Upptäckt vid research:** `SupportTicket` har redan `ReminderAt`/
+`ReminderNote` + en härledd (ej persisterad) `GET /api/admin/support/
+notifications`-endpoint som `AdminPage.tsx`s klock-ikon (🔔) redan pollar
+var 30:e sekund via en `onPendingNotiser`-callback från `SupportInbox`. Exakt
+samma mönster, bara flyttat till `User` istället för `SupportTicket`.
+
+**Genomförande:** `User.SuspensionReminderAt`/`SuspensionReminderNote`
+(migration `AddSuspensionReminder`, samma Postgres-raw-SQL-mönster som
+tidigare). `PUT /api/admin/users/{id}/status` tar nu valfria `ReminderAt`/
+`ReminderNote`, rensas automatiskt vid återaktivering (precis som
+`SuspendedAt`/`SuspendedReason` redan gjorde). Ny `GET /api/admin/users/
+notifications` — till skillnad från ärendepåminnelser (som bara syns för den
+tilldelade agenten) syns kontospärrningar för alla admins, eftersom en
+spärrning inte är tilldelad en specifik person.
+
+`PendingNotis`-typen (tidigare lokalt definierad i `SupportInbox.tsx`) flyttad
+till en delad `types/adminNotis.ts` och utökad med en tredje `typ:
+'kontospärrning'` + valfritt `epost`-fält för djuplänkning. `Anvandare.tsx`
+pollar den nya endpointen på samma sätt som `SupportInbox` gör, och
+`AdminPage.tsx`s klockikon-klick generaliserades (`öppnaNotis`) till att
+antingen öppna supportinboxen (befintligt beteende) eller djuplänka till
+Användarhantering för den specifika användaren (nytt) beroende på notistyp.
+
+`StängAvModal` fick en andra sektion: "Påminn mig om" (3 dagar/1 vecka/
+2 veckor/1 månad/ingen påminnelse), separat från anledningsfältet från
+PR 5/5. Texten är uttrycklig om att det INTE är schemalagd återaktivering —
+bara en påminnelse att en människa ska titta på fallet igen.
+
+**Verifiering:** `dotnet test` 53/53 (7 nya: suspend+påminnelse sätter
+fälten, återaktivering rensar dem, `GetNotifications` filtrerar korrekt på
+fyra scenarion — förfallen/framtida/ingen påminnelse/aktivt konto).
+`tsc -b --noEmit` och `npm run build` gröna. End-to-end mot lokal backend
+via `curl`: satte en påminnelse till igår → dök upp i
+`/api/admin/users/notifications`; satte en till imorgon → försvann ur
+listan; återaktiverade → båda fälten null i `GET /api/admin/users`.
+
+---
+
 ## feat: Användarhantering kopplad mot riktig admin-användarlista (PR 5/5) (2026-08-04)
 
 **Mål:** Sista biten av den fyra-punkts pre-launch-planen — `Anvandare.tsx`

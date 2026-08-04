@@ -79,6 +79,77 @@ public class AdminUsersControllerTests
     }
 
     [Fact]
+    public async Task SetStatus_SuspendWithReminder_SetsReminderFields()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var reminderAt = DateTime.UtcNow.AddDays(7);
+        var controller = NewController(db);
+        await controller.SetStatus(user.Id, new SetUserStatusRequest(false, "Missbruk", reminderAt, "Kolla igen om en vecka"));
+
+        var updated = await db.Users.FindAsync(user.Id);
+        Assert.Equal(reminderAt, updated!.SuspensionReminderAt);
+        Assert.Equal("Kolla igen om en vecka", updated.SuspensionReminderNote);
+    }
+
+    [Fact]
+    public async Task SetStatus_Reactivate_ClearsReminderFields()
+    {
+        using var db = NewDb();
+        var user = new User
+        {
+            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
+            IsActive = false, SuspendedAt = DateTime.UtcNow, SuspendedReason = "Missbruk",
+            SuspensionReminderAt = DateTime.UtcNow.AddDays(3), SuspensionReminderNote = "Kolla igen",
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db);
+        await controller.SetStatus(user.Id, new SetUserStatusRequest(true, null));
+
+        var updated = await db.Users.FindAsync(user.Id);
+        Assert.Null(updated!.SuspensionReminderAt);
+        Assert.Null(updated.SuspensionReminderNote);
+    }
+
+    [Fact]
+    public async Task GetNotifications_OnlyReturnsOverdueSuspendedReminders()
+    {
+        using var db = NewDb();
+        db.Users.Add(new User // Förfallen påminnelse — ska synas
+        {
+            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
+            IsActive = false, SuspensionReminderAt = DateTime.UtcNow.AddDays(-1), SuspensionReminderNote = "Kolla",
+        });
+        db.Users.Add(new User // Framtida påminnelse — ska INTE synas än
+        {
+            Name = "Bob", Email = "bob@example.com", PasswordHash = "x",
+            IsActive = false, SuspensionReminderAt = DateTime.UtcNow.AddDays(1),
+        });
+        db.Users.Add(new User // Avstängd men ingen påminnelse satt — ska INTE synas
+        {
+            Name = "Cleo", Email = "cleo@example.com", PasswordHash = "x",
+            IsActive = false,
+        });
+        db.Users.Add(new User // Aktiv — ska INTE synas oavsett datum
+        {
+            Name = "Dan", Email = "dan@example.com", PasswordHash = "x",
+            IsActive = true, SuspensionReminderAt = DateTime.UtcNow.AddDays(-1),
+        });
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db);
+        var result = Assert.IsType<OkObjectResult>(await controller.GetNotifications());
+        var list = Assert.IsAssignableFrom<System.Collections.IEnumerable>(result.Value).Cast<object>().ToList();
+
+        Assert.Single(list);
+    }
+
+    [Fact]
     public async Task SetStatus_UnknownUser_ReturnsNotFound()
     {
         using var db = NewDb();
