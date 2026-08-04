@@ -677,6 +677,69 @@ avfärdat till förmån för att återanvända `handleAdd`s redan beprövade
 mönster rakt av, vilket också gör beteendet identiskt med hur Mina källor
 redan fungerar (mindre att hålla synkat, en enda sanning för "hur en källa
 läggs till").
+## feat: e-postverifiering vid registrering, mjuk spärr (2026-08-04)
+
+**Mål:** Upptäckt under granskning av den nybyggda onboarding-wizarden —
+`User`-modellen hade inget verifieringskoncept alls, och `POST
+/api/auth/register` loggade in ett nytt konto direkt oavsett om
+e-postadressen som angavs faktiskt gick att nå. Användaren ville hålla
+kvar BÅDE Google-inloggning (`#297`, egen separat uppgift, väntar på att
+användaren skapar OAuth-uppgifter) OCH den vanliga e-post/lösenord-vägen
+i v1 — den här biten löser verifieringen för den senare.
+
+**Beslutad omfattning (uttryckligen avstämd innan kod):** mjuk spärr.
+Registrering fungerar exakt som innan (kontot loggas in direkt, inget
+steg blockeras) — en påminnelsebanderoll visas tills länken klickas, med
+en "skicka igen"-knapp. Ingen funktion låses.
+
+**Genomförande — nästan uteslutande en spegling av det redan befintliga
+lösenordsåterställningsflödet, inget nytt uppfanns:**
+- `EmailVerificationToken` (`backend/Models/`) är en nästan ordagrann
+  kopia av `PasswordResetToken` — samma GUID-token, samma
+  flaggad-inte-raderad `UsedAt`-hantering. Enda skillnaden: 48 timmars
+  giltighet istället för lösenordsåterställningens 1 timme (verifiering
+  är mindre tidskänsligt, folk kollar inte alltid mejlen direkt)
+- `User.EmailVerified` (ny `bool`, default `false`) — samma mönster som
+  redan etablerade `PushEnabled` i samma fil
+- `AuthService.RegisterAsync` skapar token + skickar mejl fire-and-forget
+  precis vid samma ställe `SendWelcomeAsync` redan anropas —
+  `IssueTokensAsync` (inloggningen) rörs inte, sker som innan
+  - `VerifyEmailAsync`/`ResendVerificationAsync` speglar
+    `ResetPasswordAsync`s valideringslogik rakt av (null/använd/utgången
+    → samma 400-svar)
+  - JWT fick en ny `emailVerified`-claim vid utfärdande — frontend läser
+    den via exakt samma `decodePayload`-mönster som redan används för
+    `role` i `AuthContext.tsx`, ingen extra nätverksrunda behövs för att
+    visa banderollen
+- **Extra fixat, inte uttryckligen efterfrågat men en uppenbar lucka i
+  precis den här funktionen:** `PUT /api/auth/me` (byt e-post) nollställer
+  nu `EmailVerified` och skickar automatiskt ett nytt bekräftelsemejl om
+  adressen faktiskt ändras — annars hade en redan bekräftad status
+  felaktigt fortsatt gälla en helt ny, overifierad adress
+- Frontend: `VerifyEmailPage.tsx` (ny, token-only-läge utan formulär,
+  speglar `ResetPasswordPage.tsx`s tidiga-return-mönster för saknad
+  token), en global, icke-blockerande banderoll i `App.tsx` (samma
+  `fixed top-0`-mönster som redan befintliga `ImpersonationBanner`),
+  `api/auth.ts` (ny, `verifyEmail`/`resendVerification` via `adminFetch`)
+
+**Verifiering — riktigt end-to-end, inte bara unit-tester:** `dotnet
+build`/`dotnet test` gröna (50/50, 7 nya tester för
+verify/resend-flödena), `npm run build` grönt. Manuellt mot lokal
+backend: registrerade två riktiga testkonton, fångade den faktiska
+verifieringslänken via en TILLFÄLLIG debug-`Console.WriteLine`
+(borttagen igen direkt efter, aldrig committad) eftersom ingen
+sqlite3-CLI eller Python fanns tillgänglig lokalt för att läsa token
+direkt ur databasen. Bekräftade: giltig token → 200 + `EmailVerified` sant
+i en ny inloggning; samma token igen → 400 (redan använd); helt
+påhittad token → 400; `resend-verification` på en redan verifierad
+användare → tydligt "redan bekräftad"-svar utan nytt mejl; på en
+overifierad användare → ny token skapas och ett nytt mejl skickas.
+
+**Andra vägar som hade kunnat fungera:** hård spärr (blockera det mesta
+av appen tills verifierad) — uttryckligen avfärdad efter en direkt fråga
+till användaren, till förmån för den mjuka varianten som inte river upp
+den redan byggda onboarding-wizarden eller riskerar att skrämma bort
+nyregistrerade med en vägg direkt efter kontoskapande.
 
 ---
 

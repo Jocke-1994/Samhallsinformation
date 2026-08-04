@@ -6,6 +6,8 @@ interface AuthContextType {
   isLoggedIn: boolean
   roll: SystemRoll
   aktivVy: SystemRoll
+  email: string | null
+  emailVerified: boolean
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string, acceptedTerms: boolean) => Promise<void>
   loginWithGoogle: (idToken: string, acceptedTerms: boolean) => Promise<void>
@@ -45,6 +47,15 @@ function decodeExp(token: string): number | null {
   return typeof exp === 'number' ? exp * 1000 : null
 }
 
+function parseEmail(token: string): string | null {
+  const email = decodePayload(token)?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress']
+  return typeof email === 'string' ? email : null
+}
+
+function parseEmailVerified(token: string): boolean {
+  return decodePayload(token)?.['emailVerified'] === 'true'
+}
+
 async function authRequest(url: string, body: object): Promise<TokenPair & { role: string; name: string }> {
   const res = await fetch(url, {
     method:  'POST',
@@ -62,8 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('si_token'))
   const refreshTokenRef = useRef<string | null>(localStorage.getItem('si_refresh_token'))
 
-  const isLoggedIn = token !== null
-  const roll       = token ? parseRole(token) : 'Användare'
+  const isLoggedIn    = token !== null
+  const roll          = token ? parseRole(token) : 'Användare'
+  const email         = token ? parseEmail(token) : null
+  const emailVerified = token ? parseEmailVerified(token) : false
 
   const [aktivVy, setAktivVy] = useState<SystemRoll>(
     () => (localStorage.getItem('si_aktiv_vy') as SystemRoll) ?? roll
@@ -150,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, roll, aktivVy, login, register, loginWithGoogle, logout, byttVy }}>
+    <AuthContext.Provider value={{ isLoggedIn, roll, aktivVy, email, emailVerified, login, register, loginWithGoogle, logout, byttVy }}>
       {children}
     </AuthContext.Provider>
   )

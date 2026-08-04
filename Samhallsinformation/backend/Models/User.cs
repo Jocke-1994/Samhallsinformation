@@ -18,5 +18,6 @@ public class User
     public DateTime? TermsAcceptedAt { get; set; }
     public DateTime? DeletedAt            { get; set; } // GDPR-radering — kontot anonymiseras i stället för att raderas fysiskt, se UserDeletionBackgroundService
     public DateTime? DeletionScheduledAt  { get; set; } // 24h ångerfönster — satt av AdminUsersController.Delete, körs av UserDeletionBackgroundService
+    public bool     EmailVerified { get; set; } = false;
     public DateTime CreatedAt    { get; set; } = DateTime.UtcNow;
 }

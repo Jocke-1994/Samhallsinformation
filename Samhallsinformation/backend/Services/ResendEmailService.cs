@@ -36,6 +36,25 @@ public class ResendEmailService : IEmailService
         await SendAsync(_fromNoreply, toEmail, "Återställ ditt lösenord", html);
     }
 
+    public async Task SendEmailVerificationAsync(string toEmail, string toName, string verifyLink)
+    {
+        var html = $"""
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
+              <h2 style="color:#7c3aed;margin-bottom:8px">Bekräfta din e-postadress</h2>
+              <p style="color:#334155">Hej {toName},</p>
+              <p style="color:#334155">Klicka på knappen nedan för att bekräfta att det här är din e-postadress.</p>
+              <a href="{verifyLink}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
+                Bekräfta e-post
+              </a>
+              <p style="color:#64748b;font-size:13px">Länken är giltig i 48 timmar. Du kan fortsätta använda ditt konto som vanligt även utan att klicka, men vissa funktioner kan komma att kräva en bekräftad adress längre fram.</p>
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+              <p style="color:#94a3b8;font-size:12px">Samhällsinformation &mdash; opartisk myndighetsinformation</p>
+            </div>
+            """;
+
+        await SendAsync(_fromNoreply, toEmail, "Bekräfta din e-postadress", html);
+    }
+
     public async Task SendWelcomeAsync(string toEmail, string toName)
     {
         var html = $"""

@@ -53,6 +53,13 @@ public class AuthService : IAuthService
         _ = _email.SendWelcomeAsync(user.Email, user.Name);
         await PushDispatcher.DispatchNewUserAsync(_db, _push, _frontendUrl, user);
 
+        var verificationToken = new EmailVerificationToken { UserId = user.Id };
+        _db.EmailVerificationTokens.Add(verificationToken);
+        await _db.SaveChangesAsync();
+
+        var verifyLink = $"{_frontendUrl}/verify-email?token={verificationToken.Token}";
+        _ = _email.SendEmailVerificationAsync(user.Email, user.Name, verifyLink);
+
         return await IssueTokensAsync(user);
     }
 
@@ -197,6 +204,41 @@ public class AuthService : IAuthService
 
         await _db.SaveChangesAsync();
         return AuthResult.Ok("Lösenordet är uppdaterat");
+    }
+
+    public async Task<AuthResult> VerifyEmailAsync(string token)
+    {
+        var verificationToken = await _db.EmailVerificationTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.Token == token);
+
+        if (verificationToken == null || verificationToken.UsedAt != null || verificationToken.ExpiresAt < DateTime.UtcNow)
+            return AuthResult.Fail(400, "Länken är ogiltig eller har gått ut");
+
+        verificationToken.User.EmailVerified = true;
+        verificationToken.UsedAt             = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+        return AuthResult.Ok("E-postadressen är bekräftad");
+    }
+
+    public async Task<AuthResult> ResendVerificationAsync(Guid userId)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+            return AuthResult.Fail(404, "Användaren hittades inte");
+
+        if (user.EmailVerified)
+            return AuthResult.Ok("E-postadressen är redan bekräftad");
+
+        var verificationToken = new EmailVerificationToken { UserId = user.Id };
+        _db.EmailVerificationTokens.Add(verificationToken);
+        await _db.SaveChangesAsync();
+
+        var verifyLink = $"{_frontendUrl}/verify-email?token={verificationToken.Token}";
+        _ = _email.SendEmailVerificationAsync(user.Email, user.Name, verifyLink);
+
+        return AuthResult.Ok("Ett nytt bekräftelsemejl har skickats");
     }
 
     private async Task<AuthResult> IssueTokensAsync(User user)
