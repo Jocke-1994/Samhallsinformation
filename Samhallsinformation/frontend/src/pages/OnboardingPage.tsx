@@ -77,7 +77,7 @@ export default function OnboardingPage() {
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-8">
 
           {steg === 'konto' && (
             <div className="flex flex-col items-center text-center gap-4">
@@ -87,7 +87,7 @@ export default function OnboardingPage() {
                 {email && <p className="text-sm text-slate-500 mt-1">{email}</p>}
               </div>
               <p className="text-sm text-slate-500 max-w-sm">
-                Ditt konto är klart. Nästa steg: välj vilka myndigheter du vill följa,
+                Ditt konto är skapat. Nästa steg: välj vilka myndigheter du vill följa,
                 så anpassar vi ditt flöde direkt.
               </p>
               <button
@@ -137,16 +137,16 @@ export default function OnboardingPage() {
                     : 'Inga valda än — lägg till närhelst under Mina källor.'}
                 </p>
               </div>
-              <div className="flex items-center gap-3 mt-2">
+              <div className="flex flex-col sm:flex-row items-center gap-3 mt-2 w-full">
                 <button
                   onClick={() => setSteg('kallor')}
-                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium rounded-lg transition-colors"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium rounded-lg transition-colors"
                 >
                   Tillbaka
                 </button>
                 <button
                   onClick={avsluta}
-                  className="px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="w-full sm:w-auto px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
                 >
                   Gå till mitt flöde
                 </button>
