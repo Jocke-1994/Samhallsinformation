@@ -13,6 +13,30 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## fix: Översikt-kortet "Användare" kopplat mot riktig data (2026-08-05)
+
+**Mål:** Efter att `GET /api/admin/users` byggdes (PR 2/5, session tidigare
+idag) finns riktiga konton — Admin Översikts "Användare"-kort visade
+fortfarande ett påhittat värde (`1284`, `"+12 senaste 7 dagarna"`) med en
+MOCK-badge, kvar sedan session 25:s genomgång.
+
+**Genomförande:** `Oversikt.tsx` hämtar nu `GET /api/admin/users` (samma
+`useQuery`-mönster som "Aktiva källor" redan använder mot
+`GET /api/admin/sources`). Kortets värde är antal konton där `deletedAt`
+är null (anonymiserade/raderade konton räknas inte som riktiga användare
+längre — de har ingen kvarvarande identitet). Underraden räknar riktiga
+nyregistreringar de senaste 7 dagarna från `createdAt`, istället för ett
+hårdkodat `+12`. MOCK-badgen borttagen för det här kortet specifikt —
+"Öppna ärenden"-kortet rördes inte (utanför scope, egen framtida uppgift).
+
+**Verifiering:** `tsc -b --noEmit`/`npm run build` gröna, `dotnet test`
+66/66 (ingen backend-ändring, ren frontend-koppling mot en redan
+existerande endpoint). End-to-end mot lokal backend: registrerade två
+konton, bekräftade att `GET /api/admin/users` innehåller `deletedAt`/
+`createdAt` i den form komponenten förväntar sig.
+
+---
+
 ## fix: 24h ångerfönster innan GDPR-radering verkställs (2026-08-05)
 
 **Mål:** Uppföljning direkt efter förra posten — användaren undrade hur lång
