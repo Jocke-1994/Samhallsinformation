@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams, useLocation, Link } from 'react-router'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useEffect, type FormEvent } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { fetchSources } from '../api/sources'
-import { fetchUserSources, saveUserSources, type SourcePrefUpdate } from '../api/userSources'
+import { saveUserSources, type SourcePrefUpdate } from '../api/userSources'
 import AllaKallorKort from '../components/Profile/MinaKallor/AllaKallorKort'
 import type { Source } from '../types'
 
@@ -12,43 +12,80 @@ const STEG_ORDNING: Steg[] = ['konto', 'kallor', 'klart']
 const STEG_LABEL: Record<Steg, string> = { konto: 'Konto', kallor: 'Källor', klart: 'Klart' }
 
 export default function OnboardingPage() {
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, register } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
   const [params] = useSearchParams()
   const redirect = params.get('redirect') ?? '/'
-  const { name, email } = (location.state ?? {}) as { name?: string; email?: string }
 
   const [steg, setSteg] = useState<Steg>('konto')
 
+  // Sidan är till för utloggade besökare som ska skapa konto — inget
+  // konto finns förrän sista steget, så en redan inloggad användare har
+  // inget att göra här.
   useEffect(() => {
-    if (!isLoggedIn) navigate('/login?redirect=/onboarding', { replace: true })
-  }, [isLoggedIn, navigate])
+    if (isLoggedIn) navigate(redirect, { replace: true })
+  }, [isLoggedIn, navigate, redirect])
 
-  const queryClient = useQueryClient()
-  const { data: sources = [] } = useQuery<Source[]>({ queryKey: ['sources'], queryFn: fetchSources, enabled: isLoggedIn })
-  const { data: prefs = [] } = useQuery({ queryKey: ['user-sources'], queryFn: fetchUserSources, enabled: isLoggedIn })
+  // Steg 1
+  const [name, setName]         = useState('')
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm]   = useState('')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [kontoFel, setKontoFel] = useState<string | null>(null)
 
-  const mutation = useMutation({
-    mutationFn: saveUserSources,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['user-sources'] }),
-  })
+  // Steg 2 — bara lokalt state, inget konto finns att spara mot än
+  const [valdaKällor, setValdaKällor] = useState<Set<number>>(new Set())
+  const { data: sources = [] } = useQuery<Source[]>({ queryKey: ['sources'], queryFn: fetchSources })
 
-  if (!isLoggedIn) return null
+  // Steg 3
+  const [skapar, setSkapar]   = useState(false)
+  const [slutFel, setSlutFel] = useState<string | null>(null)
 
-  const activeIds     = new Set(prefs.filter(p => p.isActive).map(p => p.sourceId))
-  const activeSources = sources.filter(s => activeIds.has(s.id))
+  if (isLoggedIn) return null
 
-  function handleAdd(ids: number[]) {
-    let nastaOrdning = prefs.filter(p => p.isActive).length
-    const uppdateringar: SourcePrefUpdate[] = ids.map(sourceId => {
-      const befintlig = prefs.find(p => p.sourceId === sourceId)
-      return { sourceId, isActive: true, sortOrder: befintlig?.sortOrder ?? nastaOrdning++ }
-    })
-    mutation.mutate(uppdateringar)
+  const activeSources = sources.filter(s => valdaKällor.has(s.id))
+
+  function handleKontoNasta(e: FormEvent) {
+    e.preventDefault()
+    setKontoFel(null)
+    if (!name.trim()) return setKontoFel('Ange ditt namn')
+    if (password !== confirm) return setKontoFel('Lösenorden matchar inte')
+    if (password.length < 8) return setKontoFel('Lösenordet måste vara minst 8 tecken')
+    if (!acceptedTerms) return setKontoFel('Du måste godkänna användarvillkoren')
+    setSteg('kallor')
   }
 
-  function avsluta() { navigate(redirect, { replace: true }) }
+  function avbryt() {
+    navigate('/', { replace: true })
+  }
+
+  function handleAdd(ids: number[]) {
+    setValdaKällor(prev => new Set([...prev, ...ids]))
+  }
+
+  async function slutfor() {
+    setSlutFel(null)
+    setSkapar(true)
+    try {
+      await register(name, email, password, acceptedTerms)
+    } catch (err) {
+      setSkapar(false)
+      setSlutFel(err instanceof Error ? err.message : 'Något gick fel')
+      return
+    }
+
+    if (valdaKällor.size > 0) {
+      const uppdateringar: SourcePrefUpdate[] = [...valdaKällor].map((sourceId, i) => ({
+        sourceId, isActive: true, sortOrder: i,
+      }))
+      // Icke-blockerande — kontot är redan riktigt och fungerande även om
+      // det här skulle misslyckas, källor kan alltid läggas till senare.
+      await saveUserSources(uppdateringar).catch(() => {})
+    }
+
+    navigate(redirect, { replace: true })
+  }
 
   const stegIndex = STEG_ORDNING.indexOf(steg)
 
@@ -56,46 +93,98 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-xl">
 
-        {/* Header: stegindikator + hoppa över */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-          <div className="flex items-center gap-2">
-            {STEG_ORDNING.map((s, i) => (
-              <div key={s} className="flex items-center gap-2">
-                <span className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
-                  i === stegIndex ? 'bg-violet-600 text-white'
-                    : i < stegIndex ? 'bg-violet-100 text-violet-700'
-                    : 'bg-slate-100 text-slate-400'
-                }`}>
-                  {STEG_LABEL[s]}
-                </span>
-                {i < STEG_ORDNING.length - 1 && <span className="text-slate-300">→</span>}
-              </div>
-            ))}
-          </div>
-          <button onClick={avsluta} className="text-xs text-slate-400 hover:text-slate-600 font-medium">
-            Hoppa över introduktionen
-          </button>
+        {/* Stegindikator */}
+        <div className="flex items-center gap-2 mb-6">
+          {STEG_ORDNING.map((s, i) => (
+            <div key={s} className="flex items-center gap-2">
+              <span className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
+                i === stegIndex ? 'bg-violet-600 text-white'
+                  : i < stegIndex ? 'bg-violet-100 text-violet-700'
+                  : 'bg-slate-100 text-slate-400'
+              }`}>
+                {STEG_LABEL[s]}
+              </span>
+              {i < STEG_ORDNING.length - 1 && <span className="text-slate-300">→</span>}
+            </div>
+          ))}
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-8">
 
           {steg === 'konto' && (
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-violet-100 flex items-center justify-center text-2xl">👋</div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">Välkommen{name ? `, ${name}` : ''}!</h1>
-                {email && <p className="text-sm text-slate-500 mt-1">{email}</p>}
+            <div>
+              <div className="text-center mb-6">
+                <h1 className="text-xl font-bold text-slate-900">Skapa konto</h1>
+                <p className="text-sm text-slate-500 mt-1">Kom igång på under en minut.</p>
               </div>
-              <p className="text-sm text-slate-500 max-w-sm">
-                Ditt konto är skapat. Nästa steg: välj vilka myndigheter du vill följa,
-                så anpassar vi ditt flöde direkt.
+              <form onSubmit={handleKontoNasta} className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Namn</label>
+                  <input
+                    type="text" value={name} onChange={e => setName(e.target.value)}
+                    placeholder="Ditt namn" required
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">E-post</label>
+                  <input
+                    type="email" value={email} onChange={e => setEmail(e.target.value)}
+                    placeholder="din@epost.se" required
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Lösenord</label>
+                  <input
+                    type="password" value={password} onChange={e => setPassword(e.target.value)}
+                    placeholder="Minst 8 tecken" required
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Bekräfta lösenord</label>
+                  <input
+                    type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
+                    placeholder="••••••••" required
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  />
+                </div>
+                <label className="flex items-start gap-2.5 text-sm text-slate-600">
+                  <input
+                    type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)}
+                    className="mt-0.5 rounded border-slate-300 text-violet-600 focus:ring-violet-400 shrink-0"
+                  />
+                  <span>
+                    Jag godkänner{' '}
+                    <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:text-violet-500 font-medium">
+                      användarvillkoren och integritetspolicyn
+                    </Link>
+                  </span>
+                </label>
+                {kontoFel && (
+                  <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3.5 py-2.5">{kontoFel}</p>
+                )}
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg text-sm transition-colors mt-1"
+                >
+                  Nästa
+                </button>
+                <button
+                  type="button"
+                  onClick={avbryt}
+                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium rounded-lg text-sm transition-colors"
+                >
+                  Avbryt
+                </button>
+              </form>
+              <p className="text-center text-sm text-slate-500 mt-5">
+                Har du redan ett konto?{' '}
+                <Link to={`/login${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`} className="text-violet-600 hover:text-violet-500 font-medium">
+                  Logga in här
+                </Link>
               </p>
-              <button
-                onClick={() => setSteg('kallor')}
-                className="mt-2 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
-              >
-                Nästa
-              </button>
             </div>
           )}
 
@@ -105,7 +194,7 @@ export default function OnboardingPage() {
                 <h1 className="text-lg font-bold text-slate-900">Vilka källor vill du följa?</h1>
                 <p className="text-sm text-slate-500 mt-1">Du kan alltid ändra det här senare under Mina källor.</p>
               </div>
-              <AllaKallorKort sources={sources} activeIds={activeIds} onAdd={handleAdd} />
+              <AllaKallorKort sources={sources} activeIds={valdaKällor} onAdd={handleAdd} />
               <div className="flex items-center justify-between mt-2">
                 <button
                   onClick={() => setSteg('konto')}
@@ -125,11 +214,11 @@ export default function OnboardingPage() {
 
           {steg === 'klart' && (
             <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-green-100 flex items-center justify-center text-2xl">✓</div>
-              <h1 className="text-xl font-bold text-slate-900">Klart!</h1>
+              <div className="w-14 h-14 rounded-2xl bg-violet-100 flex items-center justify-center text-2xl">👋</div>
+              <h1 className="text-xl font-bold text-slate-900">Redo att skapa ditt konto?</h1>
               <div className="text-sm text-slate-600 bg-slate-50 rounded-xl px-5 py-4 w-full text-left flex flex-col gap-1.5">
-                {name && <p><span className="font-medium">Namn:</span> {name}</p>}
-                {email && <p><span className="font-medium">E-post:</span> {email}</p>}
+                <p><span className="font-medium">Namn:</span> {name}</p>
+                <p><span className="font-medium">E-post:</span> {email}</p>
                 <p>
                   <span className="font-medium">Källor:</span>{' '}
                   {activeSources.length > 0
@@ -137,23 +226,25 @@ export default function OnboardingPage() {
                     : 'Inga valda än — lägg till närhelst under Mina källor.'}
                 </p>
               </div>
+              {slutFel && (
+                <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3.5 py-2.5 w-full">{slutFel}</p>
+              )}
               <div className="flex flex-col sm:flex-row items-center gap-3 mt-2 w-full">
                 <button
                   onClick={() => setSteg('kallor')}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium rounded-lg transition-colors"
+                  disabled={skapar}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-600 text-sm font-medium rounded-lg transition-colors"
                 >
                   Tillbaka
                 </button>
                 <button
-                  onClick={avsluta}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  onClick={slutfor}
+                  disabled={skapar}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white text-sm font-medium rounded-lg transition-colors"
                 >
-                  Gå till mitt flöde
+                  {skapar ? 'Skapar konto…' : 'Gå till mitt flöde'}
                 </button>
               </div>
-              <Link to="/profil?section=support" className="text-xs text-violet-600 hover:text-violet-500 font-medium">
-                Har du frågor? Läs vanliga frågor och svar
-              </Link>
             </div>
           )}
 

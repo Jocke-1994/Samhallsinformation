@@ -2,7 +2,7 @@ namespace Samhallsinformation.Application.Auth;
 
 public interface IAuthService
 {
-    Task<AuthResult> RegisterAsync(string name, string email, string password);
+    Task<AuthResult> RegisterAsync(string name, string email, string password, bool acceptedTerms);
 
     Task<AuthResult> LoginAsync(string email, string password);
 

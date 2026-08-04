@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
@@ -11,6 +12,7 @@ using Samhallsinformation.Models;
 
 [ApiController]
 [Route("api/auth")]
+[EnableRateLimiting("auth")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService          _auth;
@@ -32,7 +34,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req) =>
-        ToActionResult(await _auth.RegisterAsync(req.Name, req.Email, req.Password));
+        ToActionResult(await _auth.RegisterAsync(req.Name, req.Email, req.Password, req.AcceptedTerms));
 
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshRequest req) =>
@@ -128,7 +130,7 @@ public class AuthController : ControllerBase
 }
 
 public record LoginRequest(string Email, string Password);
-public record RegisterRequest(string Name, string Email, string Password);
+public record RegisterRequest(string Name, string Email, string Password, bool AcceptedTerms);
 public record RefreshRequest(string RefreshToken);
 public record UpdateMeRequest(string? Name, string? Email);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
