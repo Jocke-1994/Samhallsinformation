@@ -111,10 +111,27 @@ export default function VillkorPage() {
           </Section>
 
           <Section title="Kontoavstängning">
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
+              Vi förbehåller oss rätten att stänga av ett konto som missbrukar tjänsten, till
+              exempel genom att:
+            </p>
+            <ul className="space-y-2 mb-3">
+              {[
+                'Skapa flera eller falska konton, t.ex. för att kringgå gränser för antal inloggningsförsök',
+                'Skicka skräppost eller trakasserier via feedback-knappen eller kundtjänstboten',
+                'Skrapa eller överbelasta tjänstens API automatiserat, utöver normal användning',
+                'Försöka kringgå eller manipulera tjänstens säkerhetsfunktioner',
+                'Använda tjänsten på ett sätt som bryter mot svensk lag',
+              ].map(item => (
+                <li key={item} className="flex items-start gap-2.5 text-slate-600 dark:text-slate-400">
+                  <span className="mt-2 w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
+                  <span className="leading-relaxed">{item}</span>
+                </li>
+              ))}
+            </ul>
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              Vi förbehåller oss rätten att stänga av ett konto som missbrukar tjänsten. Ditt
-              konto raderas inte automatiskt vid en avstängning — kontakta oss om du tror att
-              det skett av misstag.
+              Ditt konto raderas inte automatiskt vid en avstängning — kontakta oss om du tror
+              att det skett av misstag.
             </p>
           </Section>
 
