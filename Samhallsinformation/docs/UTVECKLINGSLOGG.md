@@ -13,6 +13,39 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: rate limiting på /api/auth/* (PR 4/5) (2026-08-04)
+
+**Mål:** Sista kvarstående punkten på issue `#295`s egen checklista — inget
+skydd mot upprepade snabba anrop mot inloggning/registrering/refresh, alltså
+öppet för brute force mot lösenord eller för att spamma nya konton. Del av
+den fyra-PR-plan som beslutades efter en genomgång av `User`-modellens
+attribut (se `[[project_...]]`-minnena för PR 1–3).
+
+**Genomförande:** Inbyggd `Microsoft.AspNetCore.RateLimiting` (finns sedan
+.NET 7, inget nytt paket). En namngiven policy `"auth"` i `Program.cs`,
+partitionerad per IP (`RateLimitPartition.GetFixedWindowLimiter` nyckad på
+`RemoteIpAddress`) — **viktigt val:** `AddFixedWindowLimiter` utan
+partitionering delar en enda räknare mellan ALLA anropare oavsett IP, vilket
+hade gjort hela tjänsten otillgänglig för alla efter fem inloggningar totalt
+från vem som helst. Gräns satt till 5 försök/minut, matchar exakt vad
+`#295`s checklista själv föreslog. `[EnableRateLimiting("auth")]` på hela
+`AuthController` (alla dess endpoints, inte bara login) — `OnRejected`
+skriver ett eget 429-svar med samma `{ error: "..." }`-format som resten av
+auth-felen använder, så frontend inte behöver ett specialfall.
+
+Byggd oberoende av PR 1–3 (ren `Program.cs`/`AuthController.cs`-ändring,
+rör ingen datamodell) — grenad direkt av `main`, inte av
+`feat/wizard-deferred-registration`.
+
+**Verifiering:** `dotnet build`/`dotnet test` gröna (43/43, main saknar
+ännu PR 1–3:s nya testfall). Lokal end-to-end: sex snabba
+`POST /api/auth/login`-anrop med fel lösenord → fem `401` följt av `429`
+med rätt felmeddelande. Bekräftade samtidigt att en obesläktad route
+(`GET /api/sources`) fortsatt gav `200` — begränsningen är faktiskt
+scopad till auth-rutterna, inte global.
+
+---
+
 ## feat: villkorsgodkännande vid registrering (PR 3/5) (2026-08-04)
 
 **Mål:** Del 3 av 5. Gör `TermsAcceptedAt`-fältet (PR 1/5) faktiskt
