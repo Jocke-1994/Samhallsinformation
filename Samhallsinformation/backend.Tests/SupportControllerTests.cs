@@ -40,12 +40,28 @@ public class SupportControllerTests
     }
 
     [Fact]
-    public async Task Create_AnonymousWithoutContactEmail_ReturnsBadRequest()
+    public async Task Create_AnonymousWithoutContactEmail_StillCreatesTicket()
     {
+        // E-post är frivilligt — bara nödvändigt om avsändaren vill ha svar,
+        // inte ett krav för att skicka in feedback överhuvudtaget.
         using var db = NewDb();
         var controller = NewController(db, Anonymous());
 
         var result = await controller.Create(new CreateTicketRequest(null, null, "Hej, jag har en fråga", "feedback", null, null));
+
+        Assert.IsType<OkObjectResult>(result);
+        var ticket = Assert.Single(db.SupportTickets);
+        Assert.Null(ticket.CreatedByUserId);
+        Assert.Null(ticket.ContactEmail);
+    }
+
+    [Fact]
+    public async Task Create_WithoutMessage_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var controller = NewController(db, Anonymous());
+
+        var result = await controller.Create(new CreateTicketRequest(null, null, "", "feedback", null, null));
 
         Assert.IsType<BadRequestObjectResult>(result);
         Assert.Empty(db.SupportTickets);

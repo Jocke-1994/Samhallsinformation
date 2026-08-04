@@ -5,6 +5,7 @@ import { extraheraPolisenTyp, extraheraPolisenOmrade } from '../Profile/MinaKall
 import PrenumerationsKlocka from './PrenumerationsKlocka'
 import { useAuth } from '../../context/AuthContext'
 import { useSavedEvents } from '../../context/SavedEventsContext'
+import { useFlags } from '../../context/FeatureFlagsContext'
 
 interface Props {
   event: CanonicalEvent
@@ -59,6 +60,7 @@ function EventContent({ content }: { content: string }) {
 
 export default function NewsItem({ event, isRead, sourceName, sourceShortName, viewMode = 'allt', checkbox }: Props) {
   const { isLoggedIn } = useAuth()
+  const flaggor = useFlags()
   const { sparade, toggleSparad } = useSavedEvents()
   const [expanded, setExpanded] = useState(false)
   const ärSparad = sparade.has(event.id)
@@ -135,7 +137,7 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
             </div>
           )}
 
-          {isLoggedIn && (
+          {flaggor.flode_sparat && isLoggedIn && (
             <button
               onClick={e => { e.stopPropagation(); toggleSparad(event.id) }}
               title={ärSparad ? 'Ta bort från Sparat' : 'Spara den här händelsen'}

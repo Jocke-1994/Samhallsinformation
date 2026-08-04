@@ -36,9 +36,10 @@ public class SupportController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateTicketRequest req)
     {
         var userId = CurrentUserId;
-        if (userId == null && string.IsNullOrWhiteSpace(req.ContactEmail))
-            return BadRequest("ContactEmail krävs för anonyma ärenden.");
 
+        // ContactEmail är frivilligt — bara nödvändigt om avsändaren vill ha
+        // svar, inte för att skicka in något. Ett anonymt inskick utan e-post
+        // är ett giltigt, avsiktligt "kasta över muren"-meddelande.
         if (string.IsNullOrWhiteSpace(req.Message))
             return BadRequest("Message krävs.");
 

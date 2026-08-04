@@ -1,4 +1,6 @@
 export type FlagKey =
+  | 'flode_olasta_badge'
+  | 'flode_sparat'
   | 'kallor_lagg_till'
   | 'kallor_aktiva'
   | 'kallor_rekommenderade'
@@ -41,6 +43,15 @@ export interface FlagGrupp {
 }
 
 export const FLAG_GRUPPER: FlagGrupp[] = [
+  {
+    key: 'flode',
+    label: 'Flöde',
+    ikon: '📰',
+    flaggor: [
+      { key: 'flode_olasta_badge', label: 'Olästa-badge',   beskrivning: 'Visa antal olästa händelser i huvudrubriken',        defaultAktiv: false },
+      { key: 'flode_sparat',       label: 'Sparat',         beskrivning: 'Bokmärk händelser och bläddra bland sparade senare', defaultAktiv: false },
+    ],
+  },
   {
     key: 'mina-kallor',
     label: 'Mina källor',
