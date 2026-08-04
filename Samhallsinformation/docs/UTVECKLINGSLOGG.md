@@ -48,6 +48,70 @@ detta fältet blir i vägen.
 
 ---
 
+## feat: skjut upp kontoskapande till sista steget i wizarden (2026-08-04)
+
+**Mål:** Användaren pekade ut att "Ditt konto är skapat" på wizardens
+första steg kändes fel — kontot borde inte kännas klart förrän man
+faktiskt klickar "Gå till mitt flöde". Stämde inte tekniskt heller:
+`POST /api/auth/register` skedde redan när formuläret skickades in,
+INNAN wizarden ens visades. Samma problem gjorde en efterfrågad
+"Avbryt"-knapp missvisande — kontot fanns redan i databasen vid det
+laget, Avbryt kunde bara logga ut, inte ångra skapandet.
+
+**Beslutad lösning (uttryckligt vägval mot en mindre, kosmetisk fix):**
+`RegisterPage.tsx` och `OnboardingPage.tsx` slogs ihop till EN sida.
+Namn/e-post/lösenord (steg 1) och källval (steg 2) lever nu bara i
+wizardens lokala React-state — inget skickas till backend förrän sista
+klicket. "Gå till mitt flöde" gör det faktiska arbetet i sekvens:
+`register(...)` (skapar kontot + loggar in), sedan — om källor valts —
+ett icke-blockerande `saveUserSources(...)`-anrop (kontot är redan
+riktigt och fungerande även om det här skulle misslyckas). "Avbryt" på
+steg 1 är nu en genuint sann avbrytning: bara `navigate('/')`, inget
+API-anrop existerar överhuvudtaget innan sista steget (verifierat genom
+att grep:a filen efter varje `await`/API-anrop — bara två finns, båda
+inuti knapphandlern för "Gå till mitt flöde").
+
+**Sidoeffekter av omstruktureringen:**
+- `/register`-routen renderar nu `OnboardingPage` direkt,
+  `RegisterPage.tsx` och `/onboarding`-routen är borttagna helt — inget
+  länkade till `/onboarding` separat längre
+  - Auth-guard vänd om: sidan omdirigerar nu BORT en redan inloggad
+    besökare (samma princip som `/login`), istället för att kräva
+    inloggning
+  - Steg 2:s källhantering kopplades om från `fetchUserSources`/
+    `saveUserSources` (kräver autentiserad session) till rent lokalt
+    `Set<number>`-state — bara `fetchSources()` (publik, okrypterad
+    endpoint) används för att lista valbara källor under wizarden
+  - Global "Hoppa över introduktionen"-länk togs bort — den saknade
+    längre en sammanhängande betydelse innan ett konto ens finns att
+    hoppa förbi
+  - **Genuin fördel med omstruktureringen, inte bara kosmetisk:** ett
+    dubblettmejl (409 "E-postadressen används redan") upptäcks
+    fortfarande innan något skickas iväg för riktigt — felet visas nu på
+    sista steget med möjlighet att gå "Tillbaka" och rätta e-posten,
+    istället för att som tidigare bara kunna hända direkt vid
+    formulärinlämning
+
+**Verifiering:** `npm run build` grönt. Kunde inte klicka igenom hela
+flödet i webbläsaren pga upprepad browser-automation-instabilitet (samma
+återkommande problem denna session — flera nya försök gjordes, gav upp
+efter att ha nått samma tröskel som tidigare gånger). Kompenserade med
+två saker istället: (1) statisk kodgranskning — `grep` efter varje
+`await`/API-anrop i filen bekräftar att bara `register()` och
+`saveUserSources()` finns, båda i "Gå till mitt flöde"-handlern, inget
+annat ställe gör nätverksanrop; (2) `curl`-verifiering av exakt samma
+anropssekvens mot en riktig lokal backend — registrering följt av
+direkt källsparning fungerar, dubblettmejl ger korrekt 409 med samma
+felmeddelande som visas i UI:t. Upptäckte och löste under tiden ett
+separat, orelaterat testmiljöproblem: en gammal, låst bakgrundsprocess
+fick de första `dotnet run`-försöken att tyst misslyckas, vilket gjorde
+att tidiga `curl`-anrop av misstag träffade en helt annan, förlegad
+backend-process — upptäckt genom att en `emailVerified`-JWT-claim (hör
+till en annan, ännu inte mergad gren) dök upp i svaret trots att den
+här grenen inte har den koden alls.
+
+---
+
 ## feat: onboarding-wizard på riktigt (Konto → Källor → Klart) (2026-08-04)
 
 **Mål:** Punkt 2 i den bestämda ordningen innan registrering kan öppnas
