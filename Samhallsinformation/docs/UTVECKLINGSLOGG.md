@@ -13,6 +13,52 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: flagg-roadmap-status flyttad in i idé-pipelinen, "Kommande funktioner" skrotad (2026-08-04)
+
+**Mål:** Direkt efter att idé-pipelinens tre PR:ar mergats påpekade
+användaren en genuin överlappning: den fristående "Kommande funktioner"-
+sidan (byggd tidigare samma session på `feat/admin-kommande-funktioner`,
+men ALDRIG mergad/PR:ad) visar i praktiken samma sak som en idés
+"Lanseringsklar"-läge i den nya pipelinen — bara på ett annat ställe,
+härlett från en annan datakälla (`featureFlags.ts` direkt, inte
+`FeatureIdea`-tabellen).
+
+**Varför det var ett genuint problem, inte bara kosmetiskt:** projektet har
+redan blivit bränt av precis den här typen av duplicering en gång (de
+divergerande `Arende`-typerna, sessionslogg 25). Att ha två separata
+adminsidor som båda svarar på "vad är byggt men inte lanserat?" hade
+riskerat samma sak — de kan tystna glida isär.
+
+**Lösning:** Ingen sammanslagning av datamodeller (det är fortfarande två
+olika, legitima begrepp — se nedan) utan en **visuell** sammanslagning:
+`IdeDetaljModal.tsx` slår nu upp `idea.flagKey` mot `FLAG_DEFINITIONER`
+(från `featureFlags.ts`) och visar flaggans `roadmap`/`roadmapSedan`/
+`roadmapPrNummer`-info (samma PR-länkar och "väntat X dagar"-badge som den
+skrotade sidan hade) direkt i idéns egen beskrivningssektion, om en
+matchande flagga med roadmap-data finns. `FlagDefinition`-typen i
+`featureFlags.ts` fick tillbaka de tre fälten (`roadmap`/`roadmapSedan`/
+`roadmapPrNummer`) och datan för `flode_sparat`/`notif_push`/
+`support_arenden` — själva `KommandeFunktioner.tsx`-komponenten och dess
+`Oversikt.tsx`-dashboardkort byggdes INTE om, eftersom de aldrig mergades
+och den fristående sidan nu är överflödig. Grenen `feat/admin-kommande-
+funktioner` raderades helt (lokalt och på GitHub).
+
+**Varför inte en fullständig sammanslagning av datamodellerna:** `Kommande
+funktioner` var en *härledd* vy — den kan aldrig ljuga om vad som faktiskt
+är kodat, eftersom den läser `featureFlags.ts` direkt. Idé-pipelinen är en
+*process*-vy — den spårar sådant som inte ens har en flagga än (brainstorm,
+triage). De svarar på olika frågor och har olika käll-sanningar; att slå
+ihop dem till EN datamodell hade tvingat antingen pipelinen att känna till
+frontend-kodens flaggor (omöjligt för backend) eller flaggsystemet att bli
+databasdrivet (en mycket större omställning, inte motiverad av det här).
+Den lätta lösningen — visa flaggans data INUTI idévyn när en länk finns,
+annars bara den enkla textraden `Flagga: {key}` — täcker samma behov utan
+att blanda ihop källorna.
+
+**Verifiering:** `npm run build` grönt.
+
+---
+
 ## feat: Funktionsidé-pipeline-UI i admin (2026-08-04, PR 3/3)
 
 **Mål:** Del 3 av 3, den sista biten i idé-pipelinen (se PR 1–2 för
