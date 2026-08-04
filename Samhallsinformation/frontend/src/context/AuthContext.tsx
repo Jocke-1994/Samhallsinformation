@@ -7,7 +7,7 @@ interface AuthContextType {
   roll: SystemRoll
   aktivVy: SystemRoll
   login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string) => Promise<void>
+  register: (name: string, email: string, password: string, acceptedTerms: boolean) => Promise<void>
   logout: () => void
   byttVy: (vy: SystemRoll) => void
 }
@@ -121,8 +121,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     applyTokens(data)
   }
 
-  async function register(name: string, email: string, password: string): Promise<void> {
-    const data = await authRequest(`${API_BASE}/api/auth/register`, { name, email, password })
+  async function register(name: string, email: string, password: string, acceptedTerms: boolean): Promise<void> {
+    const data = await authRequest(`${API_BASE}/api/auth/register`, { name, email, password, acceptedTerms })
     applyTokens(data)
   }
 
