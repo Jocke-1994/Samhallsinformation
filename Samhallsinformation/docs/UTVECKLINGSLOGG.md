@@ -13,6 +13,41 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: fyra pre-launch-fält på User (PR 1/5) (2026-08-04)
+
+**Mål:** Under granskning av registreringsflödet identifierade
+användaren fyra saker som saknas innan registrering kan öppnas publikt:
+spårning av hur ett konto loggade in (förberedelse för Google OAuth,
+`#297`), möjlighet att stänga av ett missbrukat konto, spårning av
+villkorsgodkännande, och rate limiting på auth-endpoints (sista punkten
+på `#295`s checklista). Det här är del 1 av 5 — bara schemat.
+
+**Genomförande:** Fem nya fält på `User.cs`, alla i samma stil som
+redan etablerade `PushEnabled` (plain properties, inga separata
+tabeller): `AuthProvider` (string, default `"local"` — bara
+förberedelse, ingen Google-inloggning byggs i den här omgången, det
+kräver att användaren skapar OAuth-uppgifter i Google Cloud Console
+först, ett separat blockerat spår), `IsActive` (bool, default `true`),
+`SuspendedAt`/`SuspendedReason` (nullable, ifylls vid avstängning),
+`TermsAcceptedAt` (nullable, sätts av servern — inte klienten — vid
+lyckad registrering). Migration följer exakt samma raw-SQL-Postgres-
+block-mönster som `AddPushSupport` använde för att lägga till
+`PushEnabled` på samma tabell (`ALTER TABLE "Users" ADD COLUMN IF NOT
+EXISTS ...`).
+
+**Verifiering:** `dotnet build`/`dotnet test` gröna (43/43, inga
+regressioner), `dotnet ef database update` applicerad mot lokal SQLite
+utan fel.
+
+**Andra vägar som hade kunnat fungera:** en full `UserExternalLogin`-
+tabell (stödjer flera länkade inloggningssätt per konto) istället för
+en enkel `AuthProvider`-sträng — avfärdat som för tidigt eftersom ingen
+Google-inloggning finns att koppla mot än; en sträng är tillräcklig
+förberedelse, och en riktig tabell kan läggas till senare utan att
+detta fältet blir i vägen.
+
+---
+
 ## feat: skjut upp kontoskapande till sista steget i wizarden (2026-08-04)
 
 **Mål:** Användaren pekade ut att "Ditt konto är skapat" på wizardens
