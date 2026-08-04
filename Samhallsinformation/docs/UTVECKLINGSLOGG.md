@@ -13,6 +13,42 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## fix: e-post ska aldrig krävas för att skicka in feedback (2026-08-04)
+
+**Mål:** Användaren läste igenom kunskapsbas-underlaget för kundtjänstboten
+och var oense med en policy jag skrivit in: att e-post krävs för anonyma
+inskick. Rätt princip: e-post behövs bara om avsändaren vill ha svar, aldrig
+för att skicka in något överhuvudtaget.
+
+**Vad hände på vägen:** `SupportController.Create` hade sedan PR #398 en
+explicit kontroll — `if (userId == null && ContactEmail saknas) return
+BadRequest(...)`. Togs bort helt. `ContactEmail`/`ContactName` var redan
+nullable i datamodellen (`SupportTicket.cs`), så ingen migration behövdes —
+det här var en ren policyändring i valideringslogiken, inte ett
+schemaproblem.
+
+**Följdändringar:** `FeedbackButton.tsx` hade fått ett `required={!isLoggedIn}`
+på e-postfältet i PR #400, exakt den policyn som nu är fel — togs bort, fältet
+är nu alltid frivilligt (`useAuth`-importen blev därmed oanvänd, städad bort).
+Testet `Create_AnonymousWithoutContactEmail_ReturnsBadRequest` bytte namn och
+mening till `Create_AnonymousWithoutContactEmail_StillCreatesTicket` (verifierar
+nu motsatsen), och ett nytt test lades till för det som faktiskt fortfarande
+ska ge `400`: ett helt tomt meddelande. Båda kundtjänstbot-dokumenten
+(`docs/K_BOT/`) uppdaterades i samma veva så de inte längre motsäger den
+rättade policyn.
+
+**Andra möjliga lösningar, inte valda:**
+- Kunnat behålla kravet men bara för `channel: "feedback"` (inte för
+  `arendehantering`, som ändå bara är tillgängligt för inloggade med redan
+  känd e-post) — onödigt, `arendehantering` kräver redan inloggning i
+  praktiken (`ArendehanteringKort.tsx` är bara nåbar via Profil), så
+  channel-specifik logik hade inte tillfört något.
+
+**Verifiering:** `dotnet build`/`dotnet test` (30/30 gröna, inkl. det
+omdöpta och det nya testet), `npm run build` grönt.
+
+---
+
 ## fix: mobilanpassning av Ärendehantering + profilens Uppdateringar (2026-08-04)
 
 **Mål:** Ett kodbaserat mobilaudit av alla sidor besökare+medlemmar kan nå

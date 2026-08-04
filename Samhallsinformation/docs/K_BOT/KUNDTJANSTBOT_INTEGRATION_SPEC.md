@@ -33,13 +33,14 @@ inskick (samma endpoint som webbsidans Feedback-knapp redan använder sedan
 ```
 
 Fältkrav:
-- `message` (obligatoriskt) — den faktiska texten. Rekommenderat: hela
-  konversationshistoriken formaterad som ren text, inte bara sista meddelandet,
-  så supportpersonen har full kontext.
-- `contactEmail` (obligatoriskt om ingen inloggad Samhällsinformation-
-  användare kan identifieras — vilket är det normala fallet, boten känner
-  inte till kontots inloggningsstatus) — be besökaren om en e-postadress
-  innan konversationen skickas, annars svarar API:et `400 Bad Request`.
+- `message` (obligatoriskt, enda krävda fältet) — den faktiska texten.
+  Rekommenderat: hela konversationshistoriken formaterad som ren text, inte
+  bara sista meddelandet, så supportpersonen har full kontext.
+- `contactEmail` (helt frivilligt) — bara nödvändigt om besökaren vill ha
+  svar. Ett inskick utan e-post är giltigt och skapas precis som vanligt,
+  men ingen kan då återkoppla till besökaren. Fråga gärna "vill du ha svar? I
+  så fall, vilken e-post?" i chatten, men skicka ändå in även om svaret är nej/
+  inget.
 - `subject`/`category` — valfria, faller tillbaka till `"Feedback"` om de
   utelämnas.
 - `channel` — sätt till `"kundtjanstbot"` (en ny sträng, inte tidigare
@@ -57,8 +58,8 @@ Fältkrav:
 { "id": "guid-här", "ticketNumber": 42 }
 ```
 
-`200 OK`. Vid fel (t.ex. saknad `contactEmail` för anonymt inskick):
-`400 Bad Request` med en textförklaring i body.
+`200 OK`. Vid fel (t.ex. tom `message`): `400 Bad Request` med en
+textförklaring i body.
 
 ## Vad som händer efter
 
@@ -74,5 +75,5 @@ oavsett kanal.
 - En explicit "prata med en människa"-knapp i chattgränssnittet.
 - ELLER: automatiskt när boten inte kan svara med tillräcklig säkerhet på en
   fråga.
-- I båda fallen: samla in en e-postadress från besökaren FÖRE anropet om
-  ingen redan finns, annars misslyckas anropet.
+- I båda fallen: fråga gärna om e-post för den som vill ha svar, men anropet
+  fungerar och ska skickas även om besökaren inte vill uppge någon.

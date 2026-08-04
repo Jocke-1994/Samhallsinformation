@@ -50,8 +50,9 @@ Ja, under Konto → Tema kan du välja utseende.
 ## Support och kontakt
 
 **Hur kontaktar jag support eller rapporterar ett problem?**
-Använd feedback-knappen (pratbubblan) längst ner i sidomenyn. Är du inloggad
-behöver du inte ange e-post; annars krävs en e-postadress så vi kan svara.
+Använd feedback-knappen (pratbubblan) längst ner i sidomenyn. E-post är
+frivilligt — du kan skicka in utan att ange någon, men vi kan då inte svara
+dig. Ange en adress bara om du vill ha svar.
 
 **Finns det en FAQ-sida?**
 Ja, under Support → Vanliga frågor i profilmenyn.
