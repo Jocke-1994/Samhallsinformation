@@ -90,6 +90,7 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleToggle() }}
         className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer"
       >
+        {/* Rad 1: severity + titel får hela bredden, ingen konkurrens om plats */}
         <div className="flex items-center gap-2.5">
           {checkbox && (
             <input
@@ -105,21 +106,28 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
             {event.severity}
           </span>
 
-          <p className="flex-1 text-sm font-medium text-slate-900 dark:text-white leading-snug">
+          <p className="flex-1 min-w-0 text-sm font-medium text-slate-900 dark:text-white leading-snug">
             {event.title}
           </p>
 
-          {sourceName && (
-            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{sourceName}</span>
-          )}
+          <span className={`text-slate-300 text-xs shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}>
+            ▾
+          </span>
+        </div>
+
+        {/* Rad 2: källa, plats, tid och åtgärdsknappar — egen rad så de aldrig
+            tränger undan titeln (upptäckt via en lång källa + lång titel som
+            fick titeln att radbrytas till ett ord per rad) */}
+        <div className="flex items-center gap-2 mt-1 flex-wrap text-xs text-slate-400 dark:text-slate-500">
+          {sourceName && <span className="shrink-0">{sourceName}</span>}
 
           {showGeography && (
-            <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">
+            <span className="shrink-0 text-slate-500 dark:text-slate-400">
               📍 {event.geography}
             </span>
           )}
 
-          <span className="text-xs text-slate-400 shrink-0">{formatTime(event.publishedAt)}</span>
+          <span className="shrink-0">{formatTime(event.publishedAt)}</span>
 
           {(polisenTyp || polisenOmrade) && (
             <div onClick={e => e.stopPropagation()}>
@@ -132,17 +140,13 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
               onClick={e => { e.stopPropagation(); toggleSparad(event.id) }}
               title={ärSparad ? 'Ta bort från Sparat' : 'Spara den här händelsen'}
               aria-label={ärSparad ? 'Ta bort från Sparat' : 'Spara'}
-              className={`p-1.5 rounded-full shrink-0 transition-colors ${
+              className={`p-1.5 -my-1.5 rounded-full shrink-0 transition-colors ${
                 ärSparad ? 'text-amber-500 hover:text-amber-600' : 'text-slate-300 hover:text-slate-500 dark:hover:text-slate-300'
               }`}
             >
               <span className="text-base leading-none">{ärSparad ? '🔖' : '📑'}</span>
             </button>
           )}
-
-          <span className={`text-slate-300 text-xs shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}>
-            ▾
-          </span>
         </div>
       </div>
 
