@@ -13,6 +13,42 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: AdminFeatureIdeaController — API för idé-pipelinen (2026-08-04, PR 2/3)
+
+**Mål:** Del 2 av 3 (se PR 1/3 ovan för datamodellen och det fulla
+designresonemanget). Bygger det faktiska API:et ovanpå `FeatureIdea`-
+modellerna: lista/skapa/detalj/uppdatera/stage/triage/testare/checklista.
+
+**Genomförande:** `AdminFeatureIdeaController` (`api/admin/feature-ideas`,
+`[Authorize(Roles = "Admin")]`), samma struktur som `AdminSupportController`
+rakt av — inga nya mönster uppfanns. Enda logiken utöver ren CRUD: när
+`PUT .../stage` sätter `Stage` till `"lanseringsklar"` för första gången
+seedas fyra standardchecklista-poster ("FAQ uppdaterad", "Kundtjänstbotens
+kunskapsbas uppdaterad", "Push-notis förberedd", "Flagga aktiverad i kod")
+— men bara om idén saknar checklista sedan innan, så att flytta fram och
+tillbaka mellan stadier (t.ex. tillbaka till "byggs" och sedan fram igen)
+inte duplicerar posterna eller nollställer redan avbockade items.
+
+13 nya xUnit-tester i `AdminFeatureIdeaControllerTests.cs`, samma
+InMemory-DB-mönster som `SupportControllerTests`: `IdeaNumber` ökar
+korrekt via MAX+1, triage sätter alla tre fält, lanseringsklar-seedning
+sker exakt en gång även vid upprepade stadiebyten, testare läggs till via
+e-postuppslagning (okänd e-post → 404, redan tillagd → 409), checklista-
+items kan bockas av (sätter `DoneAt`/`DoneByUserId`) och tas bort,
+Admin-only bekräftat via samma reflektions-test som `AdminSupportController`
+redan använder.
+
+**Verifiering:** `dotnet build` grönt, `dotnet test` grönt — 43/43 (30
+tidigare + 13 nya), inga regressioner.
+
+**Andra vägar som hade kunnat fungera:** validera `Stage`-värdet mot en
+fast lista server-side istället för att acceptera vilken sträng som helst
+— avfärdat för konsekvens med `SupportTicket.Status`, som redan accepterar
+fri text utan whitelist. Om ogiltiga stadienamn blir ett verkligt problem
+i praktiken är det enkelt att lägga till senare utan att bryta något.
+
+---
+
 ## feat: FeatureIdea-datamodell för idé-pipelinen (2026-08-04, PR 1/3)
 
 **Mål:** Efter "Kommande funktioner" föreslog användaren en betydligt större
