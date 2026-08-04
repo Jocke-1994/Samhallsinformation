@@ -52,6 +52,7 @@ public class AdminUsersController : ControllerBase
                 u.AuthProvider,
                 u.CreatedAt,
                 u.DeletedAt,
+                u.DeletionScheduledAt,
             })
             .ToListAsync();
 
@@ -77,11 +78,13 @@ public class AdminUsersController : ControllerBase
     // GDPR-radering (artikel 17) implementerad som anonymisering, inte fysisk radering
     // av raden — kontot refereras av RefreshTokens/SupportTickets/UserSourcePreference
     // m.fl. via FK, och en anonymiserad rad håller referentiell integritet intakt utan
-    // att behöva städa upp varje beroende tabell för hand. Namn/e-post/lösenord skrivs
-    // över med slumpade placeholder-värden, kontot spärras precis som en vanlig
-    // avstängning (samma inloggnings-/refresh-spärr slår igenom automatiskt) och
-    // markeras med DeletedAt så adminpanelen kan skilja det från en vanlig avstängning
-    // (ett raderat konto ska aldrig kunna återaktiveras).
+    // att behöva städa upp varje beroende tabell för hand.
+    //
+    // 24h ångerfönster: kontot spärras omedelbart (samma inloggnings-/refresh-spärr
+    // som en vanlig avstängning slår igenom på direkt), men den faktiska
+    // anonymiseringen (namn/e-post/lösenord skrivs över) sker inte förrän
+    // UserDeletionBackgroundService kör igenom DeletionScheduledAt. Fram tills dess
+    // kan raderingen ångras via CancelDeletion.
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {
@@ -90,17 +93,34 @@ public class AdminUsersController : ControllerBase
 
         var user = await _db.Users.FindAsync(id);
         if (user == null) return NotFound();
+        if (user.DeletedAt != null)
+            return BadRequest(new { error = "Kontot är redan raderat." });
+        if (user.DeletionScheduledAt != null)
+            return BadRequest(new { error = "Radering är redan schemalagd för det här kontot." });
 
-        user.Name                   = "Raderad användare";
-        user.Email                  = $"deleted-{Guid.NewGuid():N}@anonymized.local";
-        user.PasswordHash           = "";
-        user.Role                   = "Användare";
-        user.IsActive               = false;
-        user.SuspendedAt            = DateTime.UtcNow;
-        user.SuspendedReason        = "Konto raderat (GDPR)";
-        user.SuspensionReminderAt   = null;
-        user.SuspensionReminderNote = null;
-        user.DeletedAt              = DateTime.UtcNow;
+        user.IsActive            = false;
+        user.SuspendedAt       ??= DateTime.UtcNow;
+        user.SuspendedReason     = "Radering begärd (GDPR) — raderas automatiskt om 24 timmar om ingen avbryter det";
+        user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24);
+
+        await _db.SaveChangesAsync();
+        return Ok(new { deletionScheduledAt = user.DeletionScheduledAt });
+    }
+
+    // Ångrar en schemalagd (ännu ej verkställd) radering — återaktiverar kontot.
+    // Går inte att ångra efter att UserDeletionBackgroundService redan anonymiserat.
+    [HttpPost("{id}/cancel-deletion")]
+    public async Task<IActionResult> CancelDeletion(Guid id)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user == null) return NotFound();
+        if (user.DeletionScheduledAt == null)
+            return BadRequest(new { error = "Ingen radering är schemalagd för det här kontot." });
+
+        user.DeletionScheduledAt = null;
+        user.IsActive            = true;
+        user.SuspendedAt         = null;
+        user.SuspendedReason     = null;
 
         await _db.SaveChangesAsync();
         return Ok();

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { laddaSparadeHandelser, taBortSparadHandelse, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
 import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
 import { useAuth } from '../../context/AuthContext'
-import { fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, type AdminUserDto } from '../../api/adminUsers'
+import { fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion, type AdminUserDto } from '../../api/adminUsers'
 import type { PendingNotis } from '../../types/adminNotis'
 
 // Mockad inloggad admin/support-identitet — samma placeholder som resten av
@@ -11,7 +11,7 @@ import type { PendingNotis } from '../../types/adminNotis'
 const INLOGGAD_NAMN = 'Joakim Rehn'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
-type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd' | 'Raderat'
+type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd' | 'Raderas snart' | 'Raderat'
 export type DetaljFlik = 'oversikt' | 'notifinstallningar' | 'notishistorik' | 'aktivitet' | 'ärenden'
 type ArendeStatusMini = 'Öppet' | 'Under behandling' | 'Hanterat' | 'Stängt'
 interface ArendeMini { id: string; kategori: string; amne: string; status: ArendeStatusMini; skapat: string }
@@ -37,6 +37,7 @@ interface Användare {
   senastAktiv:      string
   paminnelseAt?:    string
   paminnelseNotering?: string
+  raderasVid?:      string
   inloggningsmetod: Inloggningsmetod
   kontaktuppgifter: Kontaktuppgift[]
 }
@@ -81,11 +82,12 @@ function mapAdminUser(dto: AdminUserDto): Användare {
     namn:             dto.name,
     epost:            dto.email,
     roller:           [normaliseraRoll(dto.role)],
-    status:           dto.deletedAt ? 'Raderat' : dto.isActive ? 'Aktiv' : 'Avstängd',
+    status:           dto.deletedAt ? 'Raderat' : dto.deletionScheduledAt ? 'Raderas snart' : dto.isActive ? 'Aktiv' : 'Avstängd',
     registrerad:      new Date(dto.createdAt).toLocaleDateString('sv-SE'),
     senastAktiv:      '—', // ingen inloggningsspårning implementerad än
     paminnelseAt:       dto.suspensionReminderAt ? new Date(dto.suspensionReminderAt).toLocaleDateString('sv-SE') : undefined,
     paminnelseNotering: dto.suspensionReminderNote ?? undefined,
+    raderasVid:         dto.deletionScheduledAt ? new Date(dto.deletionScheduledAt).toLocaleString('sv-SE') : undefined,
     inloggningsmetod: dto.authProvider === 'google' ? 'Google' : 'E-post',
     kontaktuppgifter: [
       { id: 1, typ: 'E-post', värde: dto.email, verifierad: true, primär: true },
@@ -212,17 +214,19 @@ const ROLL_CLS: Record<Roll, string> = {
 }
 
 const STATUS_CLS: Record<Status, string> = {
-  'Aktiv':    'bg-green-100 text-green-700 border border-green-200',
-  'Inaktiv':  'bg-slate-100 text-slate-500 border border-slate-200',
-  'Avstängd': 'bg-red-100 text-red-700 border border-red-200',
-  'Raderat':  'bg-slate-200 text-slate-500 border border-slate-300',
+  'Aktiv':         'bg-green-100 text-green-700 border border-green-200',
+  'Inaktiv':       'bg-slate-100 text-slate-500 border border-slate-200',
+  'Avstängd':      'bg-red-100 text-red-700 border border-red-200',
+  'Raderas snart': 'bg-red-50 text-red-500 border border-red-200',
+  'Raderat':       'bg-slate-200 text-slate-500 border border-slate-300',
 }
 
 const STATUS_DOT: Record<Status, string> = {
-  'Aktiv':    'bg-green-500',
-  'Inaktiv':  'bg-slate-300',
-  'Avstängd': 'bg-red-500',
-  'Raderat':  'bg-slate-400',
+  'Aktiv':         'bg-green-500',
+  'Inaktiv':       'bg-slate-300',
+  'Avstängd':      'bg-red-500',
+  'Raderas snart': 'bg-red-400',
+  'Raderat':       'bg-slate-400',
 }
 
 const INLOGGNING_CLS: Record<Inloggningsmetod, string> = {
@@ -243,7 +247,7 @@ const KANAL_CLS: Record<KontaktTyp, string> = {
 }
 
 const ALLA_ROLLER_FILTER: Array<Roll | 'Alla'> = ['Alla', 'Admin', 'Support', 'Betatestare', 'Användare']
-const ALLA_STATUSAR: Array<Status | 'Alla'> = ['Alla', 'Aktiv', 'Inaktiv', 'Avstängd', 'Raderat']
+const ALLA_STATUSAR: Array<Status | 'Alla'> = ['Alla', 'Aktiv', 'Inaktiv', 'Avstängd', 'Raderas snart', 'Raderat']
 
 function initialer(namn: string) {
   return namn.split(' ').map(n => n[0]).join('').slice(0, 2)
@@ -397,8 +401,9 @@ function RaderaModal({ antal, namn, fel, raderar, onBekräfta, onStäng }: {
         </div>
         <div className="px-6 py-5 flex flex-col gap-4">
           <p className="text-sm text-slate-600">
-            Namn, e-post och lösenord anonymiseras permanent i enlighet med GDPR artikel 17. Kontot spärras och kan
-            inte återaktiveras. Åtgärden kan inte ångras.
+            Kontot spärras omedelbart. Namn, e-post och lösenord anonymiseras permanent i enlighet med GDPR
+            artikel 17 — men inte förrän om <span className="font-medium">24 timmar</span>, så det går att ångra
+            om det behövs. Efter det kan det inte ångras.
           </p>
           {fel && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3.5 py-2.5">{fel}</p>}
           <div className="flex gap-3">
@@ -522,6 +527,17 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     if (adminUsers) setAnvändare(adminUsers.map(mapAdminUser))
   }, [adminUsers])
 
+  // Håller den öppna detaljpanelen i synk efter en statusändring (stäng av/
+  // aktivera/radera/ångra radering) — annars visar panelen kvarhängande
+  // gammal status tills den stängs och öppnas igen.
+  useEffect(() => {
+    setVald(prev => {
+      if (!prev) return prev
+      const uppdaterad = användare.find(u => u.id === prev.id)
+      return uppdaterad ?? prev
+    })
+  }, [användare])
+
   const { data: kontoNotiser = [] } = useQuery({
     queryKey: ['user-notifications'],
     queryFn:  fetchUserNotifications,
@@ -620,8 +636,21 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     try {
       await deleteAdminUser(u.id)
       await refetch()
-      if (vald?.id === u.id) setVald(null)
+      // Panelen hålls öppen (om den var det) så admin genast ser
+      // "Raderas snart"-läget och kan ångra om det behövs.
       setEnkildRadera(null)
+    } catch (err) {
+      setRaderaFel(err instanceof Error ? err.message : 'Något gick fel')
+    } finally {
+      setRaderar(false)
+    }
+  }
+
+  async function angraRadering(u: Användare) {
+    setRaderaFel(null); setRaderar(true)
+    try {
+      await cancelUserDeletion(u.id)
+      await refetch()
     } catch (err) {
       setRaderaFel(err instanceof Error ? err.message : 'Något gick fel')
     } finally {
@@ -785,6 +814,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_CLS[u.status]}`}>{u.status}</span>
                     </div>
                     {u.paminnelseAt && <p className="text-xs text-amber-500 pl-4">⏰ påminnelse {u.paminnelseAt}</p>}
+                    {u.raderasVid && <p className="text-xs text-red-500 pl-4">🗑 raderas {u.raderasVid}</p>}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-slate-500">{u.registrerad}</td>
@@ -970,6 +1000,20 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   </div>
                 )}
 
+                {vald.status === 'Raderas snart' && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex flex-col gap-2">
+                    <p className="text-xs font-medium text-red-700">🗑 Raderas (anonymiseras) automatiskt {vald.raderasVid}</p>
+                    <p className="text-xs text-red-600">Går att ångra fram till dess — därefter permanent.</p>
+                    {raderaFel && <p className="text-xs text-red-700 bg-red-100 rounded-lg px-2.5 py-1.5">{raderaFel}</p>}
+                    <button
+                      onClick={() => angraRadering(vald)}
+                      disabled={raderar}
+                      className="self-start text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-red-300 text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors">
+                      {raderar ? 'Ångrar…' : 'Ångra radering'}
+                    </button>
+                  </div>
+                )}
+
               </div>
 
               {/* Åtgärder */}
@@ -1001,8 +1045,12 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                 )}
                 <button
                   onClick={() => setEnkildRadera(vald)}
-                  disabled={vald.status === 'Raderat'}
-                  title={vald.status === 'Raderat' ? 'Kontot är redan raderat' : undefined}
+                  disabled={vald.status === 'Raderat' || vald.status === 'Raderas snart'}
+                  title={
+                    vald.status === 'Raderat' ? 'Kontot är redan raderat'
+                      : vald.status === 'Raderas snart' ? 'Radering är redan schemalagd — se panelen ovan'
+                      : undefined
+                  }
                   className="text-left px-4 py-2.5 rounded-xl border border-red-200 text-sm text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors">
                   Radera konto (GDPR)
                 </button>

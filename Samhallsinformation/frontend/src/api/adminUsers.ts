@@ -13,6 +13,7 @@ export interface AdminUserDto {
   authProvider:           string
   createdAt:              string
   deletedAt:              string | null
+  deletionScheduledAt:    string | null
 }
 
 export interface UserNotisDto {
@@ -53,5 +54,13 @@ export async function deleteAdminUser(id: string): Promise<void> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error((err as { error?: string }).error ?? `deleteAdminUser: ${res.status}`)
+  }
+}
+
+export async function cancelUserDeletion(id: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/cancel-deletion`, { method: 'POST' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `cancelUserDeletion: ${res.status}`)
   }
 }

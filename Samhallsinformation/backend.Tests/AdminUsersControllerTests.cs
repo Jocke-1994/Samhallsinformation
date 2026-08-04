@@ -156,7 +156,7 @@ public class AdminUsersControllerTests
     }
 
     [Fact]
-    public async Task Delete_AnonymizesUser_AndBlocksLogin()
+    public async Task Delete_SchedulesDeletion_AndBlocksLoginImmediately()
     {
         using var db = NewDb();
         var admin = new User { Name = "Admin", Email = "admin@example.com", PasswordHash = "x", Role = "Admin" };
@@ -168,12 +168,91 @@ public class AdminUsersControllerTests
         await controller.Delete(target.Id);
 
         var updated = await db.Users.FindAsync(target.Id);
-        Assert.Equal("Raderad användare", updated!.Name);
-        Assert.NotEqual("ada@example.com", updated.Email);
-        Assert.Equal("", updated.PasswordHash);
-        Assert.False(updated.IsActive);
-        Assert.NotNull(updated.DeletedAt);
-        Assert.Null(updated.SuspensionReminderAt);
+        Assert.False(updated!.IsActive);
+        Assert.NotNull(updated.DeletionScheduledAt);
+        Assert.True(updated.DeletionScheduledAt > DateTime.UtcNow.AddHours(23));
+        Assert.Null(updated.DeletedAt);
+        // Inte anonymiserat än — det görs av UserDeletionBackgroundService när fönstret gått ut
+        Assert.Equal("Ada", updated.Name);
+        Assert.Equal("ada@example.com", updated.Email);
+    }
+
+    [Fact]
+    public async Task Delete_AlreadyScheduled_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var admin = new User { Name = "Admin", Email = "admin@example.com", PasswordHash = "x", Role = "Admin" };
+        var target = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x", DeletionScheduledAt = DateTime.UtcNow.AddHours(10) };
+        db.Users.AddRange(admin, target);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db, admin.Id);
+        var result = await controller.Delete(target.Id);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Delete_AlreadyDeleted_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var admin = new User { Name = "Admin", Email = "admin@example.com", PasswordHash = "x", Role = "Admin" };
+        var target = new User { Name = "Raderad användare", Email = "deleted-x@anonymized.local", PasswordHash = "", DeletedAt = DateTime.UtcNow };
+        db.Users.AddRange(admin, target);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db, admin.Id);
+        var result = await controller.Delete(target.Id);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task CancelDeletion_ClearsScheduleAndReactivatesAccount()
+    {
+        using var db = NewDb();
+        var user = new User
+        {
+            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
+            IsActive = false, SuspendedAt = DateTime.UtcNow, SuspendedReason = "Radering begärd (GDPR)",
+            DeletionScheduledAt = DateTime.UtcNow.AddHours(10),
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db);
+        await controller.CancelDeletion(user.Id);
+
+        var updated = await db.Users.FindAsync(user.Id);
+        Assert.Null(updated!.DeletionScheduledAt);
+        Assert.True(updated.IsActive);
+        Assert.Null(updated.SuspendedAt);
+        Assert.Null(updated.SuspendedReason);
+    }
+
+    [Fact]
+    public async Task CancelDeletion_NothingScheduled_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db);
+        var result = await controller.CancelDeletion(user.Id);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task CancelDeletion_UnknownUser_ReturnsNotFound()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var result = await controller.CancelDeletion(Guid.NewGuid());
+
+        Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]

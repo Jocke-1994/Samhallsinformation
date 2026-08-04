@@ -13,6 +13,55 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## fix: 24h ångerfönster innan GDPR-radering verkställs (2026-08-05)
+
+**Mål:** Uppföljning direkt efter förra posten — användaren undrade hur lång
+tid raderingen tar och föreslog en ångerperiod ("incase someone regrets
+it"). PR:en var inte mergad än, så omarbetat i samma gren/PR (#420) istället
+för att stapla ännu en PR ovanpå en redan öppen, oreviderad ändring.
+
+**Design:** `DELETE /api/admin/users/{id}` gör inte längre anonymiseringen
+direkt — den spärrar kontot omedelbart (samma inloggnings-/refresh-spärr som
+en vanlig avstängning) och sätter `User.DeletionScheduledAt = now + 24h`.
+En ny `UserDeletionBackgroundService` (samma `BackgroundService`-mönster som
+`SupportScheduledActionService`, 5 minuters intervall) kör den faktiska
+anonymiseringen när fönstret gått ut. Ny `POST /api/admin/users/{id}/
+cancel-deletion` — ångrar en ännu ej verkställd radering, återaktiverar
+kontot. Går inte att ångra efter att bakgrundstjänsten redan kört.
+
+**Varför en bakgrundstjänst och inte bara ett datumfält kollat vid varje
+`GetUsers`-anrop:** anonymiseringen måste ske oavsett om någon admin råkar
+titta i panelen just då — annars kan ett konto som "borde" vara raderat
+sedan länge fortfarande visa klartextnamn/e-post om ingen admin loggat in.
+
+**Frontend:** `Status` fick ett femte värde `'Raderas snart'`, skilt från
+både `'Avstängd'` (kan återaktiveras fritt) och `'Raderat'` (permanent) —
+"Stäng av"/"Aktivera"-knapparna döljs helt i det läget, en ny röd banderoll
+i detaljpanelen visar exakt datum/tid + en "Ångra radering"-knapp. Upptäckte
+under implementationen att den öppna detaljpanelen (`vald`) aldrig
+synkroniserades om efter en statusändring (stäng av/aktivera/radera) —
+gällde redan innan den här ändringen (PR 5/5–6/5), men blev en akut bugg
+här eftersom "Ångra radering"-knappen annars hade fortsatt visa det gamla
+läget efter lyckad ångring. Löst med en liten `useEffect` som håller
+`vald` i synk med `användare`-listan.
+
+**Verifiering:** `dotnet test` 65/65 (9 nya — schemaläggning blockerar
+inloggning utan att anonymisera direkt, dubbel schemaläggning/redan
+raderat ger 400, ångra återaktiverar och rensar fälten, fyra tester
+direkt mot `UserDeletionBackgroundService.ExecuteDueDeletionsAsync` med
+förfallna/ej förfallna/redan-raderade/inga-schemalagda scenarion).
+`tsc -b --noEmit`/`npm run build` gröna. End-to-end mot lokal backend via
+`curl`: schemalade en radering → `403` vid inloggning direkt, listan visar
+fortfarande klartextnamn + `deletionScheduledAt` → ångrade → `200` vid
+inloggning igen, alla fält nollställda. Kunde inte manuellt tvinga fram
+bakgrundstjänstens 5-minuterstick i den här sessionen (ingen `sqlite3`-CLI
+tillgänglig för att skruva tillbaka `DeletionScheduledAt` i den lokala
+databasen) — den delen verifierad via enhetstesterna istället, som kör
+exakt samma `ExecuteDueDeletionsAsync`-kod som den riktiga tjänsten anropar
+på sin timer.
+
+---
+
 ## feat: GDPR-radering av konton via anonymisering (2026-08-05)
 
 **Mål:** Sista av de fyra ursprungliga gapen — "Radera konto (GDPR)"-knappen
