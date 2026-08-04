@@ -13,6 +13,46 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: villkorsgodkännande vid registrering (PR 3/5) (2026-08-04)
+
+**Mål:** Del 3 av 5. Gör `TermsAcceptedAt`-fältet (PR 1/5) faktiskt
+verksamt — registrering ska kräva ett uttryckligt godkännande av
+användarvillkor/integritetspolicy, och inget sådant innehåll fanns
+skrivet alls sedan tidigare (bekräftat via kodsökning innan planeringen
+började).
+
+**Genomförande:** `RegisterAsync` fick en ny obligatorisk parameter
+`acceptedTerms` — `false` → 400 "Du måste godkänna användarvillkoren"
+innan kontot ens skapas, `true` → `TermsAcceptedAt` sätts av servern
+(inte klienten, `DateTime.UtcNow`) på det nya kontot. Kryssrutan
+placerades i wizardens steg 1 (`OnboardingPage.tsx`, ihopslagen med
+registreringsformuläret sedan förra PR:en) — samma lokala
+valideringsmönster som namn/lösenord redan har, länken öppnas i ny flik
+till en ny `/villkor`-sida.
+
+**Villkorsinnehållet är ett konkret UTKAST jag skrivit, inte juridisk
+rådgivning** — täcker ärligt vad tjänsten faktiskt gör (källaggregering,
+ingen tolkning), vilka uppgifter som samlas in vid registrering och
+under användning, cookies/analys (matchar redan befintlig
+Om-sidans text), att inga uppgifter säljs/delas, användarens rättigheter
+(radering hanteras manuellt via kontakt tills en självbetjänings-lösning
+finns — INTE påstått som redan automatiserad, eftersom GDPR-radering
+fortfarande är mockad UI enligt tidigare sessioners upptäckt),
+kontoavstängningspolicy (kopplar till PR 2/5), och kontaktväg. Användaren
+bör läsa igenom och redigera innan detta räknas som launch-klart.
+
+**Verifiering:** `dotnet build`/`dotnet test` gröna (44/44, 1 ny —
+resten av PR 2/5s suspension-tester finns inte på den här grenen
+eftersom bara PR 1/5 slogs samman hit, inte PR 2/5, exakt enligt planen).
+`npm run build` grönt. Manuellt mot lokal backend: registrering utan
+godkännande → 400 med rätt felmeddelande, med godkännande → 200 och
+kontot skapas. `TermsAcceptedAt`-sättningen bekräftas redan av
+`RegisterAsync_CreatesUser_AndReturnsTokens`s direkta DB-assert —
+mer exakt än att försöka läsa av det via ett admin-listnings-API som
+inte ens finns på den här grenen än (det hör till PR 2/5).
+
+---
+
 ## feat: skjut upp kontoskapande till sista steget i wizarden (2026-08-04)
 
 **Mål:** Användaren pekade ut att "Ditt konto är skapat" på wizardens

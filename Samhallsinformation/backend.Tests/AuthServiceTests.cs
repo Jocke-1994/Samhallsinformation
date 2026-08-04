@@ -50,13 +50,14 @@ public class AuthServiceTests
 
         var service = NewService(db, tokens, hasher);
 
-        var result = await service.RegisterAsync("Test Testsson", "test@example.com", "pw123456");
+        var result = await service.RegisterAsync("Test Testsson", "test@example.com", "pw123456", acceptedTerms: true);
 
         Assert.True(result.Success);
         Assert.Equal("access-token", result.Tokens!.AccessToken);
         Assert.Equal("raw-refresh", result.Tokens.RefreshToken);
         Assert.Single(db.Users);
         Assert.Single(db.RefreshTokens);
+        Assert.NotNull((await db.Users.SingleAsync()).TermsAcceptedAt);
     }
 
     [Fact]
@@ -68,10 +69,23 @@ public class AuthServiceTests
 
         var service = NewService(db);
 
-        var result = await service.RegisterAsync("Ny Person", "taken@example.com", "pw123456");
+        var result = await service.RegisterAsync("Ny Person", "taken@example.com", "pw123456", acceptedTerms: true);
 
         Assert.False(result.Success);
         Assert.Equal(409, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_TermsNotAccepted_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var service = NewService(db);
+
+        var result = await service.RegisterAsync("Test Testsson", "test@example.com", "pw123456", acceptedTerms: false);
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.Empty(db.Users);
     }
 
     [Fact]

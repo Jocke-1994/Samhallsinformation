@@ -31,6 +31,7 @@ export default function OnboardingPage() {
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm]   = useState('')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [kontoFel, setKontoFel] = useState<string | null>(null)
 
   // Steg 2 — bara lokalt state, inget konto finns att spara mot än
@@ -51,6 +52,7 @@ export default function OnboardingPage() {
     if (!name.trim()) return setKontoFel('Ange ditt namn')
     if (password !== confirm) return setKontoFel('Lösenorden matchar inte')
     if (password.length < 8) return setKontoFel('Lösenordet måste vara minst 8 tecken')
+    if (!acceptedTerms) return setKontoFel('Du måste godkänna användarvillkoren')
     setSteg('kallor')
   }
 
@@ -66,7 +68,7 @@ export default function OnboardingPage() {
     setSlutFel(null)
     setSkapar(true)
     try {
-      await register(name, email, password)
+      await register(name, email, password, acceptedTerms)
     } catch (err) {
       setSkapar(false)
       setSlutFel(err instanceof Error ? err.message : 'Något gick fel')
@@ -148,6 +150,18 @@ export default function OnboardingPage() {
                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                   />
                 </div>
+                <label className="flex items-start gap-2.5 text-sm text-slate-600">
+                  <input
+                    type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)}
+                    className="mt-0.5 rounded border-slate-300 text-violet-600 focus:ring-violet-400 shrink-0"
+                  />
+                  <span>
+                    Jag godkänner{' '}
+                    <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:text-violet-500 font-medium">
+                      användarvillkoren och integritetspolicyn
+                    </Link>
+                  </span>
+                </label>
                 {kontoFel && (
                   <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3.5 py-2.5">{kontoFel}</p>
                 )}
