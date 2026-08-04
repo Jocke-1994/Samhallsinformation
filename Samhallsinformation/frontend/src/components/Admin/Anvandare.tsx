@@ -77,6 +77,15 @@ function normaliseraRoll(roll: string): Roll {
     : 'Användare'
 }
 
+// Kontot fanns innan CreatedAt-kolumnen fanns — den migrationen (Program.cs,
+// AddUserSystem) backfyllde befintliga rader med literalen 0001-01-01
+// istället för deras faktiska (aldrig sparade) registreringsdatum. Ärligare
+// att visa "Okänt" än att låtsas veta ett datum som aldrig fanns.
+function formatRegistreringsdatum(iso: string): string {
+  const d = new Date(iso)
+  return d.getFullYear() < 2000 ? 'Okänt' : d.toLocaleDateString('sv-SE')
+}
+
 function mapAdminUser(dto: AdminUserDto, joinNr: number): Användare {
   return {
     id:               dto.id,
@@ -85,7 +94,7 @@ function mapAdminUser(dto: AdminUserDto, joinNr: number): Användare {
     epost:            dto.email,
     roller:           [normaliseraRoll(dto.role)],
     status:           dto.deletedAt ? 'Raderat' : dto.deletionScheduledAt ? 'Raderas snart' : dto.isActive ? 'Aktiv' : 'Avstängd',
-    registrerad:      new Date(dto.createdAt).toLocaleDateString('sv-SE'),
+    registrerad:      formatRegistreringsdatum(dto.createdAt),
     senastAktiv:      '—', // ingen inloggningsspårning implementerad än
     paminnelseAt:       dto.suspensionReminderAt ? new Date(dto.suspensionReminderAt).toLocaleDateString('sv-SE') : undefined,
     paminnelseNotering: dto.suspensionReminderNote ?? undefined,

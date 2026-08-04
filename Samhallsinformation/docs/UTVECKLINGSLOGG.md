@@ -13,6 +13,38 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## fix: "Okänt" istället för 1-01-01 som registreringsdatum (2026-08-05)
+
+**Mål:** Admin upptäckte att sitt eget konto i Användarhantering visade
+"1-01-01" som registreringsdatum — och påpekade helt riktigt att den
+faktiska datumet för när admin-kontot "gick med" inte är känt.
+
+**Grundorsak (uteslutningsmetod):** Inte ett buggigt registreringsflöde —
+nya konton får ett korrekt `DateTime.UtcNow` via `User.CreatedAt`s
+property-default. Grep:ade istället igenom alla `CreatedAt`-träffar i
+`Program.cs` och hittade den skyldiga raden i `AddUserSystem`-migrationens
+raw-SQL-block:
+`ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "CreatedAt" ... DEFAULT
+'0001-01-01 00:00:00+00'::timestamptz;` — kolumnen lades till på en tabell
+som redan hade rader (admin-kontot skapades i en tidigare session, innan
+`CreatedAt` ens fanns som fält). Postgres backfyllde den befintliga raden
+med den bokstavliga defaulten istället för ett riktigt datum, eftersom
+inget riktigt datum någonsin sparades för den raden.
+
+**Beslut:** Fixa INTE genom att hitta på ett rimligt-seende datum i
+databasen — det vore precis den typen av påhittad data hela den här
+sessionen försökt städa bort. Istället: `Anvandare.tsx` visar "Okänt" när
+`createdAt`s år är orimligt (< 2000) istället för att formatera och visa
+den bokstavliga defaulten. Påverkar bara konton som fanns innan
+migrationen kördes (i praktiken bara admin-kontot) — inga riktiga
+nyregistrerade konton kan träffa det här.
+
+**Verifiering:** `tsc -b --noEmit`/`npm run build` gröna. Testade
+gränsfunktionen isolerat (`0001-01-01` → "Okänt", ett riktigt datum →
+formaterat som vanligt).
+
+---
+
 ## fix: GUID kvar synlig som hover-tooltip på Nr-numret (2026-08-05)
 
 **Mål:** Förra postens `joinNr`-fix gjorde att det riktiga GUID:et försvann
