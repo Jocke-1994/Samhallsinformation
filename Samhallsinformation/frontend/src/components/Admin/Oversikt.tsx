@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import type { AdminSection } from './AdminSidebar'
 import { fetchAdminSources } from '../../api/sources'
+import { fetchAdminUsers } from '../../api/adminUsers'
 import { deriveStatus, STATUS_DOT } from './Kallhantering'
 
 interface StatKort {
@@ -32,14 +33,24 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
     queryFn:  fetchAdminSources,
   })
 
+  const { data: users = [] } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn:  fetchAdminUsers,
+  })
+
   const aktivaKallor = sources.filter(s => s.isActive)
   const kallorMedFel  = aktivaKallor.filter(s => s.lastFetchError !== null)
   const systemhälsaProcent = aktivaKallor.length > 0
     ? Math.round(((aktivaKallor.length - kallorMedFel.length) / aktivaKallor.length) * 100)
     : 100
 
+  // Raderade (anonymiserade) konton räknas inte som riktiga användare längre.
+  const riktigaAnvändare = users.filter(u => !u.deletedAt)
+  const sjuDagarSedan    = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const nyaSenasteVeckan = riktigaAnvändare.filter(u => new Date(u.createdAt) >= sjuDagarSedan).length
+
   const STAT_KORT: StatKort[] = [
-    { label: 'Användare',       value: 1284,  sub: '+12 senaste 7 dagarna',                          color: 'text-violet-600', ikon: '👥', sektion: 'anvandare',     mock: true },
+    { label: 'Användare',       value: riktigaAnvändare.length, sub: `+${nyaSenasteVeckan} senaste 7 dagarna`,        color: 'text-violet-600', ikon: '👥', sektion: 'anvandare' },
     { label: 'Öppna ärenden',   value: 3,     sub: 'Ärendehantering avstängd',                       color: 'text-amber-600',  ikon: '🎫', sektion: 'support-inbox', mock: true },
     { label: 'Aktiva källor',   value: aktivaKallor.length, sub: `${kallorMedFel.length} med varningar`, color: 'text-sky-600',    ikon: '📡', sektion: 'kallor' },
     { label: 'Systemhälsa',     value: `${systemhälsaProcent}%`, sub: `${aktivaKallor.length - kallorMedFel.length}/${aktivaKallor.length} källor utan fel`, color: 'text-green-600', ikon: '✅', sektion: 'felsökning' },
