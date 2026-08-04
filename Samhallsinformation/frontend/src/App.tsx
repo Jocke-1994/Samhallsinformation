@@ -19,6 +19,7 @@ import WelcomeModal from './components/WelcomeModal/WelcomeModal'
 import { fetchSources } from './api/sources'
 import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 import { useAuth } from './context/AuthContext'
+import { useFlags } from './context/FeatureFlagsContext'
 import { resendVerification } from './api/auth'
 import type { Source } from './types'
 
@@ -108,9 +109,10 @@ function ImpersonationBanner() {
 
 function EmailVerificationBanner() {
   const { isLoggedIn, emailVerified, email } = useAuth()
+  const flaggor = useFlags()
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle')
 
-  if (!isLoggedIn || emailVerified) return null
+  if (!isLoggedIn || emailVerified || !flaggor.konto_epost_paminnelse) return null
 
   async function handleResend() {
     setStatus('sending')

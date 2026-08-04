@@ -677,6 +677,9 @@ avfärdat till förmån för att återanvända `handleAdd`s redan beprövade
 mönster rakt av, vilket också gör beteendet identiskt med hur Mina källor
 redan fungerar (mindre att hålla synkat, en enda sanning för "hur en källa
 läggs till").
+
+---
+
 ## feat: e-postverifiering vid registrering, mjuk spärr (2026-08-04)
 
 **Mål:** Upptäckt under granskning av den nybyggda onboarding-wizarden —
@@ -740,6 +743,21 @@ av appen tills verifierad) — uttryckligen avfärdad efter en direkt fråga
 till användaren, till förmån för den mjuka varianten som inte river upp
 den redan byggda onboarding-wizarden eller riskerar att skrämma bort
 nyregistrerade med en vägg direkt efter kontoskapande.
+
+---
+
+## fix: gör e-postpåminnelsebanderollen avstängbar via feature flag (2026-08-04)
+
+**Mål:** Användaren ville kunna göra banderollen osynlig under lokal
+testning — jämförde uttryckligen med hur man kan växla tema via DevTools
+lokalt. Löst med samma mönster som redan används överallt annars i den
+här kodbasen: en ny flagga `konto_epost_paminnelse` (grupp "Konto"),
+`defaultAktiv: true` (banderollen ska vara på för riktiga användare) men
+avstängbar per webbläsare — antingen via Admin → Feature flags, eller
+direkt i DevTools genom att redigera `samhallsinformation_feature_flags`
+i Local Storage, precis som användaren efterfrågade.
+
+**Verifiering:** `npm run build` grönt.
 
 ---
 
