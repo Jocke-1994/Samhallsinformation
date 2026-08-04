@@ -1,15 +1,24 @@
 import { adminFetch } from './adminFetch'
 
 export interface AdminUserDto {
-  id:              string
-  name:            string
-  email:           string
-  role:            string
-  isActive:        boolean
-  suspendedAt:     string | null
-  suspendedReason: string | null
-  authProvider:    string
-  createdAt:       string
+  id:                     string
+  name:                   string
+  email:                  string
+  role:                   string
+  isActive:               boolean
+  suspendedAt:            string | null
+  suspendedReason:        string | null
+  suspensionReminderAt:   string | null
+  suspensionReminderNote: string | null
+  authProvider:           string
+  createdAt:              string
+}
+
+export interface UserNotisDto {
+  userId:   string
+  namn:     string
+  epost:    string
+  notering: string | null
 }
 
 export async function fetchAdminUsers(): Promise<AdminUserDto[]> {
@@ -18,10 +27,22 @@ export async function fetchAdminUsers(): Promise<AdminUserDto[]> {
   return res.json()
 }
 
-export async function setAdminUserStatus(id: string, isActive: boolean, reason?: string): Promise<void> {
+export async function fetchUserNotifications(): Promise<UserNotisDto[]> {
+  const res = await adminFetch('/api/admin/users/notifications')
+  if (!res.ok) throw new Error(`fetchUserNotifications: ${res.status}`)
+  return res.json()
+}
+
+export async function setAdminUserStatus(
+  id: string,
+  isActive: boolean,
+  reason?: string,
+  reminderAt?: string | null,
+  reminderNote?: string | null,
+): Promise<void> {
   const res = await adminFetch(`/api/admin/users/${id}/status`, {
     method: 'PUT',
-    body: JSON.stringify({ isActive, reason }),
+    body: JSON.stringify({ isActive, reason, reminderAt, reminderNote }),
   })
   if (!res.ok) throw new Error(`setAdminUserStatus: ${res.status}`)
 }

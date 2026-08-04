@@ -12,6 +12,8 @@ public class User
     public bool     IsActive     { get; set; } = true;
     public DateTime? SuspendedAt     { get; set; }
     public string?   SuspendedReason { get; set; }
+    public DateTime? SuspensionReminderAt   { get; set; }
+    public string?   SuspensionReminderNote { get; set; }
     public DateTime? TermsAcceptedAt { get; set; }
     public DateTime CreatedAt    { get; set; } = DateTime.UtcNow;
 }

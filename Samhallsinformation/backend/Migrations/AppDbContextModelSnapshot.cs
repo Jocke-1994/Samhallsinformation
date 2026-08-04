@@ -542,6 +542,12 @@ namespace Samhallsinformation.Migrations
                     b.Property<string>("SuspendedReason")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("SuspensionReminderAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SuspensionReminderNote")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("TermsAcceptedAt")
                         .HasColumnType("TEXT");
 
