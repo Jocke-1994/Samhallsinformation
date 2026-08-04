@@ -15,5 +15,6 @@ public class User
     public DateTime? SuspensionReminderAt   { get; set; }
     public string?   SuspensionReminderNote { get; set; }
     public DateTime? TermsAcceptedAt { get; set; }
+    public DateTime? DeletedAt   { get; set; } // GDPR-radering — kontot anonymiseras i stället för att raderas fysiskt, se AdminUsersController.Delete
     public DateTime CreatedAt    { get; set; } = DateTime.UtcNow;
 }

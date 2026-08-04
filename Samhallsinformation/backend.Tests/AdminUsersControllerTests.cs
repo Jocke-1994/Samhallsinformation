@@ -26,6 +26,12 @@ public class AdminUsersControllerTests
         ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) } },
     };
 
+    private static AdminUsersController NewController(AppDbContext db, Guid callerId) => new(db)
+    {
+        ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(
+            new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, callerId.ToString()) }, "TestAuth")) } },
+    };
+
     [Fact]
     public async Task GetUsers_ReturnsAllUsers()
     {
@@ -147,6 +153,54 @@ public class AdminUsersControllerTests
         var list = Assert.IsAssignableFrom<System.Collections.IEnumerable>(result.Value).Cast<object>().ToList();
 
         Assert.Single(list);
+    }
+
+    [Fact]
+    public async Task Delete_AnonymizesUser_AndBlocksLogin()
+    {
+        using var db = NewDb();
+        var admin = new User { Name = "Admin", Email = "admin@example.com", PasswordHash = "x", Role = "Admin" };
+        var target = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.AddRange(admin, target);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db, admin.Id);
+        await controller.Delete(target.Id);
+
+        var updated = await db.Users.FindAsync(target.Id);
+        Assert.Equal("Raderad användare", updated!.Name);
+        Assert.NotEqual("ada@example.com", updated.Email);
+        Assert.Equal("", updated.PasswordHash);
+        Assert.False(updated.IsActive);
+        Assert.NotNull(updated.DeletedAt);
+        Assert.Null(updated.SuspensionReminderAt);
+    }
+
+    [Fact]
+    public async Task Delete_OwnAccount_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var admin = new User { Name = "Admin", Email = "admin@example.com", PasswordHash = "x", Role = "Admin" };
+        db.Users.Add(admin);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db, admin.Id);
+        var result = await controller.Delete(admin.Id);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        var stillThere = await db.Users.FindAsync(admin.Id);
+        Assert.Equal("Admin", stillThere!.Name);
+    }
+
+    [Fact]
+    public async Task Delete_UnknownUser_ReturnsNotFound()
+    {
+        using var db = NewDb();
+        var controller = NewController(db, Guid.NewGuid());
+
+        var result = await controller.Delete(Guid.NewGuid());
+
+        Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]

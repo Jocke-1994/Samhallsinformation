@@ -13,6 +13,53 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: GDPR-radering av konton via anonymisering (2026-08-05)
+
+**Mål:** Sista av de fyra ursprungliga gapen — "Radera konto (GDPR)"-knappen
+i `Anvandare.tsx` hade funnits sedan komponenten byggdes men bara uppdaterat
+lokalt React-state (togs bort ur listan, dök upp igen vid omladdning).
+Fanns ingen backend-endpoint alls. Beslutat med användaren: anonymisera i
+stället för att fysiskt radera raden.
+
+**Varför anonymisering och inte en riktig `DELETE FROM Users`:** kontot
+refereras via FK från `RefreshTokens`, `SupportTickets`,
+`UserSourcePreference`, `UserSavedEvent`, `UserSettingAuditLog` m.fl. En
+fysisk radering hade antingen krävt cascade-delete genom alla dessa tabeller
+(förlorar historik som inte är personuppgifter, t.ex. supportärendets ämne)
+eller kraschat på FK-constraints. Anonymisering behåller `Id` och alla
+kopplingar intakta, skriver bara över de faktiska personuppgifterna
+(`Name`, `Email`, `PasswordHash`) med slumpade placeholder-värden.
+
+**Genomförande:** `User.DeletedAt` (migration `AddUserDeletedAt`) skiljer ett
+raderat konto från en vanlig avstängning — utan det egna fältet hade ett
+raderat konto sett ut precis som ett avstängt, med risk att någon råkar
+"återaktivera" det. `DELETE /api/admin/users/{id}`: sätter Name till
+"Raderad användare", Email till `deleted-{guid}@anonymized.local` (unikt
+index på Email kräver ett kollisionsfritt värde), tömmer `PasswordHash`,
+återställer `Role` till "Användare", spärrar kontot (`IsActive=false`,
+samma inloggnings-/refresh-spärr som en vanlig avstängning slår igenom på)
+och nollställer eventuell påminnelse. **Skydd mot självradering:** en admin
+kan inte radera sitt eget konto (400) — annars ett enkelt sätt att låsa ut
+sig själv av misstag.
+
+**Frontend:** `Status`-typen fick ett fjärde värde `'Raderat'`, skilt från
+`'Avstängd'` i UI (gråare badge, "Stäng av"/"Aktivera"-knapparna döljs helt
+för ett raderat konto, bara en inaktiverad "redan raderat"-variant av
+raderaknappen kvar). Bulk-"Radera" och enskild "Radera konto (GDPR)"
+(inaktiverade i PR 5/5) återaktiverade och kopplade mot den nya endpointen.
+`RaderaModal` uppdaterad med korrekt текст (anonymiseras, inte "all data
+raderas") + felvisning + laddningsstate, eftersom självraderings-guarden
+kan ge ett faktiskt felsvar att visa admin.
+
+**Verifiering:** `dotnet test` 56/56 (3 nya: anonymisering sätter rätt
+fält, självradering ger 400 utan att röra kontot, okänt ID ger 404).
+`tsc -b --noEmit`/`npm run build` gröna. End-to-end mot lokal backend via
+`curl`: självradering → 400 med rätt felmeddelande, radering av ett annat
+konto → 200, listan visar de anonymiserade fälten, inloggning med de gamla
+uppgifterna → 401.
+
+---
+
 ## feat: påminnelse vid kontospärrning istället för schemalagd återaktivering (2026-08-05)
 
 **Mål:** Uppföljning på PR 5/5 — användaren påpekade att en avstängning utan

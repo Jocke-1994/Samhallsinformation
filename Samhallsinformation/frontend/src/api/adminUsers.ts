@@ -12,6 +12,7 @@ export interface AdminUserDto {
   suspensionReminderNote: string | null
   authProvider:           string
   createdAt:              string
+  deletedAt:              string | null
 }
 
 export interface UserNotisDto {
@@ -45,4 +46,12 @@ export async function setAdminUserStatus(
     body: JSON.stringify({ isActive, reason, reminderAt, reminderNote }),
   })
   if (!res.ok) throw new Error(`setAdminUserStatus: ${res.status}`)
+}
+
+export async function deleteAdminUser(id: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `deleteAdminUser: ${res.status}`)
+  }
 }

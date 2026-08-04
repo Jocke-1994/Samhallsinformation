@@ -1,5 +1,6 @@
 namespace Samhallsinformation.Controllers;
 
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,8 @@ public class AdminUsersController : ControllerBase
     private readonly AppDbContext _db;
 
     public AdminUsersController(AppDbContext db) => _db = db;
+
+    private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet("lookup")]
     public async Task<IActionResult> Lookup([FromQuery] string email)
@@ -48,6 +51,7 @@ public class AdminUsersController : ControllerBase
                 u.SuspensionReminderNote,
                 u.AuthProvider,
                 u.CreatedAt,
+                u.DeletedAt,
             })
             .ToListAsync();
 
@@ -65,6 +69,38 @@ public class AdminUsersController : ControllerBase
         user.SuspendedReason = req.IsActive ? null : req.Reason;
         user.SuspensionReminderAt   = req.IsActive ? null : req.ReminderAt;
         user.SuspensionReminderNote = req.IsActive ? null : req.ReminderNote;
+
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
+    // GDPR-radering (artikel 17) implementerad som anonymisering, inte fysisk radering
+    // av raden — kontot refereras av RefreshTokens/SupportTickets/UserSourcePreference
+    // m.fl. via FK, och en anonymiserad rad håller referentiell integritet intakt utan
+    // att behöva städa upp varje beroende tabell för hand. Namn/e-post/lösenord skrivs
+    // över med slumpade placeholder-värden, kontot spärras precis som en vanlig
+    // avstängning (samma inloggnings-/refresh-spärr slår igenom automatiskt) och
+    // markeras med DeletedAt så adminpanelen kan skilja det från en vanlig avstängning
+    // (ett raderat konto ska aldrig kunna återaktiveras).
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        if (id == CurrentUserId)
+            return BadRequest(new { error = "Du kan inte radera ditt eget konto." });
+
+        var user = await _db.Users.FindAsync(id);
+        if (user == null) return NotFound();
+
+        user.Name                   = "Raderad användare";
+        user.Email                  = $"deleted-{Guid.NewGuid():N}@anonymized.local";
+        user.PasswordHash           = "";
+        user.Role                   = "Användare";
+        user.IsActive               = false;
+        user.SuspendedAt            = DateTime.UtcNow;
+        user.SuspendedReason        = "Konto raderat (GDPR)";
+        user.SuspensionReminderAt   = null;
+        user.SuspensionReminderNote = null;
+        user.DeletedAt              = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
         return Ok();
