@@ -501,12 +501,23 @@ namespace Samhallsinformation.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AuthProvider")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("local");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -523,6 +534,15 @@ namespace Samhallsinformation.Migrations
 
                     b.Property<string>("Role")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("SuspendedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SuspendedReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("TermsAcceptedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

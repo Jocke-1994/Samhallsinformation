@@ -12,6 +12,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import CookieConsent from './components/CookieConsent/CookieConsent'
 import OmPage from './pages/OmPage'
+import VillkorPage from './pages/VillkorPage'
 import UppdateringarPage from './pages/UppdateringarPage'
 import WelcomeModal from './components/WelcomeModal/WelcomeModal'
 import { fetchSources } from './api/sources'
@@ -116,6 +117,7 @@ export default function App() {
         <Route path="/profil" element={<ProfilePage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/om" element={<OmPage />} />
+        <Route path="/villkor" element={<VillkorPage />} />
         <Route path="/uppdateringar" element={<UppdateringarPage />} />
       </Routes>
       <CookieConsent />
