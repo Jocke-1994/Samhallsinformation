@@ -13,6 +13,41 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: kontospärrning + riktig admin-användarlista (PR 2/5) (2026-08-04)
+
+**Mål:** Del 2 av 5 (se PR 1/5 för fälten). Gör `IsActive`-fältet
+faktiskt verksamt: en admin ska kunna stänga av ett missbrukat konto
+utan att radera det, och behöver en riktig lista att agera på (den
+befintliga `AdminUsersController` hade bara e-postuppslagning, ingen
+lista).
+
+**Genomförande:** `LoginAsync` kontrollerar `IsActive` EFTER
+lösenordsverifiering (inte innan) — samma inloggningsfel oavsett
+lösenord eller avstängning skulle annars läcka information om att ett
+konto existerar och är avstängt till någon som inte ens har rätt
+lösenord. `RefreshAsync` fick samma kontroll, annars kunde ett redan
+inloggat konto med ett giltigt refresh-token fortsätta förnya sin
+session obegränsat efter att blivit avstängt. **Känd, accepterad
+begränsning:** en redan utfärdad access-token (upp till 15 minuters
+livslängd) fortsätter fungera för redan autentiserade anrop tills den
+naturligt går ut — ingen levande spärrkontroll per request finns (skulle
+kräva en arkitekturförändring, en DB-slagning på varje anrop eller
+JWT-svartlistning). Bedömt som ett acceptabelt fönster för v1, samma
+avvägning som redan gäller för rollbyten i det här systemet.
+
+`AdminUsersController` byggdes ut med `GET` (full lista, ingen
+paginering än) och `PUT .../status` (sätter `IsActive` +
+`SuspendedAt`/`SuspendedReason`, rensar dem vid återaktivering).
+
+**Verifiering — riktigt end-to-end, inte bara unit-tester:** `dotnet
+build`/`dotnet test` gröna (50/50, 7 nya). Manuellt mot lokal backend:
+registrerade ett testkonto → admin listade det via `GET
+/api/admin/users` → stängde av det → bekräftade BÅDE inloggning OCH
+tokenförnyelse gav 403 med rätt felmeddelande → återaktiverade →
+bekräftade fälten rensades och inloggning fungerade igen.
+
+---
+
 ## feat: fyra pre-launch-fält på User (PR 1/5) (2026-08-04)
 
 **Mål:** Under granskning av registreringsflödet identifierade

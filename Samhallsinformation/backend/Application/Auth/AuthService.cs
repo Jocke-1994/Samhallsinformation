@@ -58,6 +58,9 @@ public class AuthService : IAuthService
         if (verification == PasswordVerificationResult.Failed)
             return AuthResult.Fail(401, "Felaktigt e-post eller lösenord");
 
+        if (!user.IsActive)
+            return AuthResult.Fail(403, "Kontot är avstängt. Kontakta support om du tror det här är ett misstag.");
+
         return await IssueTokensAsync(user);
     }
 
@@ -70,6 +73,9 @@ public class AuthService : IAuthService
 
         if (existing == null || existing.RevokedAt != null || existing.ExpiresAt < DateTime.UtcNow)
             return AuthResult.Fail(401, "Ogiltig eller utgången refresh-token");
+
+        if (!existing.User.IsActive)
+            return AuthResult.Fail(403, "Kontot är avstängt. Kontakta support om du tror det här är ett misstag.");
 
         var (rawToken, newHash) = _tokens.GenerateRefreshToken();
 
