@@ -13,6 +13,52 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: Funktionsidé-pipeline-UI i admin (2026-08-04, PR 3/3)
+
+**Mål:** Del 3 av 3, den sista biten i idé-pipelinen (se PR 1–2 för
+datamodell/API). Bygger själva adminsidan: en flikfiltrerad lista
+(Brainstorm/Triage/Bygger/Testar/Lanseringsklar/Avslutade) plus en
+detaljmodal per idé (stadie-växlare, triage, testare, lanseringschecklista).
+
+**Genomförande, allt återanvänt mönster, inget nytt uppfunnet:**
+- `api/featureIdeas.ts` — exakt samma form som `api/support.ts`
+- `FunktionsIdePipeline.tsx` — flikfilter (samma mönster som
+  `SupportInbox.tsx`s Alla/Ärenden/Feedback), tabell + "Ny idé"-inline-formulär
+- `IdeDetaljModal.tsx` — `createPortal`-modal (samma mönster som
+  `FeedbackButton.tsx`, valt istället för `SupportInbox`s inline-variant
+  eftersom idékorten ligger i en tabellrad som annars kan klippas av)
+- Stadie-växlaren är en fri knapprad (alla sju stadier alltid klickbara),
+  INTE en låst linjär "nästa steg"-knapp — riktigt arbete går fram och
+  tillbaka (t.ex. testas → byggs igen vid en upptäckt bugg under test)
+- Ny "💡 Skapa idé av det här ärendet"-knapp i `SupportInbox.tsx`s
+  ärendemodal — kopplar ihop Feedback-inkorgen med idé-pipelinen: skapar en
+  idé med `källaTyp: 'feedback'` och `sourceTicketId` satt till ärendet,
+  förifylld med ärendets ämne och första meddelande
+  - Idé-detaljen visar i sin tur en länk tillbaka till käll-ärendet
+    (`onÖppnaÄrende`-prop, samma callback-mönster som redan finns för
+    `Anvandare.tsx`/`Handelsesok.tsx` i `AdminPage.tsx`) — full cirkel utan
+    att duplicera data mellan de två systemen
+- Ny adminsektion `funktionsideer` i `AdminSidebar.tsx`/`AdminPage.tsx`,
+  samma wiring-mönster som `kommande-funktioner` (egen branch, ej mergad än)
+
+**Verifiering:** `npm run build` grönt. Backend-API:t redan fullt
+curl-verifierat i PR 2/3 (skapa/lista/triage/stadiebyte/checklista-seedning/
+testare/behörighet). **Kunde INTE verifieras visuellt i webbläsaren** —
+`mcp__claude-in-chrome`-verktygen var instabila hela försöket (samma kända
+transienta problem som återkommit flera gånger denna session: tabbar
+byter ID/tabGroupId mellan anrop, verktyg svarar inte i tid). Efter ~5
+försök med olika verktyg (navigate/screenshot/get_page_text) gavs
+webbläsarverifieringen upp och lokala servrar (backend :5000, frontend
+:5175) lämnades igång åt användaren att testa manuellt istället för att
+låtsas att det verifierats.
+
+**Andra vägar som hade kunnat fungera:** en riktig drag-and-drop-kanban
+istället för flikfiltrerad lista — avfärdat i planeringsfasen, se
+plan-dokumentet: mer kod, nytt beroende, och löser inget som flikarna inte
+redan löser för en ensam admin-användare.
+
+---
+
 ## feat: AdminFeatureIdeaController — API för idé-pipelinen (2026-08-04, PR 2/3)
 
 **Mål:** Del 2 av 3 (se PR 1/3 ovan för datamodellen och det fulla
