@@ -5,10 +5,13 @@ import { fetchAdminStats } from '../../api/stats'
 
 const DAGAR_KORT = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
 
-const NOTIS_PER_KANAL = [
-  { kanal: 'E-post', antal: 35200, ikon: '📧', färg: 'bg-violet-500' },
-  { kanal: 'Push',   antal: 6980,  ikon: '📱', färg: 'bg-sky-500'    },
-  { kanal: 'SMS',    antal: 0,     ikon: '💬', färg: 'bg-green-500'  },
+// Notiser skickas idag bara via push (NotificationDeliveryLog.Channel="push",
+// se PushDispatcher.cs) — e-post/SMS listas ändå så kortet visar var de
+// hamnar den dagen de byggs, men landar alltid på 0 tills dess.
+const KANAL_META: { kanal: string; nyckel: string; ikon: string; färg: string }[] = [
+  { kanal: 'E-post', nyckel: 'email', ikon: '📧', färg: 'bg-violet-500' },
+  { kanal: 'Push',   nyckel: 'push',  ikon: '📱', färg: 'bg-sky-500'    },
+  { kanal: 'SMS',    nyckel: 'sms',   ikon: '💬', färg: 'bg-green-500'  },
 ]
 
 const ANVANDARE_PER_DAG = [
@@ -101,8 +104,12 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
     queryFn: fetchAdminStats,
   })
 
-  const notisTotal = NOTIS_PER_KANAL.reduce((s, k) => s + k.antal, 0)
-  const notisMax   = Math.max(...NOTIS_PER_KANAL.map(k => k.antal), 1)
+  const notisPerKanal = KANAL_META.map(k => ({
+    ...k,
+    antal: stats?.notificationsByChannel.find(n => n.channel === k.nyckel)?.count ?? 0,
+  }))
+  const notisTotal = notisPerKanal.reduce((s, k) => s + k.antal, 0)
+  const notisMax   = Math.max(...notisPerKanal.map(k => k.antal), 1)
 
   const händelserPerDag = stats?.eventsByDay.map(d => ({
     label: DAGAR_KORT[new Date(d.date + 'T12:00:00').getDay()],
@@ -307,15 +314,17 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
           )}
         </Kort>
 
-        <Kort titel="Notifieringar per kanal" sub="Totalt sedan start" badge={<MockBadge />}>
+        <Kort titel="Notifieringar per kanal" sub="Totalt sedan start" badge={<LiveBadge />}>
           <div className="flex flex-col gap-4">
-            {NOTIS_PER_KANAL.map(k => (
+            {notisPerKanal.map(k => (
               <div key={k.kanal} className="flex items-center gap-3">
                 <span className="text-lg shrink-0">{k.ikon}</span>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium text-slate-700">{k.kanal}</span>
-                    <span className="text-xs text-slate-500">{k.antal > 0 ? k.antal.toLocaleString('sv-SE') : 'Ej aktiverat'}</span>
+                    <span className="text-xs text-slate-500">
+                      {k.nyckel === 'push' ? k.antal.toLocaleString('sv-SE') : (k.antal > 0 ? k.antal.toLocaleString('sv-SE') : 'Ej byggt än')}
+                    </span>
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${k.färg}`} style={{ width: `${(k.antal / notisMax) * 100}%` }} />

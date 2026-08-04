@@ -55,6 +55,11 @@ public class StatsController : ControllerBase
             .OrderByDescending(x => x.Count)
             .ToListAsync();
 
+        var notificationsByChannel = await _db.NotificationDeliveryLogs
+            .GroupBy(n => n.Channel)
+            .Select(g => new { Channel = g.Key, Count = g.Count() })
+            .ToListAsync();
+
         var last7Days = Enumerable.Range(0, 7)
             .Select(i => since7days.AddDays(i))
             .Select(d => new {
@@ -70,6 +75,7 @@ public class StatsController : ControllerBase
             EventsByDay       = last7Days,
             EventsBySource    = eventsBySourceNamed,
             EventsBySeverity  = eventsBySeverity,
+            NotificationsByChannel = notificationsByChannel,
         });
     }
 }

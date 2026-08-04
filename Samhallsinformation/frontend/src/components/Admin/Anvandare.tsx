@@ -29,6 +29,7 @@ interface Kontaktuppgift {
 
 interface Användare {
   id:               string
+  joinNr:           number // visningsnummer baserat på registreringsordning, inte kopplat till GUID:et
   namn:             string
   epost:            string         // spegling av primär e-post, för tabellvisning
   roller:           Roll[]
@@ -76,9 +77,10 @@ function normaliseraRoll(roll: string): Roll {
     : 'Användare'
 }
 
-function mapAdminUser(dto: AdminUserDto): Användare {
+function mapAdminUser(dto: AdminUserDto, joinNr: number): Användare {
   return {
     id:               dto.id,
+    joinNr,
     namn:             dto.name,
     epost:            dto.email,
     roller:           [normaliseraRoll(dto.role)],
@@ -442,7 +444,7 @@ function ImpersonationModal({ användare, onBekräfta, onStäng }: {
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-800">{användare.namn}</p>
-              <p className="text-xs text-slate-400">{användare.epost} · ID #{användare.id}</p>
+              <p className="text-xs text-slate-400">{användare.epost} · Nr {användare.joinNr}</p>
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -510,7 +512,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     if (statusFilter !== 'Alla' && u.status !== statusFilter) return false
     if (sökning && !u.namn.toLowerCase().includes(sökning.toLowerCase()) &&
         !u.epost.toLowerCase().includes(sökning.toLowerCase()) &&
-        !String(u.id).includes(sökning)) return false
+        !String(u.joinNr).includes(sökning)) return false
     return true
   })
 
@@ -524,7 +526,15 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   }
 
   useEffect(() => {
-    if (adminUsers) setAnvändare(adminUsers.map(mapAdminUser))
+    if (!adminUsers) return
+    // Visningsnummer baserat på registreringsordning (äldst = 1) — inte GUID:et,
+    // som varken är läsbart eller meningsfullt att visa för en admin.
+    const joinNrById = new Map(
+      [...adminUsers]
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        .map((u, i) => [u.id, i + 1])
+    )
+    setAnvändare(adminUsers.map(dto => mapAdminUser(dto, joinNrById.get(dto.id)!)))
   }, [adminUsers])
 
   // Håller den öppna detaljpanelen i synk efter en statusändring (stäng av/
@@ -792,7 +802,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   <input type="checkbox" checked={markerade.has(u.id)} readOnly
                     className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer" />
                 </td>
-                <td className="px-2 py-3 text-xs text-slate-400 font-mono">#{u.id}</td>
+                <td className="px-2 py-3 text-xs text-slate-400 font-mono">#{u.joinNr}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-xs font-bold text-violet-700 shrink-0">{initialer(u.namn)}</div>
@@ -862,7 +872,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">Overifierad kontaktuppgift</span>
                   )}
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">{vald.epost} · ID #{vald.id}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{vald.epost} · Nr {vald.joinNr}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
