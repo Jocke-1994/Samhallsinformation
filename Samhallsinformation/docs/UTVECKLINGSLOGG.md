@@ -13,6 +13,65 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## fix: mobilanpassning av Ärendehantering + profilens Uppdateringar (2026-08-04)
+
+**Mål:** Ett kodbaserat mobilaudit av alla sidor besökare+medlemmar kan nå
+(webbläsarverktyget var otillgängligt hela sessionen — samma transienta
+instabilitet som setts tidigare, gav upp efter flera förnyade försök och gick
+kodgranskningsvägen istället). Frågan som drev det: är vi säkra på att allt är
+mobilanpassat?
+
+**Vad hände på vägen:** Delade upp granskningen i två lager — (1) navigations-
+skalet (svep + hamburgermeny för att öppna sidomenyn) och (2) innehållslagret
+(gridlayouter inuti varje sida). `grep -rl useSwipeable` visade att skalet
+redan är EN återanvänd, konsekvent implementerad lösning — `App.tsx`, `OmPage`,
+`UppdateringarPage` och `ProfilePage` (som täcker ALLA medlemssektioner: Mina
+källor, Notifieringar, Konto, Uppdateringar, Support) har den redan, sedan
+session 6/23. Inget att fixa där.
+
+Innehållslagret var mer blandat. `grep -n "grid-cols"` över samtliga
+profilsektioner visade att Konto, Notifieringar, Support-wrappern, FAQ-kortet
+och Mina källor (som redan hade fått en egen, specifik mobilfix i session 23:
+`h-auto sm:h-[523px]`) alla redan använder ett responsivt mönster
+(`grid-cols-1 lg:grid-cols-2` eller motsvarande `flex`-variant). Två filer
+gjorde INTE det:
+
+- `ArendehanteringKort.tsx` — `grid-cols-4` helt utan brytpunkt, både för
+  statistikraden och för layouten "skicka ärende (1 kol) + ärendetabell
+  (3 kol)". Skulle tvinga fyra hopklämda kolumner på en 390px-skärm.
+- `Uppdateringar.tsx` (profilsektionen, inte den publika `/uppdateringar`-sidan
+  — den har redan svep/hamburger men dess INNEHÅLL hade aldrig granskats
+  separat) — `grid-cols-2` utan brytpunkt, samma problem i mindre skala.
+
+**Lösning — användarens egen idé:** användaren bekräftade att Mina källor
+faktiskt ser bra ut på sin riktiga telefon (bättre bevis än en emulerad
+webbläsarbredd) och frågade om det mönstret kunde återanvändas. Kopierade
+`MinaKallor/index.tsx`s exakta struktur rakt av:
+`flex flex-col lg:flex-row gap-6 items-stretch lg:items-start` för den
+asymmetriska formulär+tabell-layouten i Ärendehantering (samma
+`w-full lg:w-80 lg:shrink-0` / `flex-1 min-w-0`-uppdelning som `LaggTillKort`/
+`AktivaKallorKort` redan använder), och det enklare `grid-cols-1 lg:grid-cols-2`
+(samma som Konto/Notifieringar) för statistikraden och för profilens
+Uppdateringar-sektion.
+
+**Andra möjliga lösningar, inte valda:**
+- Kunnat uppfinna en helt ny mobillayout för just Ärendehantering (t.ex.
+  kort-baserad vy istället för tabell på små skärmar) — avfärdat för nu,
+  betydligt mer jobb än att återanvända ett redan beprövat mönster, och
+  tabellen har redan `overflow-auto` så den går i alla fall att använda,
+  bara inte optimalt.
+- SupportInbox.tsx (adminsidan) har samma tabellform men rördes INTE —
+  ligger utanför den här gångens scope (besökare+medlemmar, inte admin), och
+  admin är en annan roll med andra avvägningar om mobilstöd överhuvudtaget
+  är önskvärt där.
+
+**Verifiering:** `npm run build` grönt. Inget riktigt klicktest gjordes den här
+gången (samma webbläsarverktygsproblem som hindrade hela auditen) — rekommenderar
+att användaren kollar båda sidorna på sin telefon efter merge, samma sätt som
+redan bekräftades för Mina källor.
+
+---
+
 ## fix: DateTime tappade UTC-markering vid läsning från SQLite (2026-08-03)
 
 **Mål:** Ingen ny funktion — ett bugfix upptäckt av användaren direkt efter att
