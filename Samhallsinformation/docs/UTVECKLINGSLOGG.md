@@ -13,6 +13,84 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: onboarding-wizard på riktigt (Konto → Källor → Klart) (2026-08-04)
+
+**Mål:** Punkt 2 i den bestämda ordningen innan registrering kan öppnas
+publikt (9→1→6→7→8→**2**→3→4→5, se `[[project_fore_registrering_checklista]]`).
+En 3-stegs wizard skissades som klickbar mockup i session 24 men byggdes
+aldrig på riktigt — `RegisterPage.tsx` skapade bara kontot och kastade
+användaren rakt in på startsidan.
+
+**Utforskning innan kod (två parallella Explore-agenter):** bekräftade att
+`POST /api/auth/register` redan loggar in användaren direkt (token sätts
+innan navigering), så alla tre steg kan anropa autentiserade endpoints utan
+extra inloggning. Bekräftade också att `Source` fortfarande är helt
+flack/nationell (inget geografifält) — det ursprungliga mockup-designens
+adress/ort-fält för att "föreslå lokala källor" skulle alltså inte göra
+något just nu. Efter avstämning med användaren (som inte kom ihåg den
+gamla mockup-detaljen — helt rimligt, den är från en session sedan länge)
+föll valet på att hoppa över fältet helt istället för att bygga in ett
+overksamt UI-element.
+
+**Genomförande:** Ny route `/onboarding` (`OnboardingPage.tsx`), inte
+låst till en "precis registrerad"-flagga — vilken inloggad användare som
+helst kan besöka den (samma enkla guard-mönster som `AdminPage.tsx`).
+`RegisterPage.tsx` navigerar dit istället för direkt till `redirect`-målet,
+med `name`/`email` skickat via router-state (bara för välkomstskärmens
+personalisering, ingen ny AuthContext-yta behövdes).
+
+Steg 2 (Källor) återanvänder `AllaKallorKort.tsx` **rakt av**, oförändrad
+— den var redan en ren, presentationell komponent (`sources`/`activeIds`/
+`onAdd` som props). `onAdd` gör exakt samma sak som `MinaKallor/index.tsx`s
+redan befintliga `handleAdd`: ett `saveUserSources`-anrop direkt vid klick
+(inte en lokal wizard-batch), så resultatet blir identiskt med hur riktiga
+Mina källor redan fungerar — och ett besök på `/onboarding` en andra gång
+visar korrekt redan valda källor. Steg 3 (Klart) visar en riktig
+sammanfattning (namn, e-post, valda källor) och en global "Hoppa över
+introduktionen"-länk finns på alla steg (tvingar aldrig, matchar projektets
+hållning på FAQ/samtycke).
+
+**Bugg hittad under verifiering, INTE i den nya koden:** vid manuell
+webbläsartest (registrera → gå igenom steg 2 → klicka "+ Lägg till" på
+flera källor) gav ett klick på SMHI `500 Internal Server Error`
+(`SQLite Error 19: 'FOREIGN KEY constraint failed'` i backend-loggen, från
+`UserSourcesController.SaveSources`).
+- **Uteslutningsmetod:** samma sida/lista, en annan källa (Polisen) sparades
+  precis innan utan problem — uteslöt direkt att felet satt i wizardens
+  egen kod eller i `AllaKallorKort`/`saveUserSources`-anropet i sig (samma
+  kod, samma request-form, bara olika `sourceId`). `curl GET /api/sources`
+  direkt mot backend visade bara 3 riktiga källor (Polisen/Trafikverket/
+  Krisinformation) — webbläsarens synliga lista på 8 källor var en kvarleva
+  i react-querys cache från en tidigare sidladdning, innan jag startat om
+  den lokala backend-processen ett flertal gånger under dagens
+  testningspass (varje omstart kör om `Program.cs`s seed-logik mot samma
+  ihållande lokala SQLite-fil, vilket kan ge en annan uppsättning
+  publicerade käll-ID:n än det webbläsarfliken råkade cacha tidigare).
+- **Slutsats:** ett testmiljö-artefakt orsakat av min egen upprepade
+  backend-omstart under sessionen, inte en bugg i den nya wizarden eller i
+  den redan skarpa Mina källor-koden — en riktig, kontinuerligt körande
+  backend (produktion, eller en enda sammanhängande dev-session) startas
+  inte om upprepade gånger på det här sättet.
+
+**Verifiering:** `npm run build` grönt. Manuellt end-to-end: registrerade
+ett riktigt testkonto i webbläsaren → landade korrekt på `/onboarding`
+istället för startsidan → steg 1 visade rätt namn/e-post → steg 2 (Polisen)
+sparades och visade "Tillagd" → bekräftat via `curl GET /api/user/sources`
+med kontots riktiga JWT att valet faktiskt persisterats i backend (inte
+bara UI-tillstånd). Kunde inte klicka igenom hela steg 3 pga upprepad
+webbläsarverktygs-instabilitet (samma kända problem som tidigare denna
+session), men kärnmekaniken (registrering→redirect, äkta backend-sparning,
+återbesök visar befintliga val) är bevisat fungerande.
+
+**Andra vägar som hade kunnat fungera:** batcha alla källval lokalt i
+wizard-state och göra ETT sparanrop på "Nästa" istället för per-klick —
+avfärdat till förmån för att återanvända `handleAdd`s redan beprövade
+mönster rakt av, vilket också gör beteendet identiskt med hur Mina källor
+redan fungerar (mindre att hålla synkat, en enda sanning för "hur en källa
+läggs till").
+
+---
+
 ## feat: flagg-roadmap-status flyttad in i idé-pipelinen, "Kommande funktioner" skrotad (2026-08-04)
 
 **Mål:** Direkt efter att idé-pipelinens tre PR:ar mergats påpekade

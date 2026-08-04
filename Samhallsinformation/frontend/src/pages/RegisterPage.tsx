@@ -24,7 +24,7 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       await register(name, email, password)
-      navigate(redirect, { replace: true })
+      navigate(`/onboarding?redirect=${encodeURIComponent(redirect)}`, { replace: true, state: { name, email } })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Något gick fel')
     } finally {
