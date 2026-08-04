@@ -26,6 +26,12 @@ public class AdminUsersControllerTests
         ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) } },
     };
 
+    private static AdminUsersController NewController(AppDbContext db, Guid callerId) => new(db)
+    {
+        ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(
+            new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, callerId.ToString()) }, "TestAuth")) } },
+    };
+
     [Fact]
     public async Task GetUsers_ReturnsAllUsers()
     {
@@ -147,6 +153,133 @@ public class AdminUsersControllerTests
         var list = Assert.IsAssignableFrom<System.Collections.IEnumerable>(result.Value).Cast<object>().ToList();
 
         Assert.Single(list);
+    }
+
+    [Fact]
+    public async Task Delete_SchedulesDeletion_AndBlocksLoginImmediately()
+    {
+        using var db = NewDb();
+        var admin = new User { Name = "Admin", Email = "admin@example.com", PasswordHash = "x", Role = "Admin" };
+        var target = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.AddRange(admin, target);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db, admin.Id);
+        await controller.Delete(target.Id);
+
+        var updated = await db.Users.FindAsync(target.Id);
+        Assert.False(updated!.IsActive);
+        Assert.NotNull(updated.DeletionScheduledAt);
+        Assert.True(updated.DeletionScheduledAt > DateTime.UtcNow.AddHours(23));
+        Assert.Null(updated.DeletedAt);
+        // Inte anonymiserat än — det görs av UserDeletionBackgroundService när fönstret gått ut
+        Assert.Equal("Ada", updated.Name);
+        Assert.Equal("ada@example.com", updated.Email);
+    }
+
+    [Fact]
+    public async Task Delete_AlreadyScheduled_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var admin = new User { Name = "Admin", Email = "admin@example.com", PasswordHash = "x", Role = "Admin" };
+        var target = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x", DeletionScheduledAt = DateTime.UtcNow.AddHours(10) };
+        db.Users.AddRange(admin, target);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db, admin.Id);
+        var result = await controller.Delete(target.Id);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Delete_AlreadyDeleted_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var admin = new User { Name = "Admin", Email = "admin@example.com", PasswordHash = "x", Role = "Admin" };
+        var target = new User { Name = "Raderad användare", Email = "deleted-x@anonymized.local", PasswordHash = "", DeletedAt = DateTime.UtcNow };
+        db.Users.AddRange(admin, target);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db, admin.Id);
+        var result = await controller.Delete(target.Id);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task CancelDeletion_ClearsScheduleAndReactivatesAccount()
+    {
+        using var db = NewDb();
+        var user = new User
+        {
+            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
+            IsActive = false, SuspendedAt = DateTime.UtcNow, SuspendedReason = "Radering begärd (GDPR)",
+            DeletionScheduledAt = DateTime.UtcNow.AddHours(10),
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db);
+        await controller.CancelDeletion(user.Id);
+
+        var updated = await db.Users.FindAsync(user.Id);
+        Assert.Null(updated!.DeletionScheduledAt);
+        Assert.True(updated.IsActive);
+        Assert.Null(updated.SuspendedAt);
+        Assert.Null(updated.SuspendedReason);
+    }
+
+    [Fact]
+    public async Task CancelDeletion_NothingScheduled_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db);
+        var result = await controller.CancelDeletion(user.Id);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task CancelDeletion_UnknownUser_ReturnsNotFound()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var result = await controller.CancelDeletion(Guid.NewGuid());
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task Delete_OwnAccount_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var admin = new User { Name = "Admin", Email = "admin@example.com", PasswordHash = "x", Role = "Admin" };
+        db.Users.Add(admin);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db, admin.Id);
+        var result = await controller.Delete(admin.Id);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        var stillThere = await db.Users.FindAsync(admin.Id);
+        Assert.Equal("Admin", stillThere!.Name);
+    }
+
+    [Fact]
+    public async Task Delete_UnknownUser_ReturnsNotFound()
+    {
+        using var db = NewDb();
+        var controller = NewController(db, Guid.NewGuid());
+
+        var result = await controller.Delete(Guid.NewGuid());
+
+        Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]

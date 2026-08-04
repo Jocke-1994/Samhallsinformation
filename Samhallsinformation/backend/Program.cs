@@ -130,6 +130,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 // Background service
 builder.Services.AddHostedService<IngestorBackgroundService>();
 builder.Services.AddHostedService<SupportScheduledActionService>();
+builder.Services.AddHostedService<UserDeletionBackgroundService>();
 
 // Controllers
 builder.Services.AddControllers();
@@ -603,6 +604,28 @@ using (var scope = app.Services.CreateScope())
 
                 INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
                 VALUES ('20260804220533_AddSuspensionReminder', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
+        if (pendingMigrations.Contains("20260804221437_AddUserDeletedAt"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""DeletedAt"" timestamptz;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260804221437_AddUserDeletedAt', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
+        if (pendingMigrations.Contains("20260804222722_AddDeletionScheduledAt"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""DeletionScheduledAt"" timestamptz;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260804222722_AddDeletionScheduledAt', '10.0.10')
                 ON CONFLICT DO NOTHING;
             ");
         }
