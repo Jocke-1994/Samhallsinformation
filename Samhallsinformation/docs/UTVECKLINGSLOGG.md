@@ -13,6 +13,68 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: FeatureIdea-datamodell för idé-pipelinen (2026-08-04, PR 1/3)
+
+**Mål:** Efter "Kommande funktioner" föreslog användaren en betydligt större
+idé: ett enda ställe i admin som täcker en funktions HELA livscykel —
+brainstorm → triage (kan/bör-bedömning) → bygg → test (med utvalda testare)
+→ lanseringsklar (checklista: FAQ, kundtjänstbot, push, flagga) → lanserad.
+Planerades i ett eget plan-läge-pass (två parallella Explore-agenter mot
+backend-auth/SupportTicket-mönster respektive frontend-admin-mönster) innan
+någon kod skrevs, eftersom det är ett helt nytt backend-domän. Detta är del
+1 av 3 planerade PR:ar — bara datamodellen.
+
+**Designbeslut som drevs av kodsökning, inte gissning:**
+- **Ingen global "Tester"-roll.** `User.Role` är bara en fri sträng
+  (`"Admin"/"Support"/"Användare"`), och sökning bekräftade att ingen
+  per-record multi-user-koppling finns någonstans i kodbasen sedan
+  tidigare (`SupportTicket.AssignedToUserId` är en enda FK, inte en lista).
+  En global testroll hade blandat ihop "kan testa vissa funktioner" med en
+  systemomfattande behörighetsnivå. Löst med en egen kopplingstabell
+  (`FeatureIdeaTester`) istället — matchar hur varje annan relation i
+  schemat redan är byggd (riktiga FK-tabeller, aldrig JSON-listor av ID:n).
+- **`IdeaNumber` tilldelas i applikationskod (MAX+1), inte en DB-sekvens** —
+  exakt samma medvetna val som `SupportTicket.TicketNumber` gjorde (portabelt
+  mellan SQLite lokalt och Postgres i produktion utan en till
+  sekvens-specialfix i `Program.cs`).
+- **Triage är två nullable booleans + en motivering-textsträng**
+  (`TriageKanGoras`/`TriageBorGoras`/`TriageMotivering`), inte en egen enum
+  eller fyra separata statusvärden — täcker användarens fyra kombinationer
+  (kan+bör=godkänd, alla andra=inte godkänd) utan att uppfinna en ny
+  statustyp när kodbasen redan konsekvent använder fria strängar för den
+  typen av fält (`Status`/`Channel`/`SenderType` på `SupportTicket`).
+- **Ingen `GET /api/admin/users`-lista finns** (bekräftat: `Anvandare.tsx`
+  är fortfarande 100% mock) — att bygga hela användarlistnings-API:et hör
+  inte hemma i den här funktionen. Löst med en minimal
+  `GET /api/admin/users/lookup?email=` i en ny `AdminUsersController.cs`,
+  räcker för att lägga till en specifik testare via e-post utan att bygga
+  ett helt nytt, större API i förbigående.
+
+**Genomförande:** `FeatureIdea`/`FeatureIdeaTester`/`FeatureIdeaChecklistItem`
+i `backend/Models/`, konfigurerade i `AppDbContext.OnModelCreating` med
+samma FK/index-mönster som `SupportTicket`-familjen. Migration genererad med
+`dotnet ef migrations add AddFeatureIdeas` (id
+`20260804145629_AddFeatureIdeas`), följt av det etablerade
+raw-SQL-Postgres-blocket i `Program.cs` (uuid/timestamptz/boolean/TEXT-typer,
+`ON CONFLICT DO NOTHING`-insert i `__EFMigrationsHistory`) — exakt samma
+mönster som `AddSupportTickets`.
+
+**Verifiering:** `dotnet build` grönt, alla 30 befintliga backend-tester
+gröna (inga regressioner), `dotnet ef migrations has-pending-model-changes`
+bekräftar att modellen och migrationen stämmer exakt överens, och
+`dotnet ef database update` applicerade migrationen mot den lokala
+SQLite-databasen utan fel (verifierar den faktiska SQL:en, inte bara att
+koden kompilerar). Postgres-grenen av migrationen kan inte testas lokalt
+(ingen lokal Postgres-instans), men följer syntaxen från `AddSupportTickets`
+som redan är bevisat fungerande i produktion.
+
+**Andra vägar som hade kunnat fungera:** en riktig `[Authorize(Roles =
+"Tester")]`-roll hade varit enklare kod men fel modell — skulle krävt att
+varje testare fick en global rollhöjning bara för att testa EN funktion,
+och skulle inte gått att ge olika testare till olika idéer samtidigt.
+
+---
+
 ## fix: NewsItem-radlayout (titelklämning) + tyst fel vid Spara-klick (2026-08-04)
 
 **Mål:** Två buggar hittade av användaren under manuell verifiering av
