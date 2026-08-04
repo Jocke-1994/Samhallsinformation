@@ -554,6 +554,21 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        if (pendingMigrations.Contains("20260804205026_AddAccountControlFields"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""AuthProvider""     TEXT NOT NULL DEFAULT 'local';
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""IsActive""         boolean NOT NULL DEFAULT true;
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""SuspendedAt""      timestamptz;
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""SuspendedReason""  TEXT;
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""TermsAcceptedAt""  timestamptz;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260804205026_AddAccountControlFields', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 

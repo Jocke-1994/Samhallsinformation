@@ -60,6 +60,8 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Email).IsUnique();
             entity.Property(e => e.PushEnabled).HasDefaultValue(true);
+            entity.Property(e => e.AuthProvider).HasDefaultValue("local");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
         });
 
         modelBuilder.Entity<UserDevice>(entity =>
