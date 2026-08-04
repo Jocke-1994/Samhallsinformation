@@ -13,6 +13,21 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## fix: GUID kvar synlig som hover-tooltip på Nr-numret (2026-08-05)
+
+**Mål:** Förra postens `joinNr`-fix gjorde att det riktiga GUID:et försvann
+helt ur gränssnittet — admin frågade var man ser det om man behöver det
+(felsökning, DB-slagning, buggrapport hit).
+
+**Genomförande:** Lade till `title={GUID: ...}` (native webbläsartooltip) på
+alla tre ställen `joinNr` visas (tabellradens ID-kolumn, detaljpanelens
+header, ImpersonationModal) + en prickad understrykning så det syns att
+texten är hovrable. Ingen egen komponent, ingen klick-för-att-kopiera —
+bara den enklaste möjliga vägen till samma information som fanns innan,
+utan att tabellen blir rörig igen.
+
+---
+
 ## fix: läsbara användar-nummer + riktig notisstatistik i Rapporter (2026-08-05)
 
 **Mål:** Två uppföljningsfrågor efter förra postens PR-genomgång.
