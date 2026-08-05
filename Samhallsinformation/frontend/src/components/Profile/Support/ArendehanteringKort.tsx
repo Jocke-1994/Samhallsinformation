@@ -137,7 +137,7 @@ function ArendeRad({
                       {m.text}
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      {m.senderType === 'user' ? 'Du' : 'Support'} · {formatDateTime(m.createdAt)}
+                      {m.senderType === 'user' ? 'Du' : (m.authorName ?? 'Support')} · {formatDateTime(m.createdAt)}
                     </p>
                   </div>
                 ))}

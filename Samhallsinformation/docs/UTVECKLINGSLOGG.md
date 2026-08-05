@@ -13,6 +13,49 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## feat: visningsnamn för supportsvar istället för riktigt namn (2026-08-05)
+
+**Mål:** Admin ville kunna välja om deras riktiga namn syns för slutanvändare
+i supportsvar, eller ett förnamn/påhittat smeknamn istället. Upptäckte under
+research att den citizen-facing ärendevyn (`ArendehanteringKort.tsx`) redan
+visar en hårdkodad, generisk `"Support"`-etikett för alla agent-svar — den
+riktiga `User.Name` har aldrig exponerats där. Byggde alltså inte en
+integritetsfix, utan en väg att göra den redan-privata etiketten personlig
+istället, om admin vill.
+
+**Genomförande:** Nytt nullable `User.DisplayName`-fält (migration
+`AddUserDisplayName`). `GET/PUT /api/auth/me` — omskrivet från att bara läsa
+JWT-claims (aldrig anropat av frontend förut, upptäckt via grep) till att
+fråga databasen direkt, enklare och alltid aktuellt utan att behöva lägga
+till ännu en claim. `PUT` tolkar `null` som "rör inte fältet" och tom sträng
+som "nollställ till Support" — samma mönster som resten av `UpdateMe`.
+
+`SupportController.GetMyTicket`s meddelandeprojektion fick ett nytt
+`AuthorName`-fält (`AuthorUser.DisplayName ?? "Support"`, bara för
+`SenderType == "agent"`) — matchar exakt ett redan existerande, tidigare
+oanvänt `authorName`-fält i frontend-typen `TicketMessageDto` (skrivet i
+förväg, aldrig kopplat). `ArendehanteringKort.tsx` bytte den hårdkodade
+`'Support'`-strängen mot `m.authorName ?? 'Support'`.
+
+Ny `SupportVisningsnamnKort.tsx` i Konto-sidan, bakom en ny feature-flagga
+(`konto_visningsnamn`, default på) OCH en rollkontroll (`Admin`/`Support`
+bara) — en vanlig `Användare`-roll svarar aldrig på ärenden och har inget
+att sätta här.
+
+**Verifiering:** `dotnet test` 71/71 (5 nya — `Me`/`UpdateMe` sätter/
+nollställer/lämnar orört, `GetMyTicket` faller tillbaka till "Support" när
+`DisplayName` saknas för en annan agent). `tsc -b --noEmit`/`npm run build`
+gröna. End-to-end mot lokal backend: satte visningsnamn till "Nova",
+registrerade en testanvändare, skapade ett ärende, svarade som admin,
+bekräftade att den inloggade användarens egen vy av ärendet visar
+`authorName: "Nova"` — aldrig det riktiga namnet. Stötte under verifieringen
+på tomma tokens från flera snabba `register`/`login`-anrop i rad — visade
+sig vara PR417s egen rate limiter (5/min/IP) som triggade på mina egna
+testanrop, inte en bugg; löst genom att starta om backend-processen (nollar
+den in-memory räknaren) och göra färre auth-anrop per testomgång.
+
+---
+
 ## fix: "Okänt" istället för 1-01-01 som registreringsdatum (2026-08-05)
 
 **Mål:** Admin upptäckte att sitt eget konto i Användarhantering visade

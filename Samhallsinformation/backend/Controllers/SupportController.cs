@@ -121,7 +121,16 @@ public class SupportController : ControllerBase
         var messages = await _db.SupportTicketMessages
             .Where(m => m.TicketId == id && !m.IsInternal)
             .OrderBy(m => m.CreatedAt)
-            .Select(m => new { m.Id, m.SenderType, m.Text, m.CreatedAt })
+            .Select(m => new
+            {
+                m.Id,
+                m.SenderType,
+                m.Text,
+                m.CreatedAt,
+                // Visar aldrig agentens riktiga Name — DisplayName om satt, annars
+                // en generisk etikett. Se User.DisplayName-kommentaren.
+                AuthorName = m.SenderType == "agent" ? (m.AuthorUser!.DisplayName ?? "Support") : null,
+            })
             .ToListAsync();
 
         return Ok(new

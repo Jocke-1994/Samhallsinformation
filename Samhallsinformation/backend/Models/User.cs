@@ -6,6 +6,7 @@ public class User
     public string   Email        { get; set; } = string.Empty;
     public string   PasswordHash { get; set; } = string.Empty;
     public string   Name         { get; set; } = string.Empty;
+    public string?  DisplayName  { get; set; } // Visas istället för "Support" i supportsvar till slutanvändare — avslöjar aldrig riktiga Name
     public string   Role         { get; set; } = "Användare";
     public bool     PushEnabled  { get; set; } = true;
     public string   AuthProvider { get; set; } = "local";
