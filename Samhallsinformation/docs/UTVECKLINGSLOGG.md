@@ -13,6 +13,31 @@ som källmaterial för djupa tekniska förklaringar till utvecklaren.
 
 ---
 
+## fix: rollspärr på DisplayName även i backend (2026-08-05)
+
+**Mål:** Förra postens `DisplayName`-fält var redan osynligt i UI:t för
+vanliga användare (dolt bakom en rollkontroll i `Konto/index.tsx`), men
+`PUT /api/auth/me` hade ingen egen spärr — vem som helst inloggad kunde satt
+fältet via ett direkt API-anrop. Ofarligt idag (fältet läses bara av
+agent-svar, som redan kräver adminroll att skapa), men ett implicit
+antagande, inte en garanti — en framtida kodväg som skapar agent-svar utan
+att independently kolla rollen hade tyst gjort fältet exploaterbart.
+
+**Genomförande:** En riktad kontroll i `UpdateMe`, bara på `DisplayName`-
+delen av requesten — `if (req.DisplayName != null && user.Role != "Admin"
+&& user.Role != "Support") return StatusCode(403, ...)`. Namn/e-post-
+uppdatering för vanliga användare påverkas inte (kontrollen triggar bara om
+`DisplayName` faktiskt skickas med).
+
+**Verifiering:** `dotnet test` 72/72 (1 ny — vanlig användare får 403 och
+fältet förblir null; uppdaterade två befintliga tester till att sätta
+Admin/Support-roll eftersom de nu annars hade träffat spärren). End-to-end
+mot lokal backend: admin sätter visningsnamn → 200, vanlig användare
+försöker sätta det → 403 med tydligt felmeddelande, samma användare
+uppdaterar bara sitt namn → fungerar som vanligt.
+
+---
+
 ## feat: visningsnamn för supportsvar istället för riktigt namn (2026-08-05)
 
 **Mål:** Admin ville kunna välja om deras riktiga namn syns för slutanvändare
