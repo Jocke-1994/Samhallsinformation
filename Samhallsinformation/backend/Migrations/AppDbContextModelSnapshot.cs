@@ -516,6 +516,9 @@ namespace Samhallsinformation.Migrations
                     b.Property<DateTime?>("DeletionScheduledAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DisplayName")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("TEXT");

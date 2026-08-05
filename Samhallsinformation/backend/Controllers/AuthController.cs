@@ -54,12 +54,13 @@ public class AuthController : ControllerBase
 
     [HttpGet("me")]
     [Authorize]
-    public IActionResult Me()
+    public async Task<IActionResult> Me()
     {
-        var email = User.FindFirstValue(ClaimTypes.Email);
-        var name  = User.FindFirstValue("name");
-        var role  = User.FindFirstValue("role");
-        return Ok(new { email, name, role });
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var user   = await _db.Users.FindAsync(userId);
+        if (user == null) return NotFound();
+
+        return Ok(new { user.Email, user.Name, user.DisplayName, user.Role });
     }
 
     [HttpPut("me")]
@@ -70,8 +71,9 @@ public class AuthController : ControllerBase
         var user   = await _db.Users.FindAsync(userId);
         if (user == null) return NotFound();
 
-        var oldName  = user.Name;
-        var oldEmail = user.Email;
+        var oldName        = user.Name;
+        var oldEmail       = user.Email;
+        var oldDisplayName = user.DisplayName;
 
         if (!string.IsNullOrWhiteSpace(req.Name))  user.Name  = req.Name;
         if (!string.IsNullOrWhiteSpace(req.Email))
@@ -80,16 +82,21 @@ public class AuthController : ControllerBase
                 return Conflict(new { error = "E-postadressen används redan" });
             user.Email = req.Email;
         }
+        // Explicit null = rör inte fältet, tom sträng = nollställ tillbaka till "Support".
+        if (req.DisplayName != null)
+            user.DisplayName = string.IsNullOrWhiteSpace(req.DisplayName) ? null : req.DisplayName.Trim();
 
         if (user.Name != oldName)
             _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "name", OldValue = oldName, NewValue = user.Name });
         if (user.Email != oldEmail)
             _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "email", OldValue = oldEmail, NewValue = user.Email });
+        if (user.DisplayName != oldDisplayName)
+            _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "displayName", OldValue = oldDisplayName, NewValue = user.DisplayName });
 
         await _db.SaveChangesAsync();
 
         var accessToken = _tokens.GenerateAccessToken(user);
-        return Ok(new { accessToken, name = user.Name, role = user.Role });
+        return Ok(new { accessToken, name = user.Name, displayName = user.DisplayName, role = user.Role });
     }
 
     [HttpPut("me/password")]
@@ -132,7 +139,7 @@ public class AuthController : ControllerBase
 public record LoginRequest(string Email, string Password);
 public record RegisterRequest(string Name, string Email, string Password, bool AcceptedTerms);
 public record RefreshRequest(string RefreshToken);
-public record UpdateMeRequest(string? Name, string? Email);
+public record UpdateMeRequest(string? Name, string? Email, string? DisplayName = null);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);

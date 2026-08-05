@@ -136,6 +136,32 @@ public class SupportControllerTests
     }
 
     [Fact]
+    public async Task GetMyTicket_AgentReply_UsesDisplayNameOrFallsBackToSupport()
+    {
+        using var db = NewDb();
+        var owner   = new User { Name = "Ada",   Email = "ada@example.com",   PasswordHash = "x" };
+        var agent   = new User { Name = "Joakim Rehn", Email = "admin@example.com", PasswordHash = "x", Role = "Admin", DisplayName = "Nova" };
+        var agent2  = new User { Name = "Support Two", Email = "support2@example.com", PasswordHash = "x", Role = "Admin" }; // ingen DisplayName satt
+        db.Users.AddRange(owner, agent, agent2);
+        var ticket = new SupportTicket { Subject = "Fråga", Category = "Konto", Channel = "arendehantering", CreatedByUserId = owner.Id };
+        db.SupportTickets.Add(ticket);
+        db.SupportTicketMessages.Add(new SupportTicketMessage { Ticket = ticket, SenderType = "user",  AuthorUserId = owner.Id,  Text = "Hej" });
+        db.SupportTicketMessages.Add(new SupportTicketMessage { Ticket = ticket, SenderType = "agent", AuthorUserId = agent.Id,  Text = "Hej tillbaka" });
+        db.SupportTicketMessages.Add(new SupportTicketMessage { Ticket = ticket, SenderType = "agent", AuthorUserId = agent2.Id, Text = "Jag också" });
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db, Authenticated(owner.Id));
+        var result = Assert.IsType<OkObjectResult>(await controller.GetMyTicket(ticket.Id));
+
+        var messages = (System.Collections.IEnumerable)result.Value!.GetType().GetProperty("Messages")!.GetValue(result.Value)!;
+        var names = messages.Cast<object>()
+            .Select(m => m.GetType().GetProperty("AuthorName")!.GetValue(m) as string)
+            .ToList();
+
+        Assert.Equal([null, "Nova", "Support"], names);
+    }
+
+    [Fact]
     public void AdminSupportController_RequiresAdminRole()
     {
         var attr = typeof(AdminSupportController).GetCustomAttribute<AuthorizeAttribute>();

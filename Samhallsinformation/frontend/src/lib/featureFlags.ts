@@ -13,6 +13,7 @@ export type FlagKey =
   | 'notif_push'
   | 'konto_info'
   | 'konto_losenord'
+  | 'konto_visningsnamn'
   | 'konto_tvafaktor'
   | 'konto_app_notiser'
   | 'konto_sessioner'
@@ -98,6 +99,7 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
     flaggor: [
       { key: 'konto_info',           label: 'Kontoinformation',  beskrivning: 'Visa och ändra namn, e-post och grunduppgifter', defaultAktiv: true },
       { key: 'konto_losenord',       label: 'Lösenordsbyte',     beskrivning: 'Byt lösenord för kontot',                       defaultAktiv: true },
+      { key: 'konto_visningsnamn',   label: 'Visningsnamn för support', beskrivning: 'Sätt ett visningsnamn som visas i supportsvar istället för "Support" — bara synligt för Admin/Support', defaultAktiv: true },
       { key: 'konto_tvafaktor',      label: 'Tvåfaktor',         beskrivning: 'Aktivera tvåfaktorsautentisering',               defaultAktiv: false },
       { key: 'konto_app_notiser',    label: 'App-notiser',       beskrivning: 'Inställningar för push-notiser i appen',         defaultAktiv: false },
       { key: 'konto_sessioner',      label: 'Sessioner',         beskrivning: 'Visa och avsluta aktiva inloggningar',           defaultAktiv: false },

@@ -10,7 +10,9 @@ import SessionerKort from './SessionerKort'
 import TvafaktorKort from './TvafaktorKort'
 import LösenordByte from './LösenordByte'
 import Datahantering from './Datahantering'
+import SupportVisningsnamnKort from './SupportVisningsnamnKort'
 import { useFlags } from '../../../context/FeatureFlagsContext'
+import { useAuth } from '../../../context/AuthContext'
 
 export default function Konto() {
   const [namn, setNamn] = useState<FormField>(makeField(''))
@@ -19,6 +21,8 @@ export default function Konto() {
   const location = useLocation()
   const [highlightId, setHighlightId] = useState<string | null>(location.state?.highlightId ?? null)
   const flaggor = useFlags()
+  const { roll } = useAuth()
+  const ärSupportEllerAdmin = roll === 'Admin' || roll === 'Support'
 
   useEffect(() => {
     if (!highlightId) return
@@ -72,6 +76,7 @@ export default function Konto() {
             onRemoveTelefon={() => setTelefon(makeField(''))}
           />}
           {flaggor.konto_losenord && <LösenordByte />}
+          {flaggor.konto_visningsnamn && ärSupportEllerAdmin && <SupportVisningsnamnKort />}
           {flaggor.konto_tvafaktor && <TvafaktorKort harTelefon={telefon.saved && !!telefon.value} />}
           {flaggor.konto_samtycke && <SparSamtycke />}
         </div>

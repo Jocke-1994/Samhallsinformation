@@ -629,6 +629,17 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        if (pendingMigrations.Contains("20260805001023_AddUserDisplayName"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""DisplayName"" TEXT;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260805001023_AddUserDisplayName', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 
