@@ -55,7 +55,7 @@ public class AuthControllerTests
     public async Task UpdateMe_SetsDisplayName()
     {
         using var db = NewDb();
-        var user = new User { Name = "Joakim Rehn", Email = "joakim@example.com", PasswordHash = "x" };
+        var user = new User { Name = "Joakim Rehn", Email = "joakim@example.com", PasswordHash = "x", Role = "Admin" };
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
@@ -71,13 +71,30 @@ public class AuthControllerTests
     public async Task UpdateMe_EmptyDisplayName_ClearsIt()
     {
         using var db = NewDb();
-        var user = new User { Name = "Joakim Rehn", Email = "joakim@example.com", PasswordHash = "x", DisplayName = "Nova" };
+        var user = new User { Name = "Joakim Rehn", Email = "joakim@example.com", PasswordHash = "x", Role = "Support", DisplayName = "Nova" };
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
         var controller = NewController(db, user.Id);
         await controller.UpdateMe(new UpdateMeRequest(null, null, ""));
 
+        var updated = await db.Users.FindAsync(user.Id);
+        Assert.Null(updated!.DisplayName);
+    }
+
+    [Fact]
+    public async Task UpdateMe_DisplayNameByRegularUser_ReturnsForbiddenAndLeavesItUnset()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" }; // default Role = "Användare"
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db, user.Id);
+        var result = await controller.UpdateMe(new UpdateMeRequest(null, null, "Nova"));
+
+        var status = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, status.StatusCode);
         var updated = await db.Users.FindAsync(user.Id);
         Assert.Null(updated!.DisplayName);
     }

@@ -71,6 +71,12 @@ public class AuthController : ControllerBase
         var user   = await _db.Users.FindAsync(userId);
         if (user == null) return NotFound();
 
+        // DisplayName är bara meningsfullt för konton som faktiskt kan svara på
+        // ärenden — spärra på fältet direkt istället för att förlita oss på att
+        // varje framtida kodväg som skapar agent-svar kommer ihåg att kolla rollen.
+        if (req.DisplayName != null && user.Role != "Admin" && user.Role != "Support")
+            return StatusCode(403, new { error = "Bara admin eller support kan sätta ett visningsnamn." });
+
         var oldName        = user.Name;
         var oldEmail       = user.Email;
         var oldDisplayName = user.DisplayName;
