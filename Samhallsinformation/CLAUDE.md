@@ -111,6 +111,33 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 27 — 2026-08-04 / 2026-08-05
+**What was done:**
+- **Alla fyra pre-launch-luckor från förra sessionens plan färdiga och mergade till main:** `AuthProvider`/`IsActive`/`SuspendedAt`/`TermsAcceptedAt`-fält på `User` (PR #414), kontospärrning + riktig `GET/PUT /api/admin/users` (PR #415, senare återöppnad som #421 — se nedan), villkorsgodkännande vid registrering + utkastad `/villkor`-sida (PR #416), rate limiting 5/min/IP på `/api/auth/*` (PR #417)
+- **Fem uppföljnings-PR:ar ovanpå det:** `Anvandare.tsx` kopplad mot riktig användarlista istället för 10 påhittade mockkonton (PR #418), påminnelse vid kontospärrning via adminpanelens befintliga klock-ikon istället för schemalagd återaktivering (PR #419), GDPR-radering av konton via anonymisering **med ett 24h ångerfönster** — kontot spärras direkt, en ny `UserDeletionBackgroundService` gör den faktiska anonymiseringen när fönstret gått ut, en `cancel-deletion`-endpoint ångrar det innan dess (PR #420)
+- **Merge-krock mitt i sessionen:** PR #413 (wizard, från tidigare session) mergades till main medan PR #414–420 fortfarande var öppna, vilket bröt hela stapeln. Löste `docs/UTVECKLINGSLOGG.md`-konflikter (samma append-only-fil, flera grenar la till poster överst) i varje enskild gren. Allvarligare: när `feat/account-control-fields`s branch togs bort efter att PR #414 mergats, **stängde GitHub PR #415 automatiskt istället för att omdirigera dess bas** (till skillnad från PR #416, som GitHub korrekt omdirigerade till `main`) — återöppnades som ny PR #421 med identiskt innehåll. Lärdom: retargeta nedströms-PR:ars bas till `main` proaktivt INNAN en uppströms-gren tas bort, inte efteråt
+- **Admin-polish, allt kopplat mot data som redan var riktig men aldrig visad:** Översikts "Användare"-kort visar nu riktigt antal + riktig 7-dagarstrend istället för `1284`/`+12` (PR #422); läsbara `Nr 1, 2, 3...`-nummer (registreringsordning) i Användarhantering istället för råa GUID:n, med GUID:et kvar som hover-tooltip (PR #423, #424); `"Okänt"` istället för den bokstavliga `0001-01-01`-defaulten för konton (i praktiken bara admin-kontot) som fanns innan `CreatedAt`-kolumnen lades till (PR #425); Rapporters "Notifieringar per kanal" kopplad mot redan existerande men aldrig uppvisad `NotificationDeliveryLog`-data (del av PR #423)
+- **Ny funktion: visningsnamn för supportsvar** (`User.DisplayName`) — upptäckte under research att den citizen-facing ärendevyn redan bara visade en hårdkodad `"Support"`-etikett (aldrig det riktiga namnet), så det här är en personaliseringsmöjlighet, inte en integritetsfix. Nytt kort i Konto, bakom både en feature-flagga och en rollkontroll (Admin/Support), plus samma spärr på `PUT /api/auth/me` i backend (PR #426, #427)
+- **Diskuterat men medvetet inte byggt:** om avstängda feature-flaggor (t.ex. tvåfaktor, fortfarande 100% fejk) borde bli poster i funktionsidé-pipelinen — pipelinen har redan ett `FlagKey`-fält men ingen stage som betyder "pausad, kan återupptas" (bara "lanserad" eller "avfärdad", båda fel). Sparat till nästa session enligt uttrycklig begäran. `Impersonation.tsx` bekräftades kräva samma omfattning arbete som hela `Anvandare.tsx`-ombyggnaden (egen separat mock-användarlista, ett `telefon`-fält och `BankID`/`Betatestare` som inte finns i det riktiga schemat) — sparad som egen framtida uppgift, inte en snabb fix
+
+**Problem och lösningar denna session:**
+- Se merge-krocken ovan — PR #415s automatiska stängning (inte omdirigering) när dess basgren togs bort var den allvarligaste överraskningen. Löst genom att öppna en ny PR (#421) med identiskt innehåll, och genom att proaktivt retargeta alla ännu opåverkade nedströms-PR:ar till `main` innan fler grenar togs bort
+- Under end-to-end-verifiering av visningsnamn-funktionen: flera snabba `register`/`login`-curl-anrop i rad gav tomma access-tokens — visade sig vara PR #417s egen rate limiter (5/min/IP) som triggade på de egna testanropen, inte en bugg. Löst genom att starta om backend-processen (nollar den in-memory-räknaren) och göra färre auth-anrop per testomgång
+- Webbläsarautomatisering instabil igen vid ett tillfälle (samma återkommande problem som tidigare sessioner) — föll tillbaka på statisk kodgranskning + `curl`-verifiering enligt etablerad praxis
+
+**Etablerat mönster:**
+- **Retargeta nedströms-PR:ars bas till `main` INNAN en uppströms-gren i en PR-stapel tas bort**, inte efteråt — GitHub omdirigerar ibland automatiskt (som med PR #416), men stänger ibland PR:en istället (som med PR #415) utan tydlig regel för vilket som händer
+- Vid en UI-siffra som ser konstig ut (t.ex. `1-01-01`): kolla om det är en bugg i det aktuella flödet eller ett historiskt artefakt från en tidigare migrering (`grep` efter fältnamnet i `Program.cs`s raw-SQL-block) innan man antar det ena eller andra
+- Aldrig hitta på ett rimligt-seende värde för att dölja en databas-artefakt (t.ex. ett påhittat registreringsdatum) — visa "Okänt"/motsvarande istället. Samma princip som redan etablerad för MOCK-badges
+- Ett fält som bara är meningsfullt för en viss roll (t.ex. `DisplayName` för Admin/Support) bör spärras på fältnivå i backend, inte bara döljas i UI:t — annars är säkerheten beroende av att alla framtida kodvägar råkar komma ihåg samma implicita antagande
+
+**Next session:**
+- Funktionsidéer/feature-flaggor-diskussionen (pausade funktioner som pipeline-poster) — användaren vill prata igenom det mer innan beslut
+- `Impersonation.tsx`-ombyggnad (egen mock-användarlista, `telefon`/`BankID`/`Betatestare` som inte finns i schemat) — samma omfattning som `Anvandare.tsx` var
+- Obs: Session 26 (grundpushen, PR #392–395) saknas i den här loggen — finns bara sammanfattad i minnessystemet (`project_push_grundpush_byggd.md`), aldrig skriven hit. Fyll i vid tillfälle om det behövs för framtida kontext
+
+---
+
 ### Session 25 — 2026-07-29 / 2026-07-30
 **What was done:**
 - **Händelsesök/Aktivitetslogg-polish** (PR:ar #383–#385, mergade): Idag-filter-bugg fixad (jämförde mot ett hårdkodat datum istället för `new Date()`), sökord-fritextsök, "markera alla på sidan", klickbar "Sparad till X"-badge med navigering till Användarhantering, CSV fick en "Vem"-kolumn, två-stegs bekräftelse innan Ångra. Checkbox flyttad in i händelsekortet (låg utanför, användarrapporterad bugg)
