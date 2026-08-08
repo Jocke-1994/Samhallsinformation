@@ -111,6 +111,31 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 28 — 2026-08-08
+**What was done:**
+- **FAQ-innehållet granskat post för post mot vad som faktiskt är byggt** (steg 3/7 i den gamla pre-registrerings-ordningen, se session 24/25-loggarna) och rättat i `faqStorage.ts` (PR #436):
+  - id 1–3 avpublicerade — beskriver mail/SMS-notiskanaler ("Standardinställningar under Notifieringar") som inte existerar i dagens UI. Hela Notifieringar-sidan är tom just nu (alla `notif_*`-flaggor, inkl. `notif_push`, är av)
+  - id 4 ("Hur lägger jag till fler källor?") — SPAR-adressförslags-referensen borttagen (togs bort ur Mina källor i PR #386, session 25)
+  - id 5 ("Kan jag följa flera myndigheter samtidigt?") — påståendet om separat notis-urval borttaget, matchar nu "Mitt flöde = notisbasis"-modellen
+  - id 8 ("Vad är nytt i senaste versionen?") — det överdrivna löftet om deep-links till berörda funktioner borttaget (mekaniken finns i typen men används bara på en gammal changelog-post, inte senaste versionen)
+  - id 9 ("Hur rapporterar jag ett fel?") — "Tekniskt fel på sidan" → "Tekniskt fel", matchar den faktiska ämnes-dropdownen i `ArendehanteringKort.tsx`
+  - id 6–7 (radera konto/dataexport) lämnade orörda — redan korrekt avpublicerade sedan tidigare
+- **Vitskärms-incident direkt efter merge, felsökt och avfärdad som transient:** användaren mergade PR #436 och fick en vit sida. `curl` mot produktion (HTML/JS/CSS/backend) gav 200 överallt, uteslöt deploy-/infrafel. Byggde och körde `main` lokalt (`npm install` + `build` + `preview`), verifierade sedan headless med Playwright (samma metod som session 22) mot **både** produktions-URL:en och den lokala buildet: `#root` fick 55 018 respektive 39 832 tecken, inga JS-fel — bara en blockerad GA-analytics-request (`net::ERR_ABORTED`, irrelevant för rendering). Slutsats: koden var aldrig trasig, troligen en övergående cache-krock kring deploy-tillfället (PWA-service workern sedan session 23 är en trolig kandidat) — löste sig med en hård omladdning, bekräftat av användaren
+
+**Problem och lösningar denna session:**
+- Webbläsarautomatisering (Chrome-tillägget) tappade tab-referensen upprepade gånger mitt i vitskärms-felsökningen — samma återkommande instabilitet som session 27. Föll tillbaka på den etablerade Playwright-i-scratchpad-metoden (session 22) istället för att fortsätta försöka med Chrome-verktyget
+
+**Etablerat mönster:**
+- Vid en misstänkt trasig produktionssida efter en merge: `curl` utesluter bara infra/deploy-fel (ger alltid 200 vid en klientkrasch, se session 22). Nästa steg är headless-rendering (Playwright, scratchpad, rör inte projektets egna beroenden) mot både produktion och en lokal build av samma commit, och jämför `#root`s faktiska teckenlängd — inte bara att sidan svarar
+- Chrome-tillägget för webbläsarautomation är fortsatt opålitligt vid tab-hantering session efter session — planera med Playwright-fallbacket som förstahandsval vid den här typen av verifiering, inte som sista utväg
+
+**Next session:**
+- Funktionsidéer/feature-flaggor-diskussionen (pausade funktioner som pipeline-poster) — fortfarande väntande sedan session 27
+- `Impersonation.tsx`-ombyggnad — fortfarande väntande sedan session 27
+- Resten av launch-ordningen: FAS 3 (Google OAuth, #297), sen öppna login/registrering publikt
+
+---
+
 ### Session 27 — 2026-08-04 / 2026-08-05
 **What was done:**
 - **Alla fyra pre-launch-luckor från förra sessionens plan färdiga och mergade till main:** `AuthProvider`/`IsActive`/`SuspendedAt`/`TermsAcceptedAt`-fält på `User` (PR #414), kontospärrning + riktig `GET/PUT /api/admin/users` (PR #415, senare återöppnad som #421 — se nedan), villkorsgodkännande vid registrering + utkastad `/villkor`-sida (PR #416), rate limiting 5/min/IP på `/api/auth/*` (PR #417)
