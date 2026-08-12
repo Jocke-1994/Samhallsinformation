@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { fetchSources } from '../api/sources'
 import { saveUserSources, type SourcePrefUpdate } from '../api/userSources'
 import AllaKallorKort from '../components/Profile/MinaKallor/AllaKallorKort'
+import GoogleSignInButton from '../components/Auth/GoogleSignInButton'
 import type { Source } from '../types'
 
 type Steg = 'konto' | 'kallor' | 'klart'
@@ -18,13 +19,17 @@ export default function OnboardingPage() {
   const redirect = params.get('redirect') ?? '/'
 
   const [steg, setSteg] = useState<Steg>('konto')
+  // Google-inloggning loggar in direkt vid klick i steg 1 (till skillnad från
+  // lösenordsflödet där inloggning sker sist) — då ska redirect-bevakningen
+  // nedan inte kicka ut användaren mitt i steg 2/3.
+  const [kontoSkapatViaGoogle, setKontoSkapatViaGoogle] = useState(false)
 
   // Sidan är till för utloggade besökare som ska skapa konto — inget
   // konto finns förrän sista steget, så en redan inloggad användare har
   // inget att göra här.
   useEffect(() => {
-    if (isLoggedIn) navigate(redirect, { replace: true })
-  }, [isLoggedIn, navigate, redirect])
+    if (isLoggedIn && !kontoSkapatViaGoogle) navigate(redirect, { replace: true })
+  }, [isLoggedIn, kontoSkapatViaGoogle, navigate, redirect])
 
   // Steg 1
   const [name, setName]         = useState('')
@@ -33,6 +38,7 @@ export default function OnboardingPage() {
   const [confirm, setConfirm]   = useState('')
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [kontoFel, setKontoFel] = useState<string | null>(null)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   // Steg 2 — bara lokalt state, inget konto finns att spara mot än
   const [valdaKällor, setValdaKällor] = useState<Set<number>>(new Set())
@@ -42,7 +48,7 @@ export default function OnboardingPage() {
   const [skapar, setSkapar]   = useState(false)
   const [slutFel, setSlutFel] = useState<string | null>(null)
 
-  if (isLoggedIn) return null
+  if (isLoggedIn && !kontoSkapatViaGoogle) return null
 
   const activeSources = sources.filter(s => valdaKällor.has(s.id))
 
@@ -67,12 +73,14 @@ export default function OnboardingPage() {
   async function slutfor() {
     setSlutFel(null)
     setSkapar(true)
-    try {
-      await register(name, email, password, acceptedTerms)
-    } catch (err) {
-      setSkapar(false)
-      setSlutFel(err instanceof Error ? err.message : 'Något gick fel')
-      return
+    if (!kontoSkapatViaGoogle) {
+      try {
+        await register(name, email, password, acceptedTerms)
+      } catch (err) {
+        setSkapar(false)
+        setSlutFel(err instanceof Error ? err.message : 'Något gick fel')
+        return
+      }
     }
 
     if (valdaKällor.size > 0) {
@@ -179,6 +187,22 @@ export default function OnboardingPage() {
                   Avbryt
                 </button>
               </form>
+
+              <div className="mt-5">
+                <GoogleSignInButton
+                  onStart={() => { setKontoFel(null); setGoogleLoading(true) }}
+                  onError={message => { setKontoFel(message); setGoogleLoading(false) }}
+                  onSuccess={profile => {
+                    setName(profile.name)
+                    setEmail(profile.email)
+                    setKontoSkapatViaGoogle(true)
+                    setGoogleLoading(false)
+                    setSteg('kallor')
+                  }}
+                />
+                {googleLoading && <p className="text-center text-xs text-slate-400 mt-2">Loggar in…</p>}
+              </div>
+
               <p className="text-center text-sm text-slate-500 mt-5">
                 Har du redan ett konto?{' '}
                 <Link to={`/login${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`} className="text-violet-600 hover:text-violet-500 font-medium">

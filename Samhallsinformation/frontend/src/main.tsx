@@ -9,6 +9,7 @@ import { AuthProvider } from './context/AuthContext'
 import { FeatureFlagsProvider } from './context/FeatureFlagsContext'
 import { PolisenFilterProvider } from './context/PolisenFilterContext'
 import { SavedEventsProvider } from './context/SavedEventsContext'
+import MaybeGoogleOAuthProvider from './components/Auth/MaybeGoogleOAuthProvider'
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch((err) => {
@@ -34,7 +35,9 @@ createRoot(document.getElementById('root')!).render(
             <ThemeProvider>
               <PolisenFilterProvider>
                 <SavedEventsProvider>
-                  <App />
+                  <MaybeGoogleOAuthProvider>
+                    <App />
+                  </MaybeGoogleOAuthProvider>
                 </SavedEventsProvider>
               </PolisenFilterProvider>
             </ThemeProvider>

@@ -14,14 +14,16 @@ public class AuthService : IAuthService
     private readonly ITokenService         _tokens;
     private readonly IPasswordHasher<User> _hasher;
     private readonly IEmailService         _email;
+    private readonly IGoogleTokenValidator _google;
     private readonly string                _frontendUrl;
 
-    public AuthService(AppDbContext db, ITokenService tokens, IPasswordHasher<User> hasher, IEmailService email, IConfiguration config)
+    public AuthService(AppDbContext db, ITokenService tokens, IPasswordHasher<User> hasher, IEmailService email, IGoogleTokenValidator google, IConfiguration config)
     {
         _db          = db;
         _tokens      = tokens;
         _hasher      = hasher;
         _email       = email;
+        _google      = google;
         _frontendUrl = config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
     }
 
@@ -57,9 +59,46 @@ public class AuthService : IAuthService
         if (user == null)
             return AuthResult.Fail(401, "Felaktigt e-post eller lösenord");
 
+        // Google-konton har ingen (giltig) PasswordHash — hashern kan kasta på
+        // ett tomt/malformerat hash-värde, så avvisa innan vi ens verifierar.
+        if (user.AuthProvider != "local")
+            return AuthResult.Fail(401, "Det här kontot loggar in via Google. Använd Google-knappen istället.");
+
         var verification = _hasher.VerifyHashedPassword(user, user.PasswordHash, password);
         if (verification == PasswordVerificationResult.Failed)
             return AuthResult.Fail(401, "Felaktigt e-post eller lösenord");
+
+        if (!user.IsActive)
+            return AuthResult.Fail(403, "Kontot är avstängt. Kontakta support om du tror det här är ett misstag.");
+
+        return await IssueTokensAsync(user);
+    }
+
+    public async Task<AuthResult> GoogleLoginAsync(string idToken, bool acceptedTerms)
+    {
+        var payload = await _google.ValidateAsync(idToken);
+        if (payload == null)
+            return AuthResult.Fail(401, "Ogiltig Google-inloggning");
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+
+        if (user == null)
+        {
+            if (!acceptedTerms)
+                return AuthResult.Fail(400, "Du måste godkänna användarvillkoren");
+
+            user = new User
+            {
+                Name            = payload.Name,
+                Email           = payload.Email,
+                AuthProvider    = "google",
+                TermsAcceptedAt = DateTime.UtcNow,
+            };
+            _db.Users.Add(user);
+            await _db.SaveChangesAsync();
+
+            _ = _email.SendWelcomeAsync(user.Email, user.Name);
+        }
 
         if (!user.IsActive)
             return AuthResult.Fail(403, "Kontot är avstängt. Kontakta support om du tror det här är ett misstag.");

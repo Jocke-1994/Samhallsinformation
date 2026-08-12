@@ -36,6 +36,10 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest req) =>
         ToActionResult(await _auth.RegisterAsync(req.Name, req.Email, req.Password, req.AcceptedTerms));
 
+    [HttpPost("google")]
+    public async Task<IActionResult> Google([FromBody] GoogleLoginRequest req) =>
+        ToActionResult(await _auth.GoogleLoginAsync(req.IdToken, req.AcceptedTerms));
+
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshRequest req) =>
         ToActionResult(await _auth.RefreshAsync(req.RefreshToken));
@@ -144,6 +148,7 @@ public class AuthController : ControllerBase
 
 public record LoginRequest(string Email, string Password);
 public record RegisterRequest(string Name, string Email, string Password, bool AcceptedTerms);
+public record GoogleLoginRequest(string IdToken, bool AcceptedTerms);
 public record RefreshRequest(string RefreshToken);
 public record UpdateMeRequest(string? Name, string? Email, string? DisplayName = null);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
