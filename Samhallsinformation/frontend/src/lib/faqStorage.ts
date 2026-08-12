@@ -19,7 +19,7 @@ export const INITIAL_FAQ: AdminFaqItem[] = [
   { id: 6, kategori: 'Konto',         publicerad: false, fråga: 'Hur tar jag bort mitt konto?',                       svar: 'Gå till Konto → Datahantering och välj Radera konto. Åtgärden är permanent och kan inte ångras.' },
   { id: 7, kategori: 'Konto',         publicerad: false, fråga: 'Hur laddar jag ner min data?',                       svar: 'Gå till Konto → Datahantering och klicka på Ladda ner. Du får en JSON-fil med all data vi har om dig (GDPR art. 20).' },
   { id: 8, kategori: 'Uppdateringar', publicerad: true, fråga: 'Hur ser jag vad som är nytt i senaste versionen?',    svar: 'Gå till Uppdateringar i profilmenyn. Under Senaste version ser du alla ändringar sedan förra uppdateringen.' },
-  { id: 9, kategori: 'Uppdateringar', publicerad: true, fråga: 'Hur rapporterar jag ett fel?',                        svar: 'Skapa ett nytt ärende via formuläret längre ner på den här sidan. Välj "Tekniskt fel" som ämne och beskriv vad som hänt.' },
+  { id: 9, kategori: 'Uppdateringar', publicerad: true, fråga: 'Hur rapporterar jag ett fel?',                        svar: 'Klicka på Feedback-knappen längst ner i sidomenyn och beskriv vad som hänt. Meddelandet skickas till oss, och du kan ange din e-post om du vill ha svar.' },
 ]
 
 export function laddaFaq(): AdminFaqItem[] {
