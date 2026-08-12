@@ -18,6 +18,7 @@ import Handelsesok from '../components/Admin/Handelsesok'
 import { useAuth, type SystemRoll } from '../context/AuthContext'
 import { useFeatureFlagsAdmin } from '../context/FeatureFlagsContext'
 import { usePwaIdentity, ADMIN_PWA_IDENTITET } from '../hooks/usePwaIdentity'
+import { usePushSubscription, isPushSupported } from '../hooks/usePushSubscription'
 
 const SECTION_LABELS: Record<AdminSection, string> = {
   'oversikt':       'Översikt',
@@ -70,6 +71,9 @@ export default function AdminPage() {
   usePwaIdentity(ADMIN_PWA_IDENTITET)
 
   const { flaggor, växlaFlagg, återställ } = useFeatureFlagsAdmin()
+  const { isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushSubscription()
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushFel, setPushFel]   = useState('')
 
   const [section, setSection]             = useState<AdminSection>(
     aktivVy === 'Support' ? 'support-inbox' : 'oversikt'
@@ -104,6 +108,19 @@ export default function AdminPage() {
   function markeraLäst(n: PendingNotis) { setLästaNyckar(prev => new Set([...prev, notisNyckel(n)])) }
   function taBortNotis(n: PendingNotis) { setBorttagnaNyckar(prev => new Set([...prev, notisNyckel(n)])) }
   function markeraAllaLästa() { setLästaNyckar(new Set(unikaNotiser.map(notisNyckel))) }
+
+  async function växlaPush() {
+    setPushBusy(true)
+    setPushFel('')
+    try {
+      if (isSubscribed) await unsubscribe()
+      else await subscribe()
+    } catch (err) {
+      setPushFel(err instanceof Error ? err.message : 'Något gick fel')
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   function öppnaÄrende(arendeId: string) {
     setInboxOpenId(arendeId)
@@ -147,6 +164,29 @@ export default function AdminPage() {
         <div className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0">
           <h1 className="text-lg font-semibold text-slate-900">{SECTION_LABELS[section]}</h1>
           <div className="flex items-center gap-3">
+
+            {/* Push-notiser för nya ärenden/användare — av som standard tills
+                den här enheten prenumererar. isPushSupported() är false på
+                t.ex. iOS Safari om PWA:n inte är hemskärmsinstallerad. */}
+            {isPushSupported() && (
+              <div className="relative">
+                <button
+                  onClick={växlaPush}
+                  disabled={pushLoading || pushBusy}
+                  title={isSubscribed ? 'Push-notiser aktiverade på den här enheten — klicka för att stänga av' : 'Aktivera push-notiser för nya ärenden och nya användare på den här enheten'}
+                  className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 ${
+                    isSubscribed ? 'bg-violet-100 hover:bg-violet-200' : 'hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="text-base">{isSubscribed ? '📳' : '🔕'}</span>
+                </button>
+                {pushFel && (
+                  <p className="absolute right-0 top-11 z-40 w-56 bg-white border border-red-200 rounded-lg shadow-lg px-3 py-2 text-xs text-red-600">
+                    {pushFel}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Notis-klocka */}
             <div className="relative">

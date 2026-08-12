@@ -78,6 +78,33 @@ public static class PushDispatcher
         await SendToDevicesAsync(db, push, devices, title, body, url, sourceId: null, ct);
     }
 
+    // Notifierar alla Admin/Support-användare när ett NYTT konto skapas
+    // (lösenord eller Google, spelar ingen roll) — samma mottagarmönster som
+    // DispatchNewTicketAsync ovan.
+    public static async Task DispatchNewUserAsync(
+        AppDbContext db, IPushNotificationService push, string frontendUrl,
+        User newUser, CancellationToken ct = default)
+    {
+        var adminIds = await db.Users
+            .Where(u => (u.Role == "Admin" || u.Role == "Support") && u.PushEnabled)
+            .Select(u => u.Id)
+            .ToListAsync(ct);
+
+        if (adminIds.Count == 0) return;
+
+        var devices = await db.UserDevices
+            .Where(d => adminIds.Contains(d.UserId))
+            .ToListAsync(ct);
+
+        if (devices.Count == 0) return;
+
+        var title = "Ny användare";
+        var body  = $"{newUser.Name} ({newUser.Email}) skapade ett konto";
+        var url   = $"{frontendUrl.TrimEnd('/')}/admin";
+
+        await SendToDevicesAsync(db, push, devices, title, body, url, sourceId: null, ct);
+    }
+
     private static async Task SendToDevicesAsync(
         AppDbContext db, IPushNotificationService push, List<UserDevice> devices,
         string title, string body, string url, int? sourceId, CancellationToken ct)
