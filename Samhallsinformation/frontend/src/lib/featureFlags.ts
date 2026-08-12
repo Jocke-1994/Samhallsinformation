@@ -5,6 +5,7 @@ export type FlagKey =
   | 'kallor_aktiva'
   | 'kallor_rekommenderade'
   | 'kallor_alla'
+  | 'kallor_polisen_filter'
   | 'notif_obligatoriska'
   | 'notif_mottagare'
   | 'notif_stor_ej'
@@ -75,6 +76,9 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
       { key: 'kallor_aktiva',         label: 'Aktiva källor',          beskrivning: 'Visa användarens aktiva och prenumererade källor', defaultAktiv: true },
       { key: 'kallor_rekommenderade', label: 'Rekommenderade källor',  beskrivning: 'Visa rekommenderade källor baserat på profil',     defaultAktiv: false },
       { key: 'kallor_alla',           label: 'Alla källor',            beskrivning: 'Bläddra bland samtliga tillgängliga källor',       defaultAktiv: true },
+      { key: 'kallor_polisen_filter', label: 'Polisen-filter',         beskrivning: 'Kategori/kommun-urval och prenumerationsklocka för Polisen-händelser', defaultAktiv: false,
+        roadmap: 'Fullt byggd (backend + UI, FAS 4), tillfälligt avstängd.',
+        roadmapSedan: '2026-08-12' },
     ],
   },
   {
