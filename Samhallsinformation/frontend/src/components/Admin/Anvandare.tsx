@@ -737,7 +737,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
       )}
 
       {/* Statistik */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Totalt',      värde: antal.totalt,      färg: 'text-slate-800' },
           { label: 'Aktiva',      värde: antal.aktiva,      färg: 'text-green-600' },
@@ -769,14 +769,14 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
             <>
               <input type="text" placeholder="Sök namn, e-post eller ID..." value={sökning}
                 onChange={e => setSökning(e.target.value)}
-                className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 w-60" />
-              <div className="flex gap-1 ml-auto">
+                className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 w-full sm:w-60" />
+              <div className="flex flex-wrap gap-1 md:ml-auto">
                 {ALLA_ROLLER_FILTER.map(r => (
                   <button key={r} onClick={() => setRollFilter(r)}
                     className={`text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${rollFilter === r ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:bg-slate-100'}`}>{r}</button>
                 ))}
               </div>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1">
                 {ALLA_STATUSAR.map(s => (
                   <button key={s} onClick={() => setStatusFilter(s)}
                     className={`text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${statusFilter === s ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:bg-slate-100'}`}>{s}</button>
@@ -786,6 +786,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           )}
         </div>
 
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase tracking-wide">
@@ -854,6 +855,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Detaljpanel — backdrop */}

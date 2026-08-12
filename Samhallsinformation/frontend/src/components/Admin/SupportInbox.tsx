@@ -632,7 +632,7 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onÖppna
   return (
     <div className="flex flex-col gap-6">
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatChip label="Totalt antal ärenden" value={totalt}    color="text-slate-800" />
         <StatChip label="Öppna ärenden"        value={öppna}     color="text-blue-600"  />
         <StatChip label="Under behandling"     value={pågående}  color="text-amber-600" />
