@@ -78,6 +78,7 @@ export default function AdminPage() {
   const [section, setSection]             = useState<AdminSection>(
     aktivVy === 'Support' ? 'support-inbox' : 'oversikt'
   )
+  const [sidebarOpen, setSidebarOpen]     = useState(false)
   const [notiser, setNotiser]             = useState<PendingNotis[]>([])
   const [notisDropdown, setNotisDropdown] = useState(false)
   const [avatarDropdown, setAvatarDropdown] = useState(false)
@@ -156,13 +157,30 @@ export default function AdminPage() {
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
 
-      <AdminSidebar active={section} onSelect={setSection} roll={adminRoll} />
+      <AdminSidebar
+        active={section}
+        onSelect={setSection}
+        roll={adminRoll}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Topbar */}
-        <div className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0">
-          <h1 className="text-lg font-semibold text-slate-900">{SECTION_LABELS[section]}</h1>
+        <div className="bg-white border-b border-slate-200 px-4 md:px-8 py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden w-9 h-9 shrink-0 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600"
+              aria-label="Öppna meny"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <h1 className="text-lg font-semibold text-slate-900 truncate">{SECTION_LABELS[section]}</h1>
+          </div>
           <div className="flex items-center gap-3">
 
             {/* Push-notiser för nya ärenden/användare — av som standard tills
