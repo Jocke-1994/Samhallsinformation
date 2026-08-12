@@ -125,6 +125,7 @@ builder.Services.AddSingleton<IPushNotificationService, WebPushNotificationServi
 // Auth
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
+builder.Services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Background service

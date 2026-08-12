@@ -8,6 +8,7 @@ interface AuthContextType {
   aktivVy: SystemRoll
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string, acceptedTerms: boolean) => Promise<void>
+  loginWithGoogle: (idToken: string, acceptedTerms: boolean) => Promise<void>
   logout: () => void
   byttVy: (vy: SystemRoll) => void
 }
@@ -126,6 +127,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     applyTokens(data)
   }
 
+  async function loginWithGoogle(idToken: string, acceptedTerms: boolean): Promise<void> {
+    const data = await authRequest(`${API_BASE}/api/auth/google`, { idToken, acceptedTerms })
+    applyTokens(data)
+  }
+
   function logout() {
     const rt = refreshTokenRef.current
     if (rt) {
@@ -144,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, roll, aktivVy, login, register, logout, byttVy }}>
+    <AuthContext.Provider value={{ isLoggedIn, roll, aktivVy, login, register, loginWithGoogle, logout, byttVy }}>
       {children}
     </AuthContext.Provider>
   )

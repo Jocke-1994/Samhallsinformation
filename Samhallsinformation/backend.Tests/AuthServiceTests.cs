@@ -24,16 +24,18 @@ public class AuthServiceTests
         AppDbContext db,
         ITokenService? tokens = null,
         IPasswordHasher<User>? hasher = null,
-        IEmailService? email = null)
+        IEmailService? email = null,
+        IGoogleTokenValidator? google = null)
     {
         tokens ??= Substitute.For<ITokenService>();
         hasher ??= Substitute.For<IPasswordHasher<User>>();
         email  ??= Substitute.For<IEmailService>();
+        google ??= Substitute.For<IGoogleTokenValidator>();
 
         var config = Substitute.For<IConfiguration>();
         config["FRONTEND_URL"].Returns("https://test.local");
 
-        return new AuthService(db, tokens, hasher, email, config);
+        return new AuthService(db, tokens, hasher, email, google, config);
     }
 
     [Fact]
@@ -147,6 +149,102 @@ public class AuthServiceTests
 
         Assert.False(result.Success);
         Assert.Equal(403, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task LoginAsync_GoogleAccount_RejectsPasswordLogin()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", AuthProvider = "google" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var hasher = Substitute.For<IPasswordHasher<User>>();
+        var service = NewService(db, hasher: hasher);
+
+        var result = await service.LoginAsync("ada@example.com", "nagot-lösenord");
+
+        Assert.False(result.Success);
+        Assert.Equal(401, result.StatusCode);
+        hasher.DidNotReceive().VerifyHashedPassword(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GoogleLoginAsync_InvalidToken_ReturnsUnauthorized()
+    {
+        using var db = NewDb();
+        var google = Substitute.For<IGoogleTokenValidator>();
+        google.ValidateAsync("bad-token").Returns((GooglePayload?)null);
+
+        var service = NewService(db, google: google);
+
+        var result = await service.GoogleLoginAsync("bad-token", acceptedTerms: true);
+
+        Assert.False(result.Success);
+        Assert.Equal(401, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task GoogleLoginAsync_NewUser_TermsNotAccepted_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var google = Substitute.For<IGoogleTokenValidator>();
+        google.ValidateAsync("good-token").Returns(new GooglePayload("ny@example.com", "Ny Person"));
+
+        var service = NewService(db, google: google);
+
+        var result = await service.GoogleLoginAsync("good-token", acceptedTerms: false);
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.Empty(db.Users);
+    }
+
+    [Fact]
+    public async Task GoogleLoginAsync_NewUser_CreatesAccountAndReturnsTokens()
+    {
+        using var db = NewDb();
+        var google = Substitute.For<IGoogleTokenValidator>();
+        google.ValidateAsync("good-token").Returns(new GooglePayload("ny@example.com", "Ny Person"));
+
+        var tokens = Substitute.For<ITokenService>();
+        tokens.GenerateAccessToken(Arg.Any<User>()).Returns("access-token");
+        tokens.GenerateRefreshToken().Returns(("raw-refresh", "hashed-refresh"));
+
+        var service = NewService(db, tokens, google: google);
+
+        var result = await service.GoogleLoginAsync("good-token", acceptedTerms: true);
+
+        Assert.True(result.Success);
+        Assert.Equal("access-token", result.Tokens!.AccessToken);
+
+        var created = await db.Users.SingleAsync();
+        Assert.Equal("ny@example.com", created.Email);
+        Assert.Equal("google", created.AuthProvider);
+        Assert.NotNull(created.TermsAcceptedAt);
+    }
+
+    [Fact]
+    public async Task GoogleLoginAsync_ExistingEmail_LogsInWithoutCreatingDuplicate()
+    {
+        using var db = NewDb();
+        var existing = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "hashed" };
+        db.Users.Add(existing);
+        await db.SaveChangesAsync();
+
+        var google = Substitute.For<IGoogleTokenValidator>();
+        google.ValidateAsync("good-token").Returns(new GooglePayload("ada@example.com", "Ada"));
+
+        var tokens = Substitute.For<ITokenService>();
+        tokens.GenerateAccessToken(Arg.Any<User>()).Returns("access-token");
+        tokens.GenerateRefreshToken().Returns(("raw-refresh", "hashed-refresh"));
+
+        var service = NewService(db, tokens, google: google);
+
+        var result = await service.GoogleLoginAsync("good-token", acceptedTerms: true);
+
+        Assert.True(result.Success);
+        Assert.Single(db.Users);
     }
 
     [Fact]

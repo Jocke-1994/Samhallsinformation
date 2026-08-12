@@ -6,6 +6,8 @@ public interface IAuthService
 
     Task<AuthResult> LoginAsync(string email, string password);
 
+    Task<AuthResult> GoogleLoginAsync(string idToken, bool acceptedTerms);
+
     Task<AuthResult> RefreshAsync(string refreshToken);
 
     Task<AuthResult> LogoutAsync(string refreshToken);

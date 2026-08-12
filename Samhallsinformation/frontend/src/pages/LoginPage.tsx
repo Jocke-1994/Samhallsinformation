@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useAuth } from '../context/AuthContext'
+import GoogleSignInButton from '../components/Auth/GoogleSignInButton'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -83,6 +84,14 @@ export default function LoginPage() {
             </button>
 
           </form>
+
+          <div className="mt-5">
+            <GoogleSignInButton
+              onStart={() => { setError(null); setLoading(true) }}
+              onError={message => { setError(message); setLoading(false) }}
+              onSuccess={() => { navigate(redirect, { replace: true }) }}
+            />
+          </div>
         </div>
 
         <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-5">
