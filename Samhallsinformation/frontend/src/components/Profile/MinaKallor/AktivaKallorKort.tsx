@@ -3,6 +3,7 @@ import type { Source } from '../../../types'
 import { SVENSKA_LÄN, LÄN_KOMMUNER } from './kallorUtils'
 import KategoriFilterModal from './KategoriFilterModal'
 import { usePolisenFilter } from '../../../context/PolisenFilterContext'
+import { useFlags } from '../../../context/FeatureFlagsContext'
 
 // PROTOTYP (FAS 4-diskussion) — bara Polisen har kategorifilter tillgängligt
 // just nu, eftersom det är den enda källan som fått sina händelsetyper
@@ -12,6 +13,7 @@ const HAR_KATEGORIFILTER = new Set(['Polisen'])
 
 function KallaRad({ k, onRemove }: { k: Source; onRemove: (id: number) => void }) {
   const [visaFilter, setVisaFilter] = useState(false)
+  const flaggor = useFlags()
   const {
     valdaKategorier, valdaOmraden, harAnpassatFilter,
     toggleKategori, toggleOmrade,
@@ -26,7 +28,7 @@ function KallaRad({ k, onRemove }: { k: Source; onRemove: (id: number) => void }
   const filterEtikett = `${typerValda} typ${typerValda === 1 ? '' : 'er'}, ${länAktiva} län`
   const filterKnappText = harAnpassatFilter ? `Filter · ${filterEtikett}` : 'Filter'
 
-  const harFilterKnapp = HAR_KATEGORIFILTER.has(k.shortName)
+  const harFilterKnapp = flaggor.kallor_polisen_filter && HAR_KATEGORIFILTER.has(k.shortName)
 
   return (
     <div className="py-2 group">

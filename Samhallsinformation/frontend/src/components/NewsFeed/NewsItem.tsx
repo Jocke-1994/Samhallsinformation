@@ -131,7 +131,7 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
 
           <span className="shrink-0">{formatTime(event.publishedAt)}</span>
 
-          {(polisenTyp || polisenOmrade) && (
+          {flaggor.kallor_polisen_filter && (polisenTyp || polisenOmrade) && (
             <div onClick={e => e.stopPropagation()}>
               <PrenumerationsKlocka polisenTyp={polisenTyp} polisenOmrade={polisenOmrade} mode={viewMode} />
             </div>
