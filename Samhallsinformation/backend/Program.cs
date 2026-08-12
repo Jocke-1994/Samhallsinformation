@@ -716,6 +716,27 @@ using (var scope = app.Services.CreateScope())
         await db.SaveChangesAsync();
     }
 
+    // Seed Polisen Efterlysningar — RSS-komplement till PolisenRssIngestor
+    // (händelser). Vittnesmål/efterlysningar/försvunna personer, inte bara ett
+    // filtrerat delmängd av händelseflödet. Samma ShortName ("Polisen") grupperar
+    // den under samma sidebar-knapp (multi-feed-mönstret från session 15).
+    // IsPublished=false tills flödet är verifierat att faktiskt leverera data.
+    if (!db.Sources.Any(s => s.Url == "https://polisen.se/aktuellt/rss/hela-landet/hjalp-polisen-rss/"))
+    {
+        db.Sources.Add(new Source
+        {
+            Name        = "Polisen Efterlysningar",
+            ShortName   = "Polisen",
+            BaseUrl     = "https://polisen.se",
+            Url         = "https://polisen.se/aktuellt/rss/hela-landet/hjalp-polisen-rss/",
+            Category    = "Nationell",
+            Type        = SourceType.RSS,
+            IsActive    = true,
+            IsPublished = false,
+        });
+        await db.SaveChangesAsync();
+    }
+
     // Rätta felaktiga RSS-URL:er (gamla URL:er pekade på HTML-sidor)
     var lmvSource = await db.Sources.FirstOrDefaultAsync(s =>
         s.Name == "Livsmedelsverket" &&

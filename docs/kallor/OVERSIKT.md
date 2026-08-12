@@ -29,6 +29,19 @@ Dokumenterar vilka källor som ingår, deras status, hur data hämtas och eventu
 | **Licens** | Offentlig information, fri att använda |
 | **Notering** | Geografi extraheras från händelsetiteln (sista komma-segmentet) |
 
+### Polisen Efterlysningar
+| Egenskap | Värde |
+|----------|-------|
+| **Status** | Aktiv, opublicerad (väntar på verifierad dataflödeskvalitet) |
+| **Typ** | RSS |
+| **URL** | `https://polisen.se/aktuellt/rss/hela-landet/hjalp-polisen-rss/` |
+| **Ingestor** | `GenericRssIngestor.cs` (ingen dedikerad klass — titlarna är fria meningar, matchar inte händelseflödets "tid, typ, ort"-mönster, så ingen geografi/typ-extraktion är möjlig eller görs) |
+| **Polling-intervall** | Var 5:e minut (systemets standard) |
+| **API-nyckel** | Nej |
+| **Rate limit** | Ej dokumenterat — var 5:e minut bedöms rimligt |
+| **Licens** | Offentlig information, fri att använda |
+| **Notering** | Samma `ShortName` ("Polisen") som händelseflödet, grupperas under samma sidebar-knapp. Vittnesmål, efterlysningar och försvunna personer — inte en delmängd av händelseflödet, genuint ny information. Seedad 2026-08-12 (session 29), 4 verifierade händelser lokalt vid byggtillfället |
+
 ### Krisinformation.se
 | Egenskap | Värde |
 |----------|-------|
