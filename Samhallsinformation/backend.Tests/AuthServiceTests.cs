@@ -25,17 +25,19 @@ public class AuthServiceTests
         ITokenService? tokens = null,
         IPasswordHasher<User>? hasher = null,
         IEmailService? email = null,
-        IGoogleTokenValidator? google = null)
+        IGoogleTokenValidator? google = null,
+        IPushNotificationService? push = null)
     {
         tokens ??= Substitute.For<ITokenService>();
         hasher ??= Substitute.For<IPasswordHasher<User>>();
         email  ??= Substitute.For<IEmailService>();
         google ??= Substitute.For<IGoogleTokenValidator>();
+        push   ??= Substitute.For<IPushNotificationService>();
 
         var config = Substitute.For<IConfiguration>();
         config["FRONTEND_URL"].Returns("https://test.local");
 
-        return new AuthService(db, tokens, hasher, email, google, config);
+        return new AuthService(db, tokens, hasher, email, google, push, config);
     }
 
     [Fact]

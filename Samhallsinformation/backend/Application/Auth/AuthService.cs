@@ -10,20 +10,22 @@ public class AuthService : IAuthService
 {
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
 
-    private readonly AppDbContext          _db;
-    private readonly ITokenService         _tokens;
-    private readonly IPasswordHasher<User> _hasher;
-    private readonly IEmailService         _email;
-    private readonly IGoogleTokenValidator _google;
-    private readonly string                _frontendUrl;
+    private readonly AppDbContext             _db;
+    private readonly ITokenService            _tokens;
+    private readonly IPasswordHasher<User>    _hasher;
+    private readonly IEmailService            _email;
+    private readonly IGoogleTokenValidator    _google;
+    private readonly IPushNotificationService _push;
+    private readonly string                   _frontendUrl;
 
-    public AuthService(AppDbContext db, ITokenService tokens, IPasswordHasher<User> hasher, IEmailService email, IGoogleTokenValidator google, IConfiguration config)
+    public AuthService(AppDbContext db, ITokenService tokens, IPasswordHasher<User> hasher, IEmailService email, IGoogleTokenValidator google, IPushNotificationService push, IConfiguration config)
     {
         _db          = db;
         _tokens      = tokens;
         _hasher      = hasher;
         _email       = email;
         _google      = google;
+        _push        = push;
         _frontendUrl = config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
     }
 
@@ -49,6 +51,7 @@ public class AuthService : IAuthService
         await _db.SaveChangesAsync();
 
         _ = _email.SendWelcomeAsync(user.Email, user.Name);
+        await PushDispatcher.DispatchNewUserAsync(_db, _push, _frontendUrl, user);
 
         return await IssueTokensAsync(user);
     }
@@ -98,6 +101,7 @@ public class AuthService : IAuthService
             await _db.SaveChangesAsync();
 
             _ = _email.SendWelcomeAsync(user.Email, user.Name);
+            await PushDispatcher.DispatchNewUserAsync(_db, _push, _frontendUrl, user);
         }
 
         if (!user.IsActive)
