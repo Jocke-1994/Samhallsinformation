@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage'
 import OnboardingPage from './pages/OnboardingPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 import CookieConsent from './components/CookieConsent/CookieConsent'
 import OmPage from './pages/OmPage'
 import VillkorPage from './pages/VillkorPage'
@@ -18,6 +19,8 @@ import WelcomeModal from './components/WelcomeModal/WelcomeModal'
 import { fetchSources } from './api/sources'
 import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 import { useAuth } from './context/AuthContext'
+import { useFlags } from './context/FeatureFlagsContext'
+import { resendVerification } from './api/auth'
 import type { Source } from './types'
 
 function HomePage() {
@@ -104,16 +107,51 @@ function ImpersonationBanner() {
   )
 }
 
+function EmailVerificationBanner() {
+  const { isLoggedIn, emailVerified, email } = useAuth()
+  const flaggor = useFlags()
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle')
+
+  if (!isLoggedIn || emailVerified || !flaggor.konto_epost_paminnelse) return null
+
+  async function handleResend() {
+    setStatus('sending')
+    try {
+      await resendVerification()
+      setStatus('sent')
+    } catch {
+      setStatus('idle')
+    }
+  }
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[9998] bg-violet-600 px-6 py-2.5 flex items-center justify-between gap-3 shadow-md flex-wrap">
+      <span className="text-sm text-white">
+        Bekräfta din e-postadress{email ? ` — vi har skickat en länk till ${email}` : ''}.
+      </span>
+      <button
+        onClick={handleResend}
+        disabled={status !== 'idle'}
+        className="text-xs font-semibold bg-white/20 hover:bg-white/30 disabled:opacity-70 text-white px-3 py-1.5 rounded-lg transition-colors shrink-0"
+      >
+        {status === 'sent' ? 'Skickat!' : status === 'sending' ? 'Skickar…' : 'Skicka igen'}
+      </button>
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <>
       <ImpersonationBanner />
+      <EmailVerificationBanner />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<OnboardingPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/profil" element={<ProfilePage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/om" element={<OmPage />} />

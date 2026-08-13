@@ -29,6 +29,7 @@ export type FlagKey =
   | 'support_arenden'
   | 'support_systemstatus'
   | 'support_faq'
+  | 'konto_epost_paminnelse'
 
 export interface FlagDefinition {
   key: FlagKey
@@ -111,6 +112,7 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
       { key: 'konto_samtycke',       label: 'Spara samtycke',    beskrivning: 'Hantera samtycken för datalagring',              defaultAktiv: false },
       { key: 'konto_datahantering',  label: 'Datahantering',     beskrivning: 'Exportera eller radera kontodata',               defaultAktiv: false },
       { key: 'konto_tema',           label: 'Tema',              beskrivning: 'Växla mellan ljust och mörkt läge',              defaultAktiv: true },
+      { key: 'konto_epost_paminnelse', label: 'E-postpåminnelse', beskrivning: 'Visa en banderoll som påminner om att bekräfta e-postadressen', defaultAktiv: true },
     ],
   },
   {

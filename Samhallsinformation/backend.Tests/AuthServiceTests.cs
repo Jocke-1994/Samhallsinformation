@@ -65,6 +65,131 @@ public class AuthServiceTests
     }
 
     [Fact]
+    public async Task RegisterAsync_CreatesUnverifiedUser_AndSendsVerificationEmail()
+    {
+        using var db = NewDb();
+
+        var tokens = Substitute.For<ITokenService>();
+        tokens.GenerateAccessToken(Arg.Any<User>()).Returns("access-token");
+        tokens.GenerateRefreshToken().Returns(("raw-refresh", "hashed-refresh"));
+
+        var email = Substitute.For<IEmailService>();
+
+        var service = NewService(db, tokens, email: email);
+
+        await service.RegisterAsync("Test Testsson", "test@example.com", "pw123456", acceptedTerms: true);
+
+        var user = await db.Users.SingleAsync();
+        Assert.False(user.EmailVerified);
+        Assert.Single(db.EmailVerificationTokens);
+        await email.Received(1).SendEmailVerificationAsync("test@example.com", "Test Testsson", Arg.Is<string>(s => s.Contains("https://test.local/verify-email?token=")));
+    }
+
+    [Fact]
+    public async Task VerifyEmailAsync_ValidToken_MarksUserVerified()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        var token = new EmailVerificationToken { UserId = user.Id };
+        db.EmailVerificationTokens.Add(token);
+        await db.SaveChangesAsync();
+
+        var service = NewService(db);
+
+        var result = await service.VerifyEmailAsync(token.Token);
+
+        Assert.True(result.Success);
+        Assert.True((await db.Users.FindAsync(user.Id))!.EmailVerified);
+        Assert.NotNull((await db.EmailVerificationTokens.FindAsync(token.Id))!.UsedAt);
+    }
+
+    [Fact]
+    public async Task VerifyEmailAsync_ExpiredToken_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        db.EmailVerificationTokens.Add(new EmailVerificationToken { UserId = user.Id, ExpiresAt = DateTime.UtcNow.AddHours(-1) });
+        await db.SaveChangesAsync();
+        var token = await db.EmailVerificationTokens.FirstAsync();
+
+        var service = NewService(db);
+
+        var result = await service.VerifyEmailAsync(token.Token);
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.False((await db.Users.FindAsync(user.Id))!.EmailVerified);
+    }
+
+    [Fact]
+    public async Task VerifyEmailAsync_AlreadyUsedToken_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        db.EmailVerificationTokens.Add(new EmailVerificationToken { UserId = user.Id, UsedAt = DateTime.UtcNow.AddMinutes(-1) });
+        await db.SaveChangesAsync();
+        var token = await db.EmailVerificationTokens.FirstAsync();
+
+        var service = NewService(db);
+
+        var result = await service.VerifyEmailAsync(token.Token);
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task VerifyEmailAsync_UnknownToken_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var service = NewService(db);
+
+        var result = await service.VerifyEmailAsync("does-not-exist");
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResendVerificationAsync_UnverifiedUser_SendsNewToken()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x", EmailVerified = false };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var email = Substitute.For<IEmailService>();
+        var service = NewService(db, email: email);
+
+        var result = await service.ResendVerificationAsync(user.Id);
+
+        Assert.True(result.Success);
+        Assert.Single(db.EmailVerificationTokens);
+        await email.Received(1).SendEmailVerificationAsync("ada@example.com", "Ada", Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task ResendVerificationAsync_AlreadyVerified_DoesNotSendEmail()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x", EmailVerified = true };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var email = Substitute.For<IEmailService>();
+        var service = NewService(db, email: email);
+
+        var result = await service.ResendVerificationAsync(user.Id);
+
+        Assert.True(result.Success);
+        Assert.Empty(db.EmailVerificationTokens);
+        await email.DidNotReceive().SendEmailVerificationAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
     public async Task RegisterAsync_DuplicateEmail_ReturnsConflict()
     {
         using var db = NewDb();

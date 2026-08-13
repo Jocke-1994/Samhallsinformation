@@ -582,6 +582,31 @@ using (var scope = app.Services.CreateScope())
             ");
         }
 
+        if (pendingMigrations.Contains("20260804192019_AddEmailVerification"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""EmailVerified"" boolean NOT NULL DEFAULT false;
+
+                CREATE TABLE IF NOT EXISTS ""EmailVerificationTokens"" (
+                    ""Id""        uuid NOT NULL,
+                    ""UserId""    uuid NOT NULL,
+                    ""Token""     TEXT NOT NULL,
+                    ""ExpiresAt"" timestamptz NOT NULL,
+                    ""UsedAt""    timestamptz,
+                    CONSTRAINT ""PK_EmailVerificationTokens"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_EmailVerificationTokens_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_EmailVerificationTokens_Token""  ON ""EmailVerificationTokens"" (""Token"");
+                CREATE INDEX IF NOT EXISTS        ""IX_EmailVerificationTokens_UserId"" ON ""EmailVerificationTokens"" (""UserId"");
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260804192019_AddEmailVerification', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
         if (pendingMigrations.Contains("20260804205026_AddAccountControlFields"))
         {
             await db.Database.ExecuteSqlRawAsync(@"

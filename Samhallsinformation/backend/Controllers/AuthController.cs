@@ -56,6 +56,18 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req) =>
         ToActionResult(await _auth.ResetPasswordAsync(req.Token, req.NewPassword));
 
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest req) =>
+        ToActionResult(await _auth.VerifyEmailAsync(req.Token));
+
+    [HttpPost("resend-verification")]
+    [Authorize]
+    public async Task<IActionResult> ResendVerification()
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        return ToActionResult(await _auth.ResendVerificationAsync(userId));
+    }
+
     [HttpGet("me")]
     [Authorize]
     public async Task<IActionResult> Me()
@@ -64,7 +76,7 @@ public class AuthController : ControllerBase
         var user   = await _db.Users.FindAsync(userId);
         if (user == null) return NotFound();
 
-        return Ok(new { user.Email, user.Name, user.DisplayName, user.Role });
+        return Ok(new { user.Email, user.Name, user.DisplayName, user.Role, user.EmailVerified });
     }
 
     [HttpPut("me")]
@@ -90,6 +102,10 @@ public class AuthController : ControllerBase
         {
             if (await _db.Users.AnyAsync(u => u.Email == req.Email && u.Id != userId))
                 return Conflict(new { error = "E-postadressen används redan" });
+            // Ett byte till en ny adress kräver en ny bekräftelse — annars
+            // skulle en redan bekräftad status felaktigt gälla en adress
+            // vi aldrig verifierat att kontot faktiskt äger.
+            if (req.Email != user.Email) user.EmailVerified = false;
             user.Email = req.Email;
         }
         // Explicit null = rör inte fältet, tom sträng = nollställ tillbaka till "Support".
@@ -104,6 +120,9 @@ public class AuthController : ControllerBase
             _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "displayName", OldValue = oldDisplayName, NewValue = user.DisplayName });
 
         await _db.SaveChangesAsync();
+
+        if (user.Email != oldEmail)
+            _ = _auth.ResendVerificationAsync(userId);
 
         var accessToken = _tokens.GenerateAccessToken(user);
         return Ok(new { accessToken, name = user.Name, displayName = user.DisplayName, role = user.Role });
@@ -154,3 +173,4 @@ public record UpdateMeRequest(string? Name, string? Email, string? DisplayName =
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);
+public record VerifyEmailRequest(string Token);
