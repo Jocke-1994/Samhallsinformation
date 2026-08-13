@@ -865,7 +865,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
 
       {/* Detaljpanel — slide-in från höger */}
       <div
-        className={`fixed top-0 right-0 bottom-0 z-40 w-[700px] bg-white shadow-2xl overflow-y-auto flex flex-col transition-transform duration-300 ease-out ${vald ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 bottom-0 z-40 w-full md:w-[700px] bg-white shadow-2xl overflow-y-auto flex flex-col transition-transform duration-300 ease-out ${vald ? 'translate-x-0' : 'translate-x-full'}`}
         style={{ pointerEvents: vald ? 'auto' : 'none' }}
       >
       {vald && (
@@ -893,7 +893,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           </div>
 
           {/* Flikar */}
-          <div className="flex border-b border-slate-100 px-6">
+          <div className="flex border-b border-slate-100 px-6 overflow-x-auto">
             {([
               { id: 'oversikt',           label: 'Översikt'                  },
               { id: 'notifinstallningar', label: 'Notifieringsinställningar'  },
@@ -902,7 +902,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               { id: 'ärenden',            label: 'Supportärenden'            },
             ] as { id: DetaljFlik; label: string }[]).map(f => (
               <button key={f.id} onClick={() => setDetaljFlik(f.id)}
-                className={`text-sm font-medium px-4 py-3 border-b-2 transition-colors ${
+                className={`text-sm font-medium px-4 py-3 border-b-2 transition-colors shrink-0 whitespace-nowrap ${
                   detaljFlik === f.id ? 'border-violet-600 text-violet-700' : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}>
                 {f.label}
