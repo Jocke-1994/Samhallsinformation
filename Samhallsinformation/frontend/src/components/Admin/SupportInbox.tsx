@@ -567,9 +567,9 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 
 function StatChip({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-4 flex items-center gap-4">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-5 text-center">
       <p className={`text-3xl font-bold ${color}`}>{value}</p>
-      <p className="text-xs text-slate-400 leading-tight">{label}</p>
+      <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-medium">{label}</p>
     </div>
   )
 }
