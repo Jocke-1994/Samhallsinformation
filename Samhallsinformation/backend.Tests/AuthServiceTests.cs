@@ -77,7 +77,7 @@ public class AuthServiceTests
 
         var service = NewService(db, tokens, email: email);
 
-        await service.RegisterAsync("Test Testsson", "test@example.com", "pw123456");
+        await service.RegisterAsync("Test Testsson", "test@example.com", "pw123456", acceptedTerms: true);
 
         var user = await db.Users.SingleAsync();
         Assert.False(user.EmailVerified);

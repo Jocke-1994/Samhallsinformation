@@ -103,6 +103,10 @@ public class AuthService : IAuthService
                 Email           = payload.Email,
                 AuthProvider    = "google",
                 TermsAcceptedAt = DateTime.UtcNow,
+                // Google har redan verifierat ägarskapet av adressen som en del av
+                // OAuth-flödet — en påminnelsebanderoll om att bekräfta e-posten
+                // vore meningslös friktion för något som redan är bevisat sant.
+                EmailVerified   = true,
             };
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
