@@ -244,11 +244,11 @@ function ArendeModal({
         </div>
 
         {/* Body */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
 
           {/* Vänster: konversation + svar */}
-          <div className="flex-1 flex flex-col overflow-hidden border-r border-slate-100">
-            <div className="flex-1 overflow-y-auto px-7 py-5 flex flex-col gap-3">
+          <div className="flex-1 flex flex-col md:overflow-hidden border-b md:border-b-0 md:border-r border-slate-100">
+            <div className="flex-1 md:overflow-y-auto px-7 py-5 flex flex-col gap-3">
               {messages.map(m => {
                 if (m.isInternal) return (
                   <div key={m.id} className="self-stretch">
@@ -306,7 +306,7 @@ function ArendeModal({
           </div>
 
           {/* Höger: metadata */}
-          <div className="w-64 shrink-0 flex flex-col overflow-y-auto">
+          <div className="w-full md:w-64 shrink-0 flex flex-col md:overflow-y-auto">
 
             {/* Användare */}
             <div className="px-5 py-5 border-b border-slate-100">
