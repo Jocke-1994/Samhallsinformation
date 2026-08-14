@@ -82,6 +82,34 @@ public class PushController : ControllerBase
         return Ok(new { sent = results.Count, results });
     }
 
+    // Diagnostikverktyg: visar de senaste leveransförsöken (status/felmeddelande
+    // per enhet) — den enda platsen att se VARFÖR ett skickat push misslyckades,
+    // eftersom Rapporter bara visar ett totalt antal utan status-uppdelning.
+    [HttpGet("logs")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ListLogs()
+    {
+        var rows = await _db.NotificationDeliveryLogs
+            .Include(l => l.User)
+            .Where(l => l.Channel == "push")
+            .OrderByDescending(l => l.SentAt)
+            .Take(20)
+            .ToListAsync();
+
+        var logs = rows.Select(l => new
+        {
+            l.Id,
+            UserEmail = l.User.Email,
+            l.Status,
+            l.ErrorMessage,
+            l.Subject,
+            RecipientPreview = l.Recipient.Length > 60 ? l.Recipient[..60] + "…" : l.Recipient,
+            l.SentAt,
+        });
+
+        return Ok(logs);
+    }
+
     // Anonym — frontend behöver den publika nyckeln för pushManager.subscribe(),
     // innan användaren nödvändigtvis är inloggad i den flödet.
     [HttpGet("public-key")]
