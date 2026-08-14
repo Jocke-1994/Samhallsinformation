@@ -111,6 +111,47 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 30 — 2026-08-14
+**What was done:**
+- **E-postverifieringsbanderollen hängde kvar efter lyckad verifiering** — rotorsak: banderollen läser `emailVerified` från JWT-token (`AuthContext.tsx`), inte databasen direkt. `VerifyEmailPage.tsx` uppdaterade aldrig sessionens token efter en lyckad verifiering, så den gamla "ej verifierad"-claimen låg kvar upp till ~13 minuter (nästa schemalagda token-refresh). Ny `refreshSession()` exponerad från `AuthContext`, anropas direkt efter lyckad verifiering. PR #454
+- **"Påminn senare"-knapp på samma banderoll** — snoozar den 24h åt gången via en `localStorage`-tidsstämpel. PR #455
+- **Admin fick inga push-notiser för nya ärenden — två separata, helt orelaterade rotorsaker hittade genom stegvis diagnostik:**
+  1. `User.PushEnabled` (den globala push-muten, skild från enhets-prenumerationen) var `false` på admin-kontot, satt av misstag under tidigare mute-testning (session 26) — och gick inte att se eller ändra i UI eftersom kontrollen bara finns bakom en avstängd feature-flagga. `DispatchNewTicketAsync`/`DispatchNewUserAsync` filtrerar bort användare med `PushEnabled=false` INNAN de ens kollar om en enhet finns, vilket förklarade varför `NotificationDeliveryLog`-räknaren i Rapporter stod stilla på 1 sedan systemstart
+  2. Efter den fixen kom en push till datorn men inte till mobilen (Android, riktiga Chrome, installerad PWA) — trots att backend rapporterade `status: "sent"` för varje försök (FCM tog emot). Verklig orsak: en undernivå-notiskanal i Android-inställningarna för den installerade PWA:n var avstängd, helt separat från både Chromes webbplatsbehörighet och appens huvudbrytare
+  - Byggde tre diagnostikendpoints under felsökningen, kvar i produktion (Admin-skyddade): `GET /api/push/devices`, `GET /api/push/logs`, `POST /api/push/test` — matchar en redan speccad idé (`project_push_felsokningsverktyg_spec`), byggd nu istället för "senare" eftersom behovet blev akut. PR #456, #457
+  - Permanent fix: adminpanelens klockikon synkar nu BÅDA fälten samtidigt (`pushAktiv = isSubscribed && pushEnabled`) så de inte kan hamna i osynk igen tyst. PR #458
+  - Fullständig felsökningsgång sparad i minnet (`project_push_admin_notiser_tystnad_2026-08-14`) för snabb återanvändning nästa gång push strular
+- **Support-inbox: Arkiverat-flik + oläst-indikatorer**, på användarens uttryckliga begäran:
+  - Ny "📦 Arkivera"-knapp i ärendevyn (manuell, godtycklig status) — arkiverade ärenden döljs från Alla/Ärenden/Feedback och stat-korten, syns bara under en ny Arkiverat-flik
+  - Röda bubblor med antal olästa (aldrig öppnade) ärenden — på Ärenden-/Feedback-flikarna och på Support-inbox i sidomenyn (syns admin-panel-brett, delar react-query-cache med Support-inbox-sidan så ingen extra nätverksanrop krävs)
+  - Ett ärende räknas som läst automatiskt första gången det öppnas (`FirstOpenedAt`, satt vid första `GET` av ärendedetaljer) — ingen manuell "markera som läst"-knapp
+  - Uppföljning efter första visuella granskningen: flyttade flik-bubblan till inline (låg först absolut-positionerad, ur linje med resten av flikraden), och lade till en per-rad oläst-markering i tabellen (lila prick + fetstil + tonad bakgrund) eftersom ett samlat antal inte visade VILKA ärenden som var olästa
+  - `AdminSidebar` fick en generisk `badges`-prop (valfri röd bubbla per nav-post), återanvändbar för framtida notistyper. PR #459
+- **Google-inloggningens datainsamling förklarad** (fråga från användaren, ingen kodändring): bara e-post och namn hämtas från Googles ID-token, inget annat — kontot sätts direkt som `EmailVerified=true` eftersom Google redan bevisat ägarskapet
+- **Två produktidéer diskuterade, uttryckligen inte att bygga denna session** — sparade i minnet: (1) en bekräftelseruta "Har vi rätt uppgifter om dig?" efter Google-inloggning + en lätt "8/9 uppgifter ifyllda"-progressindikator på Konto-sidan (`project_konto_uppgifter_bekraftelse_progress_idea`), (2) en Discord-liknande "Vad är nytt"-modal som poppar upp automatiskt vid ny release, hör ihop med den redan speccade schemalagda changelog-publiceringen (`project_whats_new_modal_idea`)
+
+**Problem och lösningar denna session:**
+- Chrome-tillägget för webbläsarautomation flakade upprepade gånger genom hela sessionen (tappad tab-referens, timeout-fel som ändå gick igenom vid retry) — samma etablerade mönster som tidigare sessioner. Föll tillbaka på Playwright-i-scratchpad för den fullständiga banner-verifieringen, och bad användaren köra enstaka DevTools-konsolkommandon själv för push-diagnostiken när tillägget var som mest opålitligt
+- Playwright-testskriptet för e-postverifieringsbanderollen missade första försöket: registreringsflödet är en tre-stegs guide (Konto→Källor→Klart), och det faktiska `register()`-anropet sker först i sista steget — ett skript som bara fyller i steg 1 och klickar "Nästa" ser aldrig en riktig token
+- Samma mönster upprepades i arkiv-verifieringen: `page.locator('tbody tr').first()` matchade av misstag tabellens tomt-state-rad ("Inga ärenden matchar filtret") istället för en riktig ärenderad, och en generisk `textarea`-selektor matchade kundtjänstbottens chattruta istället för Feedback-modalens eget fält — löst genom att skopa selektorer till unik placeholder-text/exakt knapptext istället för generiska taggnamn
+- Playwrights `:has-text()` gör substräng-matchning — `button:has-text("Arkivera")` matchade av misstag BÅDE "📦 Arkivera"-knappen och "Arkiverat"-fliken (eftersom "Arkiverat" innehåller "Arkivera" som substräng) — löst med exakt text inklusive emoji-prefix
+- Push-diagnostikens första LINQ-projektion kraschade bygget (`CS8790`/`CS8792`, en `Range`-indexerare i ett uttryck som EF Core försöker översätta till SQL) — löst genom att materialisera raderna med `ToListAsync()` först och göra strängtrunkeringen i vanlig C# efteråt, inte inuti `.Select()`
+
+**Etablerat mönster:**
+- En banderoll/UI-tillstånd som läser en claim direkt ur en redan utfärdad JWT-token kan bli inaktuell om den underliggande databasraden ändras utan att sessionens token förnyas — vid nya "banderoll ska försvinna efter X"-funktioner: kontrollera om X faktiskt triggar en tokenuppdatering, inte bara en databasändring
+- Vid en tyst, obekräftad notis-/leveransbugg: bygg riktiga diagnostikendpoints (lista prenumerationer, lista leveransloggar med status/fel, manuell testutlösare) istället för att gissa vidare i kod — särskilt värdefullt när felet kan ligga i endera av flera oberoende lager (databas-gating, enhetsregistrering, OS-notisinställningar) som annars är omöjliga att särskilja utifrån
+- En "aktiverad"-knapp som bara kollar lokalt webbläsartillstånd (t.ex. `pushManager.getSubscription()`) kan visa fel status om ett SEPARAT backend-fält (t.ex. en global mute) styr det faktiska utfallet — vid två kopplade men oberoende flaggor: synka båda vid varje användarhandling, visa aldrig "på" om bara den ena är sann
+- En räknad bubbla ("N olästa") svarar på "hur mycket", inte "vilka" — vid oläst/notis-koncept som rör en LISTA av poster (inte bara en enda global status): bygg alltid in en per-rad-indikator (prick/fetstil/tonad bakgrund) samtidigt som den samlade bubblan, inte som en eftertanke
+- Playwright-verifiering av en flerstegsguide eller ett tomt-state-medvetet UI kräver selektorer som är immuna mot tomma-state-rader och konkurrerande widgets (chattbottar, andra modaler på samma sida) — skopa alltid till unik placeholder-text eller exakt knapptext, aldrig generiska tagg-selektorer som `textarea` eller `tr`
+- Produktidéer som kommer upp i förbifarten ("innan jag glömmer bort det", "det hade varit nice") och uttryckligen inte ska byggas samma session: spara som en egen minnesfil kopplad till eventuell redan existerande relaterad spec, inte bara en rad i sessionsloggen — lättare att återfinna och koppla ihop nästa gång ämnet kommer upp
+
+**Next session:**
+- Adminpanelens grafiska/visuella mobilarbete från session 29 är fortfarande inte avslutat enligt användaren — okänt exakt vad som återstår, be om nya skärmdumpar
+- Öppna login/registrering publikt (sista steget i launch-ordningen) — fortfarande inte gjort
+- De två sparade produktidéerna (`project_konto_uppgifter_bekraftelse_progress_idea`, `project_whats_new_modal_idea`) väntar på att tas upp igen, ingen av dem påbörjad
+
+---
+
 ### Session 29 — 2026-08-12 / 2026-08-13
 **What was done:**
 - **Google-inloggning (FAS 3, #297) klar och verifierad live** — fortsatte från session 28:s paus. Användaren skapade Google Cloud-uppgifterna interaktivt (bild-för-bild-genomgång: projekt, OAuth consent screen, klient-ID), satte in Client ID lokalt + i Railway (`GOOGLE_CLIENT_ID`) + Vercel (`VITE_GOOGLE_CLIENT_ID`). Verifierat live: nytt konto via `/login`, nytt konto via onboarding-guiden `/register`. Hittade och fixade en riktig bugg under verifieringen: `OnboardingPage.tsx` rad 51 (`if (isLoggedIn) return null`) saknade samma `kontoSkapatViaGoogle`-undantag som redirect-effekten ovanför den, så sidan renderade `null` direkt efter en lyckad Google-registrering istället för att visa nästa steg i guiden. Konto-kopplingsvägen (Google mot ett befintligt lösenordskonto) är bara testtäckt, inte verifierad live — kräver en andra Google-adress kopplad till ett befintligt lösenordskonto. PR #438
