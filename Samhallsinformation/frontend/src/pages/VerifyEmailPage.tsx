@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { verifyEmail } from '../api/auth'
+import { useAuth } from '../context/AuthContext'
 
 type Status = 'verifying' | 'success' | 'error'
 
 export default function VerifyEmailPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  const { isLoggedIn, refreshSession } = useAuth()
   const token = params.get('token') ?? ''
 
   const [status, setStatus] = useState<Status>(token ? 'verifying' : 'error')
@@ -17,7 +19,10 @@ export default function VerifyEmailPage() {
     if (!token || attempted.current) return
     attempted.current = true
     verifyEmail(token)
-      .then(() => {
+      .then(async () => {
+        // Backend-statusen är nu uppdaterad, men en redan inloggad sessions token
+        // har fortfarande den gamla emailVerified-claimen inbakad — hämta en ny.
+        if (isLoggedIn) await refreshSession()
         setStatus('success')
         setTimeout(() => navigate('/', { replace: true }), 3000)
       })
@@ -25,7 +30,7 @@ export default function VerifyEmailPage() {
         setStatus('error')
         setError(err instanceof Error ? err.message : 'Något gick fel')
       })
-  }, [token, navigate])
+  }, [token, navigate, isLoggedIn, refreshSession])
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center px-4">

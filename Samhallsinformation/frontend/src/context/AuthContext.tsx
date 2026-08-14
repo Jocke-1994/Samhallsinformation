@@ -13,6 +13,7 @@ interface AuthContextType {
   loginWithGoogle: (idToken: string, acceptedTerms: boolean) => Promise<void>
   logout: () => void
   byttVy: (vy: SystemRoll) => void
+  refreshSession: () => Promise<void>
 }
 
 interface TokenPair {
@@ -163,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, roll, aktivVy, email, emailVerified, login, register, loginWithGoogle, logout, byttVy }}>
+    <AuthContext.Provider value={{ isLoggedIn, roll, aktivVy, email, emailVerified, login, register, loginWithGoogle, logout, byttVy, refreshSession: doRefresh }}>
       {children}
     </AuthContext.Provider>
   )
