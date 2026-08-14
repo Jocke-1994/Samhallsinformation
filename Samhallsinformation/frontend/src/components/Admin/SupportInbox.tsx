@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   fetchAdminTickets, fetchAdminTicket, fetchAgents, fetchSupportNotifications,
-  replyAsAgent, setTicketStatus, assignTicket, setTicketReminder,
+  replyAsAgent, setTicketStatus, assignTicket, setTicketReminder, setTicketArchived,
   addScheduledAction, cancelScheduledAction,
   type AdminTicketListItemDto, type AdminScheduledActionDto, type AdminAgentDto,
 } from '../../api/support'
@@ -22,6 +22,7 @@ type SortField    = 'status' | 'skapat' | 'uppdaterat' | null
 type SortDir       = 'asc' | 'desc'
 type SvarFlik       = 'svar' | 'intern'
 type KanalFilter   = '' | 'arendehantering' | 'feedback'
+type InboxFlik     = KanalFilter | 'arkiverat'
 
 // ---------------------------------------------------------------------------
 // Konstanter & hjälpare
@@ -119,6 +120,7 @@ function ArendeModal({
   const statusMutation     = useMutation({ mutationFn: (status: string) => setTicketStatus(ticketId, status), onSuccess: invalidateAll })
   const assignMutation     = useMutation({ mutationFn: (userId: string | null) => assignTicket(ticketId, userId), onSuccess: invalidateAll })
   const reminderMutation   = useMutation({ mutationFn: (p: { reminderAt: string | null; reminderNote: string | null }) => setTicketReminder(ticketId, p.reminderAt, p.reminderNote), onSuccess: invalidateAll })
+  const archiveMutation    = useMutation({ mutationFn: (archived: boolean) => setTicketArchived(ticketId, archived), onSuccess: invalidateAll })
   const addScheduleMutation = useMutation({ mutationFn: (p: Parameters<typeof addScheduledAction>[1]) => addScheduledAction(ticketId, p), onSuccess: invalidateAll })
   const cancelScheduleMutation = useMutation({ mutationFn: (actionId: string) => cancelScheduledAction(actionId), onSuccess: invalidateAll })
   const [idéSkapad, setIdéSkapad] = useState(false)
@@ -301,6 +303,12 @@ function ArendeModal({
                 {stängt && (
                   <button onClick={() => statusMutation.mutate('Öppet')} className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs rounded-lg transition-colors">Öppna igen</button>
                 )}
+                <button
+                  onClick={() => archiveMutation.mutate(!ticket.isArchived)}
+                  className="ml-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs rounded-lg transition-colors"
+                >
+                  {ticket.isArchived ? '📤 Återställ från arkiv' : '📦 Arkivera'}
+                </button>
               </div>
             </div>
           </div>
@@ -576,7 +584,7 @@ function StatChip({ label, value, color }: { label: string; value: number; color
 
 export default function SupportInbox({ onPendingNotiser, defaultOpenId, onÖppnaAnvändare }: Props) {
   const [öppetId, setÖppetId]           = useState<string | null>(defaultOpenId ?? null)
-  const [kanalFilter, setKanal]         = useState<KanalFilter>('')
+  const [flik, setFlik]                 = useState<InboxFlik>('')
   const [statusFilter, setStatus]       = useState<ArendeStatus | ''>('')
   const [kategoriFilter, setKategori]   = useState('')
   const [tilldeladFilter, setTilldelad] = useState('')
@@ -601,19 +609,26 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onÖppna
     onPendingNotiser(notiser.map(n => ({ arendeId: n.ticketId, amne: n.amne, typ: n.typ, notering: n.notering })))
   }, [notiser, onPendingNotiser])
 
-  const totalt    = ärenden.length
-  const öppna     = ärenden.filter(a => a.status === 'Öppet').length
-  const pågående  = ärenden.filter(a => a.status === 'Under behandling').length
-  const hanterade = ärenden.filter(a => a.status === 'Hanterat').length
+  const aktiva    = ärenden.filter(a => !a.isArchived)
+  const totalt    = aktiva.length
+  const öppna     = aktiva.filter(a => a.status === 'Öppet').length
+  const pågående  = aktiva.filter(a => a.status === 'Under behandling').length
+  const hanterade = aktiva.filter(a => a.status === 'Hanterat').length
+
+  const oläst = (a: AdminTicketListItemDto) => !a.isArchived && !a.firstOpenedAt
+  const olästaÄrenden = aktiva.filter(a => a.channel === 'arendehantering' && oläst(a)).length
+  const olästaFeedback = aktiva.filter(a => a.channel === 'feedback' && oläst(a)).length
 
   function toggleSort(field: SortField) {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortField(field); setSortDir('desc') }
   }
 
+  const arkivvy  = flik === 'arkiverat'
   const sökTerm = sök.trim().toLowerCase()
   const filtrerade = ärenden
-    .filter((a: AdminTicketListItemDto) => !kanalFilter      || a.channel      === kanalFilter)
+    .filter((a: AdminTicketListItemDto) => arkivvy ? a.isArchived : !a.isArchived)
+    .filter(a => arkivvy || !flik || a.channel === flik)
     .filter(a => !statusFilter    || a.status    === statusFilter)
     .filter(a => !kategoriFilter  || a.category  === kategoriFilter)
     .filter(a => !tilldeladFilter || a.assignedToUserId === tilldeladFilter)
@@ -641,11 +656,16 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onÖppna
 
       {/* Kanal-flikar */}
       <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-        {([['', 'Alla'], ['arendehantering', 'Ärenden'], ['feedback', 'Feedback']] as [KanalFilter, string][]).map(([val, label]) => (
-          <button key={val} onClick={() => setKanal(val)}
-            className={`text-xs px-4 py-1.5 rounded-md font-medium transition-colors ${kanalFilter === val ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        {([['', 'Alla', 0], ['arendehantering', 'Ärenden', olästaÄrenden], ['feedback', 'Feedback', olästaFeedback], ['arkiverat', 'Arkiverat', 0]] as [InboxFlik, string, number][]).map(([val, label, olästa]) => (
+          <button key={val} onClick={() => setFlik(val)}
+            className={`flex items-center gap-1.5 text-xs px-4 py-1.5 rounded-md font-medium transition-colors ${flik === val ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
             {label}
+            {olästa > 0 && (
+              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                {olästa}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -689,15 +709,21 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onÖppna
             <tbody className="divide-y divide-slate-100">
               {filtrerade.map(a => {
                 const harSchema = false // syns bara i detaljvyn nu, listan har inte schemalagda åtgärder
+                const ärOläst = !a.isArchived && !a.firstOpenedAt
                 return (
-                  <tr key={a.id} onClick={() => setÖppetId(a.id)} className="cursor-pointer hover:bg-slate-50 transition-colors">
-                    <td className="pl-5 pr-3 py-4 font-mono text-xs text-slate-400">{ticketNr(a)}</td>
+                  <tr key={a.id} onClick={() => setÖppetId(a.id)} className={`cursor-pointer transition-colors ${ärOläst ? 'bg-violet-50/60 hover:bg-violet-100/60' : 'hover:bg-slate-50'}`}>
+                    <td className="pl-5 pr-3 py-4 font-mono text-xs text-slate-400">
+                      <span className="flex items-center gap-1.5">
+                        {ärOläst && <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" title="Oläst" />}
+                        {ticketNr(a)}
+                      </span>
+                    </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full inline-block">{a.category}</span>
                         <span className="text-[10px] text-violet-500 bg-violet-50 px-2 py-0.5 rounded-full inline-block">{KANAL_LABELS[a.channel] ?? a.channel}</span>
                       </div>
-                      <p className="text-slate-700 font-medium text-sm leading-snug">{a.subject}</p>
+                      <p className={`text-sm leading-snug ${ärOläst ? 'text-slate-900 font-bold' : 'text-slate-700 font-medium'}`}>{a.subject}</p>
                     </td>
                     <td className="px-4 py-4">
                       <p className="text-sm text-slate-700">{a.contactName ?? '—'}</p>

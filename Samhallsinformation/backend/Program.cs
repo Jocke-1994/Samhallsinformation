@@ -666,6 +666,18 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        if (pendingMigrations.Contains("20260814210603_AddTicketArchiveAndReadTracking"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""SupportTickets"" ADD COLUMN IF NOT EXISTS ""IsArchived""     boolean NOT NULL DEFAULT false;
+                ALTER TABLE ""SupportTickets"" ADD COLUMN IF NOT EXISTS ""FirstOpenedAt""  timestamptz;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260814210603_AddTicketArchiveAndReadTracking', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 

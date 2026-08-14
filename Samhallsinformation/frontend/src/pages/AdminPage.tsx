@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
 import AdminSidebar, { type AdminSection, type AdminRoll } from '../components/Admin/AdminSidebar'
 import Oversikt from '../components/Admin/Oversikt'
 import Kallhantering from '../components/Admin/Kallhantering'
@@ -20,6 +21,7 @@ import { useFeatureFlagsAdmin } from '../context/FeatureFlagsContext'
 import { usePwaIdentity, ADMIN_PWA_IDENTITET } from '../hooks/usePwaIdentity'
 import { usePushSubscription, isPushSupported } from '../hooks/usePushSubscription'
 import { fetchPushSettings, savePushSettings } from '../api/push'
+import { fetchAdminTickets } from '../api/support'
 
 const SECTION_LABELS: Record<AdminSection, string> = {
   'oversikt':       'Översikt',
@@ -86,6 +88,15 @@ export default function AdminPage() {
     fetchPushSettings().then(s => setPushEnabled(s.pushEnabled)).catch(() => {})
   }, [])
   const pushAktiv = isSubscribed && pushEnabled
+
+  // Samma queryKey som SupportInbox.tsx — delar cache/nätverksanrop, ingen
+  // extra request bara för att räkna olästa i sidomenyns bubbla.
+  const { data: ärendenFörBadge = [] } = useQuery({
+    queryKey: ['admin-tickets'],
+    queryFn: () => fetchAdminTickets(),
+    refetchInterval: 30_000,
+  })
+  const olästaTotalt = ärendenFörBadge.filter(a => !a.isArchived && !a.firstOpenedAt).length
 
   const [section, setSection]             = useState<AdminSection>(
     aktivVy === 'Support' ? 'support-inbox' : 'oversikt'
@@ -182,6 +193,7 @@ export default function AdminPage() {
         roll={adminRoll}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        badges={{ 'support-inbox': olästaTotalt }}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">

@@ -14,6 +14,8 @@ public class SupportTicket
     public Guid?    AssignedToUserId { get; set; }
     public DateTime? ReminderAt    { get; set; }
     public string?  ReminderNote   { get; set; }
+    public bool     IsArchived     { get; set; } = false;
+    public DateTime? FirstOpenedAt { get; set; } // null = oläst, satt vid första GET av ärendedetaljer
     public DateTime CreatedAt      { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt      { get; set; } = DateTime.UtcNow;
 

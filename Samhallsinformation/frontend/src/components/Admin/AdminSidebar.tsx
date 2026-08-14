@@ -41,12 +41,14 @@ export default function AdminSidebar({
   roll,
   isOpen,
   onClose,
+  badges,
 }: {
   active: AdminSection
   onSelect: (s: AdminSection) => void
   roll: AdminRoll
   isOpen: boolean
   onClose: () => void
+  badges?: Partial<Record<AdminSection, number>>
 }) {
   const navigate = useNavigate()
   const synliga = NAV.filter(item => item.roller.includes(roll))
@@ -80,20 +82,28 @@ export default function AdminSidebar({
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
-          {synliga.map(item => (
-            <button
-              key={item.key}
-              onClick={() => { onSelect(item.key); onClose() }}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left w-full ${
-                active === item.key
-                  ? 'bg-violet-600 text-white'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <span className="text-base">{item.ikon}</span>
-              {item.label}
-            </button>
-          ))}
+          {synliga.map(item => {
+            const badge = badges?.[item.key]
+            return (
+              <button
+                key={item.key}
+                onClick={() => { onSelect(item.key); onClose() }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left w-full ${
+                  active === item.key
+                    ? 'bg-violet-600 text-white'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <span className="text-base">{item.ikon}</span>
+                <span className="flex-1">{item.label}</span>
+                {!!badge && (
+                  <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                    {badge}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </nav>
 
         {/* Footer */}

@@ -50,6 +50,8 @@ public class AdminSupportController : ControllerBase
                 t.ContactEmail,
                 t.AssignedToUserId,
                 AssignedToName = t.AssignedToUser != null ? t.AssignedToUser.Name : null,
+                t.IsArchived,
+                t.FirstOpenedAt,
                 t.CreatedAt,
                 t.UpdatedAt,
             })
@@ -61,6 +63,16 @@ public class AdminSupportController : ControllerBase
     [HttpGet("tickets/{id}")]
     public async Task<IActionResult> GetTicket(Guid id)
     {
+        // Markera som läst (första öppningen) innan projektionen byggs, så
+        // svaret nedan redan speglar det nya värdet.
+        var entity = await _db.SupportTickets.FindAsync(id);
+        if (entity == null) return NotFound();
+        if (entity.FirstOpenedAt == null)
+        {
+            entity.FirstOpenedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+
         var ticket = await _db.SupportTickets
             .Where(t => t.Id == id)
             .Select(t => new
@@ -78,6 +90,8 @@ public class AdminSupportController : ControllerBase
                 AssignedToName = t.AssignedToUser != null ? t.AssignedToUser.Name : null,
                 t.ReminderAt,
                 t.ReminderNote,
+                t.IsArchived,
+                t.FirstOpenedAt,
                 t.CreatedAt,
                 t.UpdatedAt,
             })
@@ -147,6 +161,18 @@ public class AdminSupportController : ControllerBase
 
         ticket.Status    = req.Status;
         ticket.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
+    [HttpPut("tickets/{id}/archive")]
+    public async Task<IActionResult> SetArchived(Guid id, [FromBody] SetArchivedRequest req)
+    {
+        var ticket = await _db.SupportTickets.FindAsync(id);
+        if (ticket == null) return NotFound();
+
+        ticket.IsArchived = req.Archived;
+        ticket.UpdatedAt  = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return Ok();
     }
@@ -236,5 +262,6 @@ public class AdminSupportController : ControllerBase
 public record AgentReplyRequest(string Text, bool IsInternal);
 public record SetStatusRequest(string Status);
 public record AssignRequest(Guid? UserId);
+public record SetArchivedRequest(bool Archived);
 public record SetReminderRequest(DateTime? ReminderAt, string? ReminderNote);
 public record AddScheduledActionRequest(string Type, DateTime ScheduledAt, string? Text, Guid? ReassignToUserId, string? Instruction);
