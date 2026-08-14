@@ -15,7 +15,7 @@ namespace Samhallsinformation.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.10");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
 
             modelBuilder.Entity("Samhallsinformation.Models.CanonicalEvent", b =>
                 {
@@ -407,6 +407,12 @@ namespace Samhallsinformation.Migrations
 
                     b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("FirstOpenedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("ReminderAt")
                         .HasColumnType("TEXT");

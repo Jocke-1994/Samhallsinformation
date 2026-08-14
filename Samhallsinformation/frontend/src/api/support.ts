@@ -79,6 +79,8 @@ export interface AdminTicketListItemDto {
   contactEmail?: string | null
   assignedToUserId?: string | null
   assignedToName?: string | null
+  isArchived: boolean
+  firstOpenedAt?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -149,6 +151,14 @@ export async function setTicketStatus(id: string, status: string): Promise<void>
     body: JSON.stringify({ status }),
   })
   if (!res.ok) throw new Error(`setTicketStatus: ${res.status}`)
+}
+
+export async function setTicketArchived(id: string, archived: boolean): Promise<void> {
+  const res = await adminFetch(`/api/admin/support/tickets/${id}/archive`, {
+    method: 'PUT',
+    body: JSON.stringify({ archived }),
+  })
+  if (!res.ok) throw new Error(`setTicketArchived: ${res.status}`)
 }
 
 export async function assignTicket(id: string, userId: string | null): Promise<void> {
