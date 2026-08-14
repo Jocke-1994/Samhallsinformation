@@ -658,11 +658,11 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onÖppna
       <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
         {([['', 'Alla', 0], ['arendehantering', 'Ärenden', olästaÄrenden], ['feedback', 'Feedback', olästaFeedback], ['arkiverat', 'Arkiverat', 0]] as [InboxFlik, string, number][]).map(([val, label, olästa]) => (
           <button key={val} onClick={() => setFlik(val)}
-            className={`relative text-xs px-4 py-1.5 rounded-md font-medium transition-colors ${flik === val ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`flex items-center gap-1.5 text-xs px-4 py-1.5 rounded-md font-medium transition-colors ${flik === val ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
             {label}
             {olästa > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
                 {olästa}
               </span>
             )}
@@ -709,15 +709,21 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onÖppna
             <tbody className="divide-y divide-slate-100">
               {filtrerade.map(a => {
                 const harSchema = false // syns bara i detaljvyn nu, listan har inte schemalagda åtgärder
+                const ärOläst = !a.isArchived && !a.firstOpenedAt
                 return (
-                  <tr key={a.id} onClick={() => setÖppetId(a.id)} className="cursor-pointer hover:bg-slate-50 transition-colors">
-                    <td className="pl-5 pr-3 py-4 font-mono text-xs text-slate-400">{ticketNr(a)}</td>
+                  <tr key={a.id} onClick={() => setÖppetId(a.id)} className={`cursor-pointer transition-colors ${ärOläst ? 'bg-violet-50/60 hover:bg-violet-100/60' : 'hover:bg-slate-50'}`}>
+                    <td className="pl-5 pr-3 py-4 font-mono text-xs text-slate-400">
+                      <span className="flex items-center gap-1.5">
+                        {ärOläst && <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" title="Oläst" />}
+                        {ticketNr(a)}
+                      </span>
+                    </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full inline-block">{a.category}</span>
                         <span className="text-[10px] text-violet-500 bg-violet-50 px-2 py-0.5 rounded-full inline-block">{KANAL_LABELS[a.channel] ?? a.channel}</span>
                       </div>
-                      <p className="text-slate-700 font-medium text-sm leading-snug">{a.subject}</p>
+                      <p className={`text-sm leading-snug ${ärOläst ? 'text-slate-900 font-bold' : 'text-slate-700 font-medium'}`}>{a.subject}</p>
                     </td>
                     <td className="px-4 py-4">
                       <p className="text-sm text-slate-700">{a.contactName ?? '—'}</p>
