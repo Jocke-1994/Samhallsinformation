@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
+using Samhallsinformation.Services;
 
 [ApiController]
 [Route("api/push")]
@@ -13,11 +14,72 @@ public class PushController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IConfiguration _config;
+    private readonly IPushNotificationService _push;
 
-    public PushController(AppDbContext db, IConfiguration config)
+    public PushController(AppDbContext db, IConfiguration config, IPushNotificationService push)
     {
         _db     = db;
         _config = config;
+        _push   = push;
+    }
+
+    // Diagnostikverktyg (session 2026-08-14): admin fick inga push-notiser,
+    // och NotificationDeliveryLog-räknaren stod stilla trots att enheten
+    // omprenumererades — den här listar vilka UserDevices-rader som faktiskt
+    // finns, för att se om enheten över huvud taget når databasen.
+    [HttpGet("devices")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ListDevices()
+    {
+        var rows = await _db.UserDevices
+            .Include(d => d.User)
+            .OrderByDescending(d => d.LastSeenAt)
+            .ToListAsync();
+
+        var devices = rows.Select(d => new
+        {
+            d.Id,
+            UserEmail       = d.User.Email,
+            UserRole        = d.User.Role,
+            UserPushEnabled = d.User.PushEnabled,
+            d.DeviceName,
+            d.Platform,
+            d.RegisteredAt,
+            d.LastSeenAt,
+            EndpointPreview = d.Endpoint.Length > 60 ? d.Endpoint[..60] + "…" : d.Endpoint,
+        });
+
+        return Ok(devices);
+    }
+
+    // Skickar en riktig testpush till alla enheter kopplade till den
+    // inloggade admin-användaren — för att isolera om problemet är
+    // dispatch-logiken (hittar ingen enhet) eller själva WebPush-leveransen.
+    [HttpPost("test")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> SendTest()
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var devices = await _db.UserDevices.Where(d => d.UserId == userId).ToListAsync();
+
+        if (devices.Count == 0)
+            return Ok(new { sent = 0, message = "Inga registrerade enheter för det här kontot" });
+
+        var results = new List<object>();
+        foreach (var device in devices)
+        {
+            try
+            {
+                await _push.SendAsync(device, "Testpush", "Det här är en testnotis från Felsökning", null);
+                results.Add(new { device.Id, device.DeviceName, status = "sent" });
+            }
+            catch (Exception ex)
+            {
+                results.Add(new { device.Id, device.DeviceName, status = "failed", error = ex.Message });
+            }
+        }
+
+        return Ok(new { sent = results.Count, results });
     }
 
     // Anonym — frontend behöver den publika nyckeln för pushManager.subscribe(),
