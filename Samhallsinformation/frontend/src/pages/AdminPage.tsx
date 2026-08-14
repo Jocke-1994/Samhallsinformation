@@ -19,6 +19,7 @@ import { useAuth, type SystemRoll } from '../context/AuthContext'
 import { useFeatureFlagsAdmin } from '../context/FeatureFlagsContext'
 import { usePwaIdentity, ADMIN_PWA_IDENTITET } from '../hooks/usePwaIdentity'
 import { usePushSubscription, isPushSupported } from '../hooks/usePushSubscription'
+import { fetchPushSettings, savePushSettings } from '../api/push'
 
 const SECTION_LABELS: Record<AdminSection, string> = {
   'oversikt':       'Översikt',
@@ -75,6 +76,17 @@ export default function AdminPage() {
   const [pushBusy, setPushBusy] = useState(false)
   const [pushFel, setPushFel]   = useState('')
 
+  // Enhets-prenumerationen (ovan) och det globala push-muteläget är två
+  // separata fält i backend — utan den här synkroniseringen kan en admin
+  // ha "aktiverad" enhet men ändå aldrig få notiser om muten råkat stå av
+  // (hände på riktigt, session 2026-08-14: dold bakom en avstängd
+  // feature-flagga utan något UI att se eller ändra den).
+  const [pushEnabled, setPushEnabled] = useState(true)
+  useEffect(() => {
+    fetchPushSettings().then(s => setPushEnabled(s.pushEnabled)).catch(() => {})
+  }, [])
+  const pushAktiv = isSubscribed && pushEnabled
+
   const [section, setSection]             = useState<AdminSection>(
     aktivVy === 'Support' ? 'support-inbox' : 'oversikt'
   )
@@ -114,8 +126,15 @@ export default function AdminPage() {
     setPushBusy(true)
     setPushFel('')
     try {
-      if (isSubscribed) await unsubscribe()
-      else await subscribe()
+      if (pushAktiv) {
+        await unsubscribe()
+      } else {
+        if (!isSubscribed) await subscribe()
+        if (!pushEnabled) {
+          await savePushSettings({ pushEnabled: true })
+          setPushEnabled(true)
+        }
+      }
     } catch (err) {
       setPushFel(err instanceof Error ? err.message : 'Något gick fel')
     } finally {
@@ -191,12 +210,12 @@ export default function AdminPage() {
                 <button
                   onClick={växlaPush}
                   disabled={pushLoading || pushBusy}
-                  title={isSubscribed ? 'Push-notiser aktiverade på den här enheten — klicka för att stänga av' : 'Aktivera push-notiser för nya ärenden och nya användare på den här enheten'}
+                  title={pushAktiv ? 'Push-notiser aktiverade på den här enheten — klicka för att stänga av' : 'Aktivera push-notiser för nya ärenden och nya användare på den här enheten'}
                   className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 ${
-                    isSubscribed ? 'bg-violet-100 hover:bg-violet-200' : 'hover:bg-slate-100'
+                    pushAktiv ? 'bg-violet-100 hover:bg-violet-200' : 'hover:bg-slate-100'
                   }`}
                 >
-                  <span className="text-base">{isSubscribed ? '📳' : '🔕'}</span>
+                  <span className="text-base">{pushAktiv ? '📳' : '🔕'}</span>
                 </button>
                 {pushFel && (
                   <p className="absolute right-0 top-11 z-40 w-56 bg-white border border-red-200 rounded-lg shadow-lg px-3 py-2 text-xs text-red-600">
