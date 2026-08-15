@@ -48,13 +48,14 @@ function formatDateLabel(iso: string): string {
 interface Props {
   shortName: string | null
   sources: Source[]
+  activeSourceIds: Set<number>
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
   onReadStatusChange: () => void
   onOpenSidebar: () => void
 }
 
-export default function NewsFeed({ shortName, sources, viewMode, onViewModeChange, onReadStatusChange, onOpenSidebar }: Props) {
+export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode, onViewModeChange, onReadStatusChange, onOpenSidebar }: Props) {
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()
   const flaggor = useFlags()
@@ -102,12 +103,13 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
     [sortedEvents, severityFilter]
   )
 
-  // Mitt-flödet: Polisen-händelser måste matcha valda typer/områden (om
-  // dimensionen faktiskt anpassats — annars är "allt" fortfarande standard).
-  // Ett tomt urval matchar ingenting, med avsikt (inte reset till "allt").
-  // Övriga källor har ingen filtermekanism än, de visas okritiskt.
+  // Mitt-flödet: bara händelser från källor du aktivt lagt till i Mina
+  // källor. Polisen-händelser filtreras dessutom mot valda typer/områden
+  // (om dimensionen faktiskt anpassats — annars är "allt från Polisen"
+  // fortfarande standard så länge Polisen är en aktiv källa).
   const mittEvents = useMemo(() =>
     sortedEvents.filter(event => {
+      if (!activeSourceIds.has(event.sourceId)) return false
       if (sourceMap[event.sourceId] !== 'Polisen') return true
       const typ    = extraheraPolisenTyp(event.title)
       const omrade = extraheraPolisenOmrade(event.geography)
@@ -115,7 +117,7 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
       const omradeOk = !harAnpassatOmrade || !omrade || valdaOmraden.has(omrade)
       return typOk && omradeOk
     }),
-    [sortedEvents, sourceMap, valdaKategorier, valdaOmraden, harAnpassatTyp, harAnpassatOmrade]
+    [sortedEvents, sourceMap, activeSourceIds, valdaKategorier, valdaOmraden, harAnpassatTyp, harAnpassatOmrade]
   )
 
   // Bara händelser som redan finns i det hämtade fönstret (senaste 50) kan

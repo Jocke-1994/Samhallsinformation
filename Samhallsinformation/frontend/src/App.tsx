@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Routes, Route, useLocation, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSwipeable } from 'react-swipeable'
@@ -17,6 +17,7 @@ import VillkorPage from './pages/VillkorPage'
 import UppdateringarPage from './pages/UppdateringarPage'
 import WelcomeModal from './components/WelcomeModal/WelcomeModal'
 import { fetchSources } from './api/sources'
+import { fetchUserSources } from './api/userSources'
 import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 import { useAuth } from './context/AuthContext'
 import { useFlags } from './context/FeatureFlagsContext'
@@ -44,6 +45,17 @@ function HomePage() {
     queryKey: ['sources'],
     queryFn: fetchSources,
   })
+
+  const { data: userSources = [] } = useQuery({
+    queryKey: ['user-sources'],
+    queryFn: fetchUserSources,
+    enabled: isLoggedIn,
+  })
+
+  const activeSourceIds = useMemo(
+    () => new Set(userSources.filter(p => p.isActive).map(p => p.sourceId)),
+    [userSources]
+  )
 
   const unreadSourceIds = useUnreadSourceIds(sources, readTrigger)
 
@@ -74,6 +86,7 @@ function HomePage() {
         <NewsFeed
           shortName={selectedShortName}
           sources={sources}
+          activeSourceIds={activeSourceIds}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           onReadStatusChange={handleReadStatusChange}
