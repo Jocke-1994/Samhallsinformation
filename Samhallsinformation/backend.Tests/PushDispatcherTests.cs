@@ -21,14 +21,14 @@ public class PushDispatcherTests
     }
 
     private static (User User, Source Source, UserDevice Device) SeedSubscriber(
-        AppDbContext db, bool pushEnabled = true, bool sourceActive = true)
+        AppDbContext db, bool pushNyaHandelser = true, bool sourceActive = true)
     {
         var user = new User
         {
-            Name         = "Ada",
-            Email        = $"{Guid.NewGuid()}@example.com",
-            PasswordHash = "x",
-            PushEnabled  = pushEnabled,
+            Name             = "Ada",
+            Email            = $"{Guid.NewGuid()}@example.com",
+            PasswordHash     = "x",
+            PushNyaHandelser = pushNyaHandelser,
         };
         var source = new Source { Name = "Polisen", ShortName = "Polisen", BaseUrl = "https://example.com" };
         db.Users.Add(user);
@@ -77,10 +77,10 @@ public class PushDispatcherTests
     }
 
     [Fact]
-    public async Task DispatchNewEventsAsync_GlobalMuteEnabled_SendsNothing()
+    public async Task DispatchNewEventsAsync_NyaHandelserMuted_SendsNothing()
     {
         using var db = NewDb();
-        var (_, source, _) = SeedSubscriber(db, pushEnabled: false);
+        var (_, source, _) = SeedSubscriber(db, pushNyaHandelser: false);
         var push = Substitute.For<IPushNotificationService>();
 
         await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1);
@@ -148,6 +148,39 @@ public class PushDispatcherTests
         Assert.Equal(device.Id, db.UserDevices.Single().Id);
         var log = Assert.Single(db.NotificationDeliveryLogs);
         Assert.Equal("failed", log.Status);
+    }
+
+    [Fact]
+    public async Task DispatchNewVersionAsync_OptedInUser_SendsPushAndReturnsCount()
+    {
+        using var db = NewDb();
+        var (_, _, device) = SeedSubscriber(db); // PushNyVersion defaultar till true
+        var push = Substitute.For<IPushNotificationService>();
+
+        var sent = await PushDispatcher.DispatchNewVersionAsync(db, push, "https://test.local", "1.2.0", "Nya källor och buggfixar");
+
+        Assert.Equal(1, sent);
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Is<string>(t => t!.Contains("1.2.0")),
+            Arg.Is<string>(b => b == "Nya källor och buggfixar"),
+            Arg.Any<string?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DispatchNewVersionAsync_UserOptedOut_SendsNothing()
+    {
+        using var db = NewDb();
+        SeedSubscriber(db);
+        db.Users.Single().PushNyVersion = false;
+        db.SaveChanges();
+        var push = Substitute.For<IPushNotificationService>();
+
+        var sent = await PushDispatcher.DispatchNewVersionAsync(db, push, "https://test.local", "1.2.0", "Nya källor och buggfixar");
+
+        Assert.Equal(0, sent);
+        await push.DidNotReceiveWithAnyArgs().SendAsync(default!, default!, default!, default, default);
     }
 
     private static (User Admin, UserDevice Device) SeedAdminWithDevice(AppDbContext db, bool pushEnabled = true, string role = "Admin")

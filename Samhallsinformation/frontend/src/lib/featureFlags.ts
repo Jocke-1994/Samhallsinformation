@@ -16,7 +16,6 @@ export type FlagKey =
   | 'konto_losenord'
   | 'konto_visningsnamn'
   | 'konto_tvafaktor'
-  | 'konto_app_notiser'
   | 'konto_sessioner'
   | 'konto_aktivitetslogg'
   | 'konto_samtycke'
@@ -92,9 +91,6 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
       { key: 'notif_stor_ej',       label: 'Stör ej',              beskrivning: 'Tysta notifieringar under valda tider',           defaultAktiv: false },
       { key: 'notif_leveranslage',  label: 'Leveransläge',         beskrivning: 'Ställ in hur och när notifieringar levereras',    defaultAktiv: false },
       { key: 'notif_historik',      label: 'Notishistorik',        beskrivning: 'Visa tidigare skickade notifieringar',            defaultAktiv: false },
-      { key: 'notif_push',         label: 'Push-notiser',         beskrivning: 'Aktivera riktiga push-notiser i webbläsaren',     defaultAktiv: false,
-        roadmap: 'Byggd och verifierad end-to-end i produktion (grundpushen). Väntar bara på ett produktbeslut om lansering.',
-        roadmapSedan: '2026-08-03', roadmapPrNummer: [392, 393, 394, 395] },
     ],
   },
   {
@@ -106,7 +102,9 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
       { key: 'konto_losenord',       label: 'Lösenordsbyte',     beskrivning: 'Byt lösenord för kontot',                       defaultAktiv: true },
       { key: 'konto_visningsnamn',   label: 'Visningsnamn för support', beskrivning: 'Sätt ett visningsnamn som visas i supportsvar istället för "Support" — bara synligt för Admin/Support', defaultAktiv: true },
       { key: 'konto_tvafaktor',      label: 'Tvåfaktor',         beskrivning: 'Aktivera tvåfaktorsautentisering',               defaultAktiv: false },
-      { key: 'konto_app_notiser',    label: 'App-notiser',       beskrivning: 'Inställningar för push-notiser i appen',         defaultAktiv: false },
+      { key: 'notif_push',           label: 'Push-notiser',      beskrivning: 'Aktivera riktiga push-notiser i webbläsaren',    defaultAktiv: false,
+        roadmap: 'Byggd och verifierad end-to-end i produktion (grundpushen). Väntar bara på ett produktbeslut om lansering. Flyttad hit från Notifieringar-sektionen (samlar alla notisinställningar under Konto) — appens enda mail/SMS-attrapp (App-notiser) togs samtidigt bort helt eftersom ingen mail/SMS-leverans finns.',
+        roadmapSedan: '2026-08-03', roadmapPrNummer: [392, 393, 394, 395] },
       { key: 'konto_sessioner',      label: 'Sessioner',         beskrivning: 'Visa och avsluta aktiva inloggningar',           defaultAktiv: false },
       { key: 'konto_aktivitetslogg', label: 'Aktivitetslogg',    beskrivning: 'Visa inloggningshistorik och kontoaktivitet',    defaultAktiv: false },
       { key: 'konto_samtycke',       label: 'Spara samtycke',    beskrivning: 'Hantera samtycken för datalagring',              defaultAktiv: false },
