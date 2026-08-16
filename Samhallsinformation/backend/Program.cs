@@ -678,8 +678,47 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        if (pendingMigrations.Contains("20260816194200_AddPushNotifKategorier"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PushNyaHandelser"" boolean NOT NULL DEFAULT true;
+                ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""PushNyVersion""    boolean NOT NULL DEFAULT true;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260816194200_AddPushNotifKategorier', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
+
+    // Fix Users.PushNyaHandelser/PushNyVersion — det första deployet av
+    // AddPushNotifKategorier gick via ren MigrateAsync() (glömde lägga till
+    // ovanstående pendingMigrations-block innan merge) och skapade kolumnerna
+    // som integer istället för boolean, vilket kraschade EF-läsning av VARJE
+    // User-rad (inkl. inloggning) med "Reading as System.Boolean is not
+    // supported for fields having DataTypeName integer". Samma självläkande
+    // mönster som IsPublished-fixen nedan.
+    if (databaseUrl != null || pgHost != null)
+    {
+        await db.Database.ExecuteSqlRawAsync(@"
+            DO $$
+            BEGIN
+              IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='Users' AND column_name='PushNyaHandelser' AND data_type='integer'
+              ) THEN
+                ALTER TABLE ""Users"" ALTER COLUMN ""PushNyaHandelser"" DROP DEFAULT;
+                ALTER TABLE ""Users"" ALTER COLUMN ""PushNyaHandelser"" TYPE boolean USING (""PushNyaHandelser""::boolean);
+                ALTER TABLE ""Users"" ALTER COLUMN ""PushNyaHandelser"" SET DEFAULT true;
+                ALTER TABLE ""Users"" ALTER COLUMN ""PushNyVersion""    DROP DEFAULT;
+                ALTER TABLE ""Users"" ALTER COLUMN ""PushNyVersion""    TYPE boolean USING (""PushNyVersion""::boolean);
+                ALTER TABLE ""Users"" ALTER COLUMN ""PushNyVersion""    SET DEFAULT true;
+              END IF;
+            END $$;
+        ");
+    }
 
     // Fix Sources.IsPublished — SQLite-migration skapar den som INTEGER, PostgreSQL behöver boolean
     if (databaseUrl != null || pgHost != null)
