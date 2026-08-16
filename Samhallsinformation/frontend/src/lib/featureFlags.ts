@@ -1,4 +1,6 @@
 export type FlagKey =
+  | 'auth_logga_in_knapp'
+  | 'auth_skapa_konto_knapp'
   | 'flode_olasta_badge'
   | 'flode_sparat'
   | 'kallor_lagg_till'
@@ -56,6 +58,15 @@ export interface FlagGrupp {
 }
 
 export const FLAG_GRUPPER: FlagGrupp[] = [
+  {
+    key: 'auth',
+    label: 'Inloggning & konto',
+    ikon: '🔑',
+    flaggor: [
+      { key: 'auth_logga_in_knapp',    label: 'Logga in-knapp',    beskrivning: 'Visa Logga in-knappen i sidomenyn för utloggade besökare',    defaultAktiv: true },
+      { key: 'auth_skapa_konto_knapp', label: 'Skapa konto-knapp', beskrivning: 'Visa Skapa konto-knappen i sidomenyn för utloggade besökare', defaultAktiv: true },
+    ],
+  },
   {
     key: 'flode',
     label: 'Flöde',

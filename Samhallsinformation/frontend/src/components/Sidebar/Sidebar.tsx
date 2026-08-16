@@ -161,6 +161,36 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
         </button>
       </div>
 
+      {/* Logga in / Skapa konto — endast för utloggade, alltid synligt (utanför scrollytan) */}
+      {!isLoggedIn && (flaggor.auth_logga_in_knapp || flaggor.auth_skapa_konto_knapp) && (
+        <div className="mb-4 flex flex-col gap-2">
+          {flaggor.auth_logga_in_knapp && (
+            <Link
+              to="/login"
+              onClick={onClose}
+              className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-full shadow transition-colors w-full justify-center"
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Logga in
+            </Link>
+          )}
+          {flaggor.auth_skapa_konto_knapp && (
+            <Link
+              to="/register"
+              onClick={onClose}
+              className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-600 dark:hover:bg-slate-500 text-slate-600 dark:text-slate-100 text-sm font-medium px-4 py-2 rounded-full transition-colors w-full justify-center"
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              Skapa konto
+            </Link>
+          )}
+        </div>
+      )}
+
       {/* Scrollbar innehållsyta — sources + knappar scrollar tillsammans */}
       <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">
 
