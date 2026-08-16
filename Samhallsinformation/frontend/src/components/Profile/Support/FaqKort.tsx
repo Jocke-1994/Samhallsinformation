@@ -1,13 +1,28 @@
 import { useState } from 'react'
 import type { FaqKategori } from '../../../types'
 import { laddaFaq } from '../../../lib/faqStorage'
+import { useFlags } from '../../../context/FeatureFlagsContext'
+import { isSektionSynlig } from '../../../lib/featureFlags'
 
 const FAQ_KATEGORIER: FaqKategori[] = ['Notifieringar', 'Mina källor', 'Konto', 'Uppdateringar']
+
+// Kopplar en FAQ-kategori till dess sektion i featureFlags.ts, så en flik
+// döljs om ingen flagga i den sektionen är aktiv — samma mönster som
+// ProfileLanding/Sidebar redan använder för själva profilsektionerna.
+const KATEGORI_SEKTION: Record<FaqKategori, string> = {
+  'Notifieringar': 'notifieringar',
+  'Mina källor':   'mina-kallor',
+  'Konto':         'konto',
+  'Uppdateringar': 'uppdateringar',
+}
 
 export default function FaqKort() {
   const [openIndex, setOpenIndex]         = useState<number | null>(null)
   const [aktivKategori, setAktivKategori] = useState<FaqKategori | 'alla'>('alla')
   const [sökning, setSökning]             = useState('')
+  const flaggor = useFlags()
+
+  const synligaKategorier = FAQ_KATEGORIER.filter(kat => isSektionSynlig(KATEGORI_SEKTION[kat], flaggor))
 
   const publicerade = laddaFaq().filter(f => f.publicerad)
 
@@ -42,9 +57,16 @@ export default function FaqKort() {
         </div>
       </div>
 
-      {/* Filterflikar */}
-      <div className="flex border-b border-slate-100">
-        {(['alla', ...FAQ_KATEGORIER] as (FaqKategori | 'alla')[]).map(kat => {
+      {/* Filterflikar — en kategori döljs om ingen feature-flag i den sektionen är aktiv.
+          auto-fit/minmax istället för fasta grid-cols-N: antalet flikar varierar
+          med hur många sektioner som är aktiva, så kolumnantalet måste anpassa sig
+          (fasta Tailwind-klasser som grid-cols-${n} skulle inte fungera här —
+          Tailwinds JIT-scanner hittar bara statiskt skrivna klassnamn). */}
+      <div
+        className="grid gap-2 px-4 pt-4 pb-3 border-b border-slate-100"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))' }}
+      >
+        {(['alla', ...synligaKategorier] as (FaqKategori | 'alla')[]).map(kat => {
           const count = kat === 'alla' ? publicerade.length : publicerade.filter(i => i.kategori === kat).length
           const isActive = aktivKategori === kat
           const activeStyles: Record<string, string> = {
@@ -58,7 +80,7 @@ export default function FaqKort() {
             <button
               key={kat}
               onClick={() => { setAktivKategori(kat); setOpenIndex(null) }}
-              className={`flex-1 py-3 text-xs font-semibold transition-colors ${
+              className={`rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors ${
                 isActive
                   ? activeStyles[kat]
                   : 'bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100'
