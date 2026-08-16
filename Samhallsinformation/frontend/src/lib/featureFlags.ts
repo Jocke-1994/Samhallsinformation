@@ -120,10 +120,14 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
     label: 'Uppdateringar',
     ikon: '🔄',
     flaggor: [
-      { key: 'uppdateringar_senaste',       label: 'Senaste version', beskrivning: 'Visa det senaste releaset med ändringslogg',        defaultAktiv: true },
+      { key: 'uppdateringar_senaste',       label: 'Senaste version', beskrivning: 'Visa det senaste releaset med ändringslogg',        defaultAktiv: false,
+        roadmap: 'Innehållet är inaktuellt (stannar vid v0.5.0/25 juni 2026, inget om allt som skeppats sen dess). Avstängd tills changelogen är omskriven och godkänd.',
+        roadmapSedan: '2026-08-16' },
       { key: 'uppdateringar_pagang',        label: 'Påväg',           beskrivning: 'Visa nästa planerade version och vad som är på gång', defaultAktiv: false },
       { key: 'uppdateringar_kanda_problem', label: 'Kända problem',   beskrivning: 'Visa lista över kända buggar och workarounds',       defaultAktiv: false },
-      { key: 'uppdateringar_historik',      label: 'Versionshistorik', beskrivning: 'Visa alla tidigare versioner och deras ändringar',  defaultAktiv: true },
+      { key: 'uppdateringar_historik',      label: 'Versionshistorik', beskrivning: 'Visa alla tidigare versioner och deras ändringar',  defaultAktiv: false,
+        roadmap: 'Samma orsak som Senaste version — historiken slutar vid v0.5.0. Avstängd tills changelogen är omskriven och godkänd.',
+        roadmapSedan: '2026-08-16' },
     ],
   },
   {
