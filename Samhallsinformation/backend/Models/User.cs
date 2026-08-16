@@ -8,7 +8,9 @@ public class User
     public string   Name         { get; set; } = string.Empty;
     public string?  DisplayName  { get; set; } // Visas istället för "Support" i supportsvar till slutanvändare — avslöjar aldrig riktiga Name
     public string   Role         { get; set; } = "Användare";
-    public bool     PushEnabled  { get; set; } = true;
+    public bool     PushEnabled  { get; set; } = true; // Global mute för admin/support-egna driftnotiser (nytt ärende/ny användare) — orört av kategorierna nedan
+    public bool     PushNyaHandelser { get; set; } = true; // "Ny händelse"-kategorin i Konto → Push-notiser (källorna i Mitt flöde)
+    public bool     PushNyVersion    { get; set; } = true; // "Ny version"-kategorin i Konto → Push-notiser
     public string   AuthProvider { get; set; } = "local";
     public bool     IsActive     { get; set; } = true;
     public DateTime? SuspendedAt     { get; set; }

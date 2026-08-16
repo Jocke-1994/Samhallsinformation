@@ -4,7 +4,6 @@ import Mottagare from './Mottagare'
 import StorEj from './StorEj'
 import Leveranslage from './Leveranslage'
 import NotisHistorik from './NotisHistorik'
-import PushKort from './PushKort'
 import { useFlags } from '../../../context/FeatureFlagsContext'
 
 export type SektionKey = 'epost' | 'sms' | 'push'
@@ -52,8 +51,6 @@ export default function Notifieringar() {
           {flaggor.notif_leveranslage && <Leveranslage data={mottagare} />}
         </div>
       )}
-
-      {flaggor.notif_push && <PushKort />}
 
       {flaggor.notif_historik && <NotisHistorik />}
 

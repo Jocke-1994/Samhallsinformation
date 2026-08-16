@@ -164,13 +164,21 @@ public class PushController : ControllerBase
         return Ok();
     }
 
+    // Delas av två oberoende UI-ytor: Konto → Push-notiser (kategorierna
+    // PushNyaHandelser/PushNyVersion) och adminpanelens egen klockikon för
+    // drift-notiser (PushEnabled). Alla tre fält returneras/går att sätta
+    // här, men SaveSettings är ett riktigt PATCH (bara satta fält skrivs) —
+    // annars skulle den ena ytans sparning tysta nolla den andras fält.
     [HttpGet("settings")]
     [Authorize]
     public async Task<IActionResult> GetSettings()
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var pushEnabled = await _db.Users.Where(u => u.Id == userId).Select(u => u.PushEnabled).FirstAsync();
-        return Ok(new { pushEnabled });
+        var settings = await _db.Users
+            .Where(u => u.Id == userId)
+            .Select(u => new { u.PushEnabled, u.PushNyaHandelser, u.PushNyVersion })
+            .FirstAsync();
+        return Ok(settings);
     }
 
     [HttpPut("settings")]
@@ -179,13 +187,28 @@ public class PushController : ControllerBase
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var user = await _db.Users.FirstAsync(u => u.Id == userId);
-        user.PushEnabled = req.PushEnabled;
+        if (req.PushEnabled.HasValue)      user.PushEnabled      = req.PushEnabled.Value;
+        if (req.PushNyaHandelser.HasValue) user.PushNyaHandelser = req.PushNyaHandelser.Value;
+        if (req.PushNyVersion.HasValue)    user.PushNyVersion    = req.PushNyVersion.Value;
         await _db.SaveChangesAsync();
         return Ok();
+    }
+
+    // Admin-triggad utskick av "Ny version"-kategorin — fristående minimal
+    // åtgärd, INTE kopplad till AdminUppdateringar (som fortfarande är helt
+    // dekorativ, se project_uppdateringar_schemalagd_publicering_spec).
+    [HttpPost("new-version")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> SendNewVersionNotice([FromBody] NewVersionRequest req)
+    {
+        var frontendUrl = _config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
+        var sent = await PushDispatcher.DispatchNewVersionAsync(_db, _push, frontendUrl, req.Version, req.Message);
+        return Ok(new { sent });
     }
 }
 
 public record SubscribeRequest(string Endpoint, SubscribeKeys Keys, string? DeviceName, string? Platform);
 public record SubscribeKeys(string P256dh, string Auth);
 public record UnsubscribeRequest(string Endpoint);
-public record PushSettingsRequest(bool PushEnabled);
+public record PushSettingsRequest(bool? PushEnabled, bool? PushNyaHandelser, bool? PushNyVersion);
+public record NewVersionRequest(string Version, string Message);

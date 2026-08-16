@@ -11,7 +11,7 @@ public static class PushDispatcher
     // En batchad push per källa per ingestor-körning, aldrig en per enskild
     // händelse — beslutad princip från push-scopingen (session 25/26).
     // Mottagare = UserSourcePreference.IsActive för källan (= Mitt flöde) OCH
-    // User.PushEnabled (den globala muten, oberoende av källfiltret).
+    // User.PushNyaHandelser (kategorin "Ny händelse" i Konto → Push-notiser).
     public static async Task DispatchNewEventsAsync(
         AppDbContext db, IPushNotificationService push, string frontendUrl,
         int sourceId, int insertedCount, CancellationToken ct = default)
@@ -29,7 +29,7 @@ public static class PushDispatcher
         if (subscribedUserIds.Count == 0) return;
 
         var recipientIds = await db.Users
-            .Where(u => subscribedUserIds.Contains(u.Id) && u.PushEnabled)
+            .Where(u => subscribedUserIds.Contains(u.Id) && u.PushNyaHandelser)
             .Select(u => u.Id)
             .ToListAsync(ct);
 
@@ -103,6 +103,34 @@ public static class PushDispatcher
         var url   = $"{frontendUrl.TrimEnd('/')}/admin";
 
         await SendToDevicesAsync(db, push, devices, title, body, url, sourceId: null, ct);
+    }
+
+    // Admin-triggad, fristående utskick för "Ny version"-kategorin — se
+    // PushController.SendNewVersionNotice. Mottagare = User.PushNyVersion,
+    // oberoende av källfilter (alla som opt:at in på kategorin, oavsett vilka
+    // källor de följer). Returnerar antal enheter det skickades till.
+    public static async Task<int> DispatchNewVersionAsync(
+        AppDbContext db, IPushNotificationService push, string frontendUrl,
+        string version, string message, CancellationToken ct = default)
+    {
+        var recipientIds = await db.Users
+            .Where(u => u.PushNyVersion)
+            .Select(u => u.Id)
+            .ToListAsync(ct);
+
+        if (recipientIds.Count == 0) return 0;
+
+        var devices = await db.UserDevices
+            .Where(d => recipientIds.Contains(d.UserId))
+            .ToListAsync(ct);
+
+        if (devices.Count == 0) return 0;
+
+        var title = $"Ny version: {version}";
+        var url   = $"{frontendUrl.TrimEnd('/')}/profil?section=uppdateringar";
+
+        await SendToDevicesAsync(db, push, devices, title, message, url, sourceId: null, ct);
+        return devices.Count;
     }
 
     private static async Task SendToDevicesAsync(

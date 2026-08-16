@@ -2,6 +2,8 @@ import { adminFetch } from './adminFetch'
 
 export interface PushSettingsDto {
   pushEnabled: boolean
+  pushNyaHandelser: boolean
+  pushNyVersion: boolean
 }
 
 export async function fetchVapidPublicKey(): Promise<string> {
@@ -39,10 +41,19 @@ export async function fetchPushSettings(): Promise<PushSettingsDto> {
   return res.json()
 }
 
-export async function savePushSettings(settings: PushSettingsDto): Promise<void> {
+export async function savePushSettings(settings: Partial<PushSettingsDto>): Promise<void> {
   const res = await adminFetch('/api/push/settings', {
     method: 'PUT',
     body: JSON.stringify(settings),
   })
   if (!res.ok) throw new Error(`savePushSettings: ${res.status}`)
+}
+
+export async function sendNewVersionNotice(version: string, message: string): Promise<{ sent: number }> {
+  const res = await adminFetch('/api/push/new-version', {
+    method: 'POST',
+    body: JSON.stringify({ version, message }),
+  })
+  if (!res.ok) throw new Error(`sendNewVersionNotice: ${res.status}`)
+  return res.json()
 }

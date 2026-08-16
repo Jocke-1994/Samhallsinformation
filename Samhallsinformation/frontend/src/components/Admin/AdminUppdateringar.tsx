@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { sendNewVersionNotice } from '../../api/push'
 
 type Typ    = 'ny-funktion' | 'förbättring' | 'buggfix' | 'känt-problem' | 'kommer-snart'
 type Status = 'utkast' | 'publicerad'
@@ -98,6 +99,80 @@ function typSummary(punkter: UppdateringsPunkt[]) {
   const seen = new Map<Typ, number>()
   for (const p of punkter) seen.set(p.typ, (seen.get(p.typ) ?? 0) + 1)
   return Array.from(seen.entries()).map(([typ, antal]) => ({ typ, antal }))
+}
+
+// ---------------------------------------------------------------------------
+// Skicka "Ny version"-notis — riktig, fristående funktion (kopplad mot
+// PushDispatcher.DispatchNewVersionAsync). Medvetet INTE kopplad till
+// listan/formuläret nedan, som fortfarande är helt dekorativt i väntan på
+// den större ombyggnaden (schemalagd publicering, se minnesanteckningen
+// project_uppdateringar_schemalagd_publicering_spec).
+// ---------------------------------------------------------------------------
+
+function SkickaNyVersionKort() {
+  const [version, setVersion] = useState('')
+  const [meddelande, setMeddelande] = useState('')
+  const [skickar, setSkickar] = useState(false)
+  const [resultat, setResultat] = useState<string | null>(null)
+  const [fel, setFel] = useState('')
+
+  const kanSkicka = version.trim() !== '' && meddelande.trim() !== '' && !skickar
+
+  async function skicka() {
+    setSkickar(true)
+    setFel('')
+    setResultat(null)
+    try {
+      const { sent } = await sendNewVersionNotice(version.trim(), meddelande.trim())
+      setResultat(sent === 0 ? 'Skickat — men ingen hade opt:at in på "Ny version" än.' : `Skickat till ${sent} enhet${sent === 1 ? '' : 'er'}.`)
+      setVersion('')
+      setMeddelande('')
+    } catch (err) {
+      setFel(err instanceof Error ? err.message : 'Något gick fel')
+    } finally {
+      setSkickar(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-violet-200 shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-violet-100 bg-violet-50">
+        <h2 className="text-sm font-bold text-violet-800">Skicka "Ny version"-notis</h2>
+        <p className="text-xs text-violet-500 mt-0.5">
+          Riktig push till alla som slagit på kategorin Ny version under Konto — fristående från listan nedan.
+        </p>
+      </div>
+      <div className="px-6 py-5 flex flex-col gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-3">
+          <input
+            type="text"
+            value={version}
+            onChange={e => setVersion(e.target.value)}
+            placeholder="T.ex. 0.6.0"
+            className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+          />
+          <input
+            type="text"
+            value={meddelande}
+            onChange={e => setMeddelande(e.target.value)}
+            placeholder="T.ex. 'Nya källor och en snabbare sidomeny'"
+            className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={skicka}
+            disabled={!kanSkicka}
+            className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors shrink-0"
+          >
+            {skickar ? 'Skickar…' : 'Skicka nu'}
+          </button>
+          {resultat && <p className="text-sm text-green-600">{resultat}</p>}
+          {fel && <p className="text-sm text-red-500">{fel}</p>}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -379,6 +454,8 @@ export default function AdminUppdateringar() {
       {panelÖppen && (
         <FormPanel redigerar={redigerar} onSpara={spara} onStäng={stängPanel} />
       )}
+
+      <SkickaNyVersionKort />
 
       {/* Stat-kort */}
       <div className="grid grid-cols-3 gap-4">

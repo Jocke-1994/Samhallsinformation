@@ -4,7 +4,7 @@ import { makeField, type FormField } from './kontoTypes'
 import KontoInfo from './KontoInfo'
 import SparSamtycke from './SparSamtycke'
 import ThemeKort from './ThemeKort'
-import AppNotiserKort from './AppNotiserKort'
+import PushKort from './PushKort'
 import AktivitetsloggKort from './AktivitetsloggKort'
 import SessionerKort from './SessionerKort'
 import TvafaktorKort from './TvafaktorKort'
@@ -84,7 +84,7 @@ export default function Konto() {
         {/* Höger kolumn */}
         <div className="flex flex-col gap-6">
           {flaggor.konto_tema && <ThemeKort />}
-          {flaggor.konto_app_notiser && <AppNotiserKort />}
+          {flaggor.notif_push && <PushKort />}
           {flaggor.konto_sessioner && <SessionerKort />}
           {flaggor.konto_aktivitetslogg && <AktivitetsloggKort />}
           {flaggor.konto_datahantering && <Datahantering
