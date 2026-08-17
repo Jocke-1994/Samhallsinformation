@@ -3,7 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { laddaSparadeHandelser, taBortSparadHandelse, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
 import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
 import { useAuth } from '../../context/AuthContext'
-import { fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion, type AdminUserDto } from '../../api/adminUsers'
+import {
+  fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
+  fetchAdminUserPolisenFilter, type AdminUserDto,
+} from '../../api/adminUsers'
 import type { PendingNotis } from '../../types/adminNotis'
 
 // Mockad inloggad admin/support-identitet — samma placeholder som resten av
@@ -107,12 +110,11 @@ function mapAdminUser(dto: AdminUserDto, joinNr: number): Användare {
 }
 
 // ---------------------------------------------------------------------------
-// Mock-data — detaljvyer (notiser/aktivitet/Polisen-filter/ärenden) har ingen
-// backend-motsvarighet än, se `[[project_admin_anvandare]]`. Nycklarna nedan
-// (1, 2, 3...) matchar inga riktiga användar-ID:n (nu riktiga GUID:er) — de
-// visas därför bara som tomma "inget än"-lägen tills de kopplas mot riktig
-// data i en framtida omgång, precis som Polisen-filter-vyn/supportärende-
-// fliken redan var explicit undantagna från den här PR:en.
+// Mock-data — Notishistorik/Aktivitet-flikarna har ingen backend-motsvarighet
+// än, se `[[project_admin_anvandare]]`. Nycklarna nedan (1, 3, 6...) matchar
+// inga riktiga användar-ID:n (nu riktiga GUID:er) — visas därför bara som
+// tomma "inget än"-lägen tills de kopplas mot riktig data i en framtida
+// omgång. Polisen-filter använder riktig data, se längre ner.
 // ---------------------------------------------------------------------------
 
 const MOCK_NOTISER: Record<string, NotisRad[]> = {
@@ -149,17 +151,6 @@ const MOCK_AKTIVITET: Record<string, AktivitetRad[]> = {
     { tid: 'Igår 20:10',   händelse: 'Läste 4 artiklar från Polisen' },
     { tid: '2026-03-20',   händelse: 'Skapade konto'                 },
   ],
-}
-
-// Samma datastruktur som riktiga GET /api/user/polisen-filter (UserPolisenFilterController):
-// null = ej anpassat (allt), en array = explicit valt urval (kan vara tom = matchar inget).
-// Mockad tills det finns riktiga användare att lista (steg 4, #298).
-interface PolisenFilterMini { kategorier: string[] | null; omraden: string[] | null }
-
-const MOCK_POLISEN_FILTER: Record<string, PolisenFilterMini> = {
-  3: { kategorier: ['Skottlossning', 'Explosion', 'Misshandel'], omraden: ['Norrköping', 'Göteborg'] },
-  6: { kategorier: ['Rån', 'Brand'],                             omraden: ['Göteborg', 'Malmö']     },
-  1: { kategorier: null,                                         omraden: null                       },
 }
 
 const MOCK_ÄRENDEN: Record<string, ArendeMini[]> = {
@@ -570,6 +561,12 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     })))
   }, [kontoNotiser, onPendingNotiser])
 
+  const { data: polisenFilter } = useQuery({
+    queryKey: ['admin-polisen-filter', vald?.id],
+    queryFn:  () => fetchAdminUserPolisenFilter(vald!.id),
+    enabled:  !!vald,
+  })
+
   useEffect(() => {
     if (!defaultÖppnaEpost) return
     const u = användare.find(x => x.epost === defaultÖppnaEpost)
@@ -951,36 +948,33 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   </div>
                 </div>
 
-                {/* Polisen-filter (FAS 4, #298) — mockad tills riktiga användare finns, se
-                    MOCK_POLISEN_FILTER-kommentaren för datastrukturen som redan är på riktigt */}
+                {/* Polisen-filter (FAS 4, #298) — riktig data via
+                    GET /api/admin/users/{id}/polisen-filter (admin-variant av
+                    UserPolisenFilterController), read-only här */}
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Polisen-filter</p>
-                  {(() => {
-                    const filter = MOCK_POLISEN_FILTER[vald.id]
-                    if (!filter) return <p className="text-sm text-slate-400">Följer inte Polisen som källa.</p>
-                    if (filter.kategorier === null && filter.omraden === null)
-                      return <p className="text-sm text-slate-500">Inget anpassat filter — får allt från Polisen.</p>
-                    return (
-                      <div className="flex flex-col gap-2">
-                        <div>
-                          <p className="text-xs text-slate-400 mb-1">Typer</p>
-                          <div className="flex flex-wrap gap-1">
-                            {(filter.kategorier ?? []).length > 0
-                              ? filter.kategorier!.map(k => <span key={k} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k}</span>)
-                              : <span className="text-xs text-slate-400">Alla</span>}
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-400 mb-1">Områden</p>
-                          <div className="flex flex-wrap gap-1">
-                            {(filter.omraden ?? []).length > 0
-                              ? filter.omraden!.map(o => <span key={o} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{o}</span>)
-                              : <span className="text-xs text-slate-400">Alla</span>}
-                          </div>
+                  {!polisenFilter || (polisenFilter.kategorier === null && polisenFilter.omraden === null) ? (
+                    <p className="text-sm text-slate-500">Inget anpassat filter — får allt från Polisen.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Typer</p>
+                        <div className="flex flex-wrap gap-1">
+                          {(polisenFilter.kategorier ?? []).length > 0
+                            ? polisenFilter.kategorier!.map(k => <span key={k} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k}</span>)
+                            : <span className="text-xs text-slate-400">Alla</span>}
                         </div>
                       </div>
-                    )
-                  })()}
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Områden</p>
+                        <div className="flex flex-wrap gap-1">
+                          {(polisenFilter.omraden ?? []).length > 0
+                            ? polisenFilter.omraden!.map(o => <span key={o} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{o}</span>)
+                            : <span className="text-xs text-slate-400">Alla</span>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Sparat (#298, punkt 9) — riktiga användare, men lagringen
