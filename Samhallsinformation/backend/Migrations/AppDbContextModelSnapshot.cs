@@ -224,6 +224,36 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("FeatureIdeaTesters");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.IngestorRunLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EventsInserted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("RunAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Success")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunAt");
+
+                    b.HasIndex("SourceId");
+
+                    b.ToTable("IngestorRunLogs");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.NotificationDeliveryLog", b =>
                 {
                     b.Property<Guid>("Id")

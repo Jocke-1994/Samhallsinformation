@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { laddaLogg, markeraÅngrad, type LoggPost, type ÅngraData } from '../../lib/aktivitetsloggStorage'
 import { saveAdminUserEvent, unsaveAdminUserEvent } from '../../api/adminUsers'
+import { fetchIngestorLogRecent, type IngestorLogRowDto } from '../../api/ingestorLog'
 
 type LoggTyp    = 'Ingestor' | 'Notis' | 'Fel' | 'Kontoåtgärd'
 type LoggStatus = 'OK' | 'Fel' | 'Varning' | 'Levererad' | 'Misslyckad'
@@ -19,26 +21,33 @@ interface LoggRad {
   ångraData?: ÅngraData
 }
 
-const LOGG: LoggRad[] = [
-  { id: 'm1',  tid: '10:05', datum: '2026-05-18', typ: 'Ingestor', rubrik: 'Ingestor-körning slutförd',          detalj: '847 händelser hämtade — Polisen, SMHI, Trafikverket, MSB',              status: 'OK'         },
-  { id: 'm2',  tid: '09:50', datum: '2026-05-18', typ: 'Notis',    rubrik: 'Notis skickad — Polisen',            detalj: 'E-post till anna.svensson@mail.se — "Trafikolycka E4 Södertälje"',      status: 'Levererad'  },
-  { id: 'm3',  tid: '09:48', datum: '2026-05-18', typ: 'Notis',    rubrik: 'Notis skickad — SMHI',               detalj: 'Push till 3 mottagare — "Gul varning: kraftigt regn Västra Götaland"', status: 'Levererad'  },
-  { id: 'm4',  tid: '09:45', datum: '2026-05-18', typ: 'Fel',      rubrik: 'Timeout — Krisinformation',          detalj: 'HTTP-anrop tog >30 s, retry lyckades på försök 2',                      status: 'Varning'    },
-  { id: 'm5',  tid: '08:05', datum: '2026-05-18', typ: 'Ingestor', rubrik: 'Ingestor-körning slutförd',          detalj: '612 händelser hämtade — Polisen, Trafikverket',                         status: 'OK'         },
-  { id: 'm6',  tid: '07:00', datum: '2026-05-18', typ: 'Ingestor', rubrik: 'Ingestor-körning slutförd',          detalj: '390 händelser hämtade — alla aktiva källor',                            status: 'OK'         },
-  { id: 'm7',  tid: '23:05', datum: '2026-05-17', typ: 'Ingestor', rubrik: 'Ingestor-körning slutförd',          detalj: '721 händelser hämtade — Polisen, SMHI, MSB',                            status: 'OK'         },
-  { id: 'm8',  tid: '22:14', datum: '2026-05-17', typ: 'Notis',    rubrik: 'Notis skickad — MSB',                detalj: 'E-post till 12 mottagare — "VIKTIGT: Röd varning storm"',               status: 'Levererad'  },
-  { id: 'm9',  tid: '20:05', datum: '2026-05-17', typ: 'Ingestor', rubrik: 'Ingestor-körning slutförd',          detalj: '544 händelser hämtade — Polisen, Trafikverket, Krisinformation',        status: 'OK'         },
-  { id: 'm10', tid: '18:37', datum: '2026-05-17', typ: 'Fel',      rubrik: 'Parse-fel — Polisen RSS',            detalj: 'Ogiltig XML i feed, 0 händelser importerade från Polisen denna körning', status: 'Fel'        },
-  { id: 'm11', tid: '17:05', datum: '2026-05-17', typ: 'Ingestor', rubrik: 'Ingestor-körning delvis slutförd',   detalj: '289 händelser hämtade — SMHI, Krisinformation (Polisen hoppades över)', status: 'Varning'    },
-  { id: 'm12', tid: '14:22', datum: '2026-05-17', typ: 'Notis',    rubrik: 'Notis misslyckad — E-post',          detalj: 'SMTP-fel vid leverans till erik.lindgren@example.com',                  status: 'Misslyckad' },
-  { id: 'm13', tid: '14:05', datum: '2026-05-17', typ: 'Ingestor', rubrik: 'Ingestor-körning slutförd',          detalj: '903 händelser hämtade — alla aktiva källor',                            status: 'OK'         },
-  { id: 'm14', tid: '11:05', datum: '2026-05-17', typ: 'Ingestor', rubrik: 'Ingestor-körning slutförd',          detalj: '478 händelser hämtade — Polisen, MSB',                                  status: 'OK'         },
-  { id: 'm15', tid: '08:12', datum: '2026-05-17', typ: 'Fel',      rubrik: 'Timeout — Krisinformation',          detalj: 'HTTP-anrop tog >30 s, retry lyckades på försök 3',                      status: 'Varning'    },
-  { id: 'm16', tid: '08:05', datum: '2026-05-17', typ: 'Ingestor', rubrik: 'Ingestor-körning slutförd',          detalj: '654 händelser hämtade — alla aktiva källor',                            status: 'OK'         },
-  { id: 'm17', tid: '02:00', datum: '2026-05-17', typ: 'Fel',      rubrik: 'HTTP 503 — SMHI',                    detalj: 'SMHI API svarade med 503, körning avbruten för källan',                 status: 'Fel'        },
-  { id: 'm18', tid: '02:00', datum: '2026-05-17', typ: 'Ingestor', rubrik: 'Ingestor-körning delvis slutförd',   detalj: '201 händelser hämtade — Polisen, MSB (SMHI hoppades över)',             status: 'Varning'    },
+// Notis-raderna är fortfarande mock — kräver en egen global lista över
+// NotificationDeliveryLog (utöver den redan per-användare-skopade
+// GetNotificationLog i AdminUserDetailsController), inte del av den här
+// omgången (bara Ingestor/Fel, se IngestorRunLog).
+const NOTIS_MOCK: LoggRad[] = [
+  { id: 'm2',  tid: '09:50', datum: '2026-05-18', typ: 'Notis', rubrik: 'Notis skickad — Polisen', detalj: 'E-post till anna.svensson@mail.se — "Trafikolycka E4 Södertälje"',      status: 'Levererad'  },
+  { id: 'm3',  tid: '09:48', datum: '2026-05-18', typ: 'Notis', rubrik: 'Notis skickad — SMHI',    detalj: 'Push till 3 mottagare — "Gul varning: kraftigt regn Västra Götaland"', status: 'Levererad'  },
+  { id: 'm8',  tid: '22:14', datum: '2026-05-17', typ: 'Notis', rubrik: 'Notis skickad — MSB',     detalj: 'E-post till 12 mottagare — "VIKTIGT: Röd varning storm"',               status: 'Levererad'  },
+  { id: 'm12', tid: '14:22', datum: '2026-05-17', typ: 'Notis', rubrik: 'Notis misslyckad — E-post', detalj: 'SMTP-fel vid leverans till erik.lindgren@example.com',                status: 'Misslyckad' },
 ]
+
+// Riktig ingestor-körningshistorik (IngestorRunLog) — en rad per käll-försök.
+// En lyckad retry (samma källa senare OK igen) visas som Varning, inte Fel,
+// eftersom felet självläkte — matchar samma "Kvarstår"/"OK vid retry"-logik
+// som Rapporters felkort använder.
+function ingestorRadTillLoggRad(r: IngestorLogRowDto): LoggRad {
+  const d = new Date(r.runAt)
+  return {
+    id:     r.id,
+    tid:    d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
+    datum:  d.toISOString().slice(0, 10),
+    typ:    r.success ? 'Ingestor' : 'Fel',
+    rubrik: r.success ? `Ingestor-körning — ${r.sourceName}` : `Fel — ${r.sourceName}`,
+    detalj: r.success ? `${r.eventsInserted} nya händelser hämtade` : (r.errorMessage ?? 'Okänt fel'),
+    status: r.success ? 'OK' : (r.återförsökLyckades ? 'Varning' : 'Fel'),
+  }
+}
 
 const SIDA_STORLEK = 8
 
@@ -125,13 +134,19 @@ export default function Aktivitetslogg() {
   const [kontoLogg,   setKontoLogg]   = useState<LoggPost[]>(laddaLogg)
   const [väntarÅngra, setVäntarÅngra] = useState<string | null>(null)
 
+  const { data: ingestorRader = [] } = useQuery({
+    queryKey: ['admin-ingestor-log-recent'],
+    queryFn:  () => fetchIngestorLogRecent({ limit: 100 }),
+  })
+
   // Kontoåtgärder (Sparat-ändringar m.m.) skrivna av admin/support i
-  // Användarhantering — riktiga, tidsstämplade poster. Slås ihop med den
-  // statiska Ingestor/Notis/Fel-mocken, sorterade tillsammans nyast först.
+  // Användarhantering + riktig ingestor-körningshistorik, slås ihop med den
+  // fortfarande mockade Notis-listan, sorterade tillsammans nyast först.
   const alla = useMemo(() => {
     const dynamiska = kontoLogg.map(postTillRad)
-    return [...dynamiska, ...LOGG].sort((a, b) => (b.datum + b.tid).localeCompare(a.datum + a.tid))
-  }, [kontoLogg])
+    const ingestor  = ingestorRader.map(ingestorRadTillLoggRad)
+    return [...dynamiska, ...ingestor, ...NOTIS_MOCK].sort((a, b) => (b.datum + b.tid).localeCompare(a.datum + a.tid))
+  }, [kontoLogg, ingestorRader])
 
   const filtrerad = useMemo(() => {
     const gräns = datumGräns(tidsFilter)
@@ -185,10 +200,10 @@ export default function Aktivitetslogg() {
         <div>
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             Aktivitetslogg
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200" title="Ingestor/Notis/Fel är fortfarande mockdata">MOCK + live</span>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200" title="Notis-raderna är fortfarande mockdata, resten är live">MOCK + LIVE</span>
           </h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Systemnivå (mock: ingestor-körningar, skickade notiser, fel) + kontoåtgärder tagna av admin/support i Användarhantering (live, går att ångra).
+            Riktig ingestor-körningshistorik (lyckade/fel) + kontoåtgärder tagna av admin/support i Användarhantering (live, går att ångra) — skickade notiser fortfarande mock.
           </p>
         </div>
         <button

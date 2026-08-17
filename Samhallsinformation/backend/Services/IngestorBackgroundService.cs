@@ -84,6 +84,8 @@ public class IngestorBackgroundService : BackgroundService
                     dbSource.LastFetchError = null;
                 }
 
+                db.IngestorRunLogs.Add(new IngestorRunLog { SourceId = sourceId, Success = true, EventsInserted = inserted });
+
                 await db.SaveChangesAsync(ct);
 
                 try
@@ -101,13 +103,14 @@ public class IngestorBackgroundService : BackgroundService
                 _logger.LogError(ex, "Error during ingestion for {Source}", ingestor.Source.Name);
                 try
                 {
+                    var felmeddelande = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+
                     var dbSource = await db.Sources.FindAsync([sourceId], ct);
                     if (dbSource != null)
-                    {
-                        dbSource.LastFetchError = ex.Message.Length > 500
-                            ? ex.Message[..500]
-                            : ex.Message;
-                    }
+                        dbSource.LastFetchError = felmeddelande;
+
+                    db.IngestorRunLogs.Add(new IngestorRunLog { SourceId = sourceId, Success = false, ErrorMessage = felmeddelande });
+
                     await db.SaveChangesAsync(ct);
                 }
                 catch { /* loggfel ska inte krascha loopen */ }
