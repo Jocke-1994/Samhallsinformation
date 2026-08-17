@@ -1,6 +1,7 @@
 namespace Samhallsinformation.Controllers;
 
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -145,6 +146,128 @@ public class AuthController : ControllerBase
 
         await _db.SaveChangesAsync();
         return Ok(new { message = "Lösenordet är uppdaterat" });
+    }
+
+    // Self-service GDPR-export (artikel 20) — riktig data, ersätter den
+    // tidigare klientsidan som genererade en fejkad JSON med hårdkodade
+    // "(mock) Polisen"-källor. Interna supportanteckningar (IsInternal)
+    // exkluderas medvetet, de är aldrig menade att synas för användaren.
+    [HttpGet("me/export")]
+    [Authorize]
+    public async Task<IActionResult> ExportMe()
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null) return NotFound();
+
+        var kallor = await (
+            from p in _db.UserSourcePreferences
+            where p.UserId == userId
+            join s in _db.Sources on p.SourceId equals s.Id
+            orderby p.SortOrder
+            select new { Namn = s.ShortName, p.IsActive }
+        ).ToListAsync();
+
+        var sparadeHandelser = await (
+            from sv in _db.UserSavedEvents
+            where sv.UserId == userId
+            join e in _db.Events on sv.EventId equals e.Id
+            join src in _db.Sources on e.SourceId equals src.Id into srcJ
+            from src in srcJ.DefaultIfEmpty()
+            orderby sv.SavedAt descending
+            select new { Titel = e.Title, Kalla = src != null ? src.ShortName : "Okänd källa", sv.SavedAt }
+        ).ToListAsync();
+
+        var polisenFilter = await _db.UserPolisenFilters.FirstOrDefaultAsync(f => f.UserId == userId);
+
+        var notisPerKalla = await (
+            from n in _db.UserNotificationSettings
+            where n.UserId == userId
+            join s in _db.Sources on n.SourceId equals s.Id
+            select new { Kalla = s.ShortName, n.PushEnabled, n.EmailEnabled, n.SmsEnabled }
+        ).ToListAsync();
+
+        var storEj = await _db.UserDoNotDisturbSchedules.FirstOrDefaultAsync(d => d.UserId == userId);
+
+        var notisHistorik = await _db.NotificationDeliveryLogs
+            .Where(l => l.UserId == userId)
+            .OrderByDescending(l => l.SentAt)
+            .Take(100)
+            .Select(l => new { l.SentAt, l.Channel, l.Subject, l.Status })
+            .ToListAsync();
+
+        var ärenden = await _db.SupportTickets
+            .Where(t => t.CreatedByUserId == userId)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
+
+        var ärendeIds = ärenden.Select(a => a.Id).ToList();
+        var meddelanden = await _db.SupportTicketMessages
+            .Where(m => ärendeIds.Contains(m.TicketId) && !m.IsInternal)
+            .OrderBy(m => m.CreatedAt)
+            .ToListAsync();
+
+        var ärendenExport = ärenden.Select(a => new
+        {
+            ÄrendeId = $"SUP-{a.TicketNumber:0000}",
+            a.Subject,
+            a.Category,
+            a.Status,
+            a.CreatedAt,
+            Meddelanden = meddelanden.Where(m => m.TicketId == a.Id).Select(m => new { m.SenderType, m.Text, m.CreatedAt }),
+        });
+
+        return Ok(new
+        {
+            Konto = new { user.Name, user.Email, user.CreatedAt, user.AuthProvider, user.EmailVerified },
+            Kallor = kallor,
+            SparadeHandelser = sparadeHandelser,
+            PolisenFilter = polisenFilter == null ? null : new
+            {
+                Kategorier = polisenFilter.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(polisenFilter.KategorierJson),
+                Omraden    = polisenFilter.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(polisenFilter.OmradenJson),
+            },
+            Notisinstallningar = new
+            {
+                PerKalla = notisPerKalla,
+                user.PushNyaHandelser,
+                user.PushNyVersion,
+                StorEj = storEj == null ? null : new
+                {
+                    storEj.IsEnabled,
+                    StartTid = storEj.StartTime.ToString("HH:mm"),
+                    SlutTid  = storEj.EndTime.ToString("HH:mm"),
+                },
+            },
+            NotisleveransHistorik = notisHistorik,
+            Supportärenden = ärendenExport,
+        });
+    }
+
+    // Self-service GDPR-radering (artikel 17) — samma 24h-fördröjda
+    // anonymiseringsmekanism som AdminUsersController.Delete (kontot spärras
+    // direkt, UserDeletionBackgroundService anonymiserar efter fristen).
+    // Ingen self-service-ångra: IsActive=false blockerar inloggning direkt
+    // (se AuthService.LoginAsync), så användaren kan inte logga in igen för
+    // att ångra sig själv inom fristen — måste kontakta supporten, medvetet,
+    // samma säkerhetsmarginal som redan finns för admin-initierad radering.
+    [HttpDelete("me")]
+    [Authorize]
+    public async Task<IActionResult> DeleteMe()
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null) return NotFound();
+        if (user.DeletionScheduledAt != null)
+            return BadRequest(new { error = "Radering är redan schemalagd för ditt konto." });
+
+        user.IsActive            = false;
+        user.SuspendedAt       ??= DateTime.UtcNow;
+        user.SuspendedReason     = "Radering begärd av användaren (GDPR) — raderas automatiskt om 24 timmar";
+        user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24);
+
+        await _db.SaveChangesAsync();
+        return Ok(new { deletionScheduledAt = user.DeletionScheduledAt });
     }
 
     private IActionResult ToActionResult(AuthResult result)
