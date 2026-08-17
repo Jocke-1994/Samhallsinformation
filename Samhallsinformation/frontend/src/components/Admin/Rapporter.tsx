@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { AdminSection } from './AdminSidebar'
 import { fetchAdminStats } from '../../api/stats'
+import { fetchAdminUsers } from '../../api/adminUsers'
 
 const DAGAR_KORT = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
 
@@ -104,6 +105,15 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
     queryFn: fetchAdminStats,
   })
 
+  const { data: adminUsers = [] } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn:  fetchAdminUsers,
+  })
+
+  const riktigaAnvändare = adminUsers.filter(u => !u.deletedAt)
+  const sjuDagarSedan    = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const nyaSenasteVeckan = riktigaAnvändare.filter(u => new Date(u.createdAt) >= sjuDagarSedan).length
+
   const notisPerKanal = KANAL_META.map(k => ({
     ...k,
     antal: stats?.notificationsByChannel.find(n => n.channel === k.nyckel)?.count ?? 0,
@@ -143,15 +153,15 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
       {/* Nyckeltal */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
-        {/* MOCK */}
+        {/* LIVE */}
         <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-6 flex flex-col gap-2 items-center text-center">
-          <span className="absolute top-2 right-2"><MockBadge /></span>
+          <span className="absolute top-2 right-2"><LiveBadge /></span>
           <div className="flex items-center gap-2">
             <span className="text-2xl">👥</span>
             <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Registrerade användare</span>
           </div>
-          <p className="text-4xl font-bold text-violet-600">1 284</p>
-          <p className="text-xs text-slate-400">+23 denna vecka</p>
+          <p className="text-4xl font-bold text-violet-600">{riktigaAnvändare.length.toLocaleString('sv-SE')}</p>
+          <p className="text-xs text-slate-400">+{nyaSenasteVeckan} denna vecka</p>
         </div>
 
         {/* LIVE */}
@@ -173,14 +183,14 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
           <p className="text-xs text-violet-500 mt-1">Gå till Felsökning →</p>
         </button>
 
-        {/* MOCK */}
+        {/* LIVE */}
         <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-6 flex flex-col gap-2 items-center text-center">
-          <span className="absolute top-2 right-2"><MockBadge /></span>
+          <span className="absolute top-2 right-2"><LiveBadge /></span>
           <div className="flex items-center gap-2">
             <span className="text-2xl">🔔</span>
             <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Notifieringar skickade</span>
           </div>
-          <p className="text-4xl font-bold text-green-600">42 180</p>
+          <p className="text-4xl font-bold text-green-600">{notisTotal.toLocaleString('sv-SE')}</p>
           <p className="text-xs text-slate-400">totalt sedan start</p>
         </div>
 
