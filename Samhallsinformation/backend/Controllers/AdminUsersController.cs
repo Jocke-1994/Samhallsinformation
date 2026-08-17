@@ -1,7 +1,6 @@
 namespace Samhallsinformation.Controllers;
 
 using System.Security.Claims;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -141,20 +140,6 @@ public class AdminUsersController : ControllerBase
             .ToListAsync();
 
         return Ok(notiser);
-    }
-
-    // Admin-variant av GET /api/user/polisen-filter (UserPolisenFilterController),
-    // read-only här — admin visar filtret, ändrar det inte åt användaren.
-    [HttpGet("{id}/polisen-filter")]
-    public async Task<IActionResult> GetPolisenFilter(Guid id)
-    {
-        var filter = await _db.UserPolisenFilters.FirstOrDefaultAsync(f => f.UserId == id);
-
-        return Ok(new
-        {
-            Kategorier = filter?.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(filter.KategorierJson),
-            Omraden    = filter?.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(filter.OmradenJson),
-        });
     }
 }
 
