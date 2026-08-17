@@ -11,9 +11,9 @@ export interface AdminFaqItem {
 const STORAGE_KEY = 'si_faq_items'
 
 export const INITIAL_FAQ: AdminFaqItem[] = [
-  { id: 1, kategori: 'Notifieringar', publicerad: false, fråga: 'Varför fick jag ingen notis?',                        svar: 'Kontrollera att rätt kanal (mail/SMS) är aktiverad under Notifieringar och att källan är tillagd under Mina källor. Det kan ta upp till 5 minuter innan en ny händelse når dig.' },
-  { id: 2, kategori: 'Notifieringar', publicerad: false, fråga: 'Hur ändrar jag mitt SMS-nummer?',                     svar: 'Gå till Notifieringar → Standardinställningar. Där visas ditt registrerade nummer och du kan uppdatera det.' },
-  { id: 3, kategori: 'Notifieringar', publicerad: false, fråga: 'Kan jag pausa notiser tillfälligt?',                  svar: 'Ja, avmarkera Mail och SMS i Standardinställningar under Notifieringar. Dina inställningar sparas och kan aktiveras igen när du vill.' },
+  { id: 1, kategori: 'Konto', publicerad: false, fråga: 'Varför fick jag ingen push-notis?',    svar: 'Kontrollera att push-notiser är aktiverat under Konto → Push-notiser, och att kategorin Ny händelse är påslagen. Se också till att källan finns under Mina källor, och att din webbläsare/enhet tillåter notiser från sidan.' },
+  { id: 2, kategori: 'Konto', publicerad: false, fråga: 'Hur aktiverar jag push-notiser?',       svar: 'Gå till Konto → Push-notiser och slå på Ny händelse för att få en notis när dina källor i Mitt flöde publicerar något nytt. Ingen separat "aktivera push"-knapp behövs — att slå på kategorin startar prenumerationen automatiskt.' },
+  { id: 3, kategori: 'Konto', publicerad: false, fråga: 'Kan jag pausa notiser tillfälligt?',    svar: 'Ja, stäng av Ny händelse under Konto → Push-notiser. Webbläsarens push-prenumeration avslutas automatiskt, och startas om nästa gång du slår på den igen.' },
   { id: 4, kategori: 'Mina källor',   publicerad: true, fråga: 'Hur lägger jag till fler källor?',                    svar: 'Gå till Mina källor i profilmenyn. Där kan du söka efter och lägga till de myndigheter som finns tillgängliga.' },
   { id: 5, kategori: 'Mina källor',   publicerad: true, fråga: 'Kan jag följa flera myndigheter samtidigt?',          svar: 'Ja, du kan lägga till hur många källor du vill i Mina källor. Alla visas i ditt nyhetsflöde.' },
   { id: 6, kategori: 'Konto',         publicerad: false, fråga: 'Hur tar jag bort mitt konto?',                       svar: 'Gå till Konto → Datahantering och välj Radera konto. Åtgärden är permanent och kan inte ångras.' },
