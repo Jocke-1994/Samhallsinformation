@@ -40,3 +40,21 @@ export async function resendVerification(): Promise<void> {
   const res = await adminFetch('/api/auth/resend-verification', { method: 'POST' })
   if (!res.ok) throw new Error(`resendVerification: ${res.status}`)
 }
+
+// Formen matchar AuthController.ExportMe rakt av — konsumeras bara för att
+// serialiseras tillbaka till en nedladdningsbar JSON-fil, ingen anledning
+// att typa varje nästlat fält i detalj.
+export async function exportMyData(): Promise<Record<string, unknown>> {
+  const res = await adminFetch('/api/auth/me/export')
+  if (!res.ok) throw new Error(`exportMyData: ${res.status}`)
+  return res.json()
+}
+
+export async function deleteMyAccount(): Promise<{ deletionScheduledAt: string }> {
+  const res = await adminFetch('/api/auth/me', { method: 'DELETE' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `deleteMyAccount: ${res.status}`)
+  }
+  return res.json()
+}

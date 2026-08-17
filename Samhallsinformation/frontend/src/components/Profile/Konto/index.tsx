@@ -87,11 +87,7 @@ export default function Konto() {
           {flaggor.notif_push && <PushKort />}
           {flaggor.konto_sessioner && <SessionerKort />}
           {flaggor.konto_aktivitetslogg && <AktivitetsloggKort />}
-          {flaggor.konto_datahantering && <Datahantering
-            highlightId={highlightId}
-            namnValue={namn.value}
-            epostValue={epost.value}
-          />}
+          {flaggor.konto_datahantering && <Datahantering highlightId={highlightId} />}
         </div>
 
       </div>
