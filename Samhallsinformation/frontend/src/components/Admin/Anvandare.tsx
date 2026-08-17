@@ -5,8 +5,9 @@ import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
 import { useAuth } from '../../context/AuthContext'
 import {
   fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
-  fetchAdminUserNotificationLog, type AdminUserDto,
+  fetchAdminUserPolisenFilter, fetchAdminUserNotificationLog, type AdminUserDto,
 } from '../../api/adminUsers'
+import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import type { PendingNotis } from '../../types/adminNotis'
 
 // Mockad inloggad admin/support-identitet — samma placeholder som resten av
@@ -17,7 +18,6 @@ type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd' | 'Raderas snart' | 'Raderat'
 export type DetaljFlik = 'oversikt' | 'notifinstallningar' | 'notishistorik' | 'aktivitet' | 'ärenden'
 type ArendeStatusMini = 'Öppet' | 'Under behandling' | 'Hanterat' | 'Stängt'
-interface ArendeMini { id: string; kategori: string; amne: string; status: ArendeStatusMini; skapat: string }
 type RollÄndringTyp = 'ersätt' | 'lägg-till'
 type Inloggningsmetod = 'E-post' | 'Google' | 'BankID'
 type KontaktTyp = 'E-post' | 'SMS'
@@ -100,13 +100,12 @@ function mapAdminUser(dto: AdminUserDto, joinNr: number): Användare {
 }
 
 // ---------------------------------------------------------------------------
-// Mock-data — Aktivitet/Polisen-filter-flikarna har ingen backend-
-// motsvarighet än (Polisen-filtret har en riktig self-service-endpoint,
-// men ingen admin-scoped variant ännu), se `[[project_admin_anvandare]]`.
-// Nycklarna nedan (1, 3, 6...) matchar inga riktiga användar-ID:n (nu riktiga
-// GUID:er) — visas därför bara som tomma "inget än"-lägen tills de kopplas
-// mot riktig data i en framtida omgång. Notishistorik använder riktig data,
-// se längre ner.
+// Mock-data — bara Aktivitet-fliken (inloggningsspårning) har ingen backend-
+// motsvarighet än, se `[[project_admin_anvandare]]`. Nyckeln nedan (3, 6...)
+// matchar inga riktiga användar-ID:n (nu riktiga GUID:er) — visas därför bara
+// som ett tomt "inget än"-läge tills det kopplas mot riktig data i en
+// framtida omgång. Polisen-filter, Supportärenden (fetchAdminTickets) och
+// Notishistorik använder alla riktig data, se längre ner.
 // ---------------------------------------------------------------------------
 
 const MOCK_AKTIVITET: Record<string, AktivitetRad[]> = {
@@ -125,33 +124,8 @@ const MOCK_AKTIVITET: Record<string, AktivitetRad[]> = {
   ],
 }
 
-// Samma datastruktur som riktiga GET /api/user/polisen-filter (UserPolisenFilterController):
-// null = ej anpassat (allt), en array = explicit valt urval (kan vara tom = matchar inget).
-// Mockad tills det finns riktiga användare att lista (steg 4, #298).
-interface PolisenFilterMini { kategorier: string[] | null; omraden: string[] | null }
-
-const MOCK_POLISEN_FILTER: Record<string, PolisenFilterMini> = {
-  3: { kategorier: ['Skottlossning', 'Explosion', 'Misshandel'], omraden: ['Norrköping', 'Göteborg'] },
-  6: { kategorier: ['Rån', 'Brand'],                             omraden: ['Göteborg', 'Malmö']     },
-  1: { kategorier: null,                                         omraden: null                       },
-}
-
-const MOCK_ÄRENDEN: Record<string, ArendeMini[]> = {
-  2: [ // Anna Svensson
-    { id: 'SUP-0031', kategori: 'Konto',          amne: 'Vill ta bort mitt konto',                         status: 'Hanterat',         skapat: '2026-03-01' },
-  ],
-  3: [ // Marcus Lindström
-    { id: 'SUP-0038', kategori: 'Tekniskt fel',   amne: 'Källknappen för SMHI visas inte i menyn',         status: 'Öppet',            skapat: '2026-03-10' },
-    { id: 'SUP-0024', kategori: 'Notifieringar',  amne: 'Vill ha notiser från fler regioner',              status: 'Stängt',           skapat: '2026-01-20' },
-  ],
-  4: [ // Emma Karlsson
-    { id: 'SUP-0041', kategori: 'Konto',          amne: 'Kan inte byta lösenord, får felmeddelande',       status: 'Öppet',            skapat: '2026-03-18' },
-    { id: 'SUP-0028', kategori: 'GDPR & uppgifter', amne: 'Fråga om GDPR och vilken data som sparas',     status: 'Stängt',           skapat: '2026-02-20' },
-  ],
-  5: [ // Peter Nilsson
-    { id: 'SUP-0042', kategori: 'Notifieringar',  amne: 'Får inte notiser från Polisen trots att det är inställt', status: 'Under behandling', skapat: '2026-03-15' },
-    { id: 'SUP-0019', kategori: 'Notifieringar',  amne: 'Notifieringar skickas vid fel tidpunkt',          status: 'Hanterat',         skapat: '2026-02-10' },
-  ],
+function ticketNr(t: AdminTicketListItemDto): string {
+  return `SUP-${String(t.ticketNumber).padStart(4, '0')}`
 }
 
 const ARENDE_STATUS_CLS: Record<ArendeStatusMini, string> = {
@@ -557,12 +531,24 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     refetchInterval: 30_000,
   })
 
+  const { data: valdsÄrenden = [] } = useQuery({
+    queryKey: ['admin-tickets-for-user', vald?.id],
+    queryFn:  () => fetchAdminTickets({ userId: vald!.id }),
+    enabled:  !!vald,
+  })
+
   useEffect(() => {
     if (!onPendingNotiser) return
     onPendingNotiser(kontoNotiser.map(n => ({
       arendeId: n.userId, amne: n.namn, typ: 'kontospärrning' as const, notering: n.notering, epost: n.epost,
     })))
   }, [kontoNotiser, onPendingNotiser])
+
+  const { data: polisenFilter } = useQuery({
+    queryKey: ['admin-polisen-filter', vald?.id],
+    queryFn:  () => fetchAdminUserPolisenFilter(vald!.id),
+    enabled:  !!vald,
+  })
 
   const { data: notishistorik = [] } = useQuery({
     queryKey: ['admin-notification-log', vald?.id],
@@ -951,36 +937,33 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   </div>
                 </div>
 
-                {/* Polisen-filter (FAS 4, #298) — mockad tills riktiga användare finns, se
-                    MOCK_POLISEN_FILTER-kommentaren för datastrukturen som redan är på riktigt */}
+                {/* Polisen-filter (FAS 4, #298) — riktig data via
+                    GET /api/admin/users/{id}/polisen-filter (admin-variant av
+                    UserPolisenFilterController), read-only här */}
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Polisen-filter</p>
-                  {(() => {
-                    const filter = MOCK_POLISEN_FILTER[vald.id]
-                    if (!filter) return <p className="text-sm text-slate-400">Följer inte Polisen som källa.</p>
-                    if (filter.kategorier === null && filter.omraden === null)
-                      return <p className="text-sm text-slate-500">Inget anpassat filter — får allt från Polisen.</p>
-                    return (
-                      <div className="flex flex-col gap-2">
-                        <div>
-                          <p className="text-xs text-slate-400 mb-1">Typer</p>
-                          <div className="flex flex-wrap gap-1">
-                            {(filter.kategorier ?? []).length > 0
-                              ? filter.kategorier!.map(k => <span key={k} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k}</span>)
-                              : <span className="text-xs text-slate-400">Alla</span>}
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-400 mb-1">Områden</p>
-                          <div className="flex flex-wrap gap-1">
-                            {(filter.omraden ?? []).length > 0
-                              ? filter.omraden!.map(o => <span key={o} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{o}</span>)
-                              : <span className="text-xs text-slate-400">Alla</span>}
-                          </div>
+                  {!polisenFilter || (polisenFilter.kategorier === null && polisenFilter.omraden === null) ? (
+                    <p className="text-sm text-slate-500">Inget anpassat filter — får allt från Polisen.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Typer</p>
+                        <div className="flex flex-wrap gap-1">
+                          {(polisenFilter.kategorier ?? []).length > 0
+                            ? polisenFilter.kategorier!.map(k => <span key={k} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k}</span>)
+                            : <span className="text-xs text-slate-400">Alla</span>}
                         </div>
                       </div>
-                    )
-                  })()}
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Områden</p>
+                        <div className="flex flex-wrap gap-1">
+                          {(polisenFilter.omraden ?? []).length > 0
+                            ? polisenFilter.omraden!.map(o => <span key={o} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{o}</span>)
+                            : <span className="text-xs text-slate-400">Alla</span>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Sparat (#298, punkt 9) — riktiga användare, men lagringen
@@ -1194,7 +1177,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           {/* ── Supportärenden ── */}
           {detaljFlik === 'ärenden' && (
             <div>
-              {(MOCK_ÄRENDEN[vald.id] ?? []).length === 0 ? (
+              {valdsÄrenden.length === 0 ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Inga supportärenden kopplade till den här användaren.</p>
               ) : (
                 <table className="w-full text-sm">
@@ -1208,21 +1191,21 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {MOCK_ÄRENDEN[vald.id].map(a => (
+                    {valdsÄrenden.map(a => (
                       <tr
                         key={a.id}
                         onClick={() => onÖppnaÄrende?.(a.id)}
                         className={`hover:bg-slate-50 transition-colors ${onÖppnaÄrende ? 'cursor-pointer' : ''}`}
                       >
-                        <td className="px-6 py-3 font-mono text-xs text-slate-400">{a.id}</td>
+                        <td className="px-6 py-3 font-mono text-xs text-slate-400">{ticketNr(a)}</td>
                         <td className="px-4 py-3 text-xs text-slate-400">
-                          <span className="bg-slate-100 px-2 py-0.5 rounded-full">{a.kategori}</span>
+                          <span className="bg-slate-100 px-2 py-0.5 rounded-full">{a.category}</span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-700">{a.amne}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{a.subject}</td>
                         <td className="px-4 py-3">
-                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${ARENDE_STATUS_CLS[a.status]}`}>{a.status}</span>
+                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${ARENDE_STATUS_CLS[a.status as ArendeStatusMini]}`}>{a.status}</span>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-400">{a.skapat}</td>
+                        <td className="px-4 py-3 text-xs text-slate-400">{new Date(a.createdAt).toLocaleDateString('sv-SE')}</td>
                         {onÖppnaÄrende && <td className="pr-4 py-3 text-right text-xs text-violet-600">Öppna →</td>}
                       </tr>
                     ))}

@@ -23,6 +23,11 @@ export interface UserNotisDto {
   notering: string | null
 }
 
+export interface AdminPolisenFilterDto {
+  kategorier: string[] | null
+  omraden:    string[] | null
+}
+
 export interface AdminNotificationLogDto {
   sentAt:       string
   channel:      string
@@ -73,6 +78,12 @@ export async function cancelUserDeletion(id: string): Promise<void> {
     const err = await res.json().catch(() => ({}))
     throw new Error((err as { error?: string }).error ?? `cancelUserDeletion: ${res.status}`)
   }
+}
+
+export async function fetchAdminUserPolisenFilter(id: string): Promise<AdminPolisenFilterDto> {
+  const res = await adminFetch(`/api/admin/users/${id}/polisen-filter`)
+  if (!res.ok) throw new Error(`fetchAdminUserPolisenFilter: ${res.status}`)
+  return res.json()
 }
 
 export async function fetchAdminUserNotificationLog(id: string): Promise<AdminNotificationLogDto[]> {
