@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { laddaSparadeHandelser, taBortSparadHandelse, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
 import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
 import { useAuth } from '../../context/AuthContext'
-import { fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion, type AdminUserDto } from '../../api/adminUsers'
+import {
+  fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
+  fetchAdminUserNotificationLog, type AdminUserDto,
+} from '../../api/adminUsers'
 import type { PendingNotis } from '../../types/adminNotis'
 
 // Mockad inloggad admin/support-identitet — samma placeholder som resten av
@@ -41,16 +44,6 @@ interface Användare {
   raderasVid?:      string
   inloggningsmetod: Inloggningsmetod
   kontaktuppgifter: Kontaktuppgift[]
-}
-
-interface NotisRad {
-  tid:        string
-  kanal:      KontaktTyp
-  källa:      string
-  rubrik:     string
-  skickatTill: string
-  status:     'Levererad' | 'Misslyckad' | 'Väntande'
-  felorsak?:  string
 }
 
 interface AktivitetRad {
@@ -107,33 +100,14 @@ function mapAdminUser(dto: AdminUserDto, joinNr: number): Användare {
 }
 
 // ---------------------------------------------------------------------------
-// Mock-data — detaljvyer (notiser/aktivitet/Polisen-filter/ärenden) har ingen
-// backend-motsvarighet än, se `[[project_admin_anvandare]]`. Nycklarna nedan
-// (1, 2, 3...) matchar inga riktiga användar-ID:n (nu riktiga GUID:er) — de
-// visas därför bara som tomma "inget än"-lägen tills de kopplas mot riktig
-// data i en framtida omgång, precis som Polisen-filter-vyn/supportärende-
-// fliken redan var explicit undantagna från den här PR:en.
+// Mock-data — Aktivitet/Polisen-filter-flikarna har ingen backend-
+// motsvarighet än (Polisen-filtret har en riktig self-service-endpoint,
+// men ingen admin-scoped variant ännu), se `[[project_admin_anvandare]]`.
+// Nycklarna nedan (1, 3, 6...) matchar inga riktiga användar-ID:n (nu riktiga
+// GUID:er) — visas därför bara som tomma "inget än"-lägen tills de kopplas
+// mot riktig data i en framtida omgång. Notishistorik använder riktig data,
+// se längre ner.
 // ---------------------------------------------------------------------------
-
-const MOCK_NOTISER: Record<string, NotisRad[]> = {
-  3: [
-    { tid: '2026-04-02 10:30', kanal: 'E-post', källa: 'Polisen', rubrik: 'Skottlossning, Norrköping',                   skickatTill: 'erik.l@gmail.com',  status: 'Levererad'  },
-    { tid: '2026-04-01 18:15', kanal: 'SMS',    källa: 'Polisen', rubrik: 'Explosion, Göteborg',                         skickatTill: '+46 76 345 67 89', status: 'Levererad'  },
-    { tid: '2026-04-01 09:00', kanal: 'E-post', källa: 'SMHI',    rubrik: 'Klass 2-varning: hård vind, Västra Götaland', skickatTill: 'erik.l@gmail.com',  status: 'Levererad'  },
-    { tid: '2026-03-30 14:42', kanal: 'SMS',    källa: 'Polisen', rubrik: 'Bedrägeri via telefon, nationellt',            skickatTill: '+46 76 345 67 89', status: 'Misslyckad', felorsak: 'Leverantörsfel — timeout från SMS-gateway' },
-    { tid: '2026-03-29 08:00', kanal: 'E-post', källa: 'MSB',     rubrik: 'Krisberedskapsinfo: övning Västkust',          skickatTill: 'erik@arbete.se',    status: 'Misslyckad', felorsak: 'E-postadressen är inte verifierad'          },
-    { tid: '2026-03-28 12:00', kanal: 'E-post', källa: 'SMHI',    rubrik: 'Klass 1-varning: snö, Norrland',               skickatTill: 'erik.l@gmail.com',  status: 'Levererad'  },
-  ],
-  6: [
-    { tid: '2026-04-02 11:00', kanal: 'E-post', källa: 'Polisen', rubrik: 'Rån, Göteborg',           skickatTill: 'sofia.n@gmail.com', status: 'Levererad' },
-    { tid: '2026-04-01 22:30', kanal: 'SMS',    källa: 'Polisen', rubrik: 'Brand i lägenhet, Malmö', skickatTill: '+46 72 456 78 90', status: 'Väntande'  },
-  ],
-  1: [
-    { tid: '2026-04-02 09:00', kanal: 'E-post', källa: 'Polisen', rubrik: 'Grovt brott, Stockholm',  skickatTill: 'joakim@work.se',    status: 'Levererad' },
-    { tid: '2026-04-01 14:00', kanal: 'SMS',    källa: 'SMHI',    rubrik: 'Klass 3-varning: storm',  skickatTill: '+46 70 123 45 67', status: 'Levererad' },
-    { tid: '2026-03-30 08:00', kanal: 'E-post', källa: 'MSB',     rubrik: 'Nationell övning SAMÖ',   skickatTill: 'joakim@example.com',status: 'Levererad' },
-  ],
-}
 
 const MOCK_AKTIVITET: Record<string, AktivitetRad[]> = {
   3: [
@@ -246,15 +220,35 @@ const INLOGGNING_CLS: Record<Inloggningsmetod, string> = {
   'BankID': 'bg-sky-100 text-sky-700 border border-sky-200',
 }
 
-const NOTIS_STATUS_CLS: Record<NotisRad['status'], string> = {
-  'Levererad':  'bg-green-100 text-green-700 border border-green-200',
-  'Misslyckad': 'bg-red-100 text-red-700 border border-red-200',
-  'Väntande':   'bg-amber-100 text-amber-700 border border-amber-200',
-}
-
 const KANAL_CLS: Record<KontaktTyp, string> = {
   'E-post': 'bg-violet-100 text-violet-700',
   'SMS':    'bg-sky-100 text-sky-700',
+}
+
+// Notishistorik-fliken (GET /api/admin/users/{id}/notification-log) —
+// riktiga statusar/kanaler från NotificationDeliveryLog/PushDispatcher.cs,
+// inte samma värdemängd som KANAL_CLS/kontaktuppgifter (push idag, ingen
+// e-post/SMS-leverans byggd än).
+const NOTIF_LOG_STATUS_LABEL: Record<string, string> = {
+  sent:    'Levererad',
+  failed:  'Misslyckad',
+  expired: 'Utgången',
+}
+
+const NOTIF_LOG_STATUS_CLS: Record<string, string> = {
+  sent:    'bg-green-100 text-green-700 border border-green-200',
+  failed:  'bg-red-100 text-red-700 border border-red-200',
+  expired: 'bg-amber-100 text-amber-700 border border-amber-200',
+}
+
+const NOTIF_LOG_STATUS_FALLBACK_CLS = 'bg-slate-100 text-slate-600 border border-slate-200'
+
+const NOTIF_LOG_CHANNEL_LABEL: Record<string, string> = { push: 'Push' }
+const NOTIF_LOG_CHANNEL_CLS: Record<string, string> = { push: 'bg-sky-100 text-sky-700' }
+const NOTIF_LOG_CHANNEL_FALLBACK_CLS = 'bg-slate-100 text-slate-600'
+
+function förkortaMottagare(recipient: string): string {
+  return recipient.length > 40 ? `${recipient.slice(0, 40)}…` : recipient
 }
 
 const ALLA_ROLLER_FILTER: Array<Roll | 'Alla'> = ['Alla', 'Admin', 'Support', 'Betatestare', 'Användare']
@@ -569,6 +563,12 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
       arendeId: n.userId, amne: n.namn, typ: 'kontospärrning' as const, notering: n.notering, epost: n.epost,
     })))
   }, [kontoNotiser, onPendingNotiser])
+
+  const { data: notishistorik = [] } = useQuery({
+    queryKey: ['admin-notification-log', vald?.id],
+    queryFn:  () => fetchAdminUserNotificationLog(vald!.id),
+    enabled:  !!vald,
+  })
 
   useEffect(() => {
     if (!defaultÖppnaEpost) return
@@ -1143,7 +1143,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           {/* ── Notishistorik ── */}
           {detaljFlik === 'notishistorik' && (
             <div>
-              {(MOCK_NOTISER[vald.id] ?? []).length === 0 ? (
+              {notishistorik.length === 0 ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Inga notiser skickade till den här användaren.</p>
               ) : (
                 <table className="w-full text-sm">
@@ -1158,24 +1158,32 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {MOCK_NOTISER[vald.id].map((n, i) => (
-                      <>
-                        <tr key={i} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-3 text-xs text-slate-400 font-mono whitespace-nowrap">{n.tid}</td>
-                          <td className="px-4 py-3"><span className={`text-xs font-medium px-2 py-0.5 rounded-full ${KANAL_CLS[n.kanal]}`}>{n.kanal}</span></td>
-                          <td className="px-4 py-3 text-xs text-slate-500 font-mono">{n.skickatTill}</td>
-                          <td className="px-4 py-3 text-sm text-slate-600">{n.källa}</td>
-                          <td className="px-4 py-3 text-sm text-slate-700">{n.rubrik}</td>
-                          <td className="px-4 py-3"><span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${NOTIS_STATUS_CLS[n.status]}`}>{n.status}</span></td>
+                    {notishistorik.map((n, i) => (
+                      <Fragment key={i}>
+                        <tr className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-3 text-xs text-slate-400 font-mono whitespace-nowrap">{new Date(n.sentAt).toLocaleString('sv-SE')}</td>
+                          <td className="px-4 py-3">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${NOTIF_LOG_CHANNEL_CLS[n.channel] ?? NOTIF_LOG_CHANNEL_FALLBACK_CLS}`}>
+                              {NOTIF_LOG_CHANNEL_LABEL[n.channel] ?? n.channel}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-slate-500 font-mono">{förkortaMottagare(n.recipient)}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600">{n.sourceName ?? '—'}</td>
+                          <td className="px-4 py-3 text-sm text-slate-700">{n.subject}</td>
+                          <td className="px-4 py-3">
+                            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${NOTIF_LOG_STATUS_CLS[n.status] ?? NOTIF_LOG_STATUS_FALLBACK_CLS}`}>
+                              {NOTIF_LOG_STATUS_LABEL[n.status] ?? n.status}
+                            </span>
+                          </td>
                         </tr>
-                        {n.felorsak && (
-                          <tr key={`${i}-fel`} className="bg-red-50">
+                        {n.errorMessage && (
+                          <tr className="bg-red-50">
                             <td colSpan={6} className="px-6 py-2 text-xs text-red-600">
-                              <span className="font-medium">Felorsak:</span> {n.felorsak}
+                              <span className="font-medium">Felorsak:</span> {n.errorMessage}
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
