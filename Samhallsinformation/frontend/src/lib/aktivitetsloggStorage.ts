@@ -15,7 +15,7 @@ import type { SparadHandelseMini } from './sparadeHandelserStorage'
 export type KontoÅtgärdTyp = 'Sparat: tillagd' | 'Sparat: borttagen'
 
 export interface ÅngraData {
-  anvandareId: number
+  anvandareId: string
   handelse:    SparadHandelseMini
   undoAction:  'lägg-till' | 'ta-bort'
 }

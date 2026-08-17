@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchSearchableSources, fetchEventTypes, searchEvents, type SearchParams, type AdminSearchEvent } from '../../api/eventSearch'
 import NewsItem from '../NewsFeed/NewsItem'
-import { MOCK_ANVÄNDARE_LISTA, type MockAnvändareMini } from '../../lib/mockAnvandare'
+import { fetchAdminUsers, type AdminUserDto } from '../../api/adminUsers'
 import { laddaSparadeHandelser, sparaHandelseForAnvandare, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
 import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
 import { useAuth } from '../../context/AuthContext'
@@ -17,11 +17,11 @@ function formatDatum(iso: string): string {
   return new Date(iso).toLocaleDateString('sv-SE', { year: 'numeric', month: 'numeric', day: 'numeric' })
 }
 
-function BulkSparaKnapp({ handelser, onKlar }: { handelser: AdminSearchEvent[]; onKlar: () => void }) {
+function BulkSparaKnapp({ handelser, användare, onKlar }: { handelser: AdminSearchEvent[]; användare: AdminUserDto[]; onKlar: () => void }) {
   const [öppen, setÖppen] = useState(false)
   const { aktivVy } = useAuth()
 
-  function spara(anvandareId: number, anvandareNamn: string) {
+  function spara(anvandareId: string, anvandareNamn: string) {
     const nuIso = new Date().toISOString()
     const nu    = formatDatum(nuIso)
     for (const h of handelser) {
@@ -59,14 +59,16 @@ function BulkSparaKnapp({ handelser, onKlar }: { handelser: AdminSearchEvent[]; 
           <div className="fixed inset-0 z-30" onClick={() => setÖppen(false)} />
           <div className="absolute left-0 top-8 z-40 w-56 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
             <ul className="max-h-64 overflow-y-auto py-1">
-              {MOCK_ANVÄNDARE_LISTA.map(u => (
+              {användare.length === 0 ? (
+                <li className="px-3 py-2 text-xs text-slate-400">Inga användare hittades</li>
+              ) : användare.map(u => (
                 <li key={u.id}>
                   <button
-                    onClick={() => spara(u.id, u.namn)}
+                    onClick={() => spara(u.id, u.name)}
                     className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                   >
-                    {u.namn}
-                    <span className="block text-xs text-slate-400">{u.epost}</span>
+                    {u.name}
+                    <span className="block text-xs text-slate-400">{u.email}</span>
                   </button>
                 </li>
               ))}
@@ -91,23 +93,28 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
   const [to, setTo]               = useState('')
   const [page, setPage]           = useState(1)
   const [markerade, setMarkerade] = useState<Set<string>>(new Set())
-  const [sparade, setSparade]     = useState<Record<number, SparadHandelseMini[]>>(laddaSparadeHandelser)
+  const [sparade, setSparade]     = useState<Record<string, SparadHandelseMini[]>>(laddaSparadeHandelser)
 
   const [activeParams, setActiveParams] = useState<SearchParams>({ page: 1, pageSize: SIDA_STORLEK })
+
+  const { data: adminAnvändare = [] } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn:  fetchAdminUsers,
+  })
 
   // Omvänd karta: eventId → alla användare som redan har det sparat — rent
   // informativ badge, hindrar inte att samma händelse sparas till fler
   const sparadeAvKarta = useMemo(() => {
-    const karta: Record<string, MockAnvändareMini[]> = {}
-    for (const [anvandareIdStr, lista] of Object.entries(sparade)) {
-      const användare = MOCK_ANVÄNDARE_LISTA.find(u => u.id === Number(anvandareIdStr))
+    const karta: Record<string, AdminUserDto[]> = {}
+    for (const [anvandareId, lista] of Object.entries(sparade)) {
+      const användare = adminAnvändare.find(u => u.id === anvandareId)
       if (!användare) continue
       for (const h of lista) {
         (karta[h.eventId] ??= []).push(användare)
       }
     }
     return karta
-  }, [sparade])
+  }, [sparade, adminAnvändare])
 
   function toggleMarkerad(id: string) {
     setMarkerade(prev => {
@@ -180,7 +187,7 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
       <p className="text-sm text-slate-500 mb-6">
         Sök bakåt i tiden bland alla ingestade händelser (oavsett publiceringsstatus) — sökord (titel/innehåll), källa, typ, plats och datumintervall.
         Typ-filtret kräver att källan fått sina händelsetyper extraherade (idag bara Polisen).
-        Hittar du något en användare frågar om kan du spara det direkt till deras konto (mockat tills riktiga användare finns).
+        Hittar du något en användare frågar om kan du spara det direkt till deras konto.
       </p>
 
       {/* Filter */}
@@ -312,6 +319,7 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
                   <span className="text-xs font-medium text-violet-700">{markerade.size} markerade</span>
                   <BulkSparaKnapp
                     handelser={data.events.filter(e => markerade.has(e.id))}
+                    användare={adminAnvändare}
                     onKlar={() => { setSparade(laddaSparadeHandelser()); setMarkerade(new Set()) }}
                   />
                   <button
@@ -343,10 +351,10 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
                           <span key={u.id}>
                             {i > 0 && ', '}
                             <button
-                              onClick={() => onÖppnaAnvändare?.(u.epost)}
+                              onClick={() => onÖppnaAnvändare?.(u.email)}
                               className="hover:text-violet-600 hover:underline transition-colors"
                             >
-                              {u.namn}
+                              {u.name}
                             </button>
                           </span>
                         ))}

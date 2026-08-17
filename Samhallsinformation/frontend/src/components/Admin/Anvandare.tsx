@@ -576,24 +576,20 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     if (u) {
       setVald(u)
       setDetaljFlik(defaultFlik ?? 'notifinstallningar')
-      // Sparat-lagringen (lib/sparadeHandelserStorage.ts) är fortfarande
-      // nyckad på gamla mock-numeriska ID:n (delad med Händelsesök/
-      // Aktivitetslogg, ej del av den här PR:ns scope) — riktiga GUID-ID:n
-      // matchar aldrig något, `Number(u.id)` blir NaN och ger alltid tomt.
-      setSparadeHändelser(laddaSparadeHandelser()[Number(u.id)] ?? [])
+      setSparadeHändelser(laddaSparadeHandelser()[u.id] ?? [])
     }
   }, [defaultÖppnaEpost, defaultFlik, användare])
 
   function öppnaDetalj(u: Användare) {
     setVald(u)
     setDetaljFlik('oversikt')
-    setSparadeHändelser(laddaSparadeHandelser()[Number(u.id)] ?? [])
+    setSparadeHändelser(laddaSparadeHandelser()[u.id] ?? [])
   }
 
   function taBortSparad(eventId: string) {
     if (!vald) return
     const handelse = sparadeHändelser.find(h => h.eventId === eventId)
-    taBortSparadHandelse(Number(vald.id), eventId)
+    taBortSparadHandelse(vald.id, eventId)
     setSparadeHändelser(prev => prev.filter(h => h.eventId !== eventId))
     if (handelse) {
       läggTillLoggpost({
@@ -602,7 +598,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
         typ:    'Sparat: borttagen',
         rubrik: `Tog bort sparad händelse från ${vald.namn}`,
         detalj: `"${handelse.title}" (${handelse.sourceName}) borttagen från ${vald.namn}s konto.`,
-        ångraData: { anvandareId: Number(vald.id), handelse, undoAction: 'lägg-till' },
+        ångraData: { anvandareId: vald.id, handelse, undoAction: 'lägg-till' },
       })
     }
   }
@@ -987,8 +983,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   })()}
                 </div>
 
-                {/* Sparat (#298, punkt 9) — mockad via delad localStorage-modul
-                    (sparadeHandelserStorage.ts), skrivs från Händelsesök */}
+                {/* Sparat (#298, punkt 9) — riktiga användare, men lagringen
+                    (sparadeHandelserStorage.ts) är fortfarande lokal
+                    (localStorage), ingen backend-persistens ännu. Skrivs från Händelsesök */}
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Sparat</p>
                   {sparadeHändelser.length === 0 ? (
