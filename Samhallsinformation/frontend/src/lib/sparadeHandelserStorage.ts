@@ -1,7 +1,8 @@
 // Delad localStorage-modul för att koppla ett händelsesök-resultat till en
-// mock-användare i Anvandare.tsx (samma mönster som faqStorage.ts, session
+// riktig användare i Anvandare.tsx (samma mönster som faqStorage.ts, session
 // 17) — Händelsesök skriver, Användarhanteringens Sparat-sektion läser.
-// Helt mockat: kopplar mot mock-användar-ID:n, ingen riktig backend.
+// Nyckad på riktiga GUID-användar-ID:n, men själva lagringen är lokal
+// (localStorage) — ingen riktig backend-persistens än.
 
 export interface SparadHandelseMini {
   eventId:     string
@@ -13,7 +14,7 @@ export interface SparadHandelseMini {
 
 const STORAGE_KEY = 'si_admin_sparade_handelser'
 
-export function laddaSparadeHandelser(): Record<number, SparadHandelseMini[]> {
+export function laddaSparadeHandelser(): Record<string, SparadHandelseMini[]> {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) return JSON.parse(stored)
@@ -21,7 +22,7 @@ export function laddaSparadeHandelser(): Record<number, SparadHandelseMini[]> {
   return {}
 }
 
-export function sparaHandelseForAnvandare(anvandareId: number, handelse: SparadHandelseMini): void {
+export function sparaHandelseForAnvandare(anvandareId: string, handelse: SparadHandelseMini): void {
   const alla  = laddaSparadeHandelser()
   const lista = alla[anvandareId] ?? []
   if (lista.some(h => h.eventId === handelse.eventId)) return // redan sparad, undvik dubblett
@@ -29,7 +30,7 @@ export function sparaHandelseForAnvandare(anvandareId: number, handelse: SparadH
   localStorage.setItem(STORAGE_KEY, JSON.stringify(alla))
 }
 
-export function taBortSparadHandelse(anvandareId: number, eventId: string): void {
+export function taBortSparadHandelse(anvandareId: string, eventId: string): void {
   const alla = laddaSparadeHandelser()
   alla[anvandareId] = (alla[anvandareId] ?? []).filter(h => h.eventId !== eventId)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(alla))
