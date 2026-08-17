@@ -33,4 +33,30 @@ public class AdminUserDetailsController : ControllerBase
             Omraden    = filter?.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(filter.OmradenJson),
         });
     }
+
+    // Notishistorik för en enskild användare — samma NotificationDeliveryLog-
+    // tabell som redan används aggregerat i StatsController.
+    [HttpGet("{id}/notification-log")]
+    public async Task<IActionResult> GetNotificationLog(Guid id)
+    {
+        var log = await (
+            from l in _db.NotificationDeliveryLogs
+            where l.UserId == id
+            join src in _db.Sources on l.SourceId equals src.Id into srcJ
+            from src in srcJ.DefaultIfEmpty()
+            orderby l.SentAt descending
+            select new
+            {
+                l.SentAt,
+                l.Channel,
+                SourceName = src != null ? src.ShortName : null,
+                l.Subject,
+                l.Recipient,
+                l.Status,
+                l.ErrorMessage,
+            }
+        ).Take(50).ToListAsync();
+
+        return Ok(log);
+    }
 }

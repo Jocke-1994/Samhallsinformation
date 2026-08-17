@@ -28,6 +28,16 @@ export interface AdminPolisenFilterDto {
   omraden:    string[] | null
 }
 
+export interface AdminNotificationLogDto {
+  sentAt:       string
+  channel:      string
+  sourceName:   string | null
+  subject:      string
+  recipient:    string
+  status:       string
+  errorMessage: string | null
+}
+
 export async function fetchAdminUsers(): Promise<AdminUserDto[]> {
   const res = await adminFetch('/api/admin/users')
   if (!res.ok) throw new Error(`fetchAdminUsers: ${res.status}`)
@@ -73,5 +83,11 @@ export async function cancelUserDeletion(id: string): Promise<void> {
 export async function fetchAdminUserPolisenFilter(id: string): Promise<AdminPolisenFilterDto> {
   const res = await adminFetch(`/api/admin/users/${id}/polisen-filter`)
   if (!res.ok) throw new Error(`fetchAdminUserPolisenFilter: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchAdminUserNotificationLog(id: string): Promise<AdminNotificationLogDto[]> {
+  const res = await adminFetch(`/api/admin/users/${id}/notification-log`)
+  if (!res.ok) throw new Error(`fetchAdminUserNotificationLog: ${res.status}`)
   return res.json()
 }
