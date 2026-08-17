@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { laddaSparadeHandelser, taBortSparadHandelse, type SparadHandelseMini } from '../../lib/sparadeHandelserStorage'
 import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
 import { useAuth } from '../../context/AuthContext'
-import { fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion, type AdminUserDto } from '../../api/adminUsers'
+import {
+  fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
+  fetchAdminUserSavedEvents, unsaveAdminUserEvent, type AdminUserDto,
+} from '../../api/adminUsers'
 import type { PendingNotis } from '../../types/adminNotis'
 
 // Mockad inloggad admin/support-identitet — samma placeholder som resten av
@@ -514,7 +516,6 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   const [raderaFel, setRaderaFel]               = useState<string | null>(null)
   const [enkildRollÄndring, setEnkildRollÄndring] = useState<Användare | null>(null)
   const [impersonationMål, setImpersonationMål]   = useState<Användare | null>(null)
-  const [sparadeHändelser, setSparadeHändelser]   = useState<SparadHandelseMini[]>([])
 
   const filtrerade = användare.filter(u => {
     if (rollFilter !== 'Alla' && !u.roller.includes(rollFilter)) return false
@@ -576,21 +577,25 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     if (u) {
       setVald(u)
       setDetaljFlik(defaultFlik ?? 'notifinstallningar')
-      setSparadeHändelser(laddaSparadeHandelser()[u.id] ?? [])
     }
   }, [defaultÖppnaEpost, defaultFlik, användare])
 
   function öppnaDetalj(u: Användare) {
     setVald(u)
     setDetaljFlik('oversikt')
-    setSparadeHändelser(laddaSparadeHandelser()[u.id] ?? [])
   }
 
-  function taBortSparad(eventId: string) {
+  const { data: sparadeHändelser = [], refetch: refetchSparat } = useQuery({
+    queryKey: ['admin-saved-events', vald?.id],
+    queryFn:  () => fetchAdminUserSavedEvents(vald!.id),
+    enabled:  !!vald,
+  })
+
+  async function taBortSparad(eventId: string) {
     if (!vald) return
     const handelse = sparadeHändelser.find(h => h.eventId === eventId)
-    taBortSparadHandelse(vald.id, eventId)
-    setSparadeHändelser(prev => prev.filter(h => h.eventId !== eventId))
+    await unsaveAdminUserEvent(vald.id, eventId)
+    await refetchSparat()
     if (handelse) {
       läggTillLoggpost({
         tid:    new Date().toISOString(),
@@ -598,7 +603,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
         typ:    'Sparat: borttagen',
         rubrik: `Tog bort sparad händelse från ${vald.namn}`,
         detalj: `"${handelse.title}" (${handelse.sourceName}) borttagen från ${vald.namn}s konto.`,
-        ångraData: { anvandareId: vald.id, handelse, undoAction: 'lägg-till' },
+        ångraData: {
+          anvandareId: vald.id,
+          handelse: { eventId: handelse.eventId, title: handelse.title, sourceName: handelse.sourceName, publishedAt: handelse.publishedAt, sparadDatum: handelse.savedAt },
+          undoAction: 'lägg-till',
+        },
       })
     }
   }
@@ -983,9 +992,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   })()}
                 </div>
 
-                {/* Sparat (#298, punkt 9) — riktiga användare, men lagringen
-                    (sparadeHandelserStorage.ts) är fortfarande lokal
-                    (localStorage), ingen backend-persistens ännu. Skrivs från Händelsesök */}
+                {/* Sparat (#298, punkt 9) — riktig backend-persistens via
+                    GET/POST/DELETE /api/admin/users/{id}/saved-events
+                    (UserSavedEvent-tabellen). Skrivs från Händelsesök */}
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Sparat</p>
                   {sparadeHändelser.length === 0 ? (
@@ -996,7 +1005,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                         <div key={h.eventId} className="flex items-start justify-between gap-2 text-sm">
                           <div className="min-w-0">
                             <p className="text-slate-700 truncate">{h.title}</p>
-                            <p className="text-xs text-slate-400">{h.sourceName} · sparad {h.sparadDatum}</p>
+                            <p className="text-xs text-slate-400">{h.sourceName} · sparad {new Date(h.savedAt).toLocaleDateString('sv-SE')}</p>
                           </div>
                           <button
                             onClick={() => taBortSparad(h.eventId)}
