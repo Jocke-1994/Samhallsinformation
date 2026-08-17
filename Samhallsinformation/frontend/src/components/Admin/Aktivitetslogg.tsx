@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { laddaLogg, markeraÅngrad, type LoggPost, type ÅngraData } from '../../lib/aktivitetsloggStorage'
-import { sparaHandelseForAnvandare, taBortSparadHandelse } from '../../lib/sparadeHandelserStorage'
+import { saveAdminUserEvent, unsaveAdminUserEvent } from '../../api/adminUsers'
 
 type LoggTyp    = 'Ingestor' | 'Notis' | 'Fel' | 'Kontoåtgärd'
 type LoggStatus = 'OK' | 'Fel' | 'Varning' | 'Levererad' | 'Misslyckad'
@@ -162,15 +162,15 @@ export default function Aktivitetslogg() {
     setVisaAntal(SIDA_STORLEK)
   }
 
-  function ångra(rad: LoggRad) {
+  async function ångra(rad: LoggRad) {
     if (!rad.ångraData) return
     if (väntarÅngra !== rad.id) {
       setVäntarÅngra(rad.id)
       return
     }
     const { anvandareId, handelse, undoAction } = rad.ångraData
-    if (undoAction === 'lägg-till') sparaHandelseForAnvandare(anvandareId, handelse)
-    else taBortSparadHandelse(anvandareId, handelse.eventId)
+    if (undoAction === 'lägg-till') await saveAdminUserEvent(anvandareId, handelse.eventId)
+    else await unsaveAdminUserEvent(anvandareId, handelse.eventId)
     markeraÅngrad(rad.id)
     setKontoLogg(laddaLogg())
     setVäntarÅngra(null)

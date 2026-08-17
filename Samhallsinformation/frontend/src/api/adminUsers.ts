@@ -38,6 +38,20 @@ export interface AdminNotificationLogDto {
   errorMessage: string | null
 }
 
+export interface AdminSavedEventDto {
+  eventId:     string
+  title:       string
+  sourceName:  string
+  publishedAt: string
+  savedAt:     string
+}
+
+export interface SavedByUser {
+  id:    string
+  name:  string
+  email: string
+}
+
 export async function fetchAdminUsers(): Promise<AdminUserDto[]> {
   const res = await adminFetch('/api/admin/users')
   if (!res.ok) throw new Error(`fetchAdminUsers: ${res.status}`)
@@ -89,5 +103,32 @@ export async function fetchAdminUserPolisenFilter(id: string): Promise<AdminPoli
 export async function fetchAdminUserNotificationLog(id: string): Promise<AdminNotificationLogDto[]> {
   const res = await adminFetch(`/api/admin/users/${id}/notification-log`)
   if (!res.ok) throw new Error(`fetchAdminUserNotificationLog: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchAdminUserSavedEvents(id: string): Promise<AdminSavedEventDto[]> {
+  const res = await adminFetch(`/api/admin/users/${id}/saved-events`)
+  if (!res.ok) throw new Error(`fetchAdminUserSavedEvents: ${res.status}`)
+  return res.json()
+}
+
+export async function saveAdminUserEvent(id: string, eventId: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/saved-events`, {
+    method: 'POST',
+    body: JSON.stringify({ eventId }),
+  })
+  if (!res.ok) throw new Error(`saveAdminUserEvent: ${res.status}`)
+}
+
+export async function unsaveAdminUserEvent(id: string, eventId: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/saved-events/${eventId}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`unsaveAdminUserEvent: ${res.status}`)
+}
+
+export async function fetchSavedEventsByEvent(eventIds: string[]): Promise<Record<string, SavedByUser[]>> {
+  if (eventIds.length === 0) return {}
+  const qs = eventIds.map(id => `eventIds=${encodeURIComponent(id)}`).join('&')
+  const res = await adminFetch(`/api/admin/saved-events/by-event?${qs}`)
+  if (!res.ok) throw new Error(`fetchSavedEventsByEvent: ${res.status}`)
   return res.json()
 }
