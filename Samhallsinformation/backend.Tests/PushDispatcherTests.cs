@@ -20,6 +20,9 @@ public class PushDispatcherTests
         return new AppDbContext(options);
     }
 
+    // Källa som medvetet INTE heter "Polisen" — PushDispatcher grenar på det
+    // namnet till bevaknings-matchad utskick (se PolisenEventsTests nedan för
+    // det). Dessa generiska tester ska inte råka gå via den grenen.
     private static (User User, Source Source, UserDevice Device) SeedSubscriber(
         AppDbContext db, bool pushNyaHandelser = true, bool sourceActive = true)
     {
@@ -30,7 +33,7 @@ public class PushDispatcherTests
             PasswordHash     = "x",
             PushNyaHandelser = pushNyaHandelser,
         };
-        var source = new Source { Name = "Polisen", ShortName = "Polisen", BaseUrl = "https://example.com" };
+        var source = new Source { Name = "Krisinformation", ShortName = "Krisinformation", BaseUrl = "https://example.com" };
         db.Users.Add(user);
         db.Sources.Add(source);
         db.SaveChanges();
@@ -62,12 +65,12 @@ public class PushDispatcherTests
         var (_, source, device) = SeedSubscriber(db);
         var push = Substitute.For<IPushNotificationService>();
 
-        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 3);
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 3, insertedEvents: []);
 
         await push.Received(1).SendAsync(
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
             Arg.Any<string>(),
-            Arg.Is<string>(b => b!.Contains('3') && b.Contains("Polisen")),
+            Arg.Is<string>(b => b!.Contains('3') && b.Contains("Krisinformation")),
             Arg.Any<string?>(),
             Arg.Any<CancellationToken>());
 
@@ -83,7 +86,7 @@ public class PushDispatcherTests
         var (_, source, _) = SeedSubscriber(db, pushNyaHandelser: false);
         var push = Substitute.For<IPushNotificationService>();
 
-        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1);
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: []);
 
         await push.DidNotReceiveWithAnyArgs().SendAsync(default!, default!, default!, default, default);
         Assert.Empty(db.NotificationDeliveryLogs);
@@ -96,7 +99,7 @@ public class PushDispatcherTests
         var (_, source, _) = SeedSubscriber(db, sourceActive: false);
         var push = Substitute.For<IPushNotificationService>();
 
-        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1);
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: []);
 
         await push.DidNotReceiveWithAnyArgs().SendAsync(default!, default!, default!, default, default);
     }
@@ -108,7 +111,7 @@ public class PushDispatcherTests
         var (_, source, _) = SeedSubscriber(db);
         var push = Substitute.For<IPushNotificationService>();
 
-        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 0);
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 0, insertedEvents: []);
 
         await push.DidNotReceiveWithAnyArgs().SendAsync(default!, default!, default!, default, default);
     }
@@ -125,7 +128,7 @@ public class PushDispatcherTests
         push.SendAsync(Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(goneException));
 
-        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1);
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: []);
 
         Assert.Empty(db.UserDevices);
         var log = Assert.Single(db.NotificationDeliveryLogs);
@@ -142,12 +145,141 @@ public class PushDispatcherTests
         push.SendAsync(Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new InvalidOperationException("boom")));
 
-        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1);
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: []);
 
         Assert.Single(db.UserDevices);
         Assert.Equal(device.Id, db.UserDevices.Single().Id);
         var log = Assert.Single(db.NotificationDeliveryLogs);
         Assert.Equal("failed", log.Status);
+    }
+
+    // Källan heter medvetet "Polisen" här — det är exakt vad som triggar
+    // PushDispatchers bevaknings-gren (jfr SeedSubscriber ovan, som medvetet
+    // undviker namnet för de generiska testerna).
+    private static (User User, Source Source, UserDevice Device) SeedPolisenSubscriber(AppDbContext db)
+    {
+        var user = new User
+        {
+            Name             = "Berit",
+            Email            = $"{Guid.NewGuid()}@example.com",
+            PasswordHash     = "x",
+            PushNyaHandelser = true,
+        };
+        var source = new Source { Name = "Polisen", ShortName = "Polisen", BaseUrl = "https://example.com" };
+        db.Users.Add(user);
+        db.Sources.Add(source);
+        db.SaveChanges();
+
+        db.UserSourcePreferences.Add(new UserSourcePreference { UserId = user.Id, SourceId = source.Id, IsActive = true, SortOrder = 0 });
+        var device = new UserDevice { UserId = user.Id, Endpoint = "https://push.example/polisen-ep", P256dh = "p256dh-key", Auth = "auth-secret" };
+        db.UserDevices.Add(device);
+        db.SaveChanges();
+
+        return (user, source, device);
+    }
+
+    // Titeln har medvetet ett datumprefix (samma format som skarp Polisen-data,
+    // "14 augusti 13.05, Trafikolycka, Göteborg") — inte "Trafikolycka, Göteborg"
+    // rakt av. Matchningen sker mot eventType (redan strukturerat fält), inte
+    // title, så ett realistiskt datumprefix bevisar att fixen faktiskt biter.
+    private static CanonicalEvent MakeEvent(int sourceId, string geography, string? eventType) => new()
+    {
+        SourceId    = sourceId,
+        ExternalId  = Guid.NewGuid().ToString(),
+        Title       = $"14 augusti 13.05, {eventType}, {geography}",
+        Content     = "",
+        Url         = "https://polisen.se/x",
+        RawData     = "",
+        Geography   = geography,
+        EventType   = eventType,
+        PublishedAt = DateTime.UtcNow,
+    };
+
+    [Fact]
+    public async Task DispatchNewEventsAsync_PolisenNoBevakningar_SendsAllLikeBefore()
+    {
+        using var db = NewDb();
+        var (_, source, device) = SeedPolisenSubscriber(db);
+        var events = new List<CanonicalEvent> { MakeEvent(source.Id, "Göteborg", "Trafikolycka") };
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: events);
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DispatchNewEventsAsync_PolisenBevakningMatchesOneEvent_MessageIncludesTypAndOmrade()
+    {
+        using var db = NewDb();
+        var (user, source, device) = SeedPolisenSubscriber(db);
+        db.PolisenBevakningar.Add(new PolisenBevakning
+        {
+            UserId         = user.Id,
+            KategorierJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Trafikolycka" }),
+            OmradenJson    = null,
+        });
+        db.SaveChanges();
+        var events = new List<CanonicalEvent> { MakeEvent(source.Id, "Göteborg", "Trafikolycka") };
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: events);
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(),
+            Arg.Is<string>(b => b!.Contains("Trafikolycka") && b.Contains("Göteborg")),
+            Arg.Any<string?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DispatchNewEventsAsync_PolisenBevakningDoesNotMatch_SendsNothing()
+    {
+        using var db = NewDb();
+        var (user, source, _) = SeedPolisenSubscriber(db);
+        db.PolisenBevakningar.Add(new PolisenBevakning
+        {
+            UserId         = user.Id,
+            KategorierJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Skjutning" }),
+            OmradenJson    = null,
+        });
+        db.SaveChanges();
+        var events = new List<CanonicalEvent> { MakeEvent(source.Id, "Göteborg", "Trafikolycka") };
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: events);
+
+        await push.DidNotReceiveWithAnyArgs().SendAsync(default!, default!, default!, default, default);
+    }
+
+    [Fact]
+    public async Task DispatchNewEventsAsync_PolisenMultipleMatches_UsesGenericCountMessage()
+    {
+        using var db = NewDb();
+        var (user, source, device) = SeedPolisenSubscriber(db);
+        db.PolisenBevakningar.Add(new PolisenBevakning
+        {
+            UserId         = user.Id,
+            KategorierJson = null,
+            OmradenJson    = System.Text.Json.JsonSerializer.Serialize(new[] { "Göteborg" }),
+        });
+        db.SaveChanges();
+        var events = new List<CanonicalEvent>
+        {
+            MakeEvent(source.Id, "Göteborg", "Trafikolycka"),
+            MakeEvent(source.Id, "Göteborg", "Misshandel"),
+        };
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 2, insertedEvents: events);
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(),
+            Arg.Is<string>(b => b!.Contains('2') && b.Contains("bevakningar")),
+            Arg.Any<string?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -178,7 +178,16 @@ public class AuthController : ControllerBase
             select new { Titel = e.Title, Kalla = src != null ? src.ShortName : "Okänd källa", sv.SavedAt }
         ).ToListAsync();
 
-        var polisenFilter = await _db.UserPolisenFilters.FirstOrDefaultAsync(f => f.UserId == userId);
+        var polisenBevakningar = (await _db.PolisenBevakningar
+                .Where(b => b.UserId == userId)
+                .OrderBy(b => b.CreatedAt)
+                .ToListAsync())
+            .Select(b => new
+            {
+                Kategorier = b.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.KategorierJson),
+                Omraden    = b.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson),
+            })
+            .ToList();
 
         var notisPerKalla = await (
             from n in _db.UserNotificationSettings
@@ -222,11 +231,7 @@ public class AuthController : ControllerBase
             Konto = new { user.Name, user.Email, user.CreatedAt, user.AuthProvider, user.EmailVerified },
             Kallor = kallor,
             SparadeHandelser = sparadeHandelser,
-            PolisenFilter = polisenFilter == null ? null : new
-            {
-                Kategorier = polisenFilter.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(polisenFilter.KategorierJson),
-                Omraden    = polisenFilter.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(polisenFilter.OmradenJson),
-            },
+            PolisenBevakningar = polisenBevakningar,
             Notisinstallningar = new
             {
                 PerKalla = notisPerKalla,

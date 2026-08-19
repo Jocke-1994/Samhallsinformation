@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { usePolisenFilter } from '../../context/PolisenFilterContext'
+import { usePolisenBevakningar, MAX_BEVAKNINGAR } from '../../context/PolisenBevakningarContext'
 
-// PROTOTYP (FAS 4-diskussion, session 24) — kontextuell prenumerationsklocka
-// per händelse. Allt-flödet: "lägg till"-meny med det som INTE redan följs.
-// Mitt-flödet: "ta bort"-meny med det som FAKTISKT är anledningen till att
-// händelsen syns här. Bara Polisen-händelser där typ/område kunde tolkas.
+// Kontextuell prenumerationsklocka per händelse (PROTOTYP, FAS 4-diskussion,
+// session 24; skriven om för bevakningar — flera oberoende regler, session
+// 34-uppföljning). Allt-flödet: "lägg till"-meny som skapar en NY bevakning
+// scopead till det klickade typen/området/båda. Mitt-flödet: en enda
+// "ta bort"-knapp, bara synlig när EXAKT en bevakning är anledningen till
+// att händelsen visas (annars är det oklart vilken av flera överlappande
+// bevakningar som skulle tas bort).
 //
 // Menyn och toasten renderas via en portal till <body> med fixed positionering
 // (beräknad från klockans egen bounding rect) — NewsItem-kortet har
@@ -19,11 +22,7 @@ interface Props {
 }
 
 export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }: Props) {
-  const {
-    valdaKategorier, valdaOmraden, harAnpassatTyp, harAnpassatOmrade,
-    läggTillTyp, läggTillOmrade,
-    sättValdaKategorierRakt, sättValdaOmradenRakt,
-  } = usePolisenFilter()
+  const { typDackt, omradeDackt, matchandeBevakning, skapa, taBort, bevakningar } = usePolisenBevakningar()
 
   const [öppen, setÖppen] = useState(false)
   const [menyPos, setMenyPos] = useState({ top: 0, left: 0 })
@@ -54,53 +53,76 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
     return () => clearTimeout(t)
   }, [toast])
 
-  const typActiv    = harAnpassatTyp    && !!polisenTyp    && valdaKategorier.has(polisenTyp)
-  const omradeActiv = harAnpassatOmrade && !!polisenOmrade && valdaOmraden.has(polisenOmrade)
+  if (mode === 'mitt') {
+    const matchande = polisenTyp || polisenOmrade ? matchandeBevakning(polisenTyp, polisenOmrade) : null
+    if (!matchande) return null
 
-  // Allt: erbjud det som inte redan följs. Mitt: erbjud det som faktiskt gör
-  // att händelsen matchar (annars inget meningsfullt att ta bort).
-  const visaTyp    = mode === 'allt' ? (!!polisenTyp && !typActiv)       : (!!polisenTyp && typActiv)
-  const visaOmrade = mode === 'allt' ? (!!polisenOmrade && !omradeActiv) : (!!polisenOmrade && omradeActiv)
+    async function taBortBevakning() {
+      if (!matchande) return
+      const kopia = matchande
+      await taBort(kopia.id)
+      setToast({
+        text: 'Bevakning borttagen',
+        ångra: () => { skapa(kopia.kategorier ? [...kopia.kategorier] : null, kopia.omraden ? [...kopia.omraden] : null) },
+      })
+    }
 
+    return (
+      <div className="relative shrink-0">
+        <button
+          onClick={e => { e.stopPropagation(); taBortBevakning() }}
+          title="Ta bort den här bevakningen"
+          aria-label="Ta bort bevakning"
+          className="p-1.5 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors"
+        >
+          <span className="text-base leading-none">🔔</span>
+        </button>
+
+        {toast && createPortal(
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-3">
+            <span>{toast.text}</span>
+            <button onClick={() => { toast.ångra(); setToast(null) }} className="font-semibold text-violet-300 hover:text-violet-200 transition-colors">
+              Ångra
+            </button>
+          </div>,
+          document.body,
+        )}
+      </div>
+    )
+  }
+
+  // mode === 'allt': erbjud att skapa en ny bevakning för det som INTE redan
+  // täcks av en befintlig bevakning.
+  const visaTyp    = !!polisenTyp    && !typDackt(polisenTyp)
+  const visaOmrade = !!polisenOmrade && !omradeDackt(polisenOmrade)
   if (!visaTyp && !visaOmrade) return null
 
-  function läggTill(vad: 'typ' | 'omrade' | 'bada') {
-    const föreKategorier = new Set(valdaKategorier)
-    const föreOmraden    = new Set(valdaOmraden)
-    if ((vad === 'typ' || vad === 'bada') && polisenTyp) läggTillTyp(polisenTyp)
-    if ((vad === 'omrade' || vad === 'bada') && polisenOmrade) läggTillOmrade(polisenOmrade)
+  const vidTak = bevakningar.length >= MAX_BEVAKNINGAR
 
+  async function skapaBevakning(vad: 'typ' | 'omrade' | 'bada') {
+    setÖppen(false)
+    if (vidTak) {
+      setToast({ text: `Max ${MAX_BEVAKNINGAR} bevakningar — hantera dem i Mina källor`, ångra: () => {} })
+      return
+    }
+    const kategorier = (vad === 'typ' || vad === 'bada') && polisenTyp ? [polisenTyp] : null
+    const omraden     = (vad === 'omrade' || vad === 'bada') && polisenOmrade ? [polisenOmrade] : null
+    const lyckades = await skapa(kategorier, omraden)
+    if (!lyckades) {
+      setToast({ text: `Max ${MAX_BEVAKNINGAR} bevakningar — hantera dem i Mina källor`, ångra: () => {} })
+      return
+    }
     const namn = vad === 'bada' ? `${polisenTyp} i ${polisenOmrade}` : vad === 'typ' ? polisenTyp : polisenOmrade
-    setToast({
-      text: `${namn} tillagt i dina prenumerationer`,
-      ångra: () => {
-        sättValdaKategorierRakt(föreKategorier)
-        sättValdaOmradenRakt(föreOmraden)
-      },
-    })
-    setÖppen(false)
+    setToast({ text: `Ny bevakning: ${namn}`, ångra: () => {} })
   }
-
-  function taBort(vad: 'typ' | 'omrade' | 'bada') {
-    if ((vad === 'typ' || vad === 'bada') && polisenTyp) {
-      sättValdaKategorierRakt(prev => { const n = new Set(prev); n.delete(polisenTyp); return n })
-    }
-    if ((vad === 'omrade' || vad === 'bada') && polisenOmrade) {
-      sättValdaOmradenRakt(prev => { const n = new Set(prev); n.delete(polisenOmrade); return n })
-    }
-    setÖppen(false)
-  }
-
-  const handleAction = mode === 'allt' ? läggTill : taBort
-  const verbLabel = mode === 'allt' ? 'Prenumerera på' : 'Ta bort'
 
   return (
     <div className="relative shrink-0">
       <button
         ref={knappRef}
         onClick={öppna}
-        title={mode === 'allt' ? 'Prenumerera på mer av det här' : 'Ta bort från dina prenumerationer'}
-        aria-label={mode === 'allt' ? 'Prenumerera' : 'Ta bort prenumeration'}
+        title="Skapa en bevakning för det här"
+        aria-label="Skapa bevakning"
         className="p-1.5 rounded-full text-slate-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-slate-700 transition-colors"
       >
         <span className="text-base leading-none">🔔</span>
@@ -112,10 +134,10 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
           style={{ position: 'fixed', top: menyPos.top, left: menyPos.left }}
           className="z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1.5 min-w-[220px]"
         >
-          <p className="px-3 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">{verbLabel}</p>
+          <p className="px-3 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Ny bevakning</p>
           {visaTyp && (
             <button
-              onClick={() => handleAction('typ')}
+              onClick={() => skapaBevakning('typ')}
               className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
               Typ · {polisenTyp}
@@ -123,7 +145,7 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
           )}
           {visaOmrade && (
             <button
-              onClick={() => handleAction('omrade')}
+              onClick={() => skapaBevakning('omrade')}
               className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
               Område · {polisenOmrade}
@@ -131,27 +153,21 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
           )}
           {visaTyp && visaOmrade && (
             <button
-              onClick={() => handleAction('bada')}
+              onClick={() => skapaBevakning('bada')}
               className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors border-t border-slate-100 dark:border-slate-700"
             >
               Typ &amp; Område · båda
             </button>
           )}
         </div>,
-        document.body
+        document.body,
       )}
 
       {toast && createPortal(
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-3">
           <span>{toast.text}</span>
-          <button
-            onClick={() => { toast.ångra(); setToast(null) }}
-            className="font-semibold text-violet-300 hover:text-violet-200 transition-colors"
-          >
-            Ångra
-          </button>
         </div>,
-        document.body
+        document.body,
       )}
     </div>
   )

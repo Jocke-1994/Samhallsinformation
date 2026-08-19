@@ -160,13 +160,18 @@ export function groupBy<T>(items: T[], key: (item: T) => string): Record<string,
   }, {})
 }
 
-// PROTOTYP (FAS 4-diskussion, session 24) — bästa-försök-extraktion av
-// Polisens typ/område ur en händelse i flödet, för prenumerationsklockan.
-// Titeln följer mönstret "{Typ}, {Ort}" (samma mittendel som EventType i
-// PR #373). Träffar inte alla mock-händelser (t.ex. "Inbrott" finns inte i
-// den kuraterade kategorilistan) — de visar då ingen klocka för typ-delen.
-export function extraheraPolisenTyp(title: string): string | null {
-  return POLISEN_KATEGORIER.find(kat => title.startsWith(kat)) ?? null
+// Matchar mot det redan strukturerade eventType-fältet (CanonicalEvent.EventType,
+// PR #373) — INTE title. Verifierad mot skarp Polisen-data (2026-08-19):
+// titeln har ett datumprefix ("14 augusti 13.05, Bedrägeri, ..."), så
+// title.startsWith(kategori) hade aldrig matchat något. eventType kan ha en
+// kvalificerare efter basen ("Trafikolycka, personskada") — startsWith
+// hanterar det. Träffar inte händelser vars typ inte finns i den kuraterade
+// listan (t.ex. "Bedrägeri", "Rattfylleri") — de visar då ingen klocka för
+// typ-delen och räknas som "okänd typ" i bevaknings-matchningen (matchar
+// alltid, samma passthrough som en null-geografi).
+export function extraheraPolisenTyp(eventType: string | null | undefined): string | null {
+  if (!eventType) return null
+  return POLISEN_KATEGORIER.find(kat => eventType.startsWith(kat)) ?? null
 }
 
 export function extraheraPolisenOmrade(geography: string | null): string | null {

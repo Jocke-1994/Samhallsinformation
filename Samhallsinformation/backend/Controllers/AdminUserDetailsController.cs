@@ -22,18 +22,22 @@ public class AdminUserDetailsController : ControllerBase
 
     public AdminUserDetailsController(AppDbContext db) => _db = db;
 
-    // Admin-variant av GET /api/user/polisen-filter (UserPolisenFilterController),
-    // read-only här — admin/support visar filtret, ändrar det inte åt användaren.
-    [HttpGet("{id}/polisen-filter")]
-    public async Task<IActionResult> GetPolisenFilter(Guid id)
+    // Admin-variant av GET /api/user/polisen-bevakningar (UserPolisenBevakningController),
+    // read-only här — admin/support visar bevakningarna, ändrar dem inte åt användaren.
+    [HttpGet("{id}/polisen-bevakningar")]
+    public async Task<IActionResult> GetPolisenBevakningar(Guid id)
     {
-        var filter = await _db.UserPolisenFilters.FirstOrDefaultAsync(f => f.UserId == id);
+        var bevakningar = await _db.PolisenBevakningar
+            .Where(b => b.UserId == id)
+            .OrderBy(b => b.CreatedAt)
+            .ToListAsync();
 
-        return Ok(new
+        return Ok(bevakningar.Select(b => new
         {
-            Kategorier = filter?.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(filter.KategorierJson),
-            Omraden    = filter?.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(filter.OmradenJson),
-        });
+            b.Id,
+            Kategorier = b.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.KategorierJson),
+            Omraden    = b.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson),
+        }));
     }
 
     // Notishistorik för en enskild användare — samma NotificationDeliveryLog-

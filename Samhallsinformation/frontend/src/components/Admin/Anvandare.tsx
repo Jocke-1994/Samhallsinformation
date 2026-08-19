@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import {
   fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
   fetchAdminUserSavedEvents, unsaveAdminUserEvent,
-  fetchAdminUserPolisenFilter, fetchAdminUserNotificationLog, type AdminUserDto,
+  fetchAdminUserPolisenBevakningar, fetchAdminUserNotificationLog, type AdminUserDto,
 } from '../../api/adminUsers'
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import type { PendingNotis } from '../../types/adminNotis'
@@ -539,9 +539,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     })))
   }, [kontoNotiser, onPendingNotiser])
 
-  const { data: polisenFilter } = useQuery({
-    queryKey: ['admin-polisen-filter', vald?.id],
-    queryFn:  () => fetchAdminUserPolisenFilter(vald!.id),
+  const { data: polisenBevakningar = [] } = useQuery({
+    queryKey: ['admin-polisen-bevakningar', vald?.id],
+    queryFn:  () => fetchAdminUserPolisenBevakningar(vald!.id),
     enabled:  !!vald,
   })
 
@@ -939,31 +939,37 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   </div>
                 </div>
 
-                {/* Polisen-filter (FAS 4, #298) — riktig data via
-                    GET /api/admin/users/{id}/polisen-filter (admin-variant av
-                    UserPolisenFilterController), read-only här */}
+                {/* Polisen-bevakningar — riktig data via
+                    GET /api/admin/users/{id}/polisen-bevakningar (admin-variant av
+                    UserPolisenBevakningController), read-only här. Flera oberoende
+                    bevakningar per användare (ELLER-kombinerade), ersätter det
+                    gamla enskilda "Polisen-filter" (en AND-kombination) */}
                 <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Polisen-filter</p>
-                  {!polisenFilter || (polisenFilter.kategorier === null && polisenFilter.omraden === null) ? (
-                    <p className="text-sm text-slate-500">Inget anpassat filter — får allt från Polisen.</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Polisen-bevakningar</p>
+                  {polisenBevakningar.length === 0 ? (
+                    <p className="text-sm text-slate-500">Inga bevakningar — får allt från Polisen.</p>
                   ) : (
-                    <div className="flex flex-col gap-2">
-                      <div>
-                        <p className="text-xs text-slate-400 mb-1">Typer</p>
-                        <div className="flex flex-wrap gap-1">
-                          {(polisenFilter.kategorier ?? []).length > 0
-                            ? polisenFilter.kategorier!.map(k => <span key={k} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k}</span>)
-                            : <span className="text-xs text-slate-400">Alla</span>}
+                    <div className="flex flex-col gap-3">
+                      {polisenBevakningar.map(b => (
+                        <div key={b.id} className="flex flex-col gap-2 border border-slate-100 rounded-lg p-2">
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1">Typer</p>
+                            <div className="flex flex-wrap gap-1">
+                              {(b.kategorier ?? []).length > 0
+                                ? b.kategorier!.map(k => <span key={k} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k}</span>)
+                                : <span className="text-xs text-slate-400">Alla</span>}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 mb-1">Områden</p>
+                            <div className="flex flex-wrap gap-1">
+                              {(b.omraden ?? []).length > 0
+                                ? b.omraden!.map(o => <span key={o} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{o}</span>)
+                                : <span className="text-xs text-slate-400">Alla</span>}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-400 mb-1">Områden</p>
-                        <div className="flex flex-wrap gap-1">
-                          {(polisenFilter.omraden ?? []).length > 0
-                            ? polisenFilter.omraden!.map(o => <span key={o} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{o}</span>)
-                            : <span className="text-xs text-slate-400">Alla</span>}
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   )}
                 </div>

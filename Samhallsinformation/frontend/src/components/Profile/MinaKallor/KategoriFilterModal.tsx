@@ -1,4 +1,3 @@
-// PROTOTYP (FAS 4-diskussion) — enbart lokalt UI-state, sparas ingenstans.
 import { useState } from 'react'
 import { POLISEN_KATEGORIER, SVENSKA_LÄN, LÄN_KOMMUNER, ALLA_KOMMUNER } from './kallorUtils'
 
@@ -83,26 +82,57 @@ function OmradeVal({ valda, onToggle, onVäljFlera, onAvmarkeraFlera }: {
   )
 }
 
+// Skapar/redigerar EN bevakning — äger sitt eget utkast-state (initierat
+// från props) och committar bara vid explicit Spara. Ett null-fält (alla
+// typer/områden) representeras internt som en fullständig Set för
+// kryssrutornas skull, och konverteras tillbaka till null vid Spara om inget
+// avmarkerats (samma "fullt set = null" konvention som backend/kontexten).
 export default function KategoriFilterModal({
-  kallNamn,
-  valdaKategorier, onToggleKategori, onVäljAllaKategorier, onAvmarkeraAllaKategorier,
-  valdaOmraden, onToggleOmrade, onVäljFleraOmraden, onAvmarkeraFleraOmraden, onVäljAllaOmraden, onAvmarkeraAllaOmraden,
-  onClose,
+  kallNamn, initialKategorier, initialOmraden, onSpara, onClose,
 }: {
-  kallNamn: string
-  valdaKategorier:            Set<string>
-  onToggleKategori:           (kategori: string) => void
-  onVäljAllaKategorier:       () => void
-  onAvmarkeraAllaKategorier:  () => void
-  valdaOmraden:               Set<string>
-  onToggleOmrade:             (kommun: string) => void
-  onVäljFleraOmraden:         (kommuner: string[]) => void
-  onAvmarkeraFleraOmraden:    (kommuner: string[]) => void
-  onVäljAllaOmraden:          () => void
-  onAvmarkeraAllaOmraden:     () => void
-  onClose:                    () => void
+  kallNamn:          string
+  initialKategorier: string[] | null
+  initialOmraden:    string[] | null
+  onSpara:           (kategorier: string[] | null, omraden: string[] | null) => void
+  onClose:           () => void
 }) {
   const [flik, setFlik] = useState<Flik>('typ')
+  const [valdaKategorier, setValdaKategorier] = useState<Set<string>>(new Set(initialKategorier ?? POLISEN_KATEGORIER))
+  const [valdaOmraden, setValdaOmraden]       = useState<Set<string>>(new Set(initialOmraden ?? ALLA_KOMMUNER))
+
+  function toggleKategori(kategori: string) {
+    setValdaKategorier(prev => {
+      const n = new Set(prev)
+      if (n.has(kategori)) n.delete(kategori); else n.add(kategori)
+      return n
+    })
+  }
+
+  function toggleOmrade(kommun: string) {
+    setValdaOmraden(prev => {
+      const n = new Set(prev)
+      if (n.has(kommun)) n.delete(kommun); else n.add(kommun)
+      return n
+    })
+  }
+
+  function väljFleraOmraden(kommuner: string[]) {
+    setValdaOmraden(prev => new Set([...prev, ...kommuner]))
+  }
+
+  function avmarkeraFleraOmraden(kommuner: string[]) {
+    setValdaOmraden(prev => {
+      const n = new Set(prev)
+      kommuner.forEach(k => n.delete(k))
+      return n
+    })
+  }
+
+  function spara() {
+    const kategorier = valdaKategorier.size === POLISEN_KATEGORIER.length ? null : [...valdaKategorier]
+    const omraden     = valdaOmraden.size    === ALLA_KOMMUNER.length      ? null : [...valdaOmraden]
+    onSpara(kategorier, omraden)
+  }
 
   return (
     <div
@@ -115,7 +145,7 @@ export default function KategoriFilterModal({
       >
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div>
-            <h3 className="text-base md:text-lg font-bold text-slate-900">Vad vill du se från {kallNamn} i ditt flöde?</h3>
+            <h3 className="text-base md:text-lg font-bold text-slate-900">Vad ska den här bevakningen visa från {kallNamn}?</h3>
             <p className="text-xs md:text-sm text-slate-400 mt-0.5">
               {valdaKategorier.size} av {POLISEN_KATEGORIER.length} typer · {valdaOmraden.size} av {ALLA_KOMMUNER.length} kommuner
             </p>
@@ -145,34 +175,40 @@ export default function KategoriFilterModal({
         <div className="px-6 py-2 border-b border-slate-100 flex gap-4 shrink-0">
           {flik === 'typ' ? (
             <>
-              <button onClick={onVäljAllaKategorier} className="text-xs md:text-sm text-violet-600 hover:text-violet-800 font-medium py-2">Välj alla</button>
-              <button onClick={onAvmarkeraAllaKategorier} className="text-xs md:text-sm text-slate-400 hover:text-slate-600 font-medium py-2">Avmarkera alla</button>
+              <button onClick={() => setValdaKategorier(new Set(POLISEN_KATEGORIER))} className="text-xs md:text-sm text-violet-600 hover:text-violet-800 font-medium py-2">Välj alla</button>
+              <button onClick={() => setValdaKategorier(new Set())} className="text-xs md:text-sm text-slate-400 hover:text-slate-600 font-medium py-2">Avmarkera alla</button>
             </>
           ) : (
             <>
-              <button onClick={onVäljAllaOmraden} className="text-xs md:text-sm text-violet-600 hover:text-violet-800 font-medium py-2">Välj alla län</button>
-              <button onClick={onAvmarkeraAllaOmraden} className="text-xs md:text-sm text-slate-400 hover:text-slate-600 font-medium py-2">Avmarkera alla län</button>
+              <button onClick={() => setValdaOmraden(new Set(ALLA_KOMMUNER))} className="text-xs md:text-sm text-violet-600 hover:text-violet-800 font-medium py-2">Välj alla län</button>
+              <button onClick={() => setValdaOmraden(new Set())} className="text-xs md:text-sm text-slate-400 hover:text-slate-600 font-medium py-2">Avmarkera alla län</button>
             </>
           )}
         </div>
 
         {flik === 'typ' ? (
-          <TypLista valda={valdaKategorier} onToggle={onToggleKategori} />
+          <TypLista valda={valdaKategorier} onToggle={toggleKategori} />
         ) : (
           <OmradeVal
             valda={valdaOmraden}
-            onToggle={onToggleOmrade}
-            onVäljFlera={onVäljFleraOmraden}
-            onAvmarkeraFlera={onAvmarkeraFleraOmraden}
+            onToggle={toggleOmrade}
+            onVäljFlera={väljFleraOmraden}
+            onAvmarkeraFlera={avmarkeraFleraOmraden}
           />
         )}
 
         <div className="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
           <button
             onClick={onClose}
+            className="flex-1 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm md:text-base font-semibold rounded-xl transition-all"
+          >
+            Avbryt
+          </button>
+          <button
+            onClick={spara}
             className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm md:text-base font-semibold rounded-xl transition-all"
           >
-            Klart
+            Spara
           </button>
         </div>
       </div>

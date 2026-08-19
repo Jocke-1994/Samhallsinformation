@@ -120,7 +120,7 @@ public class SourcesController : ControllerBase
 
         try
         {
-            var (inserted, updated) = await EventSync.SyncAsync(_db, ingestor, overwriteExisting: true);
+            var (inserted, updated, _) = await EventSync.SyncAsync(_db, ingestor, overwriteExisting: true);
             source.LastFetchedAt  = DateTime.UtcNow;
             source.LastFetchError = null;
             await _db.SaveChangesAsync();

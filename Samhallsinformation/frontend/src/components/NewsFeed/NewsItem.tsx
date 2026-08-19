@@ -74,7 +74,7 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
     !event.title.toLowerCase().includes(event.geography.toLowerCase())
 
   const ärPolisen = isLoggedIn && sourceShortName === 'Polisen'
-  const polisenTyp    = ärPolisen ? extraheraPolisenTyp(event.title) : null
+  const polisenTyp    = ärPolisen ? extraheraPolisenTyp(event.eventType) : null
   const polisenOmrade = ärPolisen ? extraheraPolisenOmrade(event.geography) : null
 
   function handleToggle() {

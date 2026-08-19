@@ -32,6 +32,7 @@ export interface CanonicalEvent {
   publishedAt: string
   url: string
   geography: string | null
+  eventType?: string | null // saknas i MOCK_EVENTS (offline-fallback, api/events.ts) — alltid satt av EventsController i skarpt läge
   severity: 'Bra att veta' | 'Viktigt' | 'Kritisk'
   isNational: boolean
 }
