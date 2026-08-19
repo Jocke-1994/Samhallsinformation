@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<FeatureIdea>                FeatureIdeas              => Set<FeatureIdea>();
     public DbSet<FeatureIdeaTester>          FeatureIdeaTesters        => Set<FeatureIdeaTester>();
     public DbSet<FeatureIdeaChecklistItem>   FeatureIdeaChecklistItems => Set<FeatureIdeaChecklistItem>();
+    public DbSet<SiteSettings>               SiteSettings              => Set<SiteSettings>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -206,6 +207,11 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.FeatureIdeaId);
             entity.HasOne(e => e.Idea).WithMany().HasForeignKey(e => e.FeatureIdeaId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.DoneByUser).WithMany().HasForeignKey(e => e.DoneByUserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SiteSettings>(entity =>
+        {
+            entity.HasKey(e => e.Id);
         });
     }
 }

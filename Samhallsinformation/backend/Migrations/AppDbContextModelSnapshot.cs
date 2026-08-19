@@ -335,6 +335,23 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.SiteSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ShowLoginButton")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ShowRegisterButton")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SiteSettings");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.Source", b =>
                 {
                     b.Property<int>("Id")
