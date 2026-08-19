@@ -76,9 +76,9 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
       { key: 'kallor_aktiva',         label: 'Aktiva källor',          beskrivning: 'Visa användarens aktiva och prenumererade källor', defaultAktiv: true },
       { key: 'kallor_rekommenderade', label: 'Rekommenderade källor',  beskrivning: 'Visa rekommenderade källor baserat på profil',     defaultAktiv: false },
       { key: 'kallor_alla',           label: 'Alla källor',            beskrivning: 'Bläddra bland samtliga tillgängliga källor',       defaultAktiv: true },
-      { key: 'kallor_polisen_filter', label: 'Polisen-filter',         beskrivning: 'Kategori/kommun-urval och prenumerationsklocka för Polisen-händelser', defaultAktiv: false,
-        roadmap: 'Fullt byggd (backend + UI, FAS 4), tillfälligt avstängd.',
-        roadmapSedan: '2026-08-12' },
+      { key: 'kallor_polisen_filter', label: 'Polisen-bevakningar',    beskrivning: 'Flera oberoende bevakningar (typ/kommun, upp till 10 st) och prenumerationsklocka för Polisen-händelser', defaultAktiv: false,
+        roadmap: 'Fullt byggd (backend + UI), tillfälligt avstängd inför egna tester.',
+        roadmapSedan: '2026-08-19' },
     ],
   },
   {
