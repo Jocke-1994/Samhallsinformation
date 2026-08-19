@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { laddaLogg, markeraÅngrad, type LoggPost, type ÅngraData } from '../../lib/aktivitetsloggStorage'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchAdminActivityLog, undoActivityLogEntry, type LoggPost, type ÅngraData } from '../../api/activityLog'
 import { saveAdminUserEvent, unsaveAdminUserEvent } from '../../api/adminUsers'
 import { fetchIngestorLogRecent, type IngestorLogRowDto } from '../../api/ingestorLog'
 
@@ -131,12 +131,22 @@ export default function Aktivitetslogg() {
   const [sökning,     setSökning]     = useState('')
   const [visaAntal,   setVisaAntal]   = useState(SIDA_STORLEK)
   const [expandadId,  setExpandadId]  = useState<string | null>(null)
-  const [kontoLogg,   setKontoLogg]   = useState<LoggPost[]>(laddaLogg)
   const [väntarÅngra, setVäntarÅngra] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  const { data: kontoLogg = [] } = useQuery({
+    queryKey: ['admin-activity-log'],
+    queryFn:  fetchAdminActivityLog,
+  })
 
   const { data: ingestorRader = [] } = useQuery({
     queryKey: ['admin-ingestor-log-recent'],
     queryFn:  () => fetchIngestorLogRecent({ limit: 100 }),
+  })
+
+  const undoMutation = useMutation({
+    mutationFn: undoActivityLogEntry,
+    onSuccess:  () => queryClient.invalidateQueries({ queryKey: ['admin-activity-log'] }),
   })
 
   // Kontoåtgärder (Sparat-ändringar m.m.) skrivna av admin/support i
@@ -186,8 +196,7 @@ export default function Aktivitetslogg() {
     const { anvandareId, handelse, undoAction } = rad.ångraData
     if (undoAction === 'lägg-till') await saveAdminUserEvent(anvandareId, handelse.eventId)
     else await unsaveAdminUserEvent(anvandareId, handelse.eventId)
-    markeraÅngrad(rad.id)
-    setKontoLogg(laddaLogg())
+    await undoMutation.mutateAsync(rad.id)
     setVäntarÅngra(null)
   }
 

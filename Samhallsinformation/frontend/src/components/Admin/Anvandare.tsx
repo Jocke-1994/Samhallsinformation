@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
+import { createActivityLogEntry } from '../../api/activityLog'
 import { useAuth } from '../../context/AuthContext'
 import {
   fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
@@ -9,10 +9,6 @@ import {
 } from '../../api/adminUsers'
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import type { PendingNotis } from '../../types/adminNotis'
-
-// Mockad inloggad admin/support-identitet — samma placeholder som resten av
-// admin-panelen (SupportInbox.INLOGGAD_AGENT, AdminPage-avataren)
-const INLOGGAD_NAMN = 'Joakim Rehn'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd' | 'Raderas snart' | 'Raderat'
@@ -581,12 +577,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     await unsaveAdminUserEvent(vald.id, eventId)
     await refetchSparat()
     if (handelse) {
-      läggTillLoggpost({
-        tid:    new Date().toISOString(),
-        vem:    `${INLOGGAD_NAMN} (${aktivVy}-läge)`,
-        typ:    'Sparat: borttagen',
-        rubrik: `Tog bort sparad händelse från ${vald.namn}`,
-        detalj: `"${handelse.title}" (${handelse.sourceName}) borttagen från ${vald.namn}s konto.`,
+      await createActivityLogEntry({
+        typ:     'Sparat: borttagen',
+        rubrik:  `Tog bort sparad händelse från ${vald.namn}`,
+        detalj:  `"${handelse.title}" (${handelse.sourceName}) borttagen från ${vald.namn}s konto.`,
+        aktivVy,
         ångraData: {
           anvandareId: vald.id,
           handelse: { eventId: handelse.eventId, title: handelse.title, sourceName: handelse.sourceName, publishedAt: handelse.publishedAt, sparadDatum: handelse.savedAt },

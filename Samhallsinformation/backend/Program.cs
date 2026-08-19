@@ -713,6 +713,35 @@ using (var scope = app.Services.CreateScope())
             ");
         }
 
+        if (pendingMigrations.Contains("20260819114837_AddAdminActivityLog"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""AdminActivityLogs"" (
+                    ""Id""               uuid NOT NULL,
+                    ""Tid""              timestamptz NOT NULL,
+                    ""Vem""              text NOT NULL,
+                    ""Typ""              text NOT NULL,
+                    ""Rubrik""           text NOT NULL,
+                    ""Detalj""           text NOT NULL,
+                    ""Ångrad""           boolean NOT NULL,
+                    ""AngraAnvandareId"" text,
+                    ""AngraEventId""     text,
+                    ""AngraTitle""       text,
+                    ""AngraSourceName""  text,
+                    ""AngraPublishedAt"" text,
+                    ""AngraSparadDatum"" text,
+                    ""AngraUndoAction""  text,
+                    CONSTRAINT ""PK_AdminActivityLogs"" PRIMARY KEY (""Id"")
+                );
+
+                CREATE INDEX IF NOT EXISTS ""IX_AdminActivityLogs_Tid"" ON ""AdminActivityLogs"" (""Tid"");
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260819114837_AddAdminActivityLog', '10.0.11')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
         if (pendingMigrations.Contains("20260819113722_AddFeatureFlagOverrides"))
         {
             await db.Database.ExecuteSqlRawAsync(@"

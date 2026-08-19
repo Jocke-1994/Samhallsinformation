@@ -29,6 +29,7 @@ public class AppDbContext : DbContext
     public DbSet<FeatureIdeaTester>          FeatureIdeaTesters        => Set<FeatureIdeaTester>();
     public DbSet<FeatureIdeaChecklistItem>   FeatureIdeaChecklistItems => Set<FeatureIdeaChecklistItem>();
     public DbSet<IngestorRunLog>             IngestorRunLogs           => Set<IngestorRunLog>();
+    public DbSet<AdminActivityLog>           AdminActivityLogs         => Set<AdminActivityLog>();
     public DbSet<FeatureFlagOverride>        FeatureFlagOverrides      => Set<FeatureFlagOverride>();
     public DbSet<FaqItem>                    FaqItems                  => Set<FaqItem>();
     public DbSet<SiteSettings>               SiteSettings              => Set<SiteSettings>();
@@ -217,6 +218,12 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.FeatureIdeaId);
             entity.HasOne(e => e.Idea).WithMany().HasForeignKey(e => e.FeatureIdeaId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.DoneByUser).WithMany().HasForeignKey(e => e.DoneByUserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<AdminActivityLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Tid);
         });
 
         modelBuilder.Entity<FeatureFlagOverride>(entity =>
