@@ -105,6 +105,19 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("EmailVerificationTokens");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.FeatureFlagOverride", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Value")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("FeatureFlagOverrides");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.FeatureIdea", b =>
                 {
                     b.Property<Guid>("Id")

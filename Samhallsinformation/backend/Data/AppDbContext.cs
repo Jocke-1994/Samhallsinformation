@@ -29,6 +29,7 @@ public class AppDbContext : DbContext
     public DbSet<FeatureIdeaTester>          FeatureIdeaTesters        => Set<FeatureIdeaTester>();
     public DbSet<FeatureIdeaChecklistItem>   FeatureIdeaChecklistItems => Set<FeatureIdeaChecklistItem>();
     public DbSet<IngestorRunLog>             IngestorRunLogs           => Set<IngestorRunLog>();
+    public DbSet<FeatureFlagOverride>        FeatureFlagOverrides      => Set<FeatureFlagOverride>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -214,6 +215,11 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.FeatureIdeaId);
             entity.HasOne(e => e.Idea).WithMany().HasForeignKey(e => e.FeatureIdeaId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.DoneByUser).WithMany().HasForeignKey(e => e.DoneByUserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<FeatureFlagOverride>(entity =>
+        {
+            entity.HasKey(e => e.Key);
         });
     }
 }
