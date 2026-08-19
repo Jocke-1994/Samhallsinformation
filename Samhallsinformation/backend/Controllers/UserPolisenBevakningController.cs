@@ -17,7 +17,7 @@ using Samhallsinformation.Models;
 [Authorize]
 public class UserPolisenBevakningController : ControllerBase
 {
-    public const int MaxBevakningar = 10;
+    public const int MaxBevakningar = 5;
 
     private readonly AppDbContext _db;
 

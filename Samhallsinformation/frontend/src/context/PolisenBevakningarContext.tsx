@@ -14,7 +14,7 @@ export interface Bevakning {
   omraden:    Set<string> | null // null = alla områden
 }
 
-export const MAX_BEVAKNINGAR = 10
+export const MAX_BEVAKNINGAR = 5
 
 interface PolisenBevakningarContextValue {
   bevakningar: Bevakning[]
