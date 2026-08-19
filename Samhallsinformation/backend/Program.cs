@@ -691,6 +691,28 @@ using (var scope = app.Services.CreateScope())
             ");
         }
 
+        if (pendingMigrations.Contains("20260817092731_AddIngestorRunLog"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""IngestorRunLogs"" (
+                    ""Id""             uuid NOT NULL,
+                    ""SourceId""       integer NOT NULL,
+                    ""RunAt""          timestamptz NOT NULL,
+                    ""Success""        boolean NOT NULL,
+                    ""EventsInserted"" integer NOT NULL,
+                    ""ErrorMessage""   text,
+                    CONSTRAINT ""PK_IngestorRunLogs"" PRIMARY KEY (""Id"")
+                );
+
+                CREATE INDEX IF NOT EXISTS ""IX_IngestorRunLogs_RunAt""    ON ""IngestorRunLogs"" (""RunAt"");
+                CREATE INDEX IF NOT EXISTS ""IX_IngestorRunLogs_SourceId"" ON ""IngestorRunLogs"" (""SourceId"");
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260817092731_AddIngestorRunLog', '10.0.11')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
         // Ny tabell (inte ALTER TABLE ADD COLUMN på befintlig data) — skapas
         // direkt med korrekta PostgreSQL-typer i CREATE TABLE, samma mönster
         // som AddSupportTickets. Ingen självläkande DO-block behövs eftersom

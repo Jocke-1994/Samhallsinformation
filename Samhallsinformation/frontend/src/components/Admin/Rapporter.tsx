@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { AdminSection } from './AdminSidebar'
 import { fetchAdminStats } from '../../api/stats'
+import { fetchAdminUsers } from '../../api/adminUsers'
+import { fetchIngestorLogSummary, fetchIngestorLogRecent } from '../../api/ingestorLog'
 
 const DAGAR_KORT = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
 
@@ -22,22 +24,6 @@ const ANVANDARE_PER_DAG = [
   { label: 'Fre', värde: 12 },
   { label: 'Lör', värde: 2 },
   { label: 'Sön', värde: 5 },
-]
-
-const FEL_PER_DAG = [
-  { label: 'Mån', värde: 0 },
-  { label: 'Tis', värde: 1 },
-  { label: 'Ons', värde: 0 },
-  { label: 'Tor', värde: 2 },
-  { label: 'Fre', värde: 0 },
-  { label: 'Lör', värde: 0 },
-  { label: 'Sön', värde: 0 },
-]
-
-const SENASTE_FEL = [
-  { tid: 'Tor 08:12', källa: 'Krisinformation', fel: 'Timeout efter 30 s',        återförsök: 'OK vid retry' },
-  { tid: 'Tor 02:00', källa: 'SMHI',            fel: 'HTTP 503 — tillfällig drift', återförsök: 'OK vid retry' },
-  { tid: 'Tis 14:37', källa: 'Polisen',         fel: 'Parse-fel: ogiltig XML',     återförsök: 'Manuell åtgärd' },
 ]
 
 const SEVERITY_CONFIG: Record<string, { text: string; färg: string; bg: string; bar: string }> = {
@@ -84,6 +70,11 @@ function Stapeldiagram({
   )
 }
 
+function formatFelTid(iso: string): string {
+  const d = new Date(iso)
+  return `${DAGAR_KORT[d.getDay()]} ${d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`
+}
+
 function Kort({ titel, sub, badge, children }: { titel: string; sub?: string; badge?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -103,6 +94,30 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
     queryKey: ['admin-stats'],
     queryFn: fetchAdminStats,
   })
+
+  const { data: adminUsers = [] } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn:  fetchAdminUsers,
+  })
+
+  const { data: felSummary } = useQuery({
+    queryKey: ['admin-ingestor-log-summary'],
+    queryFn:  () => fetchIngestorLogSummary(7),
+  })
+
+  const { data: senasteFel = [] } = useQuery({
+    queryKey: ['admin-ingestor-log-recent-errors'],
+    queryFn:  () => fetchIngestorLogRecent({ limit: 5, onlyErrors: true }),
+  })
+
+  const felPerDag = felSummary?.perDag.map(d => ({
+    label: DAGAR_KORT[new Date(d.date + 'T12:00:00').getDay()],
+    värde: d.count,
+  })) ?? []
+
+  const riktigaAnvändare = adminUsers.filter(u => !u.deletedAt)
+  const sjuDagarSedan    = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const nyaSenasteVeckan = riktigaAnvändare.filter(u => new Date(u.createdAt) >= sjuDagarSedan).length
 
   const notisPerKanal = KANAL_META.map(k => ({
     ...k,
@@ -143,15 +158,15 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
       {/* Nyckeltal */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
-        {/* MOCK */}
+        {/* LIVE */}
         <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-6 flex flex-col gap-2 items-center text-center">
-          <span className="absolute top-2 right-2"><MockBadge /></span>
+          <span className="absolute top-2 right-2"><LiveBadge /></span>
           <div className="flex items-center gap-2">
             <span className="text-2xl">👥</span>
             <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Registrerade användare</span>
           </div>
-          <p className="text-4xl font-bold text-violet-600">1 284</p>
-          <p className="text-xs text-slate-400">+23 denna vecka</p>
+          <p className="text-4xl font-bold text-violet-600">{riktigaAnvändare.length.toLocaleString('sv-SE')}</p>
+          <p className="text-xs text-slate-400">+{nyaSenasteVeckan} denna vecka</p>
         </div>
 
         {/* LIVE */}
@@ -173,23 +188,23 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
           <p className="text-xs text-violet-500 mt-1">Gå till Felsökning →</p>
         </button>
 
-        {/* MOCK */}
+        {/* LIVE */}
         <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-6 flex flex-col gap-2 items-center text-center">
-          <span className="absolute top-2 right-2"><MockBadge /></span>
+          <span className="absolute top-2 right-2"><LiveBadge /></span>
           <div className="flex items-center gap-2">
             <span className="text-2xl">🔔</span>
             <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Notifieringar skickade</span>
           </div>
-          <p className="text-4xl font-bold text-green-600">42 180</p>
+          <p className="text-4xl font-bold text-green-600">{notisTotal.toLocaleString('sv-SE')}</p>
           <p className="text-xs text-slate-400">totalt sedan start</p>
         </div>
 
-        {/* MOCK */}
+        {/* LIVE */}
         <button
           onClick={() => setFelModalÖppen(true)}
           className="relative bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-6 flex flex-col gap-2 items-center text-center hover:shadow-md hover:border-slate-300 transition-all cursor-pointer"
         >
-          <span className="absolute top-2 right-2"><MockBadge /></span>
+          <span className="absolute top-2 right-2"><LiveBadge /></span>
           <span className="absolute top-3 right-10 text-slate-300">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -199,8 +214,8 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
             <span className="text-2xl">⚠️</span>
             <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Fel senaste 7 dagarna</span>
           </div>
-          <p className="text-4xl font-bold text-red-500">3</p>
-          <p className="text-xs text-slate-400">0 kritiska</p>
+          <p className="text-4xl font-bold text-red-500">{felSummary?.totaltFel ?? '—'}</p>
+          <p className="text-xs text-slate-400">{felSummary?.kritiska ?? 0} kritiska</p>
           <p className="text-xs text-violet-500 mt-1">Visa detaljer →</p>
         </button>
 
@@ -214,23 +229,25 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-xl pointer-events-auto">
               <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">Fel senaste 7 dagarna <MockBadge /></h3>
-                  <p className="text-xs text-slate-400 mt-0.5">{SENASTE_FEL.length} felhändelser registrerade</p>
+                  <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">Fel senaste 7 dagarna <LiveBadge /></h3>
+                  <p className="text-xs text-slate-400 mt-0.5">{senasteFel.length === 0 ? 'Inga felhändelser registrerade' : `${senasteFel.length} senaste felhändelser`}</p>
                 </div>
                 <button onClick={() => setFelModalÖppen(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors text-lg">✕</button>
               </div>
               <div className="px-6 py-4 flex flex-col gap-3">
-                {SENASTE_FEL.map((f, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                {senasteFel.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-4">Inga fel senaste 7 dagarna.</p>
+                ) : senasteFel.map(f => (
+                  <div key={f.id} className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
                     <div className="flex-1 flex flex-col gap-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-700">{f.källa}</span>
-                        <span className="text-xs text-slate-400 font-mono">{f.tid}</span>
+                        <span className="text-xs font-semibold text-slate-700">{f.sourceName}</span>
+                        <span className="text-xs text-slate-400 font-mono">{formatFelTid(f.runAt)}</span>
                       </div>
-                      <p className="text-xs text-slate-600">{f.fel}</p>
+                      <p className="text-xs text-slate-600">{f.errorMessage}</p>
                     </div>
-                    <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${f.återförsök === 'OK vid retry' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {f.återförsök}
+                    <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${f.återförsökLyckades ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {f.återförsökLyckades ? 'OK vid retry' : 'Kvarstår'}
                     </span>
                   </div>
                 ))}
@@ -362,18 +379,20 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
           )}
         </Kort>
 
-        <Kort titel="Fel i datainsamling" sub="Senaste 7 dagarna" badge={<MockBadge />}>
-          <Stapeldiagram data={FEL_PER_DAG} stapelFärg="bg-red-400" höjd={72} />
+        <Kort titel="Fel i datainsamling" sub="Senaste 7 dagarna" badge={<LiveBadge />}>
+          <Stapeldiagram data={felPerDag} stapelFärg="bg-red-400" höjd={72} />
           <div className="mt-5 border-t border-slate-100 pt-4">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Senaste felhändelser</p>
             <div className="flex flex-col gap-2">
-              {SENASTE_FEL.map((f, i) => (
-                <div key={i} className="flex items-start gap-3 text-xs">
-                  <span className="text-slate-400 shrink-0 font-mono w-20">{f.tid}</span>
-                  <span className="font-medium text-slate-700 shrink-0 w-28">{f.källa}</span>
-                  <span className="text-slate-500 flex-1">{f.fel}</span>
-                  <span className={`shrink-0 px-2 py-0.5 rounded-full font-medium ${f.återförsök === 'OK vid retry' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {f.återförsök}
+              {senasteFel.length === 0 ? (
+                <p className="text-xs text-slate-400">Inga fel senaste 7 dagarna.</p>
+              ) : senasteFel.map(f => (
+                <div key={f.id} className="flex items-start gap-3 text-xs">
+                  <span className="text-slate-400 shrink-0 font-mono w-20">{formatFelTid(f.runAt)}</span>
+                  <span className="font-medium text-slate-700 shrink-0 w-28">{f.sourceName}</span>
+                  <span className="text-slate-500 flex-1">{f.errorMessage}</span>
+                  <span className={`shrink-0 px-2 py-0.5 rounded-full font-medium ${f.återförsökLyckades ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {f.återförsökLyckades ? 'OK vid retry' : 'Kvarstår'}
                   </span>
                 </div>
               ))}

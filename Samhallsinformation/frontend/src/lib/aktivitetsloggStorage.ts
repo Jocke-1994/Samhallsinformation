@@ -1,21 +1,27 @@
 // Delad localStorage-modul för kontoåtgärder som admin/support tar i
-// Användarhantering (idag: Sparat-ändringar) — samma mönster som
-// sparadeHandelserStorage.ts. Separat från Aktivitetsloggens statiska
-// Ingestor/Notis/Fel-mock (ingen riktig backend-loggning för dem än), men
-// de två källorna visas sammanslagna i Aktivitetslogg.tsx.
+// Användarhantering (idag: Sparat-ändringar). Separat från Aktivitetsloggens
+// statiska Ingestor/Notis/Fel-mock (ingen riktig backend-loggning för dem
+// än), men de två källorna visas sammanslagna i Aktivitetslogg.tsx.
 //
 // Bakgrund: support har inte tillgång till Aktivitetsloggen, så om en
 // supportmedarbetare råkar t.ex. ta bort fel sparad händelse finns annars
 // inget sätt för admin att se vad som hände utan att bli informerad muntligt.
 // Varje logg-post här kan bära en Ångra-payload som återställer exakt det
-// som ändrades.
-
-import type { SparadHandelseMini } from './sparadeHandelserStorage'
+// som ändrades. Sparat-datan i sig ligger i UserSavedEvent (riktig backend,
+// se AdminUserDetailsController) — bara den här aktivitetsloggen är lokal.
 
 export type KontoÅtgärdTyp = 'Sparat: tillagd' | 'Sparat: borttagen'
 
+export interface SparadHandelseMini {
+  eventId:     string
+  title:       string
+  sourceName:  string
+  publishedAt: string
+  sparadDatum: string
+}
+
 export interface ÅngraData {
-  anvandareId: number
+  anvandareId: string
   handelse:    SparadHandelseMini
   undoAction:  'lägg-till' | 'ta-bort'
 }

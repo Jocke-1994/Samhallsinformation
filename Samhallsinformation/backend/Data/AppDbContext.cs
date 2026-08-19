@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<FeatureIdea>                FeatureIdeas              => Set<FeatureIdea>();
     public DbSet<FeatureIdeaTester>          FeatureIdeaTesters        => Set<FeatureIdeaTester>();
     public DbSet<FeatureIdeaChecklistItem>   FeatureIdeaChecklistItems => Set<FeatureIdeaChecklistItem>();
+    public DbSet<IngestorRunLog>             IngestorRunLogs           => Set<IngestorRunLog>();
     public DbSet<SiteSettings>               SiteSettings              => Set<SiteSettings>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -121,6 +122,13 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Token).IsUnique();
             entity.HasIndex(e => e.UserId);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IngestorRunLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.RunAt);
+            entity.HasIndex(e => e.SourceId);
         });
 
         modelBuilder.Entity<EmailVerificationToken>(entity =>

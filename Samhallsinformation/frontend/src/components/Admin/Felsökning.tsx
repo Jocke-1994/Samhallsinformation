@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchAdminSources, updateAdminSource } from '../../api/sources'
 import { dryRunSource } from '../../api/testing'
+import { fetchAdminHealth, type AdminHealthDto, type HälsaStatus } from '../../api/health'
 import type { AdminSource } from '../../types'
 
 type Hälsa = 'OK' | 'Varning' | 'Nere' | 'Kontrollerar...'
@@ -34,12 +35,43 @@ interface Felrad {
   meddelande: string
 }
 
-const INITIAL_TJÄNSTER: Tjänst[] = [
-  { id: 'api',      namn: 'Backend-API',  beskrivning: 'REST-API på port 5000',         hälsa: 'OK',      svarstid: '42 ms', senast: '10:55:01' },
-  { id: 'db',       namn: 'Databas',      beskrivning: 'SQLite / EF Core',              hälsa: 'OK',      svarstid: '8 ms',  senast: '10:55:01' },
-  { id: 'ingestor', namn: 'Ingestor',     beskrivning: 'Bakgrundstjänst — 5 min-cykel', hälsa: 'OK',      svarstid: '—',     senast: '10:50:00' },
-  { id: 'notis',    namn: 'Notifieringar',beskrivning: 'Utskickstjänst e-post / SMS',   hälsa: 'Varning', svarstid: '—',     senast: '10:30:00' },
-]
+const HÄLSA_MAP: Record<HälsaStatus, Hälsa> = { OK: 'OK', Varning: 'Varning', Nere: 'Nere' }
+
+// Bygger om backendens /api/admin/health-svar till samma Tjänst[]-form
+// gränssnittet redan renderar. Under laddning/refetch visas alla rader som
+// "Kontrollerar..." — matchar den gamla mockens ping-UX, men bakom en riktig
+// nätverksanrop nu.
+function tjänsterFrånHälsa(h: AdminHealthDto | undefined, isFetching: boolean, senastKl: string): Tjänst[] {
+  const kontrollerar = isFetching || !h
+  const status = (s: HälsaStatus): Hälsa => kontrollerar ? 'Kontrollerar...' : HÄLSA_MAP[s]
+
+  return [
+    {
+      id: 'api', namn: 'Backend-API', beskrivning: 'REST-API',
+      hälsa: h ? status(h.api.status) : 'Kontrollerar...',
+      svarstid: h ? `${h.api.latencyMs} ms` : '—', senast: h ? senastKl : '—',
+    },
+    {
+      id: 'db', namn: 'Databas', beskrivning: 'EF Core — SQLite lokalt, PostgreSQL i produktion',
+      hälsa: h ? status(h.db.status) : 'Kontrollerar...',
+      svarstid: h ? `${h.db.latencyMs} ms` : '—', senast: h ? senastKl : '—',
+    },
+    {
+      id: 'ingestor', namn: 'Ingestor', beskrivning: h ? `${h.ingestor.aktivaKällor - h.ingestor.källorMedFel}/${h.ingestor.aktivaKällor} aktiva källor utan fel` : 'Bakgrundstjänst — 5 min-cykel',
+      hälsa: h ? status(h.ingestor.status) : 'Kontrollerar...',
+      svarstid: '—', senast: h?.ingestor.lastFetchedAt ? new Date(h.ingestor.lastFetchedAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }) : '—',
+    },
+    {
+      id: 'notis', namn: 'Notifieringar', beskrivning: h
+        ? (h.notifieringar.totaltSenaste24h === 0
+          ? 'Inga notiser skickade senaste 24h'
+          : `${h.notifieringar.totaltSenaste24h - h.notifieringar.felSenaste24h}/${h.notifieringar.totaltSenaste24h} lyckade senaste 24h`)
+        : 'Push-utskick',
+      hälsa: h ? status(h.notifieringar.status) : 'Kontrollerar...',
+      svarstid: '—', senast: h ? senastKl : '—',
+    },
+  ]
+}
 
 type KontrollTyp = 'Ingestor' | 'Fullständigt flödestest' | 'Event-drivet' | 'Intern'
 type KontrollKategori = 'Källa' | 'Intern'
@@ -241,32 +273,17 @@ export default function Felsökning() {
 
   const källorLive: KällKontroll[] = apiSources.map(toKällKontroll)
 
-  const [tjänster, setTjänster] = useState<Tjänst[]>(INITIAL_TJÄNSTER)
+  const { data: health, isFetching: hälsaKontrolleras, refetch: pingaAlla } = useQuery({
+    queryKey: ['admin-health'],
+    queryFn:  fetchAdminHealth,
+    refetchInterval: 60_000,
+  })
+  const tjänster = tjänsterFrånHälsa(health, hälsaKontrolleras, new Date().toLocaleTimeString('sv-SE'))
+
   const [testar, setTestar]     = useState<number | null>(null)
   const [pipeline, setPipeline] = useState<Record<number, PipelineSteg[]>>({})
   const [kör, setKör]           = useState<number | null>(null)
   const [loggFilter, setLoggFilter] = useState<Felrad['nivå'] | 'Alla'>('Alla')
-
-  function pingTjänst(id: string) {
-    setTjänster(prev => prev.map(t => t.id === id ? { ...t, hälsa: 'Kontrollerar...' } : t))
-    setTimeout(() => {
-      setTjänster(prev => prev.map(t => {
-        if (t.id !== id) return t
-        const ms = Math.floor(Math.random() * 80 + 10)
-        return { ...t, hälsa: 'OK', svarstid: `${ms} ms`, senast: new Date().toLocaleTimeString('sv-SE') }
-      }))
-    }, 1200)
-  }
-
-  function pingAlla() {
-    setTjänster(prev => prev.map(t => ({ ...t, hälsa: 'Kontrollerar...' })))
-    setTimeout(() => {
-      setTjänster(prev => prev.map(t => {
-        const ms = Math.floor(Math.random() * 80 + 10)
-        return { ...t, hälsa: 'OK', svarstid: t.id === 'ingestor' || t.id === 'notis' ? '—' : `${ms} ms`, senast: new Date().toLocaleTimeString('sv-SE') }
-      }))
-    }, 1400)
-  }
 
   function toggleAktiv(k: KällKontroll) {
     updateMutation.mutate({ id: k.id, req: { isActive: !k.aktiv } })
@@ -327,15 +344,15 @@ export default function Felsökning() {
   return (
     <div className="flex flex-col gap-6">
 
-      {/* Systemhälsa — simulerad ping */}
+      {/* Systemhälsa */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
               Systemhälsa
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">MOCK</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">LIVE</span>
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">Status per tjänst — klicka för att pinga</p>
+            <p className="text-xs text-slate-400 mt-0.5">Riktiga kontroller — databasanslutning, källornas senaste hämtning, notisleverans</p>
           </div>
           <div className="flex items-center gap-3">
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border ${systemOK ? 'bg-green-100 text-green-700 border-green-200' : systemVarning ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
@@ -343,10 +360,11 @@ export default function Felsökning() {
               {systemOK ? 'Alla system OK' : systemVarning ? 'Varningar finns' : 'Driftstörning'}
             </div>
             <button
-              onClick={pingAlla}
-              className="text-xs font-medium text-violet-600 hover:text-violet-800 border border-violet-200 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg transition-colors"
+              onClick={() => pingaAlla()}
+              disabled={hälsaKontrolleras}
+              className="text-xs font-medium text-violet-600 hover:text-violet-800 border border-violet-200 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
             >
-              Pinga alla
+              {hälsaKontrolleras ? 'Kontrollerar...' : 'Uppdatera'}
             </button>
           </div>
         </div>
@@ -363,13 +381,6 @@ export default function Felsökning() {
                 <span className="text-xs text-slate-400 w-24 text-right">{t.svarstid}</span>
                 <span className="text-xs text-slate-400 w-20 text-right">kl {t.senast}</span>
                 <span className={`text-xs font-medium px-2.5 py-1 rounded-full border w-32 text-center ${cls.pill}`}>{t.hälsa}</span>
-                <button
-                  onClick={() => pingTjänst(t.id)}
-                  disabled={t.hälsa === 'Kontrollerar...'}
-                  className="text-xs font-medium text-slate-500 hover:text-violet-600 border border-slate-200 hover:border-violet-200 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
-                >
-                  Pinga
-                </button>
               </div>
             )
           })}
