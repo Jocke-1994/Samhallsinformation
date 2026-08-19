@@ -713,6 +713,21 @@ using (var scope = app.Services.CreateScope())
             ");
         }
 
+        if (pendingMigrations.Contains("20260819113722_AddFeatureFlagOverrides"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""FeatureFlagOverrides"" (
+                    ""Key""   text NOT NULL,
+                    ""Value"" boolean NOT NULL,
+                    CONSTRAINT ""PK_FeatureFlagOverrides"" PRIMARY KEY (""Key"")
+                );
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260819113722_AddFeatureFlagOverrides', '10.0.11')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
         if (pendingMigrations.Contains("20260819112808_AddFaqItems"))
         {
             await db.Database.ExecuteSqlRawAsync(@"
