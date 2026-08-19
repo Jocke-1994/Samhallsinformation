@@ -11,6 +11,7 @@ import { useAuth, type SystemRoll } from '../../context/AuthContext'
 import { useFlags } from '../../context/FeatureFlagsContext'
 import { isSektionSynlig } from '../../lib/featureFlags'
 import { useSourceOrder } from '../../hooks/useSourceOrder'
+import { useSiteSettings } from '../../hooks/useSiteSettings'
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 
@@ -52,6 +53,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
   const { theme, setTheme } = useTheme()
   const flaggor = useFlags()
   const synligaSektioner = PROFILE_SECTIONS.filter(s => isSektionSynlig(s.id, flaggor))
+  const { showLoginButton, showRegisterButton } = useSiteSettings()
   const [dropdownÖppen, setDropdownÖppen] = useState(false)
   const [feedbackÖppen, setFeedbackÖppen] = useState(false)
   const [sorteraAktiv, setSorteraAktiv] = useState(false)
@@ -73,7 +75,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
   }, [sources])
 
   const shortNames = useMemo(() => [...sourceGroups.keys()], [sourceGroups])
-  const [orderedNames, sparaOrdning] = useSourceOrder(shortNames)
+  const [orderedNames, sparaOrdning] = useSourceOrder(shortNames, sourceGroups)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -162,9 +164,9 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
       </div>
 
       {/* Logga in / Skapa konto — endast för utloggade, alltid synligt (utanför scrollytan) */}
-      {!isLoggedIn && (flaggor.auth_logga_in_knapp || flaggor.auth_skapa_konto_knapp) && (
+      {!isLoggedIn && (showLoginButton || showRegisterButton) && (
         <div className="mb-4 flex flex-col gap-2">
-          {flaggor.auth_logga_in_knapp && (
+          {showLoginButton && (
             <Link
               to="/login"
               onClick={onClose}
@@ -176,7 +178,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
               Logga in
             </Link>
           )}
-          {flaggor.auth_skapa_konto_knapp && (
+          {showRegisterButton && (
             <Link
               to="/register"
               onClick={onClose}
