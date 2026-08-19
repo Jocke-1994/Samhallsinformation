@@ -20,7 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<PasswordResetToken>         PasswordResetTokens       => Set<PasswordResetToken>();
     public DbSet<EmailVerificationToken>     EmailVerificationTokens   => Set<EmailVerificationToken>();
     public DbSet<RefreshToken>               RefreshTokens             => Set<RefreshToken>();
-    public DbSet<UserPolisenFilter>          UserPolisenFilters        => Set<UserPolisenFilter>();
+    public DbSet<PolisenBevakning>           PolisenBevakningar        => Set<PolisenBevakning>();
     public DbSet<UserSavedEvent>             UserSavedEvents           => Set<UserSavedEvent>();
     public DbSet<SupportTicket>              SupportTickets            => Set<SupportTicket>();
     public DbSet<SupportTicketMessage>       SupportTicketMessages     => Set<SupportTicketMessage>();
@@ -150,9 +150,10 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<UserPolisenFilter>(entity =>
+        modelBuilder.Entity<PolisenBevakning>(entity =>
         {
-            entity.HasKey(e => e.UserId);
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UserId);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 

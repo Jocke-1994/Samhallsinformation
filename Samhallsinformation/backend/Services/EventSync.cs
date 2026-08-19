@@ -3,6 +3,7 @@ namespace Samhallsinformation.Services;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
 using Samhallsinformation.Ingestors;
+using Samhallsinformation.Models;
 
 public static class EventSync
 {
@@ -11,7 +12,7 @@ public static class EventSync
     // Vid overwriteExisting=true (admin-triggad resync) skrivs befintliga rader om med
     // den nyss hämtade datan — används för att se ingestor-ändringar slå igenom på data
     // som redan ligger i databasen, utan att vänta på att nya händelser dyker upp.
-    public static async Task<(int Inserted, int Updated)> SyncAsync(
+    public static async Task<(int Inserted, int Updated, List<CanonicalEvent> InsertedEvents)> SyncAsync(
         AppDbContext db, IIngestor ingestor, bool overwriteExisting, CancellationToken ct = default)
     {
         var events = await ingestor.FetchEventsAsync();
@@ -23,6 +24,7 @@ public static class EventSync
 
         var inserted = 0;
         var updated  = 0;
+        var insertedEvents = new List<CanonicalEvent>();
 
         foreach (var incoming in events)
         {
@@ -45,9 +47,10 @@ public static class EventSync
             {
                 db.Events.Add(incoming);
                 inserted++;
+                insertedEvents.Add(incoming);
             }
         }
 
-        return (inserted, updated);
+        return (inserted, updated, insertedEvents);
     }
 }

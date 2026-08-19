@@ -23,7 +23,8 @@ export interface UserNotisDto {
   notering: string | null
 }
 
-export interface AdminPolisenFilterDto {
+export interface AdminPolisenBevakningDto {
+  id:         string
   kategorier: string[] | null
   omraden:    string[] | null
 }
@@ -94,9 +95,9 @@ export async function cancelUserDeletion(id: string): Promise<void> {
   }
 }
 
-export async function fetchAdminUserPolisenFilter(id: string): Promise<AdminPolisenFilterDto> {
-  const res = await adminFetch(`/api/admin/users/${id}/polisen-filter`)
-  if (!res.ok) throw new Error(`fetchAdminUserPolisenFilter: ${res.status}`)
+export async function fetchAdminUserPolisenBevakningar(id: string): Promise<AdminPolisenBevakningDto[]> {
+  const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar`)
+  if (!res.ok) throw new Error(`fetchAdminUserPolisenBevakningar: ${res.status}`)
   return res.json()
 }
 

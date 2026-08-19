@@ -7,7 +7,7 @@ import App from './App.tsx'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
 import { FeatureFlagsProvider } from './context/FeatureFlagsContext'
-import { PolisenFilterProvider } from './context/PolisenFilterContext'
+import { PolisenBevakningarProvider } from './context/PolisenBevakningarContext'
 import { SavedEventsProvider } from './context/SavedEventsContext'
 import MaybeGoogleOAuthProvider from './components/Auth/MaybeGoogleOAuthProvider'
 
@@ -33,13 +33,13 @@ createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <FeatureFlagsProvider>
             <ThemeProvider>
-              <PolisenFilterProvider>
+              <PolisenBevakningarProvider>
                 <SavedEventsProvider>
                   <MaybeGoogleOAuthProvider>
                     <App />
                   </MaybeGoogleOAuthProvider>
                 </SavedEventsProvider>
-              </PolisenFilterProvider>
+              </PolisenBevakningarProvider>
             </ThemeProvider>
           </FeatureFlagsProvider>
         </AuthProvider>

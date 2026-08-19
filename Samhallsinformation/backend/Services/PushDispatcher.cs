@@ -14,7 +14,7 @@ public static class PushDispatcher
     // User.PushNyaHandelser (kategorin "Ny händelse" i Konto → Push-notiser).
     public static async Task DispatchNewEventsAsync(
         AppDbContext db, IPushNotificationService push, string frontendUrl,
-        int sourceId, int insertedCount, CancellationToken ct = default)
+        int sourceId, int insertedCount, List<CanonicalEvent> insertedEvents, CancellationToken ct = default)
     {
         if (insertedCount <= 0) return;
 
@@ -35,6 +35,16 @@ public static class PushDispatcher
 
         if (recipientIds.Count == 0) return;
 
+        // Polisen-mottagare filtreras dessutom mot varje användares egna
+        // bevakningar (PolisenBevakningMatcher) — en delad batchtext funkar
+        // inte längre här eftersom olika mottagare kan matcha olika
+        // delmängder av samma insatta händelser. Övriga källor oförändrade.
+        if (source.ShortName == "Polisen")
+        {
+            await DispatchPolisenEventsAsync(db, push, frontendUrl, source, recipientIds, insertedEvents, ct);
+            return;
+        }
+
         var devices = await db.UserDevices
             .Where(d => recipientIds.Contains(d.UserId))
             .ToListAsync(ct);
@@ -48,6 +58,50 @@ public static class PushDispatcher
         var url = $"{frontendUrl.TrimEnd('/')}/?shortName={Uri.EscapeDataString(source.ShortName)}";
 
         await SendToDevicesAsync(db, push, devices, title, body, url, sourceId, ct);
+    }
+
+    private static async Task DispatchPolisenEventsAsync(
+        AppDbContext db, IPushNotificationService push, string frontendUrl,
+        Source source, List<Guid> recipientIds, List<CanonicalEvent> insertedEvents, CancellationToken ct)
+    {
+        var bevakningarByUser = (await db.PolisenBevakningar
+                .Where(b => recipientIds.Contains(b.UserId))
+                .ToListAsync(ct))
+            .GroupBy(b => b.UserId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var devicesByUser = (await db.UserDevices
+                .Where(d => recipientIds.Contains(d.UserId))
+                .ToListAsync(ct))
+            .GroupBy(d => d.UserId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var url = $"{frontendUrl.TrimEnd('/')}/?shortName={Uri.EscapeDataString(source.ShortName)}";
+
+        foreach (var userId in recipientIds)
+        {
+            if (!devicesByUser.TryGetValue(userId, out var devices) || devices.Count == 0) continue;
+
+            var bevakningar = bevakningarByUser.TryGetValue(userId, out var b) ? b : [];
+            var matchande = insertedEvents.Where(ev => PolisenBevakningMatcher.Matches(ev, bevakningar)).ToList();
+            if (matchande.Count == 0) continue;
+
+            var title = "Samhällsinformation";
+            string body;
+            if (matchande.Count == 1)
+            {
+                var typ = PolisenBevakningMatcher.ExtractTyp(matchande[0].EventType) ?? "Ny händelse";
+                body = matchande[0].Geography != null
+                    ? $"{typ} i {matchande[0].Geography} (Polisen)"
+                    : $"{typ} (Polisen)";
+            }
+            else
+            {
+                body = $"{matchande.Count} nya händelser matchar dina bevakningar";
+            }
+
+            await SendToDevicesAsync(db, push, devices, title, body, url, source.Id, ct);
+        }
     }
 
     // Notifierar alla Admin-användare när ETT NYTT supportärende/feedback-inskick

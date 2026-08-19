@@ -7,7 +7,7 @@ import { getReadStatus, markAllAsRead } from '../../services/readState'
 import NewsItem from './NewsItem'
 import type { CanonicalEvent, Source } from '../../types'
 import { useAuth } from '../../context/AuthContext'
-import { usePolisenFilter } from '../../context/PolisenFilterContext'
+import { usePolisenBevakningar } from '../../context/PolisenBevakningarContext'
 import { useSavedEvents } from '../../context/SavedEventsContext'
 import { extraheraPolisenTyp, extraheraPolisenOmrade } from '../Profile/MinaKallor/kallorUtils'
 import { useFlags } from '../../context/FeatureFlagsContext'
@@ -59,7 +59,7 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()
   const flaggor = useFlags()
-  const { valdaKategorier, valdaOmraden, harAnpassatTyp, harAnpassatOmrade } = usePolisenFilter()
+  const { matchar } = usePolisenBevakningar()
   const { sparade } = useSavedEvents()
   const [mittUnderflik, setMittUnderflik] = useState<MittUnderflik>('Flöde')
 
@@ -104,20 +104,18 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
   )
 
   // Mitt-flödet: bara händelser från källor du aktivt lagt till i Mina
-  // källor. Polisen-händelser filtreras dessutom mot valda typer/områden
-  // (om dimensionen faktiskt anpassats — annars är "allt från Polisen"
-  // fortfarande standard så länge Polisen är en aktiv källa).
+  // källor. Polisen-händelser filtreras dessutom mot dina bevakningar (ELLER
+  // mellan bevakningarna — matchar() returnerar true rakt av om du inte
+  // skapat någon bevakning ännu, "allt från Polisen" fortfarande standard).
   const mittEvents = useMemo(() =>
     sortedEvents.filter(event => {
       if (!activeSourceIds.has(event.sourceId)) return false
       if (sourceMap[event.sourceId] !== 'Polisen') return true
-      const typ    = extraheraPolisenTyp(event.title)
+      const typ    = extraheraPolisenTyp(event.eventType)
       const omrade = extraheraPolisenOmrade(event.geography)
-      const typOk    = !harAnpassatTyp    || !typ    || valdaKategorier.has(typ)
-      const omradeOk = !harAnpassatOmrade || !omrade || valdaOmraden.has(omrade)
-      return typOk && omradeOk
+      return matchar(typ, omrade)
     }),
-    [sortedEvents, sourceMap, activeSourceIds, valdaKategorier, valdaOmraden, harAnpassatTyp, harAnpassatOmrade]
+    [sortedEvents, sourceMap, activeSourceIds, matchar]
   )
 
   // Bara händelser som redan finns i det hämtade fönstret (senaste 50) kan

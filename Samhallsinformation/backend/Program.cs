@@ -802,6 +802,42 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        // Ersätter UserPolisenFilters (en rad per användare) med PolisenBevakningar
+        // (flera rader per användare, ELLER-kombinerade — se PolisenBevakningMatcher).
+        // Ny tabell skapas med korrekta PostgreSQL-typer, precis som AddSupportTickets/
+        // AddSiteSettings. Datamigrering i samma block, INNAN gamla tabellen droppas:
+        // en rad i UserPolisenFilters med ett faktiskt anpassat filter (minst ett
+        // fält inte null) blir en motsvarande bevakning, så en testares/adminens
+        // redan sparade filter inte tappas bort.
+        if (pendingMigrations.Contains("20260819192204_AddPolisenBevakningar"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""PolisenBevakningar"" (
+                    ""Id""             uuid NOT NULL,
+                    ""UserId""         uuid NOT NULL,
+                    ""KategorierJson"" TEXT,
+                    ""OmradenJson""    TEXT,
+                    ""CreatedAt""      timestamptz NOT NULL,
+                    CONSTRAINT ""PK_PolisenBevakningar"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_PolisenBevakningar_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE INDEX IF NOT EXISTS ""IX_PolisenBevakningar_UserId"" ON ""PolisenBevakningar"" (""UserId"");
+
+                INSERT INTO ""PolisenBevakningar"" (""Id"", ""UserId"", ""KategorierJson"", ""OmradenJson"", ""CreatedAt"")
+                SELECT gen_random_uuid(), ""UserId"", ""KategorierJson"", ""OmradenJson"", now()
+                FROM ""UserPolisenFilters""
+                WHERE ""KategorierJson"" IS NOT NULL OR ""OmradenJson"" IS NOT NULL;
+
+                DROP TABLE IF EXISTS ""UserPolisenFilters"";
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260819192204_AddPolisenBevakningar', '10.0.11')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 

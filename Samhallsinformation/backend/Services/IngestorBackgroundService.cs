@@ -73,7 +73,7 @@ public class IngestorBackgroundService : BackgroundService
             var sourceId = ingestor.Source.Id;
             try
             {
-                var (inserted, _) = await EventSync.SyncAsync(db, ingestor, overwriteExisting: false, ct);
+                var (inserted, _, insertedEvents) = await EventSync.SyncAsync(db, ingestor, overwriteExisting: false, ct);
                 _logger.LogInformation("Saved {Count} new events for {Source}",
                     inserted, ingestor.Source.Name);
 
@@ -90,7 +90,7 @@ public class IngestorBackgroundService : BackgroundService
 
                 try
                 {
-                    await PushDispatcher.DispatchNewEventsAsync(db, push, frontendUrl, sourceId, inserted, ct);
+                    await PushDispatcher.DispatchNewEventsAsync(db, push, frontendUrl, sourceId, inserted, insertedEvents, ct);
                 }
                 catch (Exception ex)
                 {
