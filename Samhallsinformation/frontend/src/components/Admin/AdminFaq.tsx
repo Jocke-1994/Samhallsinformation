@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { FaqKategori } from '../../types'
-import { type AdminFaqItem as FaqItem, laddaFaq, sparaFaq } from '../../lib/faqStorage'
+import { type FaqItem, fetchAdminFaq, createFaqItem, updateFaqItem, deleteFaqItem, type FaqRequest } from '../../api/faq'
 
 const KATEGORIER: FaqKategori[] = ['Notifieringar', 'Mina källor', 'Konto', 'Uppdateringar']
 
@@ -10,8 +11,6 @@ const KAT_FÄRG: Record<FaqKategori, string> = {
   'Konto':         'bg-amber-100 text-amber-700 border-amber-200',
   'Uppdateringar': 'bg-emerald-100 text-emerald-700 border-emerald-200',
 }
-
-let nästaId = 100
 
 // ---------------------------------------------------------------------------
 // Ta bort-modal
@@ -50,7 +49,7 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
   onSpara:   (fråga: string, svar: string, kategori: FaqKategori) => void
   onStäng:   () => void
 }) {
-  const [fråga,    setFråga]    = useState(redigerar?.fråga    ?? '')
+  const [fråga,    setFråga]    = useState(redigerar?.fraga    ?? '')
   const [svar,     setSvar]     = useState(redigerar?.svar     ?? '')
   const [kategori, setKategori] = useState<FaqKategori>(redigerar?.kategori ?? 'Notifieringar')
 
@@ -140,44 +139,52 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
 // ---------------------------------------------------------------------------
 
 export default function AdminFaq() {
-  const [frågor,      setFrågor]      = useState<FaqItem[]>(laddaFaq)
+  const queryClient = useQueryClient()
+  const { data: frågor = [] } = useQuery({
+    queryKey: ['admin-faq'],
+    queryFn:  fetchAdminFaq,
+  })
+
   const [katFilter,   setKatFilter]   = useState<FaqKategori | 'alla'>('alla')
   const [sökning,     setSökning]     = useState('')
   const [panelÖppen,  setPanelÖppen]  = useState(false)
   const [redigerar,   setRedigerar]   = useState<FaqItem | null>(null)
   const [taBort,      setTaBort]      = useState<FaqItem | null>(null)
 
-  function updateFrågor(updater: (prev: FaqItem[]) => FaqItem[]) {
-    setFrågor(prev => {
-      const next = updater(prev)
-      sparaFaq(next)
-      return next
-    })
+  function invalidera() {
+    queryClient.invalidateQueries({ queryKey: ['admin-faq'] })
   }
+
+  const createMutation = useMutation({ mutationFn: createFaqItem, onSuccess: invalidera })
+  const updateMutation = useMutation({
+    mutationFn: (vars: { id: string; req: FaqRequest }) => updateFaqItem(vars.id, vars.req),
+    onSuccess:  invalidera,
+  })
+  const deleteMutation = useMutation({ mutationFn: deleteFaqItem, onSuccess: invalidera })
 
   const söktrim = sökning.trim().toLowerCase()
 
   const filtrerade = frågor.filter(f => {
     const katMatch = katFilter === 'alla' || f.kategori === katFilter
-    const sökMatch = !söktrim || f.fråga.toLowerCase().includes(söktrim) || f.svar.toLowerCase().includes(söktrim)
+    const sökMatch = !söktrim || f.fraga.toLowerCase().includes(söktrim) || f.svar.toLowerCase().includes(söktrim)
     return katMatch && sökMatch
   })
 
-  function öppnaSkapa()            { setRedigerar(null); setPanelÖppen(true) }
-  function öppnaRedigera(f: FaqItem) { setRedigerar(f);   setPanelÖppen(true) }
-  function stängPanel()            { setPanelÖppen(false); setRedigerar(null) }
+  function öppnaSkapa()              { setRedigerar(null); setPanelÖppen(true) }
+  function öppnaRedigera(f: FaqItem) { setRedigerar(f);     setPanelÖppen(true) }
+  function stängPanel()              { setPanelÖppen(false); setRedigerar(null) }
 
   function spara(fråga: string, svar: string, kategori: FaqKategori) {
     if (redigerar) {
-      updateFrågor(prev => prev.map(f => f.id === redigerar.id ? { ...f, fråga, svar, kategori } : f))
+      updateMutation.mutate({ id: redigerar.id, req: { kategori, fraga: fråga, svar, publicerad: redigerar.publicerad } })
     } else {
-      updateFrågor(prev => [...prev, { id: nästaId++, fråga, svar, kategori, publicerad: true }])
+      createMutation.mutate({ kategori, fraga: fråga, svar, publicerad: true })
     }
     stängPanel()
   }
 
-  function togglePublicerad(id: number) {
-    updateFrågor(prev => prev.map(f => f.id === id ? { ...f, publicerad: !f.publicerad } : f))
+  function togglePublicerad(f: FaqItem) {
+    updateMutation.mutate({ id: f.id, req: { kategori: f.kategori, fraga: f.fraga, svar: f.svar, publicerad: !f.publicerad } })
   }
 
   const antal = {
@@ -194,8 +201,8 @@ export default function AdminFaq() {
 
       {taBort && (
         <TaBortModal
-          fråga={taBort.fråga}
-          onBekräfta={() => { updateFrågor(prev => prev.filter(f => f.id !== taBort.id)); setTaBort(null) }}
+          fråga={taBort.fraga}
+          onBekräfta={() => { deleteMutation.mutate(taBort.id); setTaBort(null) }}
           onStäng={() => setTaBort(null)}
         />
       )}
@@ -282,7 +289,7 @@ export default function AdminFaq() {
             {filtrerade.map(f => (
               <tr key={f.id} className={`transition-colors ${f.publicerad ? 'hover:bg-slate-50' : 'bg-slate-50/60 opacity-60 hover:opacity-80'}`}>
                 <td className="px-6 py-3 w-64">
-                  <p className="font-medium text-slate-800 line-clamp-2">{f.fråga}</p>
+                  <p className="font-medium text-slate-800 line-clamp-2">{f.fraga}</p>
                 </td>
                 <td className="px-4 py-3">
                   <p className="text-sm text-slate-500 line-clamp-2">{f.svar}</p>
@@ -294,7 +301,7 @@ export default function AdminFaq() {
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <button
-                    onClick={() => togglePublicerad(f.id)}
+                    onClick={() => togglePublicerad(f)}
                     className={`text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors ${
                       f.publicerad
                         ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
