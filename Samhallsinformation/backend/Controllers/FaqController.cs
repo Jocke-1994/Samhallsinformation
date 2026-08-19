@@ -1,0 +1,80 @@
+namespace Samhallsinformation.Controllers;
+
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Data;
+using Samhallsinformation.Models;
+
+[ApiController]
+[Route("api/[controller]")]
+public class FaqController : ControllerBase
+{
+    private readonly AppDbContext _db;
+
+    public FaqController(AppDbContext db) => _db = db;
+
+    [HttpGet]
+    public async Task<IActionResult> GetFaq()
+    {
+        var items = await _db.FaqItems
+            .Where(f => f.Publicerad)
+            .OrderBy(f => f.CreatedAt)
+            .ToListAsync();
+        return Ok(items);
+    }
+
+    [HttpGet("/api/admin/faq")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetAdminFaq()
+    {
+        var items = await _db.FaqItems.OrderBy(f => f.CreatedAt).ToListAsync();
+        return Ok(items);
+    }
+
+    [HttpPost("/api/admin/faq")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> CreateFaq([FromBody] FaqRequest req)
+    {
+        var item = new FaqItem
+        {
+            Kategori   = req.Kategori,
+            Fraga      = req.Fraga,
+            Svar       = req.Svar,
+            Publicerad = req.Publicerad,
+        };
+        _db.FaqItems.Add(item);
+        await _db.SaveChangesAsync();
+        return Ok(item);
+    }
+
+    [HttpPut("/api/admin/faq/{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateFaq(Guid id, [FromBody] FaqRequest req)
+    {
+        var item = await _db.FaqItems.FindAsync(id);
+        if (item == null) return NotFound();
+
+        item.Kategori   = req.Kategori;
+        item.Fraga      = req.Fraga;
+        item.Svar       = req.Svar;
+        item.Publicerad = req.Publicerad;
+
+        await _db.SaveChangesAsync();
+        return Ok(item);
+    }
+
+    [HttpDelete("/api/admin/faq/{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DeleteFaq(Guid id)
+    {
+        var item = await _db.FaqItems.FindAsync(id);
+        if (item == null) return NotFound();
+
+        _db.FaqItems.Remove(item);
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+}
+
+public record FaqRequest(string Kategori, string Fraga, string Svar, bool Publicerad);

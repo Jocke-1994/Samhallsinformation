@@ -105,6 +105,37 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("EmailVerificationTokens");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.FaqItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Fraga")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kategori")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Publicerad")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Svar")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kategori");
+
+                    b.ToTable("FaqItems");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.FeatureIdea", b =>
                 {
                     b.Property<Guid>("Id")

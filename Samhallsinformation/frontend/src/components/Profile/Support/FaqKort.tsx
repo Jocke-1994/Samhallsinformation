@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { FaqKategori } from '../../../types'
-import { laddaFaq } from '../../../lib/faqStorage'
+import { fetchFaq } from '../../../api/faq'
 import { useFlags } from '../../../context/FeatureFlagsContext'
 import { isSektionSynlig } from '../../../lib/featureFlags'
 
@@ -24,13 +25,16 @@ export default function FaqKort() {
 
   const synligaKategorier = FAQ_KATEGORIER.filter(kat => isSektionSynlig(KATEGORI_SEKTION[kat], flaggor))
 
-  const publicerade = laddaFaq().filter(f => f.publicerad)
+  const { data: publicerade = [] } = useQuery({
+    queryKey: ['faq'],
+    queryFn:  fetchFaq,
+  })
 
   const söktrim = sökning.trim().toLowerCase()
 
   const visade = publicerade.filter(item => {
     const katMatch = aktivKategori === 'alla' || item.kategori === aktivKategori
-    const sökMatch = !söktrim || item.fråga.toLowerCase().includes(söktrim) || item.svar.toLowerCase().includes(söktrim)
+    const sökMatch = !söktrim || item.fraga.toLowerCase().includes(söktrim) || item.svar.toLowerCase().includes(söktrim)
     return katMatch && sökMatch
   })
 
@@ -105,7 +109,7 @@ export default function FaqKort() {
               onClick={() => setOpenIndex(openIndex === i ? null : i)}
               className="w-full flex items-start justify-between px-6 py-4 text-left hover:bg-slate-50 transition-colors gap-4"
             >
-              <span className="text-sm font-medium text-slate-700">{item.fråga}</span>
+              <span className="text-sm font-medium text-slate-700">{item.fraga}</span>
               <span className="text-slate-400 shrink-0">{openIndex === i ? '−' : '+'}</span>
             </button>
             {openIndex === i && (

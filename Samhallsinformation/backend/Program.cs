@@ -712,6 +712,27 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        if (pendingMigrations.Contains("20260819112808_AddFaqItems"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""FaqItems"" (
+                    ""Id""         uuid NOT NULL,
+                    ""Kategori""   text NOT NULL,
+                    ""Publicerad"" boolean NOT NULL,
+                    ""Fraga""      text NOT NULL,
+                    ""Svar""       text NOT NULL,
+                    ""CreatedAt""  timestamptz NOT NULL,
+                    CONSTRAINT ""PK_FaqItems"" PRIMARY KEY (""Id"")
+                );
+
+                CREATE INDEX IF NOT EXISTS ""IX_FaqItems_Kategori"" ON ""FaqItems"" (""Kategori"");
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260819112808_AddFaqItems', '10.0.11')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 
@@ -860,6 +881,24 @@ using (var scope = app.Services.CreateScope())
     if (kemiSource != null)
     {
         kemiSource.ShortName = "Kemikalieinspektionen";
+        await db.SaveChangesAsync();
+    }
+
+    // Seed FAQ — bara vid tomt bord, admin äger innehållet därefter (samma
+    // startvärden som tidigare låg i frontendens faqStorage.ts).
+    if (!db.FaqItems.Any())
+    {
+        db.FaqItems.AddRange(
+            new FaqItem { Kategori = "Konto",         Publicerad = false, Fraga = "Varför fick jag ingen push-notis?",                 Svar = "Kontrollera att push-notiser är aktiverat under Konto → Push-notiser, och att kategorin Ny händelse är påslagen. Se också till att källan finns under Mina källor, och att din webbläsare/enhet tillåter notiser från sidan." },
+            new FaqItem { Kategori = "Konto",         Publicerad = false, Fraga = "Hur aktiverar jag push-notiser?",                    Svar = "Gå till Konto → Push-notiser och slå på Ny händelse för att få en notis när dina källor i Mitt flöde publicerar något nytt. Ingen separat \"aktivera push\"-knapp behövs — att slå på kategorin startar prenumerationen automatiskt." },
+            new FaqItem { Kategori = "Konto",         Publicerad = false, Fraga = "Kan jag pausa notiser tillfälligt?",                 Svar = "Ja, stäng av Ny händelse under Konto → Push-notiser. Webbläsarens push-prenumeration avslutas automatiskt, och startas om nästa gång du slår på den igen." },
+            new FaqItem { Kategori = "Mina källor",   Publicerad = true,  Fraga = "Hur lägger jag till fler källor?",                   Svar = "Gå till Mina källor i profilmenyn. Där kan du söka efter och lägga till de myndigheter som finns tillgängliga." },
+            new FaqItem { Kategori = "Mina källor",   Publicerad = true,  Fraga = "Kan jag följa flera myndigheter samtidigt?",         Svar = "Ja, du kan lägga till hur många källor du vill i Mina källor. Alla visas i ditt nyhetsflöde." },
+            new FaqItem { Kategori = "Konto",         Publicerad = false, Fraga = "Hur tar jag bort mitt konto?",                       Svar = "Gå till Konto → Datahantering och välj Radera konto. Åtgärden är permanent och kan inte ångras." },
+            new FaqItem { Kategori = "Konto",         Publicerad = false, Fraga = "Hur laddar jag ner min data?",                       Svar = "Gå till Konto → Datahantering och klicka på Ladda ner. Du får en JSON-fil med all data vi har om dig (GDPR art. 20)." },
+            new FaqItem { Kategori = "Uppdateringar", Publicerad = false, Fraga = "Hur ser jag vad som är nytt i senaste versionen?",   Svar = "Gå till Uppdateringar i profilmenyn. Under Senaste version ser du alla ändringar sedan förra uppdateringen." },
+            new FaqItem { Kategori = "Uppdateringar", Publicerad = true,  Fraga = "Hur rapporterar jag ett fel?",                       Svar = "Klicka på Feedback-knappen längst ner i sidomenyn och beskriv vad som hänt. Meddelandet skickas till oss, och du kan ange din e-post om du vill ha svar." }
+        );
         await db.SaveChangesAsync();
     }
 
