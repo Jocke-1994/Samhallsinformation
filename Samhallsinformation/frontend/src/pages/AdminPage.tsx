@@ -13,6 +13,7 @@ import Impersonation from '../components/Admin/Impersonation'
 import AdminUppdateringar from '../components/Admin/AdminUppdateringar'
 import AdminFaq from '../components/Admin/AdminFaq'
 import FeatureFlagsAdmin from '../components/Admin/FeatureFlagsAdmin'
+import SiteSettingsAdmin from '../components/Admin/SiteSettingsAdmin'
 import FunktionsIdePipeline from '../components/Admin/FunktionsIdePipeline'
 import Sandlada from '../components/Admin/Sandlada'
 import Handelsesok from '../components/Admin/Handelsesok'
@@ -398,11 +399,14 @@ export default function AdminPage() {
             {section === 'aktivitetslogg' && <Aktivitetslogg />}
             {section === 'impersonation'  && <Impersonation onNavigate={setSection} />}
             {section === 'feature-flags'  && (
-              <FeatureFlagsAdmin
-                flaggor={flaggor}
-                onVäxla={växlaFlagg}
-                onÅterställ={återställ}
-              />
+              <div className="flex flex-col gap-6">
+                <SiteSettingsAdmin />
+                <FeatureFlagsAdmin
+                  flaggor={flaggor}
+                  onVäxla={växlaFlagg}
+                  onÅterställ={återställ}
+                />
+              </div>
             )}
             {section === 'funktionsideer' && <FunktionsIdePipeline onÖppnaÄrende={öppnaÄrende} />}
 
