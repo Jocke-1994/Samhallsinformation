@@ -17,6 +17,62 @@ namespace Samhallsinformation.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
 
+            modelBuilder.Entity("Samhallsinformation.Models.AdminActivityLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AngraAnvandareId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AngraEventId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AngraPublishedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AngraSourceName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AngraSparadDatum")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AngraTitle")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AngraUndoAction")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Detalj")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Rubrik")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Tid")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Typ")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Vem")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Ångrad")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Tid");
+
+                    b.ToTable("AdminActivityLogs");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.CanonicalEvent", b =>
                 {
                     b.Property<Guid>("Id")

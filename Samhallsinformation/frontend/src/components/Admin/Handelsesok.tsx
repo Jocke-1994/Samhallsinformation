@@ -3,14 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchSearchableSources, fetchEventTypes, searchEvents, type SearchParams, type AdminSearchEvent } from '../../api/eventSearch'
 import NewsItem from '../NewsFeed/NewsItem'
 import { fetchAdminUsers, saveAdminUserEvent, fetchSavedEventsByEvent, type AdminUserDto } from '../../api/adminUsers'
-import { läggTillLoggpost } from '../../lib/aktivitetsloggStorage'
+import { createActivityLogEntry } from '../../api/activityLog'
 import { useAuth } from '../../context/AuthContext'
 
 const SIDA_STORLEK = 20
-
-// Mockad inloggad admin/support-identitet — samma placeholder som resten av
-// admin-panelen (SupportInbox.INLOGGAD_AGENT, AdminPage-avataren)
-const INLOGGAD_NAMN = 'Joakim Rehn'
 
 function BulkSparaKnapp({ handelser, användare, onKlar }: { handelser: AdminSearchEvent[]; användare: AdminUserDto[]; onKlar: () => void }) {
   const [öppen, setÖppen]   = useState(false)
@@ -23,12 +19,11 @@ function BulkSparaKnapp({ handelser, användare, onKlar }: { handelser: AdminSea
     try {
       await Promise.all(handelser.map(async h => {
         await saveAdminUserEvent(anvandareId, h.id)
-        läggTillLoggpost({
-          tid:    nuIso,
-          vem:    `${INLOGGAD_NAMN} (${aktivVy}-läge)`,
-          typ:    'Sparat: tillagd',
-          rubrik: `Sparade händelse till ${anvandareNamn}`,
-          detalj: `"${h.title}" (${h.sourceName}) kopplad till ${anvandareNamn}s konto.`,
+        await createActivityLogEntry({
+          typ:     'Sparat: tillagd',
+          rubrik:  `Sparade händelse till ${anvandareNamn}`,
+          detalj:  `"${h.title}" (${h.sourceName}) kopplad till ${anvandareNamn}s konto.`,
+          aktivVy,
           ångraData: {
             anvandareId,
             handelse: { eventId: h.id, title: h.title, sourceName: h.sourceName, publishedAt: h.publishedAt, sparadDatum: nuIso },
