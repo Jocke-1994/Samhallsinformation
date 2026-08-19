@@ -733,6 +733,31 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        // Ny tabell (inte ALTER TABLE ADD COLUMN på befintlig data) — skapas
+        // direkt med korrekta PostgreSQL-typer i CREATE TABLE, samma mönster
+        // som AddSupportTickets. Ingen självläkande DO-block behövs eftersom
+        // tabellen är tom/ny — om det här blocket ändå missas vid ett
+        // fresh-deploy blir felet identiskt med AddPushNotifKategorier-
+        // incidenten (df95da1) och löses på samma sätt i efterhand.
+        if (pendingMigrations.Contains("20260819035005_AddSiteSettings"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""SiteSettings"" (
+                    ""Id"" integer PRIMARY KEY,
+                    ""ShowLoginButton"" boolean NOT NULL DEFAULT true,
+                    ""ShowRegisterButton"" boolean NOT NULL DEFAULT true
+                );
+
+                INSERT INTO ""SiteSettings"" (""Id"", ""ShowLoginButton"", ""ShowRegisterButton"")
+                VALUES (1, true, true)
+                ON CONFLICT (""Id"") DO NOTHING;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260819035005_AddSiteSettings', '10.0.10')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 
