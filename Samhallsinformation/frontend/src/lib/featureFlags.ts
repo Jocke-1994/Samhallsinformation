@@ -151,29 +151,3 @@ export function isSektionSynlig(sektionKey: string, flaggor: FlagState): boolean
 }
 
 export type FlagState = Record<FlagKey, boolean>
-
-const STORAGE_KEY = 'samhallsinformation_feature_flags'
-
-export function laddaFlaggor(): FlagState {
-  const defaults = Object.fromEntries(
-    FLAG_DEFINITIONER.map(f => [f.key, f.defaultAktiv])
-  ) as FlagState
-  try {
-    const sparad = localStorage.getItem(STORAGE_KEY)
-    if (!sparad) return defaults
-    return { ...defaults, ...JSON.parse(sparad) }
-  } catch {
-    return defaults
-  }
-}
-
-export function sparaFlaggor(flaggor: FlagState): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(flaggor))
-}
-
-export function återställFlaggor(): FlagState {
-  localStorage.removeItem(STORAGE_KEY)
-  return Object.fromEntries(
-    FLAG_DEFINITIONER.map(f => [f.key, f.defaultAktiv])
-  ) as FlagState
-}

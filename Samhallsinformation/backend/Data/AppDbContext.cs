@@ -30,6 +30,8 @@ public class AppDbContext : DbContext
     public DbSet<FeatureIdeaChecklistItem>   FeatureIdeaChecklistItems => Set<FeatureIdeaChecklistItem>();
     public DbSet<IngestorRunLog>             IngestorRunLogs           => Set<IngestorRunLog>();
     public DbSet<AdminActivityLog>           AdminActivityLogs         => Set<AdminActivityLog>();
+    public DbSet<FeatureFlagOverride>        FeatureFlagOverrides      => Set<FeatureFlagOverride>();
+    public DbSet<FaqItem>                    FaqItems                  => Set<FaqItem>();
     public DbSet<SiteSettings>               SiteSettings              => Set<SiteSettings>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -222,6 +224,17 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Tid);
+        });
+
+        modelBuilder.Entity<FeatureFlagOverride>(entity =>
+        {
+            entity.HasKey(e => e.Key);
+        });
+
+        modelBuilder.Entity<FaqItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Kategori);
         });
 
         modelBuilder.Entity<SiteSettings>(entity =>
