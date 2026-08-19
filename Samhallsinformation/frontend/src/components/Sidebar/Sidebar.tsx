@@ -73,7 +73,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
   }, [sources])
 
   const shortNames = useMemo(() => [...sourceGroups.keys()], [sourceGroups])
-  const [orderedNames, sparaOrdning] = useSourceOrder(shortNames)
+  const [orderedNames, sparaOrdning] = useSourceOrder(shortNames, sourceGroups)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
