@@ -354,6 +354,34 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("IngestorRunLogs");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.MaintenanceBanner", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EndUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MaintenanceBanners");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.NotificationDeliveryLog", b =>
                 {
                     b.Property<Guid>("Id")

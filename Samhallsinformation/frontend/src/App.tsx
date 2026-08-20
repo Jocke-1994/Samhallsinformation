@@ -22,6 +22,8 @@ import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 import { useAuth } from './context/AuthContext'
 import { useFlags } from './context/FeatureFlagsContext'
 import { resendVerification } from './api/auth'
+import { fetchMaintenanceBanners } from './api/maintenanceBanners'
+import { formatSvensktDatumTid } from './lib/tid'
 import type { Source } from './types'
 
 function HomePage() {
@@ -103,7 +105,7 @@ function ImpersonationBanner() {
   if (!params.has('impersonating') || !namn) return null
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 px-6 py-2.5 flex items-center justify-between shadow-md">
+    <div className="bg-amber-500 px-6 py-2.5 flex items-center justify-between shadow-md">
       <div className="flex items-center gap-2.5">
         <span className="text-base">🎭</span>
         <span className="text-sm font-medium text-white">
@@ -150,7 +152,7 @@ function EmailVerificationBanner() {
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9998] bg-violet-600 px-6 py-2.5 flex items-center justify-between gap-3 shadow-md flex-wrap">
+    <div className="bg-violet-600 px-6 py-2.5 flex items-center justify-between gap-3 shadow-md flex-wrap">
       <span className="text-sm text-white">
         Bekräfta din e-postadress{email ? ` — vi har skickat en länk till ${email}` : ''}.
       </span>
@@ -173,11 +175,71 @@ function EmailVerificationBanner() {
   )
 }
 
+const MAINTENANCE_DISMISS_PREFIX = 'si_maintenance_dismissed_'
+
+// Global driftmeddelande-banderoll för planerade drifttillfällen (t.ex.
+// Railways underhållsfönster). Flera meddelanden kan vara aktiva samtidigt
+// (olika målgrupper, olika tidsfönster) — varje rad från backend renderas
+// som en egen banderoll, staplade i wrappern i App(). Visas/döljs
+// automatiskt utifrån Start/End + målgrupp, ingen manuell avstängning krävs
+// efteråt. Varje banderoll har sin egen stängs-nyckel (bundet till dess id),
+// så att stänga en inte påverkar någon annan.
+function MaintenanceBanners() {
+  const { isLoggedIn } = useAuth()
+  const { data: banners = [] } = useQuery({
+    queryKey: ['maintenance-banners'],
+    queryFn: fetchMaintenanceBanners,
+    staleTime: 5 * 60_000,
+  })
+
+  const nu = Date.now()
+  const aktiva = banners.filter(b => {
+    if (nu < new Date(b.startUtc).getTime() || nu > new Date(b.endUtc).getTime()) return false
+    if (b.audience === 'Besökare' && isLoggedIn)  return false
+    if (b.audience === 'Användare' && !isLoggedIn) return false
+    return true
+  })
+
+  return (
+    <>
+      {aktiva.map(b => <EnMaintenanceBanner key={b.id} banner={b} />)}
+    </>
+  )
+}
+
+function EnMaintenanceBanner({ banner }: { banner: { id: string; message: string; startUtc: string; endUtc: string } }) {
+  const dismissKey = MAINTENANCE_DISMISS_PREFIX + banner.id
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem(dismissKey) === '1')
+
+  if (dismissed) return null
+
+  return (
+    <div className="bg-orange-600 px-6 py-2.5 flex items-center justify-between gap-3 shadow-md flex-wrap">
+      <span className="text-sm text-white">
+        {banner.message} ({formatSvensktDatumTid(banner.startUtc)}–{formatSvensktDatumTid(banner.endUtc)})
+      </span>
+      <button
+        onClick={() => { localStorage.setItem(dismissKey, '1'); setDismissed(true) }}
+        className="text-xs font-semibold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg transition-colors shrink-0"
+      >
+        Stäng
+      </button>
+    </div>
+  )
+}
+
+// En gemensam fixed wrapper som staplar alla toppbanderoller vertikalt
+// (flex-col) istället för att varje banderoll är fixed på egen hand — annars
+// hamnar de rakt ovanpå varandra på exakt samma yta och den som renderas
+// sist (senast i JSX) döljer alla tidigare, tyst.
 export default function App() {
   return (
     <>
-      <ImpersonationBanner />
-      <EmailVerificationBanner />
+      <div className="fixed top-0 left-0 right-0 z-[9999] flex flex-col">
+        <ImpersonationBanner />
+        <MaintenanceBanners />
+        <EmailVerificationBanner />
+      </div>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />

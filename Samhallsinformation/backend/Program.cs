@@ -838,6 +838,28 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        // Flera samtidigt aktiva driftmeddelanden (olika målgrupper) — en
+        // riktig rad-per-meddelande-tabell, inte fler fält på SiteSettings-
+        // singletonen (som bara kan uttrycka ETT meddelande i taget).
+        if (pendingMigrations.Contains("20260820072659_AddMaintenanceBanners"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""MaintenanceBanners"" (
+                    ""Id""        uuid NOT NULL,
+                    ""Message""   text NOT NULL,
+                    ""StartUtc""  timestamptz NOT NULL,
+                    ""EndUtc""    timestamptz NOT NULL,
+                    ""Audience""  text NOT NULL,
+                    ""CreatedAt"" timestamptz NOT NULL,
+                    CONSTRAINT ""PK_MaintenanceBanners"" PRIMARY KEY (""Id"")
+                );
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260820072659_AddMaintenanceBanners', '10.0.11')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 
