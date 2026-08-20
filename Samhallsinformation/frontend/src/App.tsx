@@ -23,7 +23,6 @@ import { useAuth } from './context/AuthContext'
 import { useFlags } from './context/FeatureFlagsContext'
 import { resendVerification } from './api/auth'
 import { fetchMaintenanceBanners } from './api/maintenanceBanners'
-import { formatSvensktDatumTid } from './lib/tid'
 import type { Source } from './types'
 
 function HomePage() {
@@ -223,8 +222,8 @@ function EnMaintenanceBanner({ banner }: { banner: { id: string; message: string
 
   return (
     <div className="bg-orange-600 px-6 py-2.5 flex items-center justify-between gap-3 shadow-md flex-wrap">
-      <span className="text-sm text-white">
-        {banner.message} ({formatSvensktDatumTid(banner.startUtc)}–{formatSvensktDatumTid(banner.endUtc)})
+      <span className="text-[18px] text-white flex-1 text-center">
+        {banner.message}
       </span>
       <button
         onClick={() => { localStorage.setItem(dismissKey, avtryck); setDismissatAvtryck(avtryck) }}

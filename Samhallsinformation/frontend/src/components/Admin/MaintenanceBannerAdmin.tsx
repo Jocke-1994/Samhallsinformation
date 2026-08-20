@@ -23,6 +23,12 @@ function isoTillDatetimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+// Enda standardtexten som finns idag — fler kan läggas till som egna
+// funktioner + knappar i samma stil om fler mallar behövs.
+function standardtextUnderhåll(start: string, slut: string): string {
+  return `Planerat underhåll utförs mellan ${formatSvensktDatumTid(start)} och ${formatSvensktDatumTid(slut)}. Under denna tid kan sidan vara tillfälligt otillgänglig.`
+}
+
 function status(b: MaintenanceBanner): { text: string; färg: string } {
   const nu = Date.now()
   const start = new Date(b.startUtc).getTime()
@@ -75,6 +81,7 @@ function FormModal({ redigerar, onSpara, onStäng }: {
   const [åskådare, setÅskådare]     = useState<BannerÅskådare>(redigerar?.audience ?? 'Alla')
 
   const kanSpara = meddelande.trim() !== '' && start !== '' && slut !== '' && new Date(slut) > new Date(start)
+  const kanAnvändaStandardtext = start !== '' && slut !== '' && new Date(slut) > new Date(start)
 
   function spara() {
     if (!kanSpara) return
@@ -98,7 +105,18 @@ function FormModal({ redigerar, onSpara, onStäng }: {
 
         <div className="px-6 py-5 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Meddelande</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Meddelande</label>
+              <button
+                type="button"
+                onClick={() => setMeddelande(standardtextUnderhåll(start, slut))}
+                disabled={!kanAnvändaStandardtext}
+                title={kanAnvändaStandardtext ? undefined : 'Fyll i start och slut först'}
+                className="text-xs font-medium text-violet-600 hover:text-violet-500 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
+              >
+                Använd standardtext (underhåll)
+              </button>
+            </div>
             <input
               type="text"
               value={meddelande}
