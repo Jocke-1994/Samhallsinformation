@@ -187,7 +187,7 @@ export default function AdminPage() {
   const totalCount    = olästaNotiser.length
 
   return (
-    <div className="flex h-screen bg-slate-100 overflow-hidden">
+    <div className="flex h-full bg-slate-100 overflow-hidden">
 
       <AdminSidebar
         active={section}

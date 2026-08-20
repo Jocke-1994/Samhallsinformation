@@ -35,9 +35,8 @@ public class MaintenanceBannersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] MaintenanceBannerRequest req)
     {
-        if (string.IsNullOrWhiteSpace(req.Message)) return BadRequest("Meddelande krävs.");
-        if (!GiltigaMålgrupper.Contains(req.Audience)) return BadRequest("Ogiltig målgrupp.");
-        if (req.EndUtc <= req.StartUtc) return BadRequest("Sluttid måste vara efter starttid.");
+        var fel = Validera(req);
+        if (fel != null) return BadRequest(fel);
 
         var banner = new MaintenanceBanner
         {
@@ -57,9 +56,8 @@ public class MaintenanceBannersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(Guid id, [FromBody] MaintenanceBannerRequest req)
     {
-        if (string.IsNullOrWhiteSpace(req.Message)) return BadRequest("Meddelande krävs.");
-        if (!GiltigaMålgrupper.Contains(req.Audience)) return BadRequest("Ogiltig målgrupp.");
-        if (req.EndUtc <= req.StartUtc) return BadRequest("Sluttid måste vara efter starttid.");
+        var fel = Validera(req);
+        if (fel != null) return BadRequest(fel);
 
         var banner = await _db.MaintenanceBanners.FindAsync(id);
         if (banner == null) return NotFound();
@@ -81,6 +79,14 @@ public class MaintenanceBannersController : ControllerBase
         _db.MaintenanceBanners.Remove(banner);
         await _db.SaveChangesAsync();
         return NoContent();
+    }
+
+    private static string? Validera(MaintenanceBannerRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.Message))         return "Meddelande krävs.";
+        if (!GiltigaMålgrupper.Contains(req.Audience))      return "Ogiltig målgrupp.";
+        if (req.EndUtc <= req.StartUtc)                     return "Sluttid måste vara efter starttid.";
+        return null;
     }
 
     private static object ToDto(MaintenanceBanner b) => new

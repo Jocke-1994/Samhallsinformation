@@ -73,7 +73,7 @@ function HomePage() {
   })
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="flex h-full bg-slate-50 dark:bg-slate-900">
       <Sidebar
         selectedShortName={selectedShortName}
         onSelectSource={setSelectedShortName}
@@ -207,11 +207,19 @@ function MaintenanceBanners() {
   )
 }
 
+// Stängs-nyckeln innehåller innehållet, inte bara id:t — annars skulle en
+// admin-redigering av ett redan stängt meddelandes text/tider aldrig synas
+// igen för den som redan stängt bort den ursprungliga texten.
+function bannerAvtryck(b: { message: string; startUtc: string; endUtc: string }): string {
+  return `${b.message}|${b.startUtc}|${b.endUtc}`
+}
+
 function EnMaintenanceBanner({ banner }: { banner: { id: string; message: string; startUtc: string; endUtc: string } }) {
   const dismissKey = MAINTENANCE_DISMISS_PREFIX + banner.id
-  const [dismissed, setDismissed] = useState(() => localStorage.getItem(dismissKey) === '1')
+  const avtryck = bannerAvtryck(banner)
+  const [dismissatAvtryck, setDismissatAvtryck] = useState(() => localStorage.getItem(dismissKey))
 
-  if (dismissed) return null
+  if (dismissatAvtryck === avtryck) return null
 
   return (
     <div className="bg-orange-600 px-6 py-2.5 flex items-center justify-between gap-3 shadow-md flex-wrap">
@@ -219,7 +227,7 @@ function EnMaintenanceBanner({ banner }: { banner: { id: string; message: string
         {banner.message} ({formatSvensktDatumTid(banner.startUtc)}–{formatSvensktDatumTid(banner.endUtc)})
       </span>
       <button
-        onClick={() => { localStorage.setItem(dismissKey, '1'); setDismissed(true) }}
+        onClick={() => { localStorage.setItem(dismissKey, avtryck); setDismissatAvtryck(avtryck) }}
         className="text-xs font-semibold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg transition-colors shrink-0"
       >
         Stäng
@@ -228,32 +236,35 @@ function EnMaintenanceBanner({ banner }: { banner: { id: string; message: string
   )
 }
 
-// En gemensam fixed wrapper som staplar alla toppbanderoller vertikalt
-// (flex-col) istället för att varje banderoll är fixed på egen hand — annars
-// hamnar de rakt ovanpå varandra på exakt samma yta och den som renderas
-// sist (senast i JSX) döljer alla tidigare, tyst.
+// Banderollstacken ligger i normalt dokumentflöde (inte fixed) ovanför en
+// h-full-yta, så den knuffar undan sidinnehållet istället för att lägga sig
+// ovanpå det — annars täcker den t.ex. "Samhällsinfo"-texten högst upp i
+// sidomenyn. De enskilda sidorna (HomePage m.fl.) är h-full, inte h-screen,
+// så de fyller exakt det som blir kvar under banderollerna.
 export default function App() {
   return (
-    <>
-      <div className="fixed top-0 left-0 right-0 z-[9999] flex flex-col">
+    <div className="h-dvh flex flex-col">
+      <div className="flex flex-col shrink-0">
         <ImpersonationBanner />
         <MaintenanceBanners />
         <EmailVerificationBanner />
       </div>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<OnboardingPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/profil" element={<ProfilePage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/om" element={<OmPage />} />
-        <Route path="/villkor" element={<VillkorPage />} />
-        <Route path="/uppdateringar" element={<UppdateringarPage />} />
-      </Routes>
+      <div className="flex-1 min-h-0">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<OnboardingPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/profil" element={<ProfilePage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/om" element={<OmPage />} />
+          <Route path="/villkor" element={<VillkorPage />} />
+          <Route path="/uppdateringar" element={<UppdateringarPage />} />
+        </Routes>
+      </div>
       <CookieConsent />
-    </>
+    </div>
   )
 }

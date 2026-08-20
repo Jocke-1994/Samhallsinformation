@@ -84,7 +84,7 @@ export default function UppdateringarPage() {
   const [latest, ...older] = UPDATES
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="flex h-full bg-slate-50 dark:bg-slate-900">
       <Sidebar
         selectedShortName={null}
         onSelectSource={() => {}}

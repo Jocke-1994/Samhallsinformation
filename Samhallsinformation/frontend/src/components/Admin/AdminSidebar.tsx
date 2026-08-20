@@ -61,7 +61,7 @@ export default function AdminSidebar({
         onClick={onClose}
       />
       <div className={`
-        w-64 h-screen bg-slate-900 flex flex-col shrink-0
+        w-64 h-full bg-slate-900 flex flex-col shrink-0
         fixed inset-y-0 left-0 z-50 transition-transform duration-200
         md:static md:translate-x-0 md:z-auto
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}

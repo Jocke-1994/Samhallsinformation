@@ -39,7 +39,7 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center px-4">
+      <div className="min-h-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center px-4">
         <div className="text-center">
           <p className="text-slate-600 dark:text-slate-300">Ogiltig återställningslänk.</p>
           <Link to="/login" className="text-violet-600 hover:text-violet-500 text-sm mt-2 inline-block">Tillbaka till inloggning</Link>
@@ -49,7 +49,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center px-4">
+    <div className="min-h-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
 
         <div className="text-center mb-8">
