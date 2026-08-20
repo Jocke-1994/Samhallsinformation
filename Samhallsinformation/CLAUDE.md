@@ -111,6 +111,35 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 36 — 2026-08-20
+**What was done:**
+- Sessionen inleddes med en avbruten föregående session — verifierade via `git status`/`git log` att inget arbete gått förlorat (working tree rent, senaste två commits redan på plats)
+- Startade lokal backend (`dotnet run`) och frontend (`npm run dev`) i bakgrunden på användarens begäran, för att kunna dubbelkolla driftbanderollen live
+- **Driftbanderollens text** (`App.tsx`): förstorad +2px och centrerad på begäran, itererad till en exakt `text-[18px]`
+- **UTC vs svensk tid-diskussion**: klargjorde att Sverige kör sommartid (CEST, UTC+2) i augusti — Railways "Sat 10:00–Sun 18:00 UTC" blir "lördag 12:00–söndag 20:00" svensk tid, inte samma klockslag
+- **Hittade och fixade en verklig UX-bugg i banderollen**, upptäckt av användaren via skärmdump: meddelandetexten fick en auto-tillagd tidsparentes `({startUtc}–{endUtc})` som visade banderollens VISNINGSFÖNSTER, inte den faktiska underhållstiden admin skrev i meddelandet — kunde motsäga adminens egen text (skedde i praktiken, olika datum). Parentesen borttagen; `startUtc`/`endUtc` styr fortfarande bara när banderollen syns, visas inte längre i texten (PR #490, commit `aea9d18`)
+- **Standardtext-knapp för underhållsmeddelanden**: ny "Använd standardtext (underhåll)"-knapp i `MaintenanceBannerAdmin.tsx` som genererar meddelandet från de redan ifyllda start-/sluttiderna i formuläret — förhindrar att texten hamnar i otakt med de riktiga tiderna. Diskuterade fler mallar för andra meddelandetyper, användaren ville avvakta ("vi har annat att prioritera") — bara underhåll byggt, men som en egen fristående funktion så fler mallar/knappar är enkla att lägga till senare
+- **Valfria UTC-omvandlingsfält**: två nya "UTC-start"/"UTC-slut (valfritt)"-fält i samma formulär som auto-räknar om till svensk lokal tid (DST-medveten, `isoTillDatetimeLocal`-mönstret återanvänt) och fyller i de befintliga lokala fälten — löser exakt det UTC/lokal-missförstånd som uppstod tidigare i sessionen. Diskuterade en generell tidszonsväljare (fler zoner än UTC), landade på att INTE bygga det — Railway är den enda kända UTC-källan idag, en dropdown för hypotetiska framtida zoner vore för tidigt (PR #490, commit `03452ae`)
+- **Lokalt admin-testkonto skapat och sparat i minnet**: `admin@dev.lokal` — databasen hade fem gamla admin-testkonton (`dev-admin@local.test`, `admin@test.se`, `mbtest_admin@test.se`, `mbtest_admin2@test.se`, `admin@lokal.se`) utan kända lösenord (bara hascharna kvar). Genererade ett nytt lösenord, seedade via `ADMIN_EMAIL`/`ADMIN_PASSWORD`-env-variabler, verifierade med en riktig inloggning (200 + giltig JWT). Sparat i `reference_lokal_admin_konto.md` i minnessystemet för återanvändning
+- **Playwright-skärmdumpsverifiering** (samma etablerade `npm install --no-save playwright`-mönster som tidigare sessioner): injicerade adminens JWT direkt i `localStorage` via `addInitScript`, navigerade till Feature flags-sidan i admin, öppnade "Nytt driftmeddelande"-formuläret, fyllde i UTC-tider och bekräftade visuellt att omräkningen, standardtexten och layouten (mörkt tema, ljusare bakgrundsruta för UTC-fälten) fungerade korrekt innan commit
+- PR #490 öppnad och mergad av användaren tillsammans med tre väntande Dependabot-PR:ar (eslint-plugin-react-refresh, globals, typescript-eslint). Lokal `main` synkad (`git pull`, 11 commits ifikapp), och sex lokalt mergade branches städade bort (`feat/maintenance-banner` + fyra äldre grenar från tidigare sessioner + en dokumentationsgren)
+
+**Problem och lösningar:**
+- Lokal backend kraschade med 500 på VARJE `/api/auth/*`-anrop (inklusive login) när `RESEND_API_KEY` saknades som miljövariabel — `AuthController` konstruerar `ResendEmailService` via DI oavsett endpoint, och konstruktorn kastar om nyckeln saknas. Löst genom att alltid sätta en dummy-nyckel (`RESEND_API_KEY=dummy-local-key`) vid lokal körning. Gav initialt en missvisande signal (401-liknande, faktiskt 500) när ett gissat lösenord testades — verifierades mot backend-loggen istället för att anta att lösenordet bara var fel
+- Adminens seed-logik (`Program.cs`) skapar bara ett konto om e-posten INTE redan finns — att sätta nya `ADMIN_EMAIL`/`ADMIN_PASSWORD` för ett redan existerande konto (`admin@lokal.se`) satte alltså inget nytt lösenord på det. Löst genom att skapa ett helt nytt konto (`admin@dev.lokal`) istället för att försöka återställa ett gammalt
+- Playwright-skriptets första körning fastnade (timeout) på att leta efter "Nytt meddelande"-knappen direkt på Översikt-sidan — Driftmeddelanden-sektionen ligger faktiskt under adminens "Feature flags"-sida (`AdminPage.tsx`), inte en egen synlig meny-post. Löst genom att navigera dit explicit innan interaktion, samma "verifiera mot faktisk DOM, gissa inte"-lärdom som tidigare sessioners Playwright-arbete
+
+**Etablerat mönster:**
+- En banderoll/meddelande-komponent som återanvänder samma `startUtc`/`endUtc`-fält både för att STYRA VISNING och för att GENERERA VISAD TEXT riskerar att visa två olika, motsägande tidsangivelser om admin medvetet sätter ett bredare visningsfönster än det faktiska händelsefönstret (t.ex. varna i förväg + bekräfta efteråt). Om ett fält har dubbla syften (styrning + visning): fråga om båda syftena verkligen ska dela exakt samma värde, eller om texten hellre ska vara helt fristående admin-skriven text
+- Ett formulär som kräver lokal tid men vars källdata ofta kommer som UTC (tredjepartsleverantörer som Railway) bör erbjuda en valfri, auto-omvandlande genväg istället för att lita på att admin räknar om för hand — bekräftat värdefullt genom att vi själva gissade fel en gång i den här sessionen innan fältet fanns
+- Ett nytt lokalt dev-only admin-konto (e-post + lösenord) hör hemma i minnessystemet (`reference_*`), inte bara i sessionsloggen — återanvänds direkt nästa session utan att behöva gissa mot gamla, okända testkontons hascher igen
+- Lokal backend-uppstart för det här projektet kräver konsekvent `RESEND_API_KEY` satt (vilket värde som helst) — annars kraschar HELA `/api/auth/*`-ytan, inte bara e-postutskicket. Redan känt sedan tidigare sessioner men värt att upprepa: sätt den alltid proaktivt vid lokal `dotnet run`, vänta inte på att en 500:a avslöjar det
+
+**Next session:**
+- Ingen specifik uppgift bestämd — sessionen avslutades med att PR #490 + Dependabot-PR:arna var mergade och `main` synkad. Näst-senaste öppna trådar från session 35 kvarstår oförändrade (registreringstester hotmail/gmail innan Logga in/Skapa konto-knapparna slås på igen, `kallor_polisen_filter`-flaggan medvetet fortsatt avstängd, m.m. — se Session 35 nedan)
+
+---
+
 ### Session 35 — 2026-08-19
 **What was done:**
 - **Reflektionssamtal innan kodning**: användaren bad om en tillbakablick på resan hittills (34 sessioner, live på Vercel+Railway+Resend) och min syn på nästa mål. Slutsats: tekniskt öppen för användare redan, väntar bara på två planerade registreringstester (hotmail/gmail) innan Logga in/Skapa konto-knapparna slås på igen — men användaren ville fixa polisfiltret innan dess.
