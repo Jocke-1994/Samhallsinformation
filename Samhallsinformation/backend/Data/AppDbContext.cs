@@ -33,6 +33,7 @@ public class AppDbContext : DbContext
     public DbSet<FeatureFlagOverride>        FeatureFlagOverrides      => Set<FeatureFlagOverride>();
     public DbSet<FaqItem>                    FaqItems                  => Set<FaqItem>();
     public DbSet<SiteSettings>               SiteSettings              => Set<SiteSettings>();
+    public DbSet<MaintenanceBanner>          MaintenanceBanners        => Set<MaintenanceBanner>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

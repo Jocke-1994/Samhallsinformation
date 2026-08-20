@@ -22,6 +22,7 @@ import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 import { useAuth } from './context/AuthContext'
 import { useFlags } from './context/FeatureFlagsContext'
 import { resendVerification } from './api/auth'
+import { fetchMaintenanceBanners } from './api/maintenanceBanners'
 import type { Source } from './types'
 
 function HomePage() {
@@ -71,7 +72,7 @@ function HomePage() {
   })
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="flex h-full bg-slate-50 dark:bg-slate-900">
       <Sidebar
         selectedShortName={selectedShortName}
         onSelectSource={setSelectedShortName}
@@ -103,7 +104,7 @@ function ImpersonationBanner() {
   if (!params.has('impersonating') || !namn) return null
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 px-6 py-2.5 flex items-center justify-between shadow-md">
+    <div className="bg-amber-500 px-6 py-2.5 flex items-center justify-between shadow-md">
       <div className="flex items-center gap-2.5">
         <span className="text-base">🎭</span>
         <span className="text-sm font-medium text-white">
@@ -150,7 +151,7 @@ function EmailVerificationBanner() {
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9998] bg-violet-600 px-6 py-2.5 flex items-center justify-between gap-3 shadow-md flex-wrap">
+    <div className="bg-violet-600 px-6 py-2.5 flex items-center justify-between gap-3 shadow-md flex-wrap">
       <span className="text-sm text-white">
         Bekräfta din e-postadress{email ? ` — vi har skickat en länk till ${email}` : ''}.
       </span>
@@ -173,25 +174,96 @@ function EmailVerificationBanner() {
   )
 }
 
-export default function App() {
+const MAINTENANCE_DISMISS_PREFIX = 'si_maintenance_dismissed_'
+
+// Global driftmeddelande-banderoll för planerade drifttillfällen (t.ex.
+// Railways underhållsfönster). Flera meddelanden kan vara aktiva samtidigt
+// (olika målgrupper, olika tidsfönster) — varje rad från backend renderas
+// som en egen banderoll, staplade i wrappern i App(). Visas/döljs
+// automatiskt utifrån Start/End + målgrupp, ingen manuell avstängning krävs
+// efteråt. Varje banderoll har sin egen stängs-nyckel (bundet till dess id),
+// så att stänga en inte påverkar någon annan.
+function MaintenanceBanners() {
+  const { isLoggedIn } = useAuth()
+  const { data: banners = [] } = useQuery({
+    queryKey: ['maintenance-banners'],
+    queryFn: fetchMaintenanceBanners,
+    staleTime: 5 * 60_000,
+  })
+
+  const nu = Date.now()
+  const aktiva = banners.filter(b => {
+    if (nu < new Date(b.startUtc).getTime() || nu > new Date(b.endUtc).getTime()) return false
+    if (b.audience === 'Besökare' && isLoggedIn)  return false
+    if (b.audience === 'Användare' && !isLoggedIn) return false
+    return true
+  })
+
   return (
     <>
-      <ImpersonationBanner />
-      <EmailVerificationBanner />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<OnboardingPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/profil" element={<ProfilePage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/om" element={<OmPage />} />
-        <Route path="/villkor" element={<VillkorPage />} />
-        <Route path="/uppdateringar" element={<UppdateringarPage />} />
-      </Routes>
-      <CookieConsent />
+      {aktiva.map(b => <EnMaintenanceBanner key={b.id} banner={b} />)}
     </>
+  )
+}
+
+// Stängs-nyckeln innehåller innehållet, inte bara id:t — annars skulle en
+// admin-redigering av ett redan stängt meddelandes text/tider aldrig synas
+// igen för den som redan stängt bort den ursprungliga texten.
+function bannerAvtryck(b: { message: string; startUtc: string; endUtc: string }): string {
+  return `${b.message}|${b.startUtc}|${b.endUtc}`
+}
+
+function EnMaintenanceBanner({ banner }: { banner: { id: string; message: string; startUtc: string; endUtc: string } }) {
+  const dismissKey = MAINTENANCE_DISMISS_PREFIX + banner.id
+  const avtryck = bannerAvtryck(banner)
+  const [dismissatAvtryck, setDismissatAvtryck] = useState(() => localStorage.getItem(dismissKey))
+
+  if (dismissatAvtryck === avtryck) return null
+
+  return (
+    <div className="bg-orange-600 px-6 py-2.5 flex items-center justify-between gap-3 shadow-md flex-wrap">
+      <span className="text-[18px] text-white flex-1 text-center">
+        {banner.message}
+      </span>
+      <button
+        onClick={() => { localStorage.setItem(dismissKey, avtryck); setDismissatAvtryck(avtryck) }}
+        className="text-xs font-semibold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg transition-colors shrink-0"
+      >
+        Stäng
+      </button>
+    </div>
+  )
+}
+
+// Banderollstacken ligger i normalt dokumentflöde (inte fixed) ovanför en
+// h-full-yta, så den knuffar undan sidinnehållet istället för att lägga sig
+// ovanpå det — annars täcker den t.ex. "Samhällsinfo"-texten högst upp i
+// sidomenyn. De enskilda sidorna (HomePage m.fl.) är h-full, inte h-screen,
+// så de fyller exakt det som blir kvar under banderollerna.
+export default function App() {
+  return (
+    <div className="h-dvh flex flex-col">
+      <div className="flex flex-col shrink-0">
+        <ImpersonationBanner />
+        <MaintenanceBanners />
+        <EmailVerificationBanner />
+      </div>
+      <div className="flex-1 min-h-0">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<OnboardingPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/profil" element={<ProfilePage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/om" element={<OmPage />} />
+          <Route path="/villkor" element={<VillkorPage />} />
+          <Route path="/uppdateringar" element={<UppdateringarPage />} />
+        </Routes>
+      </div>
+      <CookieConsent />
+    </div>
   )
 }
