@@ -79,6 +79,16 @@ function FormModal({ redigerar, onSpara, onStäng }: {
   const [start, setStart]           = useState(redigerar ? isoTillDatetimeLocal(redigerar.startUtc) : '')
   const [slut, setSlut]             = useState(redigerar ? isoTillDatetimeLocal(redigerar.endUtc) : '')
   const [åskådare, setÅskådare]     = useState<BannerÅskådare>(redigerar?.audience ?? 'Alla')
+  const [utcStart, setUtcStart]     = useState('')
+  const [utcSlut, setUtcSlut]       = useState('')
+
+  // Många leverantörers underhållsaviseringar (t.ex. Railway) anger UTC-tid.
+  // De här två fälten är bara ett omvandlingshjälpmedel — de sparas inte,
+  // de fyller bara i de riktiga lokala tid-fälten nedan.
+  function utcTillLokalt(utcDatetimeLocal: string): string {
+    if (!utcDatetimeLocal) return ''
+    return isoTillDatetimeLocal(`${utcDatetimeLocal}:00Z`)
+  }
 
   const kanSpara = meddelande.trim() !== '' && start !== '' && slut !== '' && new Date(slut) > new Date(start)
   const kanAnvändaStandardtext = start !== '' && slut !== '' && new Date(slut) > new Date(start)
@@ -124,6 +134,30 @@ function FormModal({ redigerar, onSpara, onStäng }: {
               placeholder="Vi gör en planerad tjänsteuppdatering — sajten kan vara tillfälligt otillgänglig."
               className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-xl px-3 py-3 border border-slate-100">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">UTC-start (valfritt)</label>
+              <input
+                type="datetime-local"
+                value={utcStart}
+                onChange={e => { setUtcStart(e.target.value); setStart(utcTillLokalt(e.target.value)) }}
+                className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 bg-white"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">UTC-slut (valfritt)</label>
+              <input
+                type="datetime-local"
+                value={utcSlut}
+                onChange={e => { setUtcSlut(e.target.value); setSlut(utcTillLokalt(e.target.value)) }}
+                className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 bg-white"
+              />
+            </div>
+            <p className="col-span-2 text-xs text-slate-400">
+              Fyll i om du har UTC-tider (t.ex. från Railway) — fälten nedan räknas om automatiskt till svensk tid.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
