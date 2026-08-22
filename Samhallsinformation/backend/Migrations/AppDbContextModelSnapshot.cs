@@ -23,6 +23,10 @@ namespace Samhallsinformation.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AktörTyp")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("AngraAnvandareId")
                         .HasColumnType("TEXT");
 
@@ -44,13 +48,31 @@ namespace Samhallsinformation.Migrations
                     b.Property<string>("AngraUndoAction")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Arkiverad")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Detalj")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Enhet")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GammaltVärde")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Ip")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NyttVärde")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Rubrik")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("Test")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("Tid")
                         .HasColumnType("TEXT");

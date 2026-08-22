@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
 using Samhallsinformation.Infrastructure.Auth;
@@ -127,6 +128,10 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 builder.Services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Aktivitetslogg (#491 wave 1) — behöver HttpContext för att fånga Vem/Ip/Enhet automatiskt
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IAktivitetsloggService, AktivitetsloggService>();
 
 // Background service
 builder.Services.AddHostedService<IngestorBackgroundService>();
@@ -857,6 +862,27 @@ using (var scope = app.Services.CreateScope())
 
                 INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
                 VALUES ('20260820072659_AddMaintenanceBanners', '10.0.11')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
+        // Breddar AdminActivityLogs till den generella aktivitetsloggen
+        // (#491 wave 1) — se Application/Aktivitetslogg/AktivitetsloggService.
+        // Befintliga rader backfillas AktörTyp='Admin' (de är alla
+        // Kontoåtgärd/Sparat-ångra, admin/support-initierade).
+        if (pendingMigrations.Contains("20260822101606_AddAktivitetsloggFields"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""AdminActivityLogs"" ADD COLUMN IF NOT EXISTS ""AktörTyp""     text NOT NULL DEFAULT 'Admin';
+                ALTER TABLE ""AdminActivityLogs"" ADD COLUMN IF NOT EXISTS ""Arkiverad""    boolean NOT NULL DEFAULT false;
+                ALTER TABLE ""AdminActivityLogs"" ADD COLUMN IF NOT EXISTS ""Test""         boolean NOT NULL DEFAULT false;
+                ALTER TABLE ""AdminActivityLogs"" ADD COLUMN IF NOT EXISTS ""Ip""           text;
+                ALTER TABLE ""AdminActivityLogs"" ADD COLUMN IF NOT EXISTS ""Enhet""        text;
+                ALTER TABLE ""AdminActivityLogs"" ADD COLUMN IF NOT EXISTS ""GammaltVärde"" text;
+                ALTER TABLE ""AdminActivityLogs"" ADD COLUMN IF NOT EXISTS ""NyttVärde""    text;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260822101606_AddAktivitetsloggFields', '10.0.11')
                 ON CONFLICT DO NOTHING;
             ");
         }
