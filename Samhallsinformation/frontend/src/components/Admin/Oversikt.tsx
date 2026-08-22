@@ -2,8 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import type { AdminSection } from './AdminSidebar'
 import { fetchAdminSources } from '../../api/sources'
 import { fetchAdminUsers } from '../../api/adminUsers'
-import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
+import { fetchAdminTickets } from '../../api/support'
+import { fetchAdminActivityLog } from '../../api/activityLog'
 import { deriveStatus, STATUS_DOT } from './Kallhantering'
+import { TYP_MÄRKE, TYP_IKON } from './Aktivitetslogg'
 
 interface StatKort {
   label:    string
@@ -12,17 +14,6 @@ interface StatKort {
   color:    string
   ikon:     string
   sektion?: AdminSection
-}
-
-interface HändelseRad {
-  tid:   string
-  typ:   string
-  text:  string
-  färg:  string
-}
-
-function ticketNr(t: AdminTicketListItemDto): string {
-  return `SUP-${String(t.ticketNumber).padStart(4, '0')}`
 }
 
 function formatTid(iso: string): string {
@@ -50,6 +41,13 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
     queryFn:  () => fetchAdminTickets(),
   })
 
+  // Filtrerad vy av den enhetliga aktivitetsloggen (#491 wave 1) — de 8
+  // senaste admin/system-händelserna, ingen egen härledning längre.
+  const { data: aktivitetslogg } = useQuery({
+    queryKey: ['admin-activity-log', 'oversikt'],
+    queryFn:  () => fetchAdminActivityLog({ gräns: 8 }),
+  })
+
   const aktivaKallor = sources.filter(s => s.isActive)
   const kallorMedFel  = aktivaKallor.filter(s => s.lastFetchError !== null)
   const systemhälsaProcent = aktivaKallor.length > 0
@@ -72,22 +70,7 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
     { label: 'Systemhälsa',     value: `${systemhälsaProcent}%`, sub: `${aktivaKallor.length - kallorMedFel.length}/${aktivaKallor.length} källor utan fel`, color: 'text-green-600', ikon: '✅', sektion: 'felsökning' },
   ]
 
-  // Slår ihop tre riktiga händelsekällor till ett flöde — ingen ingestor-
-  // körningslogg finns i backend än, så "System"-rader (schemalagd insamling
-  // slutförd) kan inte visas här ännu.
-  const senasteHändelser: HändelseRad[] = [
-    ...riktigaAnvändare.map((u): HändelseRad => ({
-      tid: u.createdAt, typ: 'Användare', text: `Ny registrering — ${u.email}`, färg: 'bg-violet-100 text-violet-700',
-    })),
-    ...aktivaÄrenden.map((t): HändelseRad => ({
-      tid: t.createdAt, typ: 'Ärende', text: `${ticketNr(t)} öppnat: "${t.subject}"`, färg: 'bg-amber-100 text-amber-700',
-    })),
-    ...kallorMedFel.filter(s => s.lastFetchedAt).map((s): HändelseRad => ({
-      tid: s.lastFetchedAt as string, typ: 'Källa', text: `${s.shortName} — ${s.lastFetchError}`, färg: 'bg-orange-100 text-orange-700',
-    })),
-  ]
-    .sort((a, b) => new Date(b.tid).getTime() - new Date(a.tid).getTime())
-    .slice(0, 8)
+  const senasteHändelser = aktivitetslogg?.rader ?? []
 
   return (
     <div className="flex flex-col gap-6">
@@ -123,16 +106,16 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
         <div className="lg:col-span-2 lg:row-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <h3 className="text-base font-semibold text-slate-900">Senaste händelser</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Nya registreringar, ärenden och källfel</p>
+            <p className="text-xs text-slate-400 mt-0.5">Filtrerad vy av aktivitetsloggen — de 8 senaste admin/system-händelserna</p>
           </div>
           <div className="divide-y divide-slate-50">
             {senasteHändelser.length === 0 ? (
               <p className="px-6 py-4 text-sm text-slate-400 text-center">Ingen aktivitet att visa.</p>
-            ) : senasteHändelser.map((h, i) => (
-              <div key={i} className="flex items-start gap-3 px-6 py-3">
+            ) : senasteHändelser.map(h => (
+              <div key={h.id} className="flex items-start gap-3 px-6 py-3">
                 <span className="text-xs text-slate-400 w-12 shrink-0 pt-0.5">{formatTid(h.tid)}</span>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${h.färg}`}>{h.typ}</span>
-                <p className="text-sm text-slate-700">{h.text}</p>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${TYP_MÄRKE[h.typ]}`}>{TYP_IKON[h.typ]} {h.typ}</span>
+                <p className="text-sm text-slate-700">{h.rubrik}</p>
               </div>
             ))}
           </div>

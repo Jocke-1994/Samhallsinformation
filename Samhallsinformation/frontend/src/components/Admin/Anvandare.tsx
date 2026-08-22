@@ -578,7 +578,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     await refetchSparat()
     if (handelse) {
       await createActivityLogEntry({
-        typ:     'Sparat: borttagen',
+        typ:     'Kontoåtgärd',
         rubrik:  `Tog bort sparad händelse från ${vald.namn}`,
         detalj:  `"${handelse.title}" (${handelse.sourceName}) borttagen från ${vald.namn}s konto.`,
         aktivVy,

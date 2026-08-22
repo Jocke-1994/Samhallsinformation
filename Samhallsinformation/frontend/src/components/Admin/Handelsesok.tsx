@@ -20,7 +20,7 @@ function BulkSparaKnapp({ handelser, användare, onKlar }: { handelser: AdminSea
       await Promise.all(handelser.map(async h => {
         await saveAdminUserEvent(anvandareId, h.id)
         await createActivityLogEntry({
-          typ:     'Sparat: tillagd',
+          typ:     'Kontoåtgärd',
           rubrik:  `Sparade händelse till ${anvandareNamn}`,
           detalj:  `"${h.title}" (${h.sourceName}) kopplad till ${anvandareNamn}s konto.`,
           aktivVy,

@@ -1,6 +1,19 @@
 import { adminFetch } from './adminFetch'
 
-export type KontoÅtgärdTyp = 'Sparat: tillagd' | 'Sparat: borttagen'
+export type AktörTyp = 'System' | 'Admin'
+
+export type LoggTyp =
+  | 'Ingestor'
+  | 'Notis'
+  | 'Fel'
+  | 'Kontoåtgärd'
+  | 'Konfiguration'
+  | 'Konto'
+  | 'Ärende'
+  | 'Push'
+  | 'Registrering'
+
+export type LoggStatus = 'OK' | 'Fel' | 'Varning'
 
 export interface SparadHandelseMini {
   eventId:     string
@@ -17,26 +30,64 @@ export interface ÅngraData {
 }
 
 export interface LoggPost {
-  id:         string
-  tid:        string
-  vem:        string
-  typ:        KontoÅtgärdTyp
-  rubrik:     string
-  detalj:     string
-  ångrad:     boolean
-  ångraData?: ÅngraData
+  id:            string
+  tid:           string
+  vem:           string
+  aktörTyp:      AktörTyp
+  typ:           LoggTyp
+  rubrik:        string
+  detalj:        string
+  status:        LoggStatus
+  ångrad:        boolean
+  ångraData?:    ÅngraData
+  ip?:           string | null
+  enhet?:        string | null
+  gammaltVärde?: string | null
+  nyttVärde?:    string | null
+  arkiverad:     boolean
+  test:          boolean
+}
+
+export interface ActivityLogSammanfattning {
+  ingestor:  number
+  fel:       number
+  varningar: number
+}
+
+export interface ActivityLogResponse {
+  rader:          LoggPost[]
+  totalt:         number
+  sammanfattning: ActivityLogSammanfattning
+}
+
+export interface FetchActivityLogParams {
+  aktörTyp?:       AktörTyp
+  typ?:            string
+  sök?:            string
+  från?:           string
+  till?:           string
+  gräns?:          number
 }
 
 interface CreateLogEntryRequest {
-  typ:        KontoÅtgärdTyp
+  typ:        'Kontoåtgärd'
   rubrik:     string
   detalj:     string
   aktivVy:    string
   ångraData?: ÅngraData
 }
 
-export async function fetchAdminActivityLog(): Promise<LoggPost[]> {
-  const res = await adminFetch('/api/admin/activity-log')
+export async function fetchAdminActivityLog(params?: FetchActivityLogParams): Promise<ActivityLogResponse> {
+  const query = new URLSearchParams()
+  if (params?.aktörTyp) query.set('aktörTyp', params.aktörTyp)
+  if (params?.typ)      query.set('typ', params.typ)
+  if (params?.sök)      query.set('sök', params.sök)
+  if (params?.från)     query.set('från', params.från)
+  if (params?.till)     query.set('till', params.till)
+  if (params?.gräns)    query.set('gräns', String(params.gräns))
+  const qs = query.toString()
+
+  const res = await adminFetch(`/api/admin/activity-log${qs ? `?${qs}` : ''}`)
   if (!res.ok) throw new Error(`fetchAdminActivityLog: ${res.status}`)
   return res.json()
 }
