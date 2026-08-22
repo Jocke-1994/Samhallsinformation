@@ -916,6 +916,18 @@ using (var scope = app.Services.CreateScope())
         ");
     }
 
+    // Normalisera AdminActivityLogs.Typ för gamla Sparat-rader (#491 wave 1):
+    // skrevs tidigare som "Sparat: tillagd"/"Sparat: borttagen" (se Anvandare.tsx/
+    // Handelsesok.tsx), men det nya enhetliga Typ-filtret i Aktivitetslogg
+    // förväntar sig "Kontoåtgärd" (Rubrik-texten beskriver redan tillagd/
+    // borttagen, ingen information går förlorad). Ren datauppdatering, inte
+    // schemaändring — idempotent (inga rader matchar längre efter första
+    // körningen), samma provider för både SQLite och PostgreSQL.
+    await db.Database.ExecuteSqlRawAsync(@"
+        UPDATE ""AdminActivityLogs"" SET ""Typ"" = 'Kontoåtgärd'
+        WHERE ""Typ"" IN ('Sparat: tillagd', 'Sparat: borttagen');
+    ");
+
     // Fix Sources.IsPublished — SQLite-migration skapar den som INTEGER, PostgreSQL behöver boolean
     if (databaseUrl != null || pgHost != null)
     {
