@@ -15,7 +15,6 @@ import CookieConsent from './components/CookieConsent/CookieConsent'
 import OmPage from './pages/OmPage'
 import VillkorPage from './pages/VillkorPage'
 import UppdateringarPage from './pages/UppdateringarPage'
-import WelcomeModal from './components/WelcomeModal/WelcomeModal'
 import { fetchSources } from './api/sources'
 import { fetchUserSources } from './api/userSources'
 import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
@@ -82,7 +81,6 @@ function HomePage() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      <WelcomeModal />
       <main {...swipeHandlers} className="flex-1 overflow-hidden select-none md:select-auto">
         <NewsFeed
           shortName={selectedShortName}
