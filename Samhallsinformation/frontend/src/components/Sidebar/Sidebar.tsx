@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTheme } from '../../context/ThemeContext'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useLocation, Link } from 'react-router'
@@ -58,6 +58,12 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
   const [feedbackÖppen, setFeedbackÖppen] = useState(false)
   const [sorteraAktiv, setSorteraAktiv] = useState(false)
   const [inställningarÖppen, setInställningarÖppen] = useState(true)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const w = window as Window & { gtag?: (...args: unknown[]) => void }
+    w.gtag?.('event', 'sidebar_open')
+  }, [isOpen])
 
   const { data: sources = [] } = useQuery<Source[]>({
     queryKey: ['sources'],
