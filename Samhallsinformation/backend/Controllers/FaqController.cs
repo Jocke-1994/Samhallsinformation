@@ -3,6 +3,7 @@ namespace Samhallsinformation.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -11,8 +12,13 @@ using Samhallsinformation.Models;
 public class FaqController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IAktivitetsloggService _aktivitetslogg;
 
-    public FaqController(AppDbContext db) => _db = db;
+    public FaqController(AppDbContext db, IAktivitetsloggService aktivitetslogg)
+    {
+        _db = db;
+        _aktivitetslogg = aktivitetslogg;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetFaq()
@@ -45,6 +51,9 @@ public class FaqController : ControllerBase
         };
         _db.FaqItems.Add(item);
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konfiguration,
+            $"FAQ skapad — {item.Fraga}", $"Kategori {item.Kategori}, {(item.Publicerad ? "publicerad" : "dold")}");
         return Ok(item);
     }
 
@@ -55,12 +64,20 @@ public class FaqController : ControllerBase
         var item = await _db.FaqItems.FindAsync(id);
         if (item == null) return NotFound();
 
+        var publiceradFörut = item.Publicerad;
+
         item.Kategori   = req.Kategori;
         item.Fraga      = req.Fraga;
         item.Svar       = req.Svar;
         item.Publicerad = req.Publicerad;
 
         await _db.SaveChangesAsync();
+        var detalj = publiceradFörut != req.Publicerad
+            ? (req.Publicerad ? "Publicerad" : "Dold")
+            : "Innehåll redigerat";
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konfiguration,
+            $"FAQ redigerad — {item.Fraga}", detalj);
         return Ok(item);
     }
 
@@ -71,8 +88,12 @@ public class FaqController : ControllerBase
         var item = await _db.FaqItems.FindAsync(id);
         if (item == null) return NotFound();
 
+        var fråga = item.Fraga;
         _db.FaqItems.Remove(item);
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konfiguration,
+            $"FAQ borttagen — {fråga}", "");
         return NoContent();
     }
 }

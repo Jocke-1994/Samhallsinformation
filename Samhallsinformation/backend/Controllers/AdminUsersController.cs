@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 
 [ApiController]
@@ -12,8 +13,13 @@ using Samhallsinformation.Data;
 public class AdminUsersController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IAktivitetsloggService _aktivitetslogg;
 
-    public AdminUsersController(AppDbContext db) => _db = db;
+    public AdminUsersController(AppDbContext db, IAktivitetsloggService aktivitetslogg)
+    {
+        _db = db;
+        _aktivitetslogg = aktivitetslogg;
+    }
 
     private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -72,6 +78,10 @@ public class AdminUsersController : ControllerBase
         user.SuspensionReminderNote = req.IsActive ? null : req.ReminderNote;
 
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konto,
+            req.IsActive ? $"Konto återaktiverat — {user.Name}" : $"Konto spärrat — {user.Name}",
+            req.IsActive ? "" : (req.Reason ?? "Ingen anledning angiven"));
         return Ok();
     }
 
@@ -104,6 +114,10 @@ public class AdminUsersController : ControllerBase
         user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24);
 
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konto,
+            $"Radering begärd — {user.Name}",
+            $"Verkställs {user.DeletionScheduledAt:yyyy-MM-dd HH:mm} UTC om ingen avbryter");
         return Ok(new { deletionScheduledAt = user.DeletionScheduledAt });
     }
 
@@ -123,6 +137,9 @@ public class AdminUsersController : ControllerBase
         user.SuspendedReason     = null;
 
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konto,
+            $"Radering ångrad — {user.Name}", "Kontot återaktiverat");
         return Ok();
     }
 

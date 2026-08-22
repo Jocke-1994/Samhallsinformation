@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
+using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -26,18 +27,20 @@ public class AuthServiceTests
         IPasswordHasher<User>? hasher = null,
         IEmailService? email = null,
         IGoogleTokenValidator? google = null,
-        IPushNotificationService? push = null)
+        IPushNotificationService? push = null,
+        IAktivitetsloggService? aktivitetslogg = null)
     {
         tokens ??= Substitute.For<ITokenService>();
         hasher ??= Substitute.For<IPasswordHasher<User>>();
         email  ??= Substitute.For<IEmailService>();
         google ??= Substitute.For<IGoogleTokenValidator>();
         push   ??= Substitute.For<IPushNotificationService>();
+        aktivitetslogg ??= Substitute.For<IAktivitetsloggService>();
 
         var config = Substitute.For<IConfiguration>();
         config["FRONTEND_URL"].Returns("https://test.local");
 
-        return new AuthService(db, tokens, hasher, email, google, push, config);
+        return new AuthService(db, tokens, hasher, email, google, push, aktivitetslogg, config);
     }
 
     [Fact]

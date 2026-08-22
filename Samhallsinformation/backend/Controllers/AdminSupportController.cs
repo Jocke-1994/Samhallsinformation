@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -13,8 +14,13 @@ using Samhallsinformation.Models;
 public class AdminSupportController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IAktivitetsloggService _aktivitetslogg;
 
-    public AdminSupportController(AppDbContext db) => _db = db;
+    public AdminSupportController(AppDbContext db, IAktivitetsloggService aktivitetslogg)
+    {
+        _db = db;
+        _aktivitetslogg = aktivitetslogg;
+    }
 
     private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -159,9 +165,14 @@ public class AdminSupportController : ControllerBase
         var ticket = await _db.SupportTickets.FindAsync(id);
         if (ticket == null) return NotFound();
 
+        var gammalStatus = ticket.Status;
         ticket.Status    = req.Status;
         ticket.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Ärende,
+            $"Ärendestatus ändrad — {ticket.Subject}", $"{gammalStatus} → {req.Status}",
+            gammaltVärde: gammalStatus, nyttVärde: req.Status);
         return Ok();
     }
 
@@ -174,6 +185,9 @@ public class AdminSupportController : ControllerBase
         ticket.IsArchived = req.Archived;
         ticket.UpdatedAt  = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Ärende,
+            req.Archived ? $"Ärende arkiverat — {ticket.Subject}" : $"Ärende återställt från arkiv — {ticket.Subject}", "");
         return Ok();
     }
 
@@ -186,6 +200,13 @@ public class AdminSupportController : ControllerBase
         ticket.AssignedToUserId = req.UserId;
         ticket.UpdatedAt        = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        var tilldeladNamn = req.UserId == null
+            ? "Otilldelad"
+            : (await _db.Users.FindAsync(req.UserId.Value))?.Name ?? "Okänd";
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Ärende,
+            $"Ärende tilldelat — {ticket.Subject}", tilldeladNamn);
         return Ok();
     }
 

@@ -3,6 +3,7 @@ namespace Samhallsinformation.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Ingestors;
 using Samhallsinformation.Models;
@@ -15,12 +16,14 @@ public class SourcesController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IEnumerable<IIngestor> _dedicatedIngestors;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IAktivitetsloggService _aktivitetslogg;
 
-    public SourcesController(AppDbContext db, IEnumerable<IIngestor> dedicatedIngestors, IHttpClientFactory httpClientFactory)
+    public SourcesController(AppDbContext db, IEnumerable<IIngestor> dedicatedIngestors, IHttpClientFactory httpClientFactory, IAktivitetsloggService aktivitetslogg)
     {
         _db = db;
         _dedicatedIngestors = dedicatedIngestors;
         _httpClientFactory = httpClientFactory;
+        _aktivitetslogg = aktivitetslogg;
     }
 
     [HttpGet]
@@ -78,6 +81,9 @@ public class SourcesController : ControllerBase
 
         _db.Sources.Add(source);
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konfiguration,
+            $"Källa skapad — {source.Name}", $"{source.ShortName}, typ {source.Type}");
         return Ok(source);
     }
 
@@ -88,14 +94,19 @@ public class SourcesController : ControllerBase
         var source = await _db.Sources.FindAsync(id);
         if (source == null) return NotFound();
 
-        if (req.Name     != null) source.Name     = req.Name;
-        if (req.ShortName!= null) source.ShortName= req.ShortName;
-        if (req.Url      != null) source.Url      = req.Url;
-        if (req.Category != null) source.Category = req.Category;
-        if (req.IsActive.HasValue)    source.IsActive    = req.IsActive.Value;
-        if (req.IsPublished.HasValue) source.IsPublished = req.IsPublished.Value;
+        var ändringar = new List<string>();
+        if (req.Name      != null && req.Name      != source.Name)      { ändringar.Add($"Namn: {source.Name} → {req.Name}"); source.Name = req.Name; }
+        if (req.ShortName != null && req.ShortName != source.ShortName) { ändringar.Add($"Kortnamn: {source.ShortName} → {req.ShortName}"); source.ShortName = req.ShortName; }
+        if (req.Url       != null && req.Url       != source.Url)       { ändringar.Add($"URL: {source.Url} → {req.Url}"); source.Url = req.Url; }
+        if (req.Category  != null && req.Category  != source.Category) { ändringar.Add($"Kategori: {source.Category} → {req.Category}"); source.Category = req.Category; }
+        if (req.IsActive.HasValue    && req.IsActive.Value    != source.IsActive)    { ändringar.Add($"Aktiv: {source.IsActive} → {req.IsActive.Value}"); source.IsActive = req.IsActive.Value; }
+        if (req.IsPublished.HasValue && req.IsPublished.Value != source.IsPublished) { ändringar.Add($"Publicerad: {source.IsPublished} → {req.IsPublished.Value}"); source.IsPublished = req.IsPublished.Value; }
 
         await _db.SaveChangesAsync();
+        if (ändringar.Count > 0)
+            await _aktivitetslogg.LogAsync(
+                AktörTyper.Admin, LoggTyper.Konfiguration,
+                $"Källa redigerad — {source.Name}", string.Join(", ", ändringar));
         return Ok(source);
     }
 
@@ -124,12 +135,18 @@ public class SourcesController : ControllerBase
             source.LastFetchedAt  = DateTime.UtcNow;
             source.LastFetchError = null;
             await _db.SaveChangesAsync();
+            await _aktivitetslogg.LogAsync(
+                AktörTyper.Admin, LoggTyper.Konfiguration,
+                $"Källa omsynkad — {source.Name}", $"{inserted} nya, {updated} uppdaterade");
             return Ok(new { inserted, updated });
         }
         catch (Exception ex)
         {
             source.LastFetchError = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
             await _db.SaveChangesAsync();
+            await _aktivitetslogg.LogAsync(
+                AktörTyper.Admin, LoggTyper.Konfiguration,
+                $"Källa omsynk misslyckades — {source.Name}", ex.Message);
             return BadRequest(new { error = ex.Message });
         }
     }
@@ -141,8 +158,12 @@ public class SourcesController : ControllerBase
         var source = await _db.Sources.FindAsync(id);
         if (source == null) return NotFound();
 
+        var namn = source.Name;
         _db.Sources.Remove(source);
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konfiguration,
+            $"Källa borttagen — {namn}", $"Id {id}");
         return NoContent();
     }
 }

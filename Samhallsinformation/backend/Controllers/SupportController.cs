@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 using Samhallsinformation.Services;
@@ -18,12 +19,14 @@ public class SupportController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IPushNotificationService _push;
     private readonly IConfiguration _config;
+    private readonly IAktivitetsloggService _aktivitetslogg;
 
-    public SupportController(AppDbContext db, IPushNotificationService push, IConfiguration config)
+    public SupportController(AppDbContext db, IPushNotificationService push, IConfiguration config, IAktivitetsloggService aktivitetslogg)
     {
         _db     = db;
         _push   = push;
         _config = config;
+        _aktivitetslogg = aktivitetslogg;
     }
 
     private Guid? CurrentUserId =>
@@ -70,6 +73,10 @@ public class SupportController : ControllerBase
         });
 
         await _db.SaveChangesAsync();
+
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.System, LoggTyper.Ärende,
+            $"Ärende öppnat — {ticket.Subject}", $"{ticket.ContactName ?? "Okänd"} — {ticket.Category}");
 
         try
         {

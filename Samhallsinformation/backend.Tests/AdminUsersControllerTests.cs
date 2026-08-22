@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
+using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Controllers;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -21,12 +23,12 @@ public class AdminUsersControllerTests
         return new AppDbContext(options);
     }
 
-    private static AdminUsersController NewController(AppDbContext db) => new(db)
+    private static AdminUsersController NewController(AppDbContext db) => new(db, Substitute.For<IAktivitetsloggService>())
     {
         ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) } },
     };
 
-    private static AdminUsersController NewController(AppDbContext db, Guid callerId) => new(db)
+    private static AdminUsersController NewController(AppDbContext db, Guid callerId) => new(db, Substitute.For<IAktivitetsloggService>())
     {
         ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(
             new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, callerId.ToString()) }, "TestAuth")) } },
