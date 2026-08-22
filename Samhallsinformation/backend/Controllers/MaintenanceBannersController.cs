@@ -3,6 +3,7 @@ namespace Samhallsinformation.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -17,10 +18,12 @@ public class MaintenanceBannersController : ControllerBase
     private static readonly string[] GiltigaMålgrupper = ["Alla", "Besökare", "Användare"];
 
     private readonly AppDbContext _db;
+    private readonly IAktivitetsloggService _aktivitetslogg;
 
-    public MaintenanceBannersController(AppDbContext db)
+    public MaintenanceBannersController(AppDbContext db, IAktivitetsloggService aktivitetslogg)
     {
         _db = db;
+        _aktivitetslogg = aktivitetslogg;
     }
 
     [HttpGet("api/maintenance-banners")]
@@ -49,6 +52,9 @@ public class MaintenanceBannersController : ControllerBase
         };
         _db.MaintenanceBanners.Add(banner);
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konfiguration,
+            "Driftmeddelande skapat", $"{banner.Audience}: {banner.Message}");
         return Ok(ToDto(banner));
     }
 
@@ -67,6 +73,9 @@ public class MaintenanceBannersController : ControllerBase
         banner.EndUtc   = req.EndUtc;
         banner.Audience = req.Audience;
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konfiguration,
+            "Driftmeddelande redigerat", $"{banner.Audience}: {banner.Message}");
         return Ok(ToDto(banner));
     }
 
@@ -76,8 +85,12 @@ public class MaintenanceBannersController : ControllerBase
     {
         var banner = await _db.MaintenanceBanners.FindAsync(id);
         if (banner == null) return NotFound();
+        var meddelande = banner.Message;
         _db.MaintenanceBanners.Remove(banner);
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konfiguration,
+            "Driftmeddelande borttaget", meddelande);
         return NoContent();
     }
 

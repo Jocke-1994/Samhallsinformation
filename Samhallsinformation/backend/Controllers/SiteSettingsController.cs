@@ -3,6 +3,7 @@ namespace Samhallsinformation.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -14,10 +15,12 @@ using Samhallsinformation.Models;
 public class SiteSettingsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IAktivitetsloggService _aktivitetslogg;
 
-    public SiteSettingsController(AppDbContext db)
+    public SiteSettingsController(AppDbContext db, IAktivitetsloggService aktivitetslogg)
     {
         _db = db;
+        _aktivitetslogg = aktivitetslogg;
     }
 
     [HttpGet("api/settings/site")]
@@ -33,9 +36,22 @@ public class SiteSettingsController : ControllerBase
     public async Task<IActionResult> UpdateSiteSettings([FromBody] UpdateSiteSettingsRequest req)
     {
         var settings = await GetOrCreateAsync();
-        if (req.ShowLoginButton.HasValue)    settings.ShowLoginButton    = req.ShowLoginButton.Value;
-        if (req.ShowRegisterButton.HasValue) settings.ShowRegisterButton = req.ShowRegisterButton.Value;
+        var ändringar = new List<string>();
+        if (req.ShowLoginButton.HasValue    && req.ShowLoginButton.Value    != settings.ShowLoginButton)
+        {
+            ändringar.Add($"Logga in-knapp: {settings.ShowLoginButton} → {req.ShowLoginButton.Value}");
+            settings.ShowLoginButton = req.ShowLoginButton.Value;
+        }
+        if (req.ShowRegisterButton.HasValue && req.ShowRegisterButton.Value != settings.ShowRegisterButton)
+        {
+            ändringar.Add($"Skapa konto-knapp: {settings.ShowRegisterButton} → {req.ShowRegisterButton.Value}");
+            settings.ShowRegisterButton = req.ShowRegisterButton.Value;
+        }
         await _db.SaveChangesAsync();
+        if (ändringar.Count > 0)
+            await _aktivitetslogg.LogAsync(
+                AktörTyper.Admin, LoggTyper.Konfiguration,
+                "SiteSettings ändrat", string.Join(", ", ändringar));
         return Ok(new { settings.ShowLoginButton, settings.ShowRegisterButton });
     }
 

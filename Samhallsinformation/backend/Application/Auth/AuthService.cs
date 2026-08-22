@@ -2,6 +2,7 @@ namespace Samhallsinformation.Application.Auth;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 using Samhallsinformation.Services;
@@ -16,9 +17,10 @@ public class AuthService : IAuthService
     private readonly IEmailService            _email;
     private readonly IGoogleTokenValidator    _google;
     private readonly IPushNotificationService _push;
+    private readonly IAktivitetsloggService   _aktivitetslogg;
     private readonly string                   _frontendUrl;
 
-    public AuthService(AppDbContext db, ITokenService tokens, IPasswordHasher<User> hasher, IEmailService email, IGoogleTokenValidator google, IPushNotificationService push, IConfiguration config)
+    public AuthService(AppDbContext db, ITokenService tokens, IPasswordHasher<User> hasher, IEmailService email, IGoogleTokenValidator google, IPushNotificationService push, IAktivitetsloggService aktivitetslogg, IConfiguration config)
     {
         _db          = db;
         _tokens      = tokens;
@@ -26,6 +28,7 @@ public class AuthService : IAuthService
         _email       = email;
         _google      = google;
         _push        = push;
+        _aktivitetslogg = aktivitetslogg;
         _frontendUrl = config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
     }
 
@@ -52,6 +55,7 @@ public class AuthService : IAuthService
 
         _ = _email.SendWelcomeAsync(user.Email, user.Name);
         await PushDispatcher.DispatchNewUserAsync(_db, _push, _frontendUrl, user);
+        await _aktivitetslogg.LogAsync(AktörTyper.System, LoggTyper.Registrering, "Ny registrering", $"{user.Name} — via Lösenord");
 
         var verificationToken = new EmailVerificationToken { UserId = user.Id };
         _db.EmailVerificationTokens.Add(verificationToken);
@@ -113,6 +117,7 @@ public class AuthService : IAuthService
 
             _ = _email.SendWelcomeAsync(user.Email, user.Name);
             await PushDispatcher.DispatchNewUserAsync(_db, _push, _frontendUrl, user);
+            await _aktivitetslogg.LogAsync(AktörTyper.System, LoggTyper.Registrering, "Ny registrering", $"{user.Name} — via Google");
         }
 
         if (!user.IsActive)

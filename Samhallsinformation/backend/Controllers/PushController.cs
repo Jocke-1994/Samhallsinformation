@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 using Samhallsinformation.Services;
@@ -15,12 +16,14 @@ public class PushController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IConfiguration _config;
     private readonly IPushNotificationService _push;
+    private readonly IAktivitetsloggService _aktivitetslogg;
 
-    public PushController(AppDbContext db, IConfiguration config, IPushNotificationService push)
+    public PushController(AppDbContext db, IConfiguration config, IPushNotificationService push, IAktivitetsloggService aktivitetslogg)
     {
         _db     = db;
         _config = config;
         _push   = push;
+        _aktivitetslogg = aktivitetslogg;
     }
 
     // Diagnostikverktyg (session 2026-08-14): admin fick inga push-notiser,
@@ -203,6 +206,9 @@ public class PushController : ControllerBase
     {
         var frontendUrl = _config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
         var sent = await PushDispatcher.DispatchNewVersionAsync(_db, _push, frontendUrl, req.Version, req.Message);
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Push,
+            $"Push skickad — Ny version {req.Version}", $"{sent} mottagare");
         return Ok(new { sent });
     }
 }
