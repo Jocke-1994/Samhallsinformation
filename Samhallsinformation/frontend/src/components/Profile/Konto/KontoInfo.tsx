@@ -1,16 +1,12 @@
 import { type FormField, inputClass } from './kontoTypes'
 
-export default function KontoInfo({ namn, epost, telefon, onUpdateNamn, onUpdateEpost, onUpdateTelefon, onSaveNamn, onSaveEpost, onSaveTelefon, onRemoveTelefon }: {
+export default function KontoInfo({ namn, epost, onUpdateNamn, onUpdateEpost, onSaveNamn, onSaveEpost }: {
   namn: FormField
   epost: FormField
-  telefon: FormField
   onUpdateNamn: (value: string) => void
   onUpdateEpost: (value: string) => void
-  onUpdateTelefon: (value: string) => void
   onSaveNamn: () => void
   onSaveEpost: () => void
-  onSaveTelefon: () => void
-  onRemoveTelefon: () => void
 }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -67,39 +63,6 @@ export default function KontoInfo({ namn, epost, telefon, onUpdateNamn, onUpdate
           </div>
           {epost.error && <p className="text-xs text-red-500 font-medium">{epost.error}</p>}
           {epost.saved && <p className="text-xs text-green-600 font-medium">✓ Sparat</p>}
-        </div>
-
-        {/* Telefonnummer */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Telefonnummer</label>
-          {telefon.saved && telefon.value ? (
-            <div className="flex gap-2">
-              <div className={`${inputClass} flex items-center text-slate-500`}>{telefon.value}</div>
-              <button
-                onClick={onRemoveTelefon}
-                className="px-4 py-3 bg-red-500 hover:bg-red-400 text-white text-sm font-semibold rounded-xl transition-all shrink-0"
-              >
-                Ta bort
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <input
-                type="tel"
-                value={telefon.value}
-                onChange={e => onUpdateTelefon(e.target.value)}
-                placeholder="+46 70 000 00 00"
-                className={inputClass}
-              />
-              <button
-                onClick={onSaveTelefon}
-                className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow shrink-0"
-              >
-                Lägg till
-              </button>
-            </div>
-          )}
-          {telefon.error && <p className="text-xs text-red-500 font-medium">{telefon.error}</p>}
         </div>
       </div>
     </div>

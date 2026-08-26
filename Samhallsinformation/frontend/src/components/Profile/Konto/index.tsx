@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router'
 import { makeField, type FormField } from './kontoTypes'
+import { fetchMe, updateMyProfile } from '../../../api/auth'
 import KontoInfo from './KontoInfo'
 import SparSamtycke from './SparSamtycke'
 import ThemeKort from './ThemeKort'
@@ -17,11 +18,11 @@ import { useAuth } from '../../../context/AuthContext'
 export default function Konto() {
   const [namn, setNamn] = useState<FormField>(makeField(''))
   const [epost, setEpost] = useState<FormField>(makeField(''))
-  const [telefon, setTelefon] = useState<FormField>(makeField(''))
+  const [laddningsfel, setLaddningsfel] = useState(false)
   const location = useLocation()
   const [highlightId, setHighlightId] = useState<string | null>(location.state?.highlightId ?? null)
   const flaggor = useFlags()
-  const { roll } = useAuth()
+  const { roll, setAccessToken } = useAuth()
   const ärSupportEllerAdmin = roll === 'Admin' || roll === 'Support'
 
   useEffect(() => {
@@ -30,14 +31,37 @@ export default function Konto() {
     return () => clearTimeout(timer)
   }, [highlightId])
 
+  useEffect(() => {
+    let avbruten = false
+    fetchMe()
+      .then(data => {
+        if (avbruten) return
+        setNamn({ value: data.name, saved: true, error: '' })
+        setEpost({ value: data.email, saved: true, error: '' })
+      })
+      .catch(() => { if (!avbruten) setLaddningsfel(true) })
+    return () => { avbruten = true }
+  }, [])
+
   function update(setter: React.Dispatch<React.SetStateAction<FormField>>, value: string) {
     setter(prev => ({ ...prev, value, saved: false, error: '' }))
   }
 
-  function save(setter: React.Dispatch<React.SetStateAction<FormField>>, validate?: () => string) {
-    const err = validate?.() ?? ''
+  async function saveField(
+    setter: React.Dispatch<React.SetStateAction<FormField>>,
+    value: string,
+    field: 'name' | 'email',
+    validate: () => string,
+  ) {
+    const err = validate()
     if (err) { setter(prev => ({ ...prev, error: err, saved: false })); return }
-    setter(prev => ({ ...prev, saved: true, error: '' }))
+    try {
+      const res = await updateMyProfile({ [field]: value })
+      setAccessToken(res.accessToken)
+      setter(prev => ({ ...prev, saved: true, error: '' }))
+    } catch (e) {
+      setter(prev => ({ ...prev, error: e instanceof Error ? e.message : 'Något gick fel.', saved: false }))
+    }
   }
 
   return (
@@ -58,6 +82,12 @@ export default function Konto() {
         </div>
       </div>
 
+      {laddningsfel && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+          Kunde inte ladda dina kontouppgifter. Prova att ladda om sidan.
+        </div>
+      )}
+
       {/* Tvåkolumns grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
@@ -66,18 +96,14 @@ export default function Konto() {
           {flaggor.konto_info && <KontoInfo
             namn={namn}
             epost={epost}
-            telefon={telefon}
             onUpdateNamn={value => update(setNamn, value)}
             onUpdateEpost={value => update(setEpost, value)}
-            onUpdateTelefon={value => update(setTelefon, value)}
-            onSaveNamn={() => save(setNamn, () => namn.value.trim() ? '' : 'Ange ett namn.')}
-            onSaveEpost={() => save(setEpost, () => epost.value.includes('@') ? '' : 'Ange en giltig e-postadress.')}
-            onSaveTelefon={() => save(setTelefon, () => telefon.value.trim() ? '' : 'Ange ett telefonnummer.')}
-            onRemoveTelefon={() => setTelefon(makeField(''))}
+            onSaveNamn={() => saveField(setNamn, namn.value.trim(), 'name', () => namn.value.trim() ? '' : 'Ange ett namn.')}
+            onSaveEpost={() => saveField(setEpost, epost.value.trim(), 'email', () => epost.value.includes('@') ? '' : 'Ange en giltig e-postadress.')}
           />}
           {flaggor.konto_losenord && <LösenordByte />}
           {flaggor.konto_visningsnamn && ärSupportEllerAdmin && <SupportVisningsnamnKort />}
-          {flaggor.konto_tvafaktor && <TvafaktorKort harTelefon={telefon.saved && !!telefon.value} />}
+          {flaggor.konto_tvafaktor && <TvafaktorKort harTelefon={false} />}
           {flaggor.konto_samtycke && <SparSamtycke />}
         </div>
 

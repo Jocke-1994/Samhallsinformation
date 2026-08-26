@@ -14,6 +14,7 @@ interface AuthContextType {
   logout: () => void
   byttVy: (vy: SystemRoll) => void
   refreshSession: () => Promise<void>
+  setAccessToken: (token: string) => void
 }
 
 interface TokenPair {
@@ -163,8 +164,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAktivVy(vy)
   }
 
+  // Uppdaterar bara access-token lokalt (t.ex. efter PUT /api/auth/me, som
+  // returnerar en färsk token med uppdaterade claims) — till skillnad från
+  // doRefresh görs inget nätverksanrop, så det finns ingen risk att en
+  // rate-limitad /api/auth/refresh-förfrågan loggar ut användaren mitt i en
+  // helt orelaterad sparning.
+  function setAccessToken(newToken: string) {
+    localStorage.setItem('si_token', newToken)
+    setToken(newToken)
+  }
+
   return (
-    <AuthContext.Provider value={{ isLoggedIn, roll, aktivVy, email, emailVerified, login, register, loginWithGoogle, logout, byttVy, refreshSession: doRefresh }}>
+    <AuthContext.Provider value={{ isLoggedIn, roll, aktivVy, email, emailVerified, login, register, loginWithGoogle, logout, byttVy, refreshSession: doRefresh, setAccessToken }}>
       {children}
     </AuthContext.Provider>
   )
