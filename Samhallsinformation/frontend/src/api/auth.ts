@@ -25,6 +25,18 @@ export async function updateDisplayName(displayName: string): Promise<void> {
   }
 }
 
+export async function updateMyProfile(fields: { name?: string; email?: string }): Promise<{ accessToken: string }> {
+  const res = await adminFetch('/api/auth/me', {
+    method: 'PUT',
+    body: JSON.stringify(fields),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `updateMyProfile: ${res.status}`)
+  }
+  return res.json()
+}
+
 export async function verifyEmail(token: string): Promise<void> {
   const res = await adminFetch('/api/auth/verify-email', {
     method: 'POST',

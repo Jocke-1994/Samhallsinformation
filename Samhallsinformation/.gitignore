@@ -4,3 +4,6 @@
 
 # Claude-specifika filer
 .claude/
+
+# Lokal IDE-konfiguration
+backend/Properties/launchSettings.json
