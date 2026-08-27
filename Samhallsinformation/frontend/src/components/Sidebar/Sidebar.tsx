@@ -39,6 +39,13 @@ const ROLL_CONFIG: Record<SystemRoll, { label: string; färg: string; initial: s
   'Användare': { label: 'Användare', färg: 'bg-violet-100 text-violet-700', initial: 'JO' },
 }
 
+function initialer(namn: string | null): string {
+  if (!namn) return '?'
+  const delar = namn.trim().split(/\s+/)
+  const bokstäver = delar.length >= 2 ? delar[0][0] + delar[1][0] : delar[0].slice(0, 2)
+  return bokstäver.toUpperCase()
+}
+
 const TILLÅTNA_VYN: Record<SystemRoll, SystemRoll[]> = {
   'Admin':     ['Admin', 'Support', 'Användare'],
   'Support':   ['Support', 'Användare'],
@@ -49,7 +56,7 @@ const TILLÅTNA_VYN: Record<SystemRoll, SystemRoll[]> = {
 export default function Sidebar({ selectedShortName, onSelectSource, viewMode, onSelectViewMode, unreadSourceIds, isOpen, onClose }: Props) {
   const navigate  = useNavigate()
   const location  = useLocation()
-  const { isLoggedIn, roll, aktivVy, logout, byttVy } = useAuth()
+  const { isLoggedIn, roll, aktivVy, name, logout, byttVy } = useAuth()
   const { theme, setTheme } = useTheme()
   const flaggor = useFlags()
   const synligaSektioner = PROFILE_SECTIONS.filter(s => isSektionSynlig(s.id, flaggor))
@@ -389,13 +396,15 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
               {/* Användarprofil */}
               <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-100">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                  JO
+                  {initialer(name)}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">Joakim Rehn</p>
-                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${aktivConfig.färg}`}>
-                    {aktivConfig.label}
-                  </span>
+                  <p className="text-sm font-semibold text-slate-900 truncate">{name ?? 'Ditt namn'}</p>
+                  {aktivVy !== 'Användare' && (
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${aktivConfig.färg}`}>
+                      {aktivConfig.label}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -443,7 +452,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
           `}
         >
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
-            {isLoggedIn ? 'JO' : '?'}
+            {isLoggedIn ? initialer(name) : '?'}
           </div>
           <div className="text-left min-w-0 flex-1">
             <p className="text-sm font-semibold text-slate-900 truncate">Min profil</p>

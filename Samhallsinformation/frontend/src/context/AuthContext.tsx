@@ -7,6 +7,7 @@ interface AuthContextType {
   roll: SystemRoll
   aktivVy: SystemRoll
   email: string | null
+  name: string | null
   emailVerified: boolean
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string, acceptedTerms: boolean) => Promise<void>
@@ -54,6 +55,11 @@ function parseEmail(token: string): string | null {
   return typeof email === 'string' ? email : null
 }
 
+function parseName(token: string): string | null {
+  const name = decodePayload(token)?.['name']
+  return typeof name === 'string' ? name : null
+}
+
 function parseEmailVerified(token: string): boolean {
   return decodePayload(token)?.['emailVerified'] === 'true'
 }
@@ -78,6 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isLoggedIn    = token !== null
   const roll          = token ? parseRole(token) : 'Användare'
   const email         = token ? parseEmail(token) : null
+  const name          = token ? parseName(token) : null
   const emailVerified = token ? parseEmailVerified(token) : false
 
   const [aktivVy, setAktivVy] = useState<SystemRoll>(
@@ -175,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, roll, aktivVy, email, emailVerified, login, register, loginWithGoogle, logout, byttVy, refreshSession: doRefresh, setAccessToken }}>
+    <AuthContext.Provider value={{ isLoggedIn, roll, aktivVy, email, name, emailVerified, login, register, loginWithGoogle, logout, byttVy, refreshSession: doRefresh, setAccessToken }}>
       {children}
     </AuthContext.Provider>
   )
