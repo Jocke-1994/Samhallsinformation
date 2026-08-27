@@ -7,3 +7,7 @@
 
 # Lokal IDE-konfiguration
 backend/Properties/launchSettings.json
+
+# Obsidians egna appinställningar + nedladdade plugin-binärer — regenereras
+# automatiskt när valvet öppnas, hör inte hemma i versionshantering
+docs/vault/.obsidian/
