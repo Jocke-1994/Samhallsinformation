@@ -63,7 +63,7 @@ const SUPPORT_SEKTIONER: AdminSection[] = ['anvandare', 'support-inbox', 'handel
 
 export default function AdminPage() {
   const navigate = useNavigate()
-  const { isLoggedIn, roll, aktivVy, byttVy } = useAuth()
+  const { isLoggedIn, roll, aktivVy, name, byttVy } = useAuth()
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -321,7 +321,7 @@ export default function AdminPage() {
                   <div className="fixed inset-0 z-30" onClick={() => setAvatarDropdown(false)} />
                   <div className="absolute right-0 top-11 z-40 w-52 bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden">
                     <div className="px-4 py-3 border-b border-slate-100">
-                      <p className="text-sm font-semibold text-slate-900">Joakim Rehn</p>
+                      <p className="text-sm font-semibold text-slate-900">{name ?? 'Ditt namn'}</p>
                       <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${ROLL_FÄRG[adminRoll]}`}>
                         {adminRoll}
                       </span>
