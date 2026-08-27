@@ -345,7 +345,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
 
         <div className="border-t border-slate-100 dark:border-slate-800 mt-2" />
 
-        {/* Om, Nyheter, Feedback — direkt under källorna */}
+        {/* Om, Nyheter, Hjälp & Feedback — direkt under källorna */}
         <div className="pt-2 flex flex-col gap-1">
           <Link
             to="/om"
@@ -376,7 +376,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h6m-6 8l4-4h7a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h2v4z" />
             </svg>
-            Feedback
+            Hjälp &amp; Feedback
           </button>
 
         </div>
