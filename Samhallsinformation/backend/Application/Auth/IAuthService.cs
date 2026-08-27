@@ -19,4 +19,14 @@ public interface IAuthService
     Task<AuthResult> VerifyEmailAsync(string token);
 
     Task<AuthResult> ResendVerificationAsync(Guid userId);
+
+    // Skickar en bekräftelselänk till den NYA adressen — kontots e-post byts
+    // inte förrän ConfirmEmailChangeAsync anropas med en giltig token. Kräver
+    // nuvarande lösenord för lösenordskonton — en redan inloggad session ska
+    // inte ensam räcka för att kapa kontot till en ny adress.
+    Task<AuthResult> RequestEmailChangeAsync(Guid userId, string newEmail, string? currentPassword);
+
+    Task<AuthResult> ConfirmEmailChangeAsync(string token);
+
+    Task<AuthResult> CancelEmailChangeAsync(Guid userId);
 }

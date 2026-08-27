@@ -250,6 +250,101 @@ public class AuthService : IAuthService
         return AuthResult.Ok("Ett nytt bekräftelsemejl har skickats");
     }
 
+    public async Task<AuthResult> RequestEmailChangeAsync(Guid userId, string newEmail, string? currentPassword)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+            return AuthResult.Fail(404, "Användaren hittades inte");
+
+        // En kapad session (stulen access-token) ska inte ensam räcka för att
+        // byta bort kontots e-post — kräv beviset man redan bad om vid inloggning.
+        // Google-konton har ingen (giltig) PasswordHash, se samma resonemang i
+        // LoginAsync — inget lösenord att be om där.
+        if (user.AuthProvider == "local")
+        {
+            if (string.IsNullOrEmpty(currentPassword))
+                return AuthResult.Fail(400, "Ange ditt lösenord för att bekräfta bytet");
+            if (_hasher.VerifyHashedPassword(user, user.PasswordHash, currentPassword) == PasswordVerificationResult.Failed)
+                return AuthResult.Fail(401, "Fel lösenord");
+        }
+
+        newEmail = newEmail.Trim();
+        if (string.IsNullOrWhiteSpace(newEmail) || !newEmail.Contains('@'))
+            return AuthResult.Fail(400, "Ange en giltig e-postadress");
+
+        if (newEmail == user.Email)
+            return AuthResult.Fail(400, "Det är redan din adress");
+
+        if (await _db.Users.AnyAsync(u => u.Email == newEmail && u.Id != userId))
+            return AuthResult.Fail(409, "E-postadressen används redan");
+
+        // En ny förfrågan ersätter en eventuell tidigare väntande — annars kan
+        // flera giltiga länkar peka mot olika adresser samtidigt.
+        var tidigare = await _db.EmailChangeTokens
+            .Where(t => t.UserId == userId && t.UsedAt == null)
+            .ToListAsync();
+        foreach (var t in tidigare) t.UsedAt = DateTime.UtcNow;
+
+        var changeToken = new EmailChangeToken { UserId = userId, NewEmail = newEmail };
+        _db.EmailChangeTokens.Add(changeToken);
+        await _db.SaveChangesAsync();
+
+        var confirmLink = $"{_frontendUrl}/confirm-email-change?token={changeToken.Token}";
+        _ = _email.SendEmailChangeConfirmationAsync(newEmail, user.Name, confirmLink);
+        _ = _email.SendEmailChangeNoticeAsync(user.Email, user.Name, newEmail);
+
+        return AuthResult.Ok("Ett bekräftelsemejl har skickats till den nya adressen");
+    }
+
+    public async Task<AuthResult> ConfirmEmailChangeAsync(string token)
+    {
+        var changeToken = await _db.EmailChangeTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.Token == token);
+
+        if (changeToken == null || changeToken.UsedAt != null || changeToken.ExpiresAt < DateTime.UtcNow)
+            return AuthResult.Fail(400, "Länken är ogiltig eller har gått ut");
+
+        // Adressen kan ha hunnit tas av någon annan sedan bekräftelsemejlet skickades.
+        if (await _db.Users.AnyAsync(u => u.Email == changeToken.NewEmail && u.Id != changeToken.UserId))
+            return AuthResult.Fail(409, "E-postadressen används redan");
+
+        var oldEmail = changeToken.User.Email;
+        changeToken.User.Email         = changeToken.NewEmail;
+        // Länken skickades till och klickades från den nya adressen — det
+        // beviset på ägarskap är detsamma som e-postverifiering vid registrering.
+        changeToken.User.EmailVerified = true;
+        changeToken.UsedAt             = DateTime.UtcNow;
+
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId = changeToken.UserId, Setting = "email", OldValue = oldEmail, NewValue = changeToken.NewEmail,
+        });
+
+        // Ett lyckat e-postbyte loggar ut alla enheter, även den som bekräftade
+        // — samma "signa ut allt vid en känslig kontoändring"-mönster som stora
+        // leverantörer använder. Tvingar en ny inloggning med den nya adressen.
+        var aktivaRefreshTokens = await _db.RefreshTokens
+            .Where(t => t.UserId == changeToken.UserId && t.RevokedAt == null)
+            .ToListAsync();
+        foreach (var rt in aktivaRefreshTokens) rt.RevokedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+        return AuthResult.Ok("E-postadressen är uppdaterad");
+    }
+
+    public async Task<AuthResult> CancelEmailChangeAsync(Guid userId)
+    {
+        var väntande = await _db.EmailChangeTokens
+            .Where(t => t.UserId == userId && t.UsedAt == null)
+            .ToListAsync();
+
+        foreach (var t in väntande) t.UsedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return AuthResult.Ok("Bytet är avbrutet");
+    }
+
     private async Task<AuthResult> IssueTokensAsync(User user)
     {
         var accessToken         = _tokens.GenerateAccessToken(user);

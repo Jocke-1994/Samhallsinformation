@@ -1,12 +1,20 @@
 import { type FormField, inputClass } from './kontoTypes'
 
-export default function KontoInfo({ namn, epost, onUpdateNamn, onUpdateEpost, onSaveNamn, onSaveEpost }: {
+export default function KontoInfo({
+  namn, epost, pendingEmail, requiresPassword, emailPassword,
+  onUpdateNamn, onUpdateEpost, onSaveNamn, onUpdateEmailPassword, onRequestEmailChange, onCancelEmailChange,
+}: {
   namn: FormField
   epost: FormField
+  pendingEmail: string | null
+  requiresPassword: boolean
+  emailPassword: string
   onUpdateNamn: (value: string) => void
   onUpdateEpost: (value: string) => void
   onSaveNamn: () => void
-  onSaveEpost: () => void
+  onUpdateEmailPassword: (value: string) => void
+  onRequestEmailChange: () => void
+  onCancelEmailChange: () => void
 }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -54,15 +62,49 @@ export default function KontoInfo({ namn, epost, onUpdateNamn, onUpdateEpost, on
               placeholder="din@epost.se"
               className={inputClass}
             />
-            <button
-              onClick={onSaveEpost}
-              className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow shrink-0"
-            >
-              Spara
-            </button>
+            {!requiresPassword && (
+              <button
+                onClick={onRequestEmailChange}
+                className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow shrink-0"
+              >
+                Skicka bekräftelse
+              </button>
+            )}
           </div>
+          {requiresPassword && (
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={emailPassword}
+                onChange={e => onUpdateEmailPassword(e.target.value)}
+                placeholder="Nuvarande lösenord"
+                className={inputClass}
+              />
+              <button
+                onClick={onRequestEmailChange}
+                className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow shrink-0"
+              >
+                Skicka bekräftelse
+              </button>
+            </div>
+          )}
+          {requiresPassword && (
+            <p className="text-xs text-slate-400">Vi ber om ditt lösenord för att bekräfta att det är du som byter e-post.</p>
+          )}
           {epost.error && <p className="text-xs text-red-500 font-medium">{epost.error}</p>}
-          {epost.saved && <p className="text-xs text-green-600 font-medium">✓ Sparat</p>}
+          {pendingEmail && (
+            <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <p className="text-xs text-amber-800">
+                📧 Bekräftelse skickad till <strong>{pendingEmail}</strong>. Klicka länken i mejlet för att slutföra bytet — giltig i 24 timmar. Din nuvarande adress fungerar som vanligt tills dess.
+              </p>
+              <button
+                onClick={onCancelEmailChange}
+                className="text-xs font-semibold text-amber-700 hover:text-amber-900 shrink-0"
+              >
+                Avbryt
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

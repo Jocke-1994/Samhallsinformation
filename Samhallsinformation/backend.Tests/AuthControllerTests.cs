@@ -60,7 +60,7 @@ public class AuthControllerTests
         await db.SaveChangesAsync();
 
         var controller = NewController(db, user.Id);
-        await controller.UpdateMe(new UpdateMeRequest(null, null, "Nova"));
+        await controller.UpdateMe(new UpdateMeRequest(null, "Nova"));
 
         var updated = await db.Users.FindAsync(user.Id);
         Assert.Equal("Nova", updated!.DisplayName);
@@ -76,7 +76,7 @@ public class AuthControllerTests
         await db.SaveChangesAsync();
 
         var controller = NewController(db, user.Id);
-        await controller.UpdateMe(new UpdateMeRequest(null, null, ""));
+        await controller.UpdateMe(new UpdateMeRequest(null, ""));
 
         var updated = await db.Users.FindAsync(user.Id);
         Assert.Null(updated!.DisplayName);
@@ -91,7 +91,7 @@ public class AuthControllerTests
         await db.SaveChangesAsync();
 
         var controller = NewController(db, user.Id);
-        var result = await controller.UpdateMe(new UpdateMeRequest(null, null, "Nova"));
+        var result = await controller.UpdateMe(new UpdateMeRequest(null, "Nova"));
 
         var status = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, status.StatusCode);

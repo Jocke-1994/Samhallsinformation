@@ -6,6 +6,8 @@ export interface MeDto {
   displayName:   string | null
   role:          string
   emailVerified: boolean
+  pendingEmail:  string | null
+  authProvider:  string
 }
 
 export async function fetchMe(): Promise<MeDto> {
@@ -25,7 +27,7 @@ export async function updateDisplayName(displayName: string): Promise<void> {
   }
 }
 
-export async function updateMyProfile(fields: { name?: string; email?: string }): Promise<{ accessToken: string }> {
+export async function updateMyProfile(fields: { name?: string }): Promise<{ accessToken: string }> {
   const res = await adminFetch('/api/auth/me', {
     method: 'PUT',
     body: JSON.stringify(fields),
@@ -35,6 +37,37 @@ export async function updateMyProfile(fields: { name?: string; email?: string })
     throw new Error((err as { error?: string }).error ?? `updateMyProfile: ${res.status}`)
   }
   return res.json()
+}
+
+// Byter inte e-posten direkt — skickar en bekräftelselänk till den nya
+// adressen. Kontots e-post ändras först när länken klickas (confirmEmailChange).
+// currentPassword krävs för lösenordskonton (kollas av backend) — en kapad
+// inloggad session ska inte ensam räcka för att byta bort kontots e-post.
+export async function requestEmailChange(newEmail: string, currentPassword?: string): Promise<void> {
+  const res = await adminFetch('/api/auth/me/email-change', {
+    method: 'POST',
+    body: JSON.stringify({ newEmail, currentPassword }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `requestEmailChange: ${res.status}`)
+  }
+}
+
+export async function cancelEmailChange(): Promise<void> {
+  const res = await adminFetch('/api/auth/me/email-change', { method: 'DELETE' })
+  if (!res.ok) throw new Error(`cancelEmailChange: ${res.status}`)
+}
+
+export async function confirmEmailChange(token: string): Promise<void> {
+  const res = await adminFetch('/api/auth/confirm-email-change', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `confirmEmailChange: ${res.status}`)
+  }
 }
 
 export async function verifyEmail(token: string): Promise<void> {

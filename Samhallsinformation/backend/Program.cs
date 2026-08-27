@@ -886,6 +886,32 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        // E-postbyte kräver nu en bekräftelselänk till den NYA adressen innan
+        // kontots e-post faktiskt ändras — se AuthController.RequestEmailChange.
+        if (pendingMigrations.Contains("20260827083220_AddEmailChangeToken"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""EmailChangeTokens"" (
+                    ""Id""        uuid NOT NULL,
+                    ""UserId""    uuid NOT NULL,
+                    ""NewEmail""  TEXT NOT NULL,
+                    ""Token""     TEXT NOT NULL,
+                    ""ExpiresAt"" timestamptz NOT NULL,
+                    ""UsedAt""    timestamptz,
+                    CONSTRAINT ""PK_EmailChangeTokens"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_EmailChangeTokens_Users_UserId""
+                        FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_EmailChangeTokens_Token""  ON ""EmailChangeTokens"" (""Token"");
+                CREATE INDEX IF NOT EXISTS        ""IX_EmailChangeTokens_UserId"" ON ""EmailChangeTokens"" (""UserId"");
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260827083220_AddEmailChangeToken', '10.0.11')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 

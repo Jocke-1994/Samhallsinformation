@@ -77,8 +77,37 @@ public class AuthController : ControllerBase
         var user   = await _db.Users.FindAsync(userId);
         if (user == null) return NotFound();
 
-        return Ok(new { user.Email, user.Name, user.DisplayName, user.Role, user.EmailVerified });
+        var pendingEmail = await _db.EmailChangeTokens
+            .Where(t => t.UserId == userId && t.UsedAt == null && t.ExpiresAt > DateTime.UtcNow)
+            .OrderByDescending(t => t.ExpiresAt)
+            .Select(t => t.NewEmail)
+            .FirstOrDefaultAsync();
+
+        return Ok(new { user.Email, user.Name, user.DisplayName, user.Role, user.EmailVerified, pendingEmail, user.AuthProvider });
     }
+
+    // Byte till en ny adress kräver att den bekräftas via en länk skickad till
+    // DEN NYA adressen — kontots e-post ändras inte här, bara vid ConfirmEmailChange.
+    // Kräver också nuvarande lösenord (lösenordskonton) — se AuthService.RequestEmailChangeAsync.
+    [HttpPost("me/email-change")]
+    [Authorize]
+    public async Task<IActionResult> RequestEmailChange([FromBody] RequestEmailChangeRequest req)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        return ToActionResult(await _auth.RequestEmailChangeAsync(userId, req.NewEmail, req.CurrentPassword));
+    }
+
+    [HttpDelete("me/email-change")]
+    [Authorize]
+    public async Task<IActionResult> CancelEmailChange()
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        return ToActionResult(await _auth.CancelEmailChangeAsync(userId));
+    }
+
+    [HttpPost("confirm-email-change")]
+    public async Task<IActionResult> ConfirmEmailChange([FromBody] ConfirmEmailChangeRequest req) =>
+        ToActionResult(await _auth.ConfirmEmailChangeAsync(req.Token));
 
     [HttpPut("me")]
     [Authorize]
@@ -95,35 +124,21 @@ public class AuthController : ControllerBase
             return StatusCode(403, new { error = "Bara admin eller support kan sätta ett visningsnamn." });
 
         var oldName        = user.Name;
-        var oldEmail       = user.Email;
         var oldDisplayName = user.DisplayName;
 
         if (!string.IsNullOrWhiteSpace(req.Name))  user.Name  = req.Name;
-        if (!string.IsNullOrWhiteSpace(req.Email))
-        {
-            if (await _db.Users.AnyAsync(u => u.Email == req.Email && u.Id != userId))
-                return Conflict(new { error = "E-postadressen används redan" });
-            // Ett byte till en ny adress kräver en ny bekräftelse — annars
-            // skulle en redan bekräftad status felaktigt gälla en adress
-            // vi aldrig verifierat att kontot faktiskt äger.
-            if (req.Email != user.Email) user.EmailVerified = false;
-            user.Email = req.Email;
-        }
+        // E-postbyte går via POST /api/auth/me/email-change (bekräftelselänk
+        // till den nya adressen) — den här endpointen rör aldrig user.Email.
         // Explicit null = rör inte fältet, tom sträng = nollställ tillbaka till "Support".
         if (req.DisplayName != null)
             user.DisplayName = string.IsNullOrWhiteSpace(req.DisplayName) ? null : req.DisplayName.Trim();
 
         if (user.Name != oldName)
             _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "name", OldValue = oldName, NewValue = user.Name });
-        if (user.Email != oldEmail)
-            _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "email", OldValue = oldEmail, NewValue = user.Email });
         if (user.DisplayName != oldDisplayName)
             _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "displayName", OldValue = oldDisplayName, NewValue = user.DisplayName });
 
         await _db.SaveChangesAsync();
-
-        if (user.Email != oldEmail)
-            _ = _auth.ResendVerificationAsync(userId);
 
         var accessToken = _tokens.GenerateAccessToken(user);
         return Ok(new { accessToken, name = user.Name, displayName = user.DisplayName, role = user.Role });
@@ -297,8 +312,10 @@ public record LoginRequest(string Email, string Password);
 public record RegisterRequest(string Name, string Email, string Password, bool AcceptedTerms);
 public record GoogleLoginRequest(string IdToken, bool AcceptedTerms);
 public record RefreshRequest(string RefreshToken);
-public record UpdateMeRequest(string? Name, string? Email, string? DisplayName = null);
+public record UpdateMeRequest(string? Name, string? DisplayName = null);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);
 public record VerifyEmailRequest(string Token);
+public record RequestEmailChangeRequest(string NewEmail, string? CurrentPassword = null);
+public record ConfirmEmailChangeRequest(string Token);

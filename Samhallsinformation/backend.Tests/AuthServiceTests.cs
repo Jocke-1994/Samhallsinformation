@@ -192,6 +192,222 @@ public class AuthServiceTests
         await email.DidNotReceive().SendEmailVerificationAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
+    private static IPasswordHasher<User> CorrectPasswordHasher(User user, string correctPassword)
+    {
+        var hasher = Substitute.For<IPasswordHasher<User>>();
+        hasher.VerifyHashedPassword(user, user.PasswordHash, correctPassword).Returns(PasswordVerificationResult.Success);
+        return hasher;
+    }
+
+    [Fact]
+    public async Task RequestEmailChangeAsync_ValidNewEmail_CreatesTokenAndSendsBothEmails()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "hashed" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var email = Substitute.For<IEmailService>();
+        var service = NewService(db, hasher: CorrectPasswordHasher(user, "correct-pw"), email: email);
+
+        var result = await service.RequestEmailChangeAsync(user.Id, "ny@example.com", "correct-pw");
+
+        Assert.True(result.Success);
+        Assert.Single(db.EmailChangeTokens);
+        Assert.Equal("ny@example.com", (await db.EmailChangeTokens.SingleAsync()).NewEmail);
+        // E-posten på kontot ändras inte förrän länken bekräftas.
+        Assert.Equal("ada@example.com", (await db.Users.FindAsync(user.Id))!.Email);
+        await email.Received(1).SendEmailChangeConfirmationAsync("ny@example.com", "Ada", Arg.Is<string>(s => s.Contains("https://test.local/confirm-email-change?token=")));
+        await email.Received(1).SendEmailChangeNoticeAsync("ada@example.com", "Ada", "ny@example.com");
+    }
+
+    [Fact]
+    public async Task RequestEmailChangeAsync_WrongPassword_ReturnsUnauthorized()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "hashed" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = NewService(db, hasher: CorrectPasswordHasher(user, "correct-pw"));
+
+        var result = await service.RequestEmailChangeAsync(user.Id, "ny@example.com", "fel-lösenord");
+
+        Assert.False(result.Success);
+        Assert.Equal(401, result.StatusCode);
+        Assert.Empty(db.EmailChangeTokens);
+    }
+
+    [Fact]
+    public async Task RequestEmailChangeAsync_MissingPassword_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "hashed" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = NewService(db);
+
+        var result = await service.RequestEmailChangeAsync(user.Id, "ny@example.com", null);
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.Empty(db.EmailChangeTokens);
+    }
+
+    [Fact]
+    public async Task RequestEmailChangeAsync_GoogleAccount_SkipsPasswordCheck()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", AuthProvider = "google" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var hasher = Substitute.For<IPasswordHasher<User>>();
+        var service = NewService(db, hasher: hasher);
+
+        var result = await service.RequestEmailChangeAsync(user.Id, "ny@example.com", null);
+
+        Assert.True(result.Success);
+        Assert.Single(db.EmailChangeTokens);
+        hasher.DidNotReceive().VerifyHashedPassword(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task RequestEmailChangeAsync_AlreadyTakenEmail_ReturnsConflict()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "hashed" };
+        db.Users.Add(user);
+        db.Users.Add(new User { Name = "Björn", Email = "upptagen@example.com", PasswordHash = "x" });
+        await db.SaveChangesAsync();
+
+        var service = NewService(db, hasher: CorrectPasswordHasher(user, "correct-pw"));
+
+        var result = await service.RequestEmailChangeAsync(user.Id, "upptagen@example.com", "correct-pw");
+
+        Assert.False(result.Success);
+        Assert.Equal(409, result.StatusCode);
+        Assert.Empty(db.EmailChangeTokens);
+    }
+
+    [Fact]
+    public async Task RequestEmailChangeAsync_NewRequestSupersedesOlderPendingToken()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "hashed" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = NewService(db, hasher: CorrectPasswordHasher(user, "correct-pw"));
+
+        await service.RequestEmailChangeAsync(user.Id, "forsta@example.com", "correct-pw");
+        var forstaToken = await db.EmailChangeTokens.SingleAsync();
+        await service.RequestEmailChangeAsync(user.Id, "andra@example.com", "correct-pw");
+
+        Assert.Equal(2, await db.EmailChangeTokens.CountAsync());
+        Assert.NotNull((await db.EmailChangeTokens.FindAsync(forstaToken.Id))!.UsedAt);
+        Assert.Null((await db.EmailChangeTokens.SingleAsync(t => t.NewEmail == "andra@example.com")).UsedAt);
+    }
+
+    [Fact]
+    public async Task ConfirmEmailChangeAsync_ValidToken_SwapsEmailAndMarksVerified()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x", EmailVerified = false };
+        db.Users.Add(user);
+        var token = new EmailChangeToken { UserId = user.Id, NewEmail = "ny@example.com" };
+        db.EmailChangeTokens.Add(token);
+        await db.SaveChangesAsync();
+
+        var service = NewService(db);
+
+        var result = await service.ConfirmEmailChangeAsync(token.Token);
+
+        Assert.True(result.Success);
+        var updated = await db.Users.FindAsync(user.Id);
+        Assert.Equal("ny@example.com", updated!.Email);
+        Assert.True(updated.EmailVerified);
+        Assert.NotNull((await db.EmailChangeTokens.FindAsync(token.Id))!.UsedAt);
+        Assert.Contains(db.UserSettingAuditLogs, l => l.Setting == "email" && l.OldValue == "ada@example.com" && l.NewValue == "ny@example.com");
+    }
+
+    [Fact]
+    public async Task ConfirmEmailChangeAsync_ValidToken_RevokesAllActiveRefreshTokens()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        var token = new EmailChangeToken { UserId = user.Id, NewEmail = "ny@example.com" };
+        db.EmailChangeTokens.Add(token);
+        db.RefreshTokens.Add(new RefreshToken { UserId = user.Id, TokenHash = "aktiv-hash", ExpiresAt = DateTime.UtcNow.AddDays(1) });
+        db.RefreshTokens.Add(new RefreshToken { UserId = user.Id, TokenHash = "redan-utloggad-hash", ExpiresAt = DateTime.UtcNow.AddDays(1), RevokedAt = DateTime.UtcNow.AddMinutes(-5) });
+        await db.SaveChangesAsync();
+
+        var service = NewService(db);
+
+        await service.ConfirmEmailChangeAsync(token.Token);
+
+        Assert.All(db.RefreshTokens, rt => Assert.NotNull(rt.RevokedAt));
+    }
+
+    [Fact]
+    public async Task ConfirmEmailChangeAsync_ExpiredToken_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        db.EmailChangeTokens.Add(new EmailChangeToken { UserId = user.Id, NewEmail = "ny@example.com", ExpiresAt = DateTime.UtcNow.AddHours(-1) });
+        await db.SaveChangesAsync();
+        var token = await db.EmailChangeTokens.FirstAsync();
+
+        var service = NewService(db);
+
+        var result = await service.ConfirmEmailChangeAsync(token.Token);
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.Equal("ada@example.com", (await db.Users.FindAsync(user.Id))!.Email);
+    }
+
+    [Fact]
+    public async Task ConfirmEmailChangeAsync_EmailTakenSinceRequest_ReturnsConflict()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        db.Users.Add(new User { Name = "Björn", Email = "ny@example.com", PasswordHash = "x" });
+        var token = new EmailChangeToken { UserId = user.Id, NewEmail = "ny@example.com" };
+        db.EmailChangeTokens.Add(token);
+        await db.SaveChangesAsync();
+
+        var service = NewService(db);
+
+        var result = await service.ConfirmEmailChangeAsync(token.Token);
+
+        Assert.False(result.Success);
+        Assert.Equal(409, result.StatusCode);
+        Assert.Equal("ada@example.com", (await db.Users.FindAsync(user.Id))!.Email);
+    }
+
+    [Fact]
+    public async Task CancelEmailChangeAsync_MarksPendingTokensUsed()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        var token = new EmailChangeToken { UserId = user.Id, NewEmail = "ny@example.com" };
+        db.EmailChangeTokens.Add(token);
+        await db.SaveChangesAsync();
+
+        var service = NewService(db);
+
+        var result = await service.CancelEmailChangeAsync(user.Id);
+
+        Assert.True(result.Success);
+        Assert.NotNull((await db.EmailChangeTokens.FindAsync(token.Id))!.UsedAt);
+    }
+
     [Fact]
     public async Task RegisterAsync_DuplicateEmail_ReturnsConflict()
     {

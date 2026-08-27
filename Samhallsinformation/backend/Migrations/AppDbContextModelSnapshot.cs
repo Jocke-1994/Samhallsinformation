@@ -154,6 +154,39 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("Events");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.EmailChangeToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NewEmail")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("EmailChangeTokens");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.EmailVerificationToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1054,6 +1087,17 @@ namespace Samhallsinformation.Migrations
                         .IsUnique();
 
                     b.ToTable("UserSourcePreferences");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.EmailChangeToken", b =>
+                {
+                    b.HasOne("Samhallsinformation.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Samhallsinformation.Models.EmailVerificationToken", b =>
