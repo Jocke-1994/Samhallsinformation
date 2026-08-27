@@ -408,6 +408,17 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
                 </div>
               </div>
 
+              {/* Inställningar & konto — det knappens egen undertext lovar,
+                  men som saknades helt innan: ingen annan yta i appen
+                  länkade till /profil. */}
+              <Link
+                to="/profil"
+                onClick={() => { setDropdownÖppen(false); onClose() }}
+                className="block w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-100"
+              >
+                Inställningar &amp; konto
+              </Link>
+
               {/* Rollväljare — visas bara om man har fler alternativ */}
               {vynAttVälja.length > 0 && (
                 <div className="px-3 py-2 border-b border-slate-100">
