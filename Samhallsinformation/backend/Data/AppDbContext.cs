@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<NotificationDeliveryLog>    NotificationDeliveryLogs  => Set<NotificationDeliveryLog>();
     public DbSet<PasswordResetToken>         PasswordResetTokens       => Set<PasswordResetToken>();
     public DbSet<EmailVerificationToken>     EmailVerificationTokens   => Set<EmailVerificationToken>();
+    public DbSet<EmailChangeToken>           EmailChangeTokens         => Set<EmailChangeToken>();
     public DbSet<RefreshToken>               RefreshTokens             => Set<RefreshToken>();
     public DbSet<PolisenBevakning>           PolisenBevakningar        => Set<PolisenBevakning>();
     public DbSet<UserSavedEvent>             UserSavedEvents           => Set<UserSavedEvent>();
@@ -136,6 +137,14 @@ public class AppDbContext : DbContext
         });
 
         modelBuilder.Entity<EmailVerificationToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => e.UserId);
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmailChangeToken>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Token).IsUnique();

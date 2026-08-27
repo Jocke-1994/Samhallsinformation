@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router'
 import { makeField, type FormField } from './kontoTypes'
-import { fetchMe, updateMyProfile } from '../../../api/auth'
+import { fetchMe, updateMyProfile, requestEmailChange, cancelEmailChange } from '../../../api/auth'
 import KontoInfo from './KontoInfo'
 import SparSamtycke from './SparSamtycke'
 import ThemeKort from './ThemeKort'
@@ -18,6 +18,12 @@ import { useAuth } from '../../../context/AuthContext'
 export default function Konto() {
   const [namn, setNamn] = useState<FormField>(makeField(''))
   const [epost, setEpost] = useState<FormField>(makeField(''))
+  // Kontots FAKTISKA, bekräftade adress — skild från epost.value (inmatningsfältets
+  // innehåll) eftersom ett e-postbyte inte slår igenom förrän länken i mejlet klickas.
+  const [accountEmail, setAccountEmail] = useState('')
+  const [authProvider, setAuthProvider] = useState('local')
+  const [emailPassword, setEmailPassword] = useState('')
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null)
   const [laddningsfel, setLaddningsfel] = useState(false)
   const location = useLocation()
   const [highlightId, setHighlightId] = useState<string | null>(location.state?.highlightId ?? null)
@@ -38,6 +44,9 @@ export default function Konto() {
         if (avbruten) return
         setNamn({ value: data.name, saved: true, error: '' })
         setEpost({ value: data.email, saved: true, error: '' })
+        setAccountEmail(data.email)
+        setAuthProvider(data.authProvider)
+        setPendingEmail(data.pendingEmail)
       })
       .catch(() => { if (!avbruten) setLaddningsfel(true) })
     return () => { avbruten = true }
@@ -50,7 +59,7 @@ export default function Konto() {
   async function saveField(
     setter: React.Dispatch<React.SetStateAction<FormField>>,
     value: string,
-    field: 'name' | 'email',
+    field: 'name',
     validate: () => string,
   ) {
     const err = validate()
@@ -61,6 +70,35 @@ export default function Konto() {
       setter(prev => ({ ...prev, saved: true, error: '' }))
     } catch (e) {
       setter(prev => ({ ...prev, error: e instanceof Error ? e.message : 'Något gick fel.', saved: false }))
+    }
+  }
+
+  async function handleRequestEmailChange() {
+    const value = epost.value.trim()
+    if (!value.includes('@')) {
+      setEpost(prev => ({ ...prev, error: 'Ange en giltig e-postadress.', saved: false }))
+      return
+    }
+    if (authProvider === 'local' && !emailPassword) {
+      setEpost(prev => ({ ...prev, error: 'Ange ditt lösenord för att bekräfta bytet.', saved: false }))
+      return
+    }
+    try {
+      await requestEmailChange(value, emailPassword || undefined)
+      setPendingEmail(value)
+      setEmailPassword('')
+      setEpost(prev => ({ ...prev, error: '' }))
+    } catch (e) {
+      setEpost(prev => ({ ...prev, error: e instanceof Error ? e.message : 'Något gick fel.', saved: false }))
+    }
+  }
+
+  async function handleCancelEmailChange() {
+    try {
+      await cancelEmailChange()
+      setPendingEmail(null)
+    } catch {
+      // Ingen synlig feedback behövs — bannern ligger kvar och avbryt går att prova igen.
     }
   }
 
@@ -77,7 +115,7 @@ export default function Konto() {
             {namn.value || 'Ditt namn'}
           </p>
           <p className="text-violet-200 text-sm mt-0.5">
-            {epost.value || 'din@epost.se'}
+            {accountEmail || 'din@epost.se'}
           </p>
         </div>
       </div>
@@ -96,10 +134,15 @@ export default function Konto() {
           {flaggor.konto_info && <KontoInfo
             namn={namn}
             epost={epost}
+            pendingEmail={pendingEmail}
+            requiresPassword={authProvider === 'local'}
+            emailPassword={emailPassword}
             onUpdateNamn={value => update(setNamn, value)}
             onUpdateEpost={value => update(setEpost, value)}
             onSaveNamn={() => saveField(setNamn, namn.value.trim(), 'name', () => namn.value.trim() ? '' : 'Ange ett namn.')}
-            onSaveEpost={() => saveField(setEpost, epost.value.trim(), 'email', () => epost.value.includes('@') ? '' : 'Ange en giltig e-postadress.')}
+            onUpdateEmailPassword={setEmailPassword}
+            onRequestEmailChange={handleRequestEmailChange}
+            onCancelEmailChange={handleCancelEmailChange}
           />}
           {flaggor.konto_losenord && <LösenordByte />}
           {flaggor.konto_visningsnamn && ärSupportEllerAdmin && <SupportVisningsnamnKort />}

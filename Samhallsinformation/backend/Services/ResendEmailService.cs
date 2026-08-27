@@ -55,6 +55,41 @@ public class ResendEmailService : IEmailService
         await SendAsync(_fromNoreply, toEmail, "Bekräfta din e-postadress", html);
     }
 
+    public async Task SendEmailChangeConfirmationAsync(string toNewEmail, string toName, string confirmLink)
+    {
+        var html = $"""
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
+              <h2 style="color:#7c3aed;margin-bottom:8px">Bekräfta din nya e-postadress</h2>
+              <p style="color:#334155">Hej {toName},</p>
+              <p style="color:#334155">Vi fick en förfrågan om att byta e-postadressen på ditt Samhällsinformation-konto till den här adressen. Klicka på knappen nedan för att bekräfta bytet.</p>
+              <a href="{confirmLink}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
+                Bekräfta ny e-postadress
+              </a>
+              <p style="color:#64748b;font-size:13px">Länken är giltig i 24 timmar. Din nuvarande adress fortsätter fungera som vanligt tills du klickar. Om du inte begärde det här kan du ignorera mejlet.</p>
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+              <p style="color:#94a3b8;font-size:12px">Samhällsinformation &mdash; opartisk myndighetsinformation</p>
+            </div>
+            """;
+
+        await SendAsync(_fromNoreply, toNewEmail, "Bekräfta din nya e-postadress", html);
+    }
+
+    public async Task SendEmailChangeNoticeAsync(string toOldEmail, string toName, string newEmail)
+    {
+        var html = $"""
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
+              <h2 style="color:#7c3aed;margin-bottom:8px">Din e-postadress håller på att bytas</h2>
+              <p style="color:#334155">Hej {toName},</p>
+              <p style="color:#334155">Någon har begärt att byta e-postadressen på ditt Samhällsinformation-konto till <strong>{newEmail}</strong>. Bytet slår inte igenom förrän den nya adressen bekräftas.</p>
+              <p style="color:#334155">Var det inte du som gjorde det här? Logga in och kontrollera ditt konto, eller kontakta oss.</p>
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+              <p style="color:#94a3b8;font-size:12px">Samhällsinformation &mdash; opartisk myndighetsinformation</p>
+            </div>
+            """;
+
+        await SendAsync(_fromNoreply, toOldEmail, "Din e-postadress håller på att bytas", html);
+    }
+
     public async Task SendWelcomeAsync(string toEmail, string toName)
     {
         var html = $"""
