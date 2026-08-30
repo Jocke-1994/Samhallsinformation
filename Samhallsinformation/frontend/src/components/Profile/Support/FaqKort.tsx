@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { FaqKategori } from '../../../types'
 import { fetchFaq } from '../../../api/faq'
 import { useFlags } from '../../../context/FeatureFlagsContext'
-import { isSektionSynlig } from '../../../lib/featureFlags'
+import { isSektionSynlig, type FlagKey } from '../../../lib/featureFlags'
 
 const FAQ_KATEGORIER: FaqKategori[] = ['Notifieringar', 'Mina källor', 'Konto', 'Uppdateringar']
 
@@ -25,10 +25,15 @@ export default function FaqKort() {
 
   const synligaKategorier = FAQ_KATEGORIER.filter(kat => isSektionSynlig(KATEGORI_SEKTION[kat], flaggor))
 
-  const { data: publicerade = [] } = useQuery({
+  const { data: hämtade = [] } = useQuery({
     queryKey: ['faq'],
     queryFn:  fetchFaq,
   })
+
+  // En fråga kopplad till en avstängd flagga döljs helt, oavsett Publicerad —
+  // annars ligger t.ex. en beskrivning av en funktion kvar synlig efter att
+  // funktionen själv stängts av (hände med de gamla mail/SMS-FAQ-posterna).
+  const publicerade = hämtade.filter(item => !item.flagKey || flaggor[item.flagKey as FlagKey])
 
   const söktrim = sökning.trim().toLowerCase()
 
