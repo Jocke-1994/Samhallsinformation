@@ -6,6 +6,7 @@ import PrenumerationsKlocka from './PrenumerationsKlocka'
 import { useAuth } from '../../context/AuthContext'
 import { useSavedEvents } from '../../context/SavedEventsContext'
 import { useFlags } from '../../context/FeatureFlagsContext'
+import { checkEventLinkStatus } from '../../api/events'
 
 interface Props {
   event: CanonicalEvent
@@ -63,6 +64,7 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
   const flaggor = useFlags()
   const { sparade, toggleSparad } = useSavedEvents()
   const [expanded, setExpanded] = useState(false)
+  const [länkStatus, setLänkStatus] = useState<'unknown' | 'checking' | 'dead'>('unknown')
   const ärSparad = sparade.has(event.id)
   const cfg = SEVERITY_CONFIG[event.severity]
 
@@ -80,6 +82,20 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
   function handleToggle() {
     if (!isRead) markAsRead(event.id)
     setExpanded(prev => !prev)
+  }
+
+  // Reaktiv koll — bara vid faktiskt klick, ingen bakgrundsbevakning av
+  // länkar. En misslyckad koll mot vår egen backend antar "levande" (fail
+  // open), så ett nätverksglapp aldrig blockerar en i övrigt fungerande länk.
+  async function handleLäsMer() {
+    setLänkStatus('checking')
+    const alive = await checkEventLinkStatus(event.id)
+    if (alive) {
+      window.open(event.url, '_blank', 'noopener,noreferrer')
+      setLänkStatus('unknown')
+    } else {
+      setLänkStatus('dead')
+    }
   }
 
   return (
@@ -155,14 +171,24 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
       {expanded && (
         <div className="px-4 pb-4 pt-3 border-t border-slate-100 dark:border-slate-700">
           <EventContent content={event.content} />
-          <a
-            href={event.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-500 transition-colors"
-          >
-            {event.url.includes('trafikinformation') ? 'Se trafikläget hos Trafikverket' : 'Läs mer hos källan'} →
-          </a>
+          {länkStatus === 'dead' ? (
+            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400 dark:text-slate-500">
+              <span>⚠️ Originalsidan finns inte längre hos {sourceName ?? 'källan'} — sammandraget ovan är vad vi sparade.</span>
+              <a href={event.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-500 dark:hover:text-slate-300 shrink-0">
+                Försök öppna ändå
+              </a>
+            </div>
+          ) : (
+            <button
+              onClick={handleLäsMer}
+              disabled={länkStatus === 'checking'}
+              className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-500 transition-colors disabled:opacity-50"
+            >
+              {länkStatus === 'checking'
+                ? 'Kollar länken…'
+                : `${event.url.includes('trafikinformation') ? 'Se trafikläget hos Trafikverket' : 'Läs mer hos källan'} →`}
+            </button>
+          )}
         </div>
       )}
     </div>
