@@ -56,6 +56,12 @@ public class IngestorBackgroundService : BackgroundService
         var dedicated = scope.ServiceProvider.GetRequiredService<IEnumerable<IIngestor>>().ToList();
         var frontendUrl = _config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
 
+        // En delad tidsstämpel för hela cykeln, satt en gång — inte
+        // IngestorRunLog.RunAt:s egen DateTime.UtcNow-default per rad. Låter
+        // AdminActivityLogController gruppera alla källors rader från samma
+        // cykel till EN aktivitetsloggrad istället för en per källa.
+        var cycleStart = DateTime.UtcNow;
+
         var dedicatedIds = dedicated.Select(i => i.Source.Id).ToHashSet();
 
         var genericSources = await db.Sources
@@ -84,7 +90,7 @@ public class IngestorBackgroundService : BackgroundService
                     dbSource.LastFetchError = null;
                 }
 
-                db.IngestorRunLogs.Add(new IngestorRunLog { SourceId = sourceId, Success = true, EventsInserted = inserted });
+                db.IngestorRunLogs.Add(new IngestorRunLog { SourceId = sourceId, RunAt = cycleStart, Success = true, EventsInserted = inserted });
 
                 await db.SaveChangesAsync(ct);
 
@@ -109,7 +115,7 @@ public class IngestorBackgroundService : BackgroundService
                     if (dbSource != null)
                         dbSource.LastFetchError = felmeddelande;
 
-                    db.IngestorRunLogs.Add(new IngestorRunLog { SourceId = sourceId, Success = false, ErrorMessage = felmeddelande });
+                    db.IngestorRunLogs.Add(new IngestorRunLog { SourceId = sourceId, RunAt = cycleStart, Success = false, ErrorMessage = felmeddelande });
 
                     await db.SaveChangesAsync(ct);
                 }

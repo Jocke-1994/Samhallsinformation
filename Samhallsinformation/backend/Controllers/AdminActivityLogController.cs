@@ -70,9 +70,23 @@ public class AdminActivityLogController : ControllerBase
         if (till != null) ingestorQuery = ingestorQuery.Where(l => l.RunAt <= till);
 
         var ingestorRader = await ingestorQuery.OrderByDescending(l => l.RunAt).Take(MaxFönster).ToListAsync();
-        var sourceNames   = await _db.Sources.ToDictionaryAsync(s => s.Id, s => s.ShortName);
+        // Fullständigt Name, inte ShortName — flera källor delar medvetet
+        // ShortName för sidomenyns gruppering (t.ex. "Polisen" och "Polisen
+        // Efterlysningar" delar "Polisen"), vilket gör en ingestor-radrubrik
+        // som "Polisen misslyckades" tvetydig om man inte vet vilket av de
+        // två flödena som faktiskt är trasigt.
+        var sourceNames   = await _db.Sources.ToDictionaryAsync(s => s.Id, s => s.Name);
         var aktuellaFel   = await _db.Sources.Where(s => s.LastFetchError != null).Select(s => s.Id).ToListAsync();
-        var ingestorDtosAlla = ingestorRader.Select(r => IngestorTillDto(r, sourceNames, aktuellaFel)).ToList();
+
+        // En rad per ingestor-CYKEL, inte en rad per källa — annars fyller en
+        // enda 5-minuterskörning (8+ källor) hela "Senaste händelser" på
+        // Översikt (visar bara 8 rader totalt) utan att en enda riktig
+        // admin/system-händelse syns. RunAt är en delad tidsstämpel per cykel
+        // sedan IngestorBackgroundService satte den explicit (se där).
+        var ingestorDtosAlla = ingestorRader
+            .GroupBy(r => r.RunAt)
+            .Select(g => IngestorCykelTillDto(g.Key, g.ToList(), sourceNames, aktuellaFel))
+            .ToList();
 
         var ingestorMedI = string.IsNullOrWhiteSpace(aktörTyp) || aktörTyp == AktörTyper.System
             ? ingestorDtosAlla
@@ -152,20 +166,58 @@ public class AdminActivityLogController : ControllerBase
         p.Ip, p.Enhet, p.GammaltVärde, p.NyttVärde, p.Arkiverad, p.Test
     );
 
-    // Ingestor-körningar (IngestorRunLog) mappas till samma radform som
-    // AdminActivityLog-poster — en lyckad retry (samma källa senare OK igen)
-    // visas som Varning, inte Fel, eftersom felet självläkte (samma
-    // "Kvarstår"/"OK vid retry"-logik som AdminIngestorLogController.GetRecent).
-    private static LoggPostDto IngestorTillDto(IngestorRunLog r, Dictionary<int, string> sourceNames, List<int> aktuellaFel)
+    // En hel ingestor-cykel (alla källor som kördes i samma
+    // IngestorBackgroundService-tick, delad RunAt) mappas till EN rad —
+    // tidigare en rad per källa, vilket dränkte riktig admin/system-aktivitet
+    // i rutinmässiga "Ingestor-körning — X"-rader så fort fler än en källa
+    // fanns. En lyckad retry (samma källa senare OK igen) räknas som Varning,
+    // inte Fel, om felet självläkt (samma "Kvarstår"/"OK vid retry"-logik som
+    // AdminIngestorLogController.GetRecent).
+    private static LoggPostDto IngestorCykelTillDto(
+        DateTime runAt, List<IngestorRunLog> rader, Dictionary<int, string> sourceNames, List<int> aktuellaFel)
     {
-        var sourceName = sourceNames.GetValueOrDefault(r.SourceId, "Okänd källa");
-        var typ    = r.Success ? LoggTyper.Ingestor : LoggTyper.Fel;
-        var rubrik = r.Success ? $"Ingestor-körning — {sourceName}" : $"Fel — {sourceName}";
-        var detalj = r.Success ? $"{r.EventsInserted} nya händelser hämtade" : (r.ErrorMessage ?? "Okänt fel");
-        var status = r.Success ? "OK" : (aktuellaFel.Contains(r.SourceId) ? "Fel" : "Varning");
+        string Namn(int sourceId) => sourceNames.GetValueOrDefault(sourceId, "Okänd källa");
+
+        var uppdaterade = rader
+            .Where(r => r.Success && r.EventsInserted > 0)
+            .Select(r => $"{Namn(r.SourceId)} (+{r.EventsInserted})")
+            .ToList();
+        var misslyckade = rader.Where(r => !r.Success).ToList();
+
+        // Uppdateringarna är huvudsaken och leder alltid raden — ett fel är en
+        // kort flagga på SLUTET, inte tvärtom. Annars leder en enda kroniskt
+        // trasig källa varenda rad med "X misslyckades" för evigt och begraver
+        // riktiga uppdateringar i en bisats (upptäckt via en skärmdump: en rad
+        // med "Polisen (+151)" såg ut som ett rent fel eftersom en helt annan,
+        // redan trasig källa råkade misslyckas i samma cykel).
+        // Radar aldrig upp namnen på fler än en trasig källa i rubriken — blir
+        // för långt och klipps mitt i ett namn i den smala Översikts-widgeten.
+        // Namnen finns redan i Detalj (klicka för att öppna raden), samma
+        // expanderbara mönster som Aktivitetslogg redan använder.
+        var rubrikDelar = new List<string> { uppdaterade.Count > 0 ? string.Join(", ", uppdaterade) : "inga nya händelser" };
+        if (misslyckade.Count > 0)
+        {
+            rubrikDelar.Add(misslyckade.Count == 1
+                ? $"{Namn(misslyckade[0].SourceId)} misslyckades"
+                : $"{misslyckade.Count} källor misslyckades");
+        }
+        var rubrik = $"Ingestor-körning — {string.Join(" · ", rubrikDelar)}";
+
+        var detaljDelar = new List<string>
+        {
+            uppdaterade.Count > 0 ? $"Uppdaterade: {string.Join(", ", uppdaterade)}" : "Inga nya händelser i denna körning",
+        };
+        if (misslyckade.Count > 0)
+        {
+            detaljDelar.Add("Fel: " + string.Join(", ", misslyckade.Select(r => $"{Namn(r.SourceId)} ({r.ErrorMessage ?? "okänt fel"})")));
+        }
+
+        var någotFortfarandeTrasigt = misslyckade.Any(r => aktuellaFel.Contains(r.SourceId));
+        var status = misslyckade.Count == 0 ? "OK" : (någotFortfarandeTrasigt ? "Fel" : "Varning");
+        var typ    = misslyckade.Count == 0 ? LoggTyper.Ingestor : LoggTyper.Fel;
 
         return new LoggPostDto(
-            r.Id, r.RunAt, AktörTyper.System, AktörTyper.System, typ, rubrik, detalj, status, false, null,
+            rader[0].Id, runAt, AktörTyper.System, AktörTyper.System, typ, rubrik, string.Join(" · ", detaljDelar), status, false, null,
             null, null, null, null, false, false);
     }
 }
