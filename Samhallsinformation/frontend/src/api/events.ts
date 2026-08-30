@@ -232,3 +232,15 @@ export async function fetchEvents(params: FetchEventsParams = {}): Promise<Event
   if (!res.ok) throw new Error(`fetchEvents: ${res.status}`)
   return res.json()
 }
+
+export async function checkEventLinkStatus(eventId: string): Promise<boolean> {
+  if (USE_MOCK) return true
+  try {
+    const res = await fetch(`${API_BASE}/api/events/${eventId}/link-status`)
+    if (!res.ok) return true // okänt fel i kollen — anta levande, hellre än att blockera ett fungerande klick
+    const data: { alive: boolean } = await res.json()
+    return data.alive
+  } catch {
+    return true
+  }
+}

@@ -8,6 +8,7 @@ import {
   fetchAdminUserPolisenBevakningar, fetchAdminUserNotificationLog, fetchAdminUserSettingLog, type AdminUserDto,
 } from '../../api/adminUsers'
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
+import { checkEventLinkStatus } from '../../api/events'
 import type { PendingNotis } from '../../types/adminNotis'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
@@ -589,6 +590,20 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     enabled:  !!vald,
   })
 
+  const [dödaLänkar, setDödaLänkar] = useState<Set<string>>(new Set())
+  const [kollarLänk, setKollarLänk] = useState<string | null>(null)
+
+  async function öppnaSparad(h: { eventId: string; url: string }) {
+    setKollarLänk(h.eventId)
+    const alive = await checkEventLinkStatus(h.eventId)
+    setKollarLänk(null)
+    if (alive) {
+      window.open(h.url, '_blank', 'noopener,noreferrer')
+    } else {
+      setDödaLänkar(prev => new Set(prev).add(h.eventId))
+    }
+  }
+
   async function taBortSparad(eventId: string) {
     if (!vald) return
     const handelse = sparadeHändelser.find(h => h.eventId === eventId)
@@ -1005,7 +1020,22 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                       {sparadeHändelser.map(h => (
                         <div key={h.eventId} className="flex items-start justify-between gap-2 text-sm">
                           <div className="min-w-0">
-                            <p className="text-slate-700 truncate">{h.title}</p>
+                            {dödaLänkar.has(h.eventId) ? (
+                              <>
+                                <p className="text-slate-500 truncate">{h.title}</p>
+                                <p className="text-xs text-amber-600">⚠️ Sidan finns inte längre hos källan —{' '}
+                                  <a href={h.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-700">öppna ändå</a>
+                                </p>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => öppnaSparad(h)}
+                                disabled={kollarLänk === h.eventId}
+                                className="text-slate-700 hover:text-violet-600 hover:underline truncate block text-left disabled:opacity-50"
+                              >
+                                {kollarLänk === h.eventId ? 'Kollar länken…' : h.title}
+                              </button>
+                            )}
                             <p className="text-xs text-slate-400">{h.sourceName} · sparad {new Date(h.savedAt).toLocaleDateString('sv-SE')}</p>
                           </div>
                           <button

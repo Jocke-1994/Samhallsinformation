@@ -104,6 +104,7 @@ public class AdminUserDetailsController : ControllerBase
             {
                 EventId     = s.EventId,
                 Title       = e.Title,
+                Url         = e.Url,
                 SourceName  = src != null ? src.ShortName : "Okänd källa",
                 PublishedAt = e.PublishedAt,
                 SavedAt     = s.SavedAt,

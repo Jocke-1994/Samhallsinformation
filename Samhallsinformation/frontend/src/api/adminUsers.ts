@@ -50,6 +50,7 @@ export interface AdminNotificationLogDto {
 export interface AdminSavedEventDto {
   eventId:     string
   title:       string
+  url:         string
   sourceName:  string
   publishedAt: string
   savedAt:     string
