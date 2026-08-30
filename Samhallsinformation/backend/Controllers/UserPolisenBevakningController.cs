@@ -51,6 +51,11 @@ public class UserPolisenBevakningController : ControllerBase
             OmradenJson    = req.Omraden    == null ? null : JsonSerializer.Serialize(req.Omraden),
         };
         _db.PolisenBevakningar.Add(bevakning);
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId = userId, Setting = "polisen_bevakning_skapad", OldValue = null,
+            NewValue = $"{req.Kategorier?.Count ?? 0} kategorier, {req.Omraden?.Count ?? 0} områden", ChangedBy = "user",
+        });
         await _db.SaveChangesAsync();
 
         return Ok(ToDto(bevakning));
@@ -62,8 +67,15 @@ public class UserPolisenBevakningController : ControllerBase
         var bevakning = await _db.PolisenBevakningar.FirstOrDefaultAsync(b => b.Id == id && b.UserId == CurrentUserId);
         if (bevakning == null) return NotFound();
 
+        var gammaltVärde = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}";
         bevakning.KategorierJson = req.Kategorier == null ? null : JsonSerializer.Serialize(req.Kategorier);
         bevakning.OmradenJson    = req.Omraden    == null ? null : JsonSerializer.Serialize(req.Omraden);
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId = CurrentUserId, Setting = "polisen_bevakning_ändrad",
+            OldValue = gammaltVärde, NewValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}",
+            ChangedBy = "user",
+        });
         await _db.SaveChangesAsync();
 
         return Ok(ToDto(bevakning));
@@ -76,6 +88,12 @@ public class UserPolisenBevakningController : ControllerBase
         if (bevakning == null) return NotFound();
 
         _db.PolisenBevakningar.Remove(bevakning);
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId = CurrentUserId, Setting = "polisen_bevakning_borttagen",
+            OldValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}", NewValue = null,
+            ChangedBy = "user",
+        });
         await _db.SaveChangesAsync();
 
         return Ok();

@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import {
   fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
   fetchAdminUserSavedEvents, unsaveAdminUserEvent,
-  fetchAdminUserPolisenBevakningar, fetchAdminUserNotificationLog, type AdminUserDto,
+  fetchAdminUserPolisenBevakningar, fetchAdminUserNotificationLog, fetchAdminUserSettingLog, type AdminUserDto,
 } from '../../api/adminUsers'
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import { checkEventLinkStatus } from '../../api/events'
@@ -13,7 +13,7 @@ import type { PendingNotis } from '../../types/adminNotis'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd' | 'Raderas snart' | 'Raderat'
-export type DetaljFlik = 'oversikt' | 'notifinstallningar' | 'notishistorik' | 'aktivitet' | 'ärenden'
+export type DetaljFlik = 'oversikt' | 'notifinstallningar' | 'notishistorik' | 'installningshistorik' | 'aktivitet' | 'ärenden'
 type ArendeStatusMini = 'Öppet' | 'Under behandling' | 'Hanterat' | 'Stängt'
 type RollÄndringTyp = 'ersätt' | 'lägg-till'
 type Inloggningsmetod = 'E-post' | 'Google' | 'BankID'
@@ -216,6 +216,17 @@ const NOTIF_LOG_STATUS_FALLBACK_CLS = 'bg-slate-100 text-slate-600 border border
 
 const NOTIF_LOG_CHANNEL_LABEL: Record<string, string> = { push: 'Push' }
 
+const SETTING_LABEL: Record<string, string> = {
+  password:                     'Lösenord',
+  email:                        'E-postadress',
+  name:                         'Namn',
+  displayName:                  'Visningsnamn',
+  account_deletion_requested:   'Kontoradering begärd (GDPR)',
+  data_export:                  'GDPR-export nedladdad',
+  polisen_bevakning_skapad:     'Polisen-bevakning skapad',
+  polisen_bevakning_ändrad:     'Polisen-bevakning ändrad',
+  polisen_bevakning_borttagen:  'Polisen-bevakning borttagen',
+}
 const NOTIF_LOG_CHANNEL_CLS: Record<string, string> = { push: 'bg-sky-100 text-sky-700' }
 const NOTIF_LOG_CHANNEL_FALLBACK_CLS = 'bg-slate-100 text-slate-600'
 
@@ -550,6 +561,12 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   const { data: notishistorik = [] } = useQuery({
     queryKey: ['admin-notification-log', vald?.id],
     queryFn:  () => fetchAdminUserNotificationLog(vald!.id),
+    enabled:  !!vald,
+  })
+
+  const { data: installningshistorik = [] } = useQuery({
+    queryKey: ['admin-setting-log', vald?.id],
+    queryFn:  () => fetchAdminUserSettingLog(vald!.id),
     enabled:  !!vald,
   })
 
@@ -898,6 +915,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               { id: 'oversikt',           label: 'Översikt'                  },
               { id: 'notifinstallningar', label: 'Notifieringsinställningar'  },
               { id: 'notishistorik',      label: 'Notishistorik'             },
+              { id: 'installningshistorik', label: 'Inställningshistorik'    },
               { id: 'aktivitet',          label: 'Aktivitet'                 },
               { id: 'ärenden',            label: 'Supportärenden'            },
             ] as { id: DetaljFlik; label: string }[]).map(f => (
@@ -1206,6 +1224,42 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                           </tr>
                         )}
                       </Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {/* ── Inställningshistorik ── */}
+          {/* Per-användare diagnostik ("varför funkade inte e-postbytet/
+              bevakningen"), inte menad att synas i den delade Senaste
+              händelser-vyn — UserSettingAuditLog har loggat det här sedan
+              session 18, bara aldrig haft en vy förrän nu. */}
+          {detaljFlik === 'installningshistorik' && (
+            <div>
+              {installningshistorik.length === 0 ? (
+                <p className="px-6 py-10 text-center text-sm text-slate-400">Ingen inställningshistorik för den här användaren.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase tracking-wide">
+                      <th className="text-left px-6 py-3 font-medium">Tid</th>
+                      <th className="text-left px-4 py-3 font-medium">Inställning</th>
+                      <th className="text-left px-4 py-3 font-medium">Från → Till</th>
+                      <th className="text-left px-4 py-3 font-medium">Av</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {installningshistorik.map((s, i) => (
+                      <tr key={i} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-3 text-xs text-slate-400 font-mono whitespace-nowrap">{new Date(s.changedAt).toLocaleString('sv-SE')}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{SETTING_LABEL[s.setting] ?? s.setting}</td>
+                        <td className="px-4 py-3 text-xs text-slate-500">
+                          {s.oldValue == null && s.newValue == null ? '—' : `${s.oldValue ?? '(inget)'} → ${s.newValue ?? '(borttaget)'}`}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-400">{s.changedBy === 'user' ? 'Användaren själv' : s.changedBy}</td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
