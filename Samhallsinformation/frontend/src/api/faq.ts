@@ -7,6 +7,7 @@ export interface FaqItem {
   publicerad: boolean
   fraga:      string
   svar:       string
+  flagKey:    string | null
 }
 
 export interface FaqRequest {
@@ -14,6 +15,7 @@ export interface FaqRequest {
   fraga:      string
   svar:       string
   publicerad: boolean
+  flagKey:    string | null
 }
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''

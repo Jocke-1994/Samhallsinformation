@@ -48,6 +48,7 @@ public class FaqController : ControllerBase
             Fraga      = req.Fraga,
             Svar       = req.Svar,
             Publicerad = req.Publicerad,
+            FlagKey    = req.FlagKey,
         };
         _db.FaqItems.Add(item);
         await _db.SaveChangesAsync();
@@ -70,6 +71,7 @@ public class FaqController : ControllerBase
         item.Fraga      = req.Fraga;
         item.Svar       = req.Svar;
         item.Publicerad = req.Publicerad;
+        item.FlagKey    = req.FlagKey;
 
         await _db.SaveChangesAsync();
         var detalj = publiceradFörut != req.Publicerad
@@ -98,4 +100,4 @@ public class FaqController : ControllerBase
     }
 }
 
-public record FaqRequest(string Kategori, string Fraga, string Svar, bool Publicerad);
+public record FaqRequest(string Kategori, string Fraga, string Svar, bool Publicerad, string? FlagKey);

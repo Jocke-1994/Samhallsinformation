@@ -225,6 +225,9 @@ namespace Samhallsinformation.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("FlagKey")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Fraga")
                         .IsRequired()
                         .HasColumnType("TEXT");

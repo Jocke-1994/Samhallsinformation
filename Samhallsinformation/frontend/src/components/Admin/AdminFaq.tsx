@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { FaqKategori } from '../../types'
 import { type FaqItem, fetchAdminFaq, createFaqItem, updateFaqItem, deleteFaqItem, type FaqRequest } from '../../api/faq'
+import { FLAG_DEFINITIONER, type FlagKey } from '../../lib/featureFlags'
+import { useFeatureFlagsAdmin } from '../../context/FeatureFlagsContext'
 
 const KATEGORIER: FaqKategori[] = ['Notifieringar', 'Mina källor', 'Konto', 'Uppdateringar']
 
@@ -46,12 +48,13 @@ function TaBortModal({ fråga, onBekräfta, onStäng }: {
 
 function FormPanel({ redigerar, onSpara, onStäng }: {
   redigerar: FaqItem | null
-  onSpara:   (fråga: string, svar: string, kategori: FaqKategori) => void
+  onSpara:   (fråga: string, svar: string, kategori: FaqKategori, flagKey: string | null) => void
   onStäng:   () => void
 }) {
   const [fråga,    setFråga]    = useState(redigerar?.fraga    ?? '')
   const [svar,     setSvar]     = useState(redigerar?.svar     ?? '')
   const [kategori, setKategori] = useState<FaqKategori>(redigerar?.kategori ?? 'Notifieringar')
+  const [flagKey,  setFlagKey]  = useState<string | null>(redigerar?.flagKey ?? null)
 
   const kanSpara = fråga.trim() !== '' && svar.trim() !== ''
 
@@ -113,6 +116,22 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
             />
           </div>
 
+          {/* Kopplad funktion */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Kopplad funktion (valfritt)</label>
+            <select
+              value={flagKey ?? ''}
+              onChange={e => setFlagKey(e.target.value || null)}
+              className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 bg-white"
+            >
+              <option value="">Ingen koppling</option>
+              {FLAG_DEFINITIONER.map(f => (
+                <option key={f.key} value={f.key}>{f.label}</option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-400">Om funktionen stängs av döljs frågan automatiskt för besökare, oavsett status nedan.</p>
+          </div>
+
         </div>
 
         {/* Footer */}
@@ -121,7 +140,7 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
             Avbryt
           </button>
           <button
-            onClick={() => kanSpara && onSpara(fråga.trim(), svar.trim(), kategori)}
+            onClick={() => kanSpara && onSpara(fråga.trim(), svar.trim(), kategori, flagKey)}
             disabled={!kanSpara}
             className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
           >
@@ -140,6 +159,7 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
 
 export default function AdminFaq() {
   const queryClient = useQueryClient()
+  const { flaggor } = useFeatureFlagsAdmin()
   const { data: frågor = [] } = useQuery({
     queryKey: ['admin-faq'],
     queryFn:  fetchAdminFaq,
@@ -174,17 +194,21 @@ export default function AdminFaq() {
   function öppnaRedigera(f: FaqItem) { setRedigerar(f);     setPanelÖppen(true) }
   function stängPanel()              { setPanelÖppen(false); setRedigerar(null) }
 
-  function spara(fråga: string, svar: string, kategori: FaqKategori) {
+  function spara(fråga: string, svar: string, kategori: FaqKategori, flagKey: string | null) {
     if (redigerar) {
-      updateMutation.mutate({ id: redigerar.id, req: { kategori, fraga: fråga, svar, publicerad: redigerar.publicerad } })
+      updateMutation.mutate({ id: redigerar.id, req: { kategori, fraga: fråga, svar, publicerad: redigerar.publicerad, flagKey } })
     } else {
-      createMutation.mutate({ kategori, fraga: fråga, svar, publicerad: true })
+      createMutation.mutate({ kategori, fraga: fråga, svar, publicerad: true, flagKey })
     }
     stängPanel()
   }
 
   function togglePublicerad(f: FaqItem) {
-    updateMutation.mutate({ id: f.id, req: { kategori: f.kategori, fraga: f.fraga, svar: f.svar, publicerad: !f.publicerad } })
+    updateMutation.mutate({ id: f.id, req: { kategori: f.kategori, fraga: f.fraga, svar: f.svar, publicerad: !f.publicerad, flagKey: f.flagKey } })
+  }
+
+  function flaggaÄrAv(f: FaqItem): boolean {
+    return !!f.flagKey && !flaggor[f.flagKey as FlagKey]
   }
 
   const antal = {
@@ -300,16 +324,26 @@ export default function AdminFaq() {
                   </span>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
-                  <button
-                    onClick={() => togglePublicerad(f)}
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors ${
-                      f.publicerad
-                        ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-                        : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
-                    }`}
-                  >
-                    {f.publicerad ? 'Publicerad' : 'Dold'}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => togglePublicerad(f)}
+                      className={`text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                        f.publicerad
+                          ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                          : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                      }`}
+                    >
+                      {f.publicerad ? 'Publicerad' : 'Dold'}
+                    </button>
+                    {flaggaÄrAv(f) && (
+                      <span
+                        title={`Kopplad funktion (${f.flagKey}) är avstängd — frågan visas inte för besökare oavsett status ovan`}
+                        className="text-xs font-semibold px-2 py-1 rounded-full border bg-amber-50 text-amber-700 border-amber-200"
+                      >
+                        ⚠️ Dold av flagga
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2 justify-end">
