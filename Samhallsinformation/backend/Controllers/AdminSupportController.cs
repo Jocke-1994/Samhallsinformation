@@ -156,6 +156,9 @@ public class AdminSupportController : ControllerBase
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Ärende,
+            $"Ärende svarat — {ticket.Subject}", req.IsInternal ? "Intern anteckning" : "Svar till medborgaren");
         return Ok();
     }
 

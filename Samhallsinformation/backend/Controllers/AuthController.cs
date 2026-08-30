@@ -175,6 +175,12 @@ public class AuthController : ControllerBase
         var user = await _db.Users.FindAsync(userId);
         if (user == null) return NotFound();
 
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId = userId, Setting = "data_export", OldValue = null, NewValue = null, ChangedBy = "user",
+        });
+        await _db.SaveChangesAsync();
+
         var kallor = await (
             from p in _db.UserSourcePreferences
             where p.UserId == userId
@@ -285,6 +291,12 @@ public class AuthController : ControllerBase
         user.SuspendedAt       ??= DateTime.UtcNow;
         user.SuspendedReason     = "Radering begärd av användaren (GDPR) — raderas automatiskt om 24 timmar";
         user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24);
+
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId = userId, Setting = "account_deletion_requested", OldValue = null,
+            NewValue = user.DeletionScheduledAt.ToString(), ChangedBy = "user",
+        });
 
         await _db.SaveChangesAsync();
         return Ok(new { deletionScheduledAt = user.DeletionScheduledAt });

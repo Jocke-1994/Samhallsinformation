@@ -40,6 +40,25 @@ public class AdminUserDetailsController : ControllerBase
         }));
     }
 
+    // Inställningshistorik för en enskild användare — UserSettingAuditLog har
+    // funnits sedan session 18 (lösenord/e-post/namn/Mina källor loggar redan
+    // dit) men saknade en admin-vy helt. Till skillnad från den delade
+    // Aktivitetsloggen (AdminActivityLog) är det här per-användare-diagnostik
+    // för felsökning ("varför funkade inte X"), inte menat att synas i
+    // Senaste händelser.
+    [HttpGet("{id}/setting-log")]
+    public async Task<IActionResult> GetSettingLog(Guid id)
+    {
+        var rader = await _db.UserSettingAuditLogs
+            .Where(l => l.UserId == id)
+            .OrderByDescending(l => l.ChangedAt)
+            .Take(100)
+            .Select(l => new { l.Setting, l.OldValue, l.NewValue, l.ChangedBy, l.ChangedAt })
+            .ToListAsync();
+
+        return Ok(rader);
+    }
+
     // Notishistorik för en enskild användare — samma NotificationDeliveryLog-
     // tabell som redan används aggregerat i StatsController.
     [HttpGet("{id}/notification-log")]

@@ -29,6 +29,14 @@ export interface AdminPolisenBevakningDto {
   omraden:    string[] | null
 }
 
+export interface AdminSettingLogDto {
+  setting:   string
+  oldValue:  string | null
+  newValue:  string | null
+  changedBy: string
+  changedAt: string
+}
+
 export interface AdminNotificationLogDto {
   sentAt:       string
   channel:      string
@@ -98,6 +106,12 @@ export async function cancelUserDeletion(id: string): Promise<void> {
 export async function fetchAdminUserPolisenBevakningar(id: string): Promise<AdminPolisenBevakningDto[]> {
   const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar`)
   if (!res.ok) throw new Error(`fetchAdminUserPolisenBevakningar: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchAdminUserSettingLog(id: string): Promise<AdminSettingLogDto[]> {
+  const res = await adminFetch(`/api/admin/users/${id}/setting-log`)
+  if (!res.ok) throw new Error(`fetchAdminUserSettingLog: ${res.status}`)
   return res.json()
 }
 
