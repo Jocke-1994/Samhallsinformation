@@ -9,10 +9,12 @@ using Samhallsinformation.Data;
 public class EventsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public EventsController(AppDbContext db)
+    public EventsController(AppDbContext db, IHttpClientFactory httpClientFactory)
     {
         _db = db;
+        _httpClientFactory = httpClientFactory;
     }
 
     [HttpGet]
@@ -81,5 +83,31 @@ public class EventsController : ControllerBase
         var evt = await _db.Events.FindAsync(id);
         if (evt is null) return NotFound();
         return Ok(evt);
+    }
+
+    // Kollar reaktivt om en händelses källänk fortfarande lever, t.ex. innan
+    // "Läs mer"-klick på en sparad händelse öppnas i en ny flik. Ingen
+    // schemalagd bakgrundskoll — bara vid faktiskt klick, så trafiken mot
+    // källan hålls minimal.
+    [HttpGet("{id:guid}/link-status")]
+    public async Task<IActionResult> GetLinkStatus(Guid id)
+    {
+        var evt = await _db.Events.FindAsync(id);
+        if (evt is null) return NotFound();
+
+        var client = _httpClientFactory.CreateClient("linkcheck");
+        bool alive;
+        try
+        {
+            using var request  = new HttpRequestMessage(HttpMethod.Get, evt.Url);
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            alive = response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            alive = false;
+        }
+
+        return Ok(new { alive });
     }
 }
