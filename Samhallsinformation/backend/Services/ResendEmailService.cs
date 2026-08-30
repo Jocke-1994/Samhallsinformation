@@ -8,6 +8,7 @@ public class ResendEmailService : IEmailService
 {
     private readonly HttpClient _http;
     private readonly string _fromNoreply = "noreply@samhallsinformation.se";
+    private readonly string _fromSupport = "support@samhallsinformation.se";
 
     public ResendEmailService(IConfiguration config)
     {
@@ -81,13 +82,13 @@ public class ResendEmailService : IEmailService
               <h2 style="color:#7c3aed;margin-bottom:8px">Din e-postadress håller på att bytas</h2>
               <p style="color:#334155">Hej {toName},</p>
               <p style="color:#334155">Någon har begärt att byta e-postadressen på ditt Samhällsinformation-konto till <strong>{newEmail}</strong>. Bytet slår inte igenom förrän den nya adressen bekräftas.</p>
-              <p style="color:#334155">Var det inte du som gjorde det här? Logga in och kontrollera ditt konto, eller kontakta oss.</p>
+              <p style="color:#334155">Var det inte du som gjorde det här? Logga in och kontrollera ditt konto, eller använd Hjälp &amp; Feedback-knappen i appen för att höra av dig till oss.</p>
               <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
               <p style="color:#94a3b8;font-size:12px">Samhällsinformation &mdash; opartisk myndighetsinformation</p>
             </div>
             """;
 
-        await SendAsync(_fromNoreply, toOldEmail, "Din e-postadress håller på att bytas", html);
+        await SendAsync(_fromSupport, toOldEmail, "Din e-postadress håller på att bytas", html);
     }
 
     public async Task SendWelcomeAsync(string toEmail, string toName)
