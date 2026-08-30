@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { AdminSection } from './AdminSidebar'
 import { fetchAdminSources } from '../../api/sources'
@@ -5,7 +6,7 @@ import { fetchAdminUsers } from '../../api/adminUsers'
 import { fetchAdminTickets } from '../../api/support'
 import { fetchAdminActivityLog } from '../../api/activityLog'
 import { deriveStatus, STATUS_DOT } from './Kallhantering'
-import { TYP_MÄRKE, TYP_IKON } from './Aktivitetslogg'
+import { TYP_MÄRKE, TYP_IKON, STATUS_PRICK } from './Aktivitetslogg'
 
 interface StatKort {
   label:    string
@@ -22,10 +23,12 @@ function formatTid(iso: string): string {
   const sammaDag = d.toDateString() === idag.toDateString()
   return sammaDag
     ? d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
-    : d.toLocaleDateString('sv-SE')
+    : d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
 }
 
 export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection) => void }) {
+  const [öppenId, setÖppenId] = useState<string | null>(null)
+
   const { data: sources = [] } = useQuery({
     queryKey: ['admin-sources'],
     queryFn:  fetchAdminSources,
@@ -112,10 +115,22 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
             {senasteHändelser.length === 0 ? (
               <p className="px-6 py-4 text-sm text-slate-400 text-center">Ingen aktivitet att visa.</p>
             ) : senasteHändelser.map(h => (
-              <div key={h.id} className="flex items-start gap-3 px-6 py-3">
-                <span className="text-xs text-slate-400 w-12 shrink-0 pt-0.5">{formatTid(h.tid)}</span>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${TYP_MÄRKE[h.typ]}`}>{TYP_IKON[h.typ]} {h.typ}</span>
-                <p className="text-sm text-slate-700">{h.rubrik}</p>
+              <div key={h.id}>
+                <button
+                  onClick={() => setÖppenId(öppenId === h.id ? null : h.id)}
+                  className="w-full flex items-start gap-3 px-6 py-3 text-left hover:bg-slate-50 transition-colors"
+                >
+                  <span className="text-xs text-slate-400 w-14 shrink-0 whitespace-nowrap pt-0.5">{formatTid(h.tid)}</span>
+                  <span className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${STATUS_PRICK[h.status]}`} title={h.status} />
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap ${TYP_MÄRKE[h.typ]}`}>{TYP_IKON[h.typ]} {h.typ}</span>
+                  <p className="text-sm text-slate-700 min-w-0 truncate flex-1">{h.rubrik}</p>
+                  <span className="text-slate-300 text-xs shrink-0">{öppenId === h.id ? '▲' : '▼'}</span>
+                </button>
+                {öppenId === h.id && (
+                  <div className="px-6 pb-3 pl-[4.75rem] pr-6">
+                    <p className="text-xs text-slate-500 leading-relaxed">{h.detalj}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

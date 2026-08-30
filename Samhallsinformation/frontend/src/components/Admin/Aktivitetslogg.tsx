@@ -65,7 +65,7 @@ const STATUS_MÄRKE: Record<LoggStatus, string> = {
   Fel:     'bg-red-100 text-red-700',
 }
 
-const STATUS_PRICK: Record<LoggStatus, string> = {
+export const STATUS_PRICK: Record<LoggStatus, string> = {
   OK:      'bg-green-500',
   Varning: 'bg-amber-400',
   Fel:     'bg-red-500',
