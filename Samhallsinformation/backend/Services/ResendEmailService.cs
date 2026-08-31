@@ -110,10 +110,39 @@ public class ResendEmailService : IEmailService
         await SendAsync(_fromNoreply, toEmail, "Välkommen till Samhällsinformation", html);
     }
 
-    private async Task SendAsync(string from, string to, string subject, string html)
+    public async Task SendTicketReplyAsync(string toEmail, string toName, int ticketNumber, string subject, string replyText)
     {
-        var payload = JsonSerializer.Serialize(new { from, to, subject, html });
-        var content = new StringContent(payload, Encoding.UTF8, "application/json");
+        var replyTo = $"svar+{ticketNumber}@samhallsinformation.se";
+        var html = $"""
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
+              <h2 style="color:#7c3aed;margin-bottom:8px">Svar på ditt ärende — {subject}</h2>
+              <p style="color:#334155">Hej {toName},</p>
+              <p style="color:#334155;white-space:pre-wrap">{System.Net.WebUtility.HtmlEncode(replyText)}</p>
+              <p style="color:#64748b;font-size:13px">Du kan svara direkt på det här mejlet om du har följdfrågor.</p>
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+              <p style="color:#94a3b8;font-size:12px">Samhällsinformation &mdash; opartisk myndighetsinformation</p>
+            </div>
+            """;
+
+        await SendAsync(_fromSupport, toEmail, $"Svar på ditt ärende: {subject}", html, replyTo);
+    }
+
+    public async Task<string?> GetReceivedEmailTextAsync(string emailId)
+    {
+        var res = await _http.GetAsync($"/emails/receiving/{emailId}");
+        if (!res.IsSuccessStatusCode) return null;
+
+        var body = await res.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        return doc.RootElement.TryGetProperty("text", out var textEl) ? textEl.GetString() : null;
+    }
+
+    private async Task SendAsync(string from, string to, string subject, string html, string? replyTo = null)
+    {
+        object payload = replyTo == null
+            ? new { from, to, subject, html }
+            : new { from, to, subject, html, reply_to = replyTo };
+        var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
         var res = await _http.PostAsync("/emails", content);
         if (!res.IsSuccessStatusCode)
         {
