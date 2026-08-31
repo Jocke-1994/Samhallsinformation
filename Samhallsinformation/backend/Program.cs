@@ -1103,6 +1103,51 @@ using (var scope = app.Services.CreateScope())
         await db.SaveChangesAsync();
     }
 
+    // Kompletterande FAQ-frågor inför öppen registrering (session 43) — tabellen
+    // har redan rader sedan tidigare, så varje fråga läggs till enskilt och
+    // idempotent (kollar på frågetexten) istället för villkoret ovan. Bara
+    // funktioner som faktiskt är påslagna i produktion nämns — push-notiser,
+    // Polisen-bevakningar, radera konto/GDPR-export och tvåfaktor ligger
+    // fortfarande bakom avstängda flaggor och beskrivs medvetet inte.
+    var nyaFaqFragor = new[]
+    {
+        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = "konto_losenord", Fraga = "Hur byter jag lösenord?",
+            Svar = "Gå till Konto → Lösenordsbyte, ange ditt nuvarande lösenord och sedan det nya. Har du skapat kontot med Google finns inget lösenord att byta — logga in via Google-knappen istället." },
+        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = "konto_info", Fraga = "Hur ändrar jag min e-postadress eller mitt namn?",
+            Svar = "Gå till Konto → Kontoinformation. Ändrar du e-postadress skickar vi en bekräftelselänk till den nya adressen — bytet gäller först när du klickat på länken, och du loggas ut ur eventuella andra inloggade enheter av säkerhetsskäl." },
+        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = null, Fraga = "Kan jag logga in med Google?",
+            Svar = "Ja. Välj \"Fortsätt med Google\" på inloggnings- eller registreringssidan — det fungerar både för att skapa ett nytt konto och för att logga in på ett befintligt." },
+        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = "konto_epost_paminnelse", Fraga = "Varför ber ni mig bekräfta min e-postadress?",
+            Svar = "En banderoll påminner dig om att klicka på bekräftelselänken vi skickade när du registrerade dig. Det bevisar att adressen faktiskt är din — du kan fortsätta använda tjänsten som vanligt under tiden, inget låses." },
+        new FaqItem { Kategori = "Mina källor", Publicerad = true, FlagKey = "kallor_alla", Fraga = "Vad är skillnaden på Alla källor och Mina källor?",
+            Svar = "Mina källor visar de myndigheter du redan följer och som syns i ditt flöde. Alla källor är den fullständiga listan att välja bland — där lägger du till fler." },
+        new FaqItem { Kategori = "Uppdateringar", Publicerad = true, FlagKey = null, Fraga = "Var ser jag vad som är nytt i tjänsten?",
+            Svar = "Klicka på Nyheter i sidomenyn om du är utloggad, eller Uppdateringar i profilmenyn om du är inloggad, för en lista över de senaste ändringarna." },
+    };
+    foreach (var fraga in nyaFaqFragor)
+    {
+        if (!db.FaqItems.Any(f => f.Fraga == fraga.Fraga))
+        {
+            db.FaqItems.Add(fraga);
+        }
+    }
+    await db.SaveChangesAsync();
+
+    // Lansering (session 43): kallor_polisen_filter och flode_sparat låg kvar
+    // påslagna i produktion från tidigare egna tester — upptäckt vid en
+    // live-koll av /api/feature-flags inför att Logga in/Skapa konto-knapparna
+    // skulle slås på. Kodens default för båda är av; återställ genom att ta
+    // bort overridena (rör bara raden om den faktiskt finns, idempotent).
+    var flaggorAttStanga = new[] { "kallor_polisen_filter", "flode_sparat" };
+    var overridesAttTaBort = await db.FeatureFlagOverrides
+        .Where(f => flaggorAttStanga.Contains(f.Key))
+        .ToListAsync();
+    if (overridesAttTaBort.Count > 0)
+    {
+        db.FeatureFlagOverrides.RemoveRange(overridesAttTaBort);
+        await db.SaveChangesAsync();
+    }
+
     // Seed admin-användare från env-variabler
     var adminEmail    = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
     var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
