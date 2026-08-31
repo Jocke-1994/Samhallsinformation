@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
+using Samhallsinformation.Services;
 
 [ApiController]
 [Route("api/admin/support")]
@@ -15,11 +16,15 @@ public class AdminSupportController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IAktivitetsloggService _aktivitetslogg;
+    private readonly IEmailService _email;
+    private readonly ILogger<AdminSupportController> _logger;
 
-    public AdminSupportController(AppDbContext db, IAktivitetsloggService aktivitetslogg)
+    public AdminSupportController(AppDbContext db, IAktivitetsloggService aktivitetslogg, IEmailService email, ILogger<AdminSupportController> logger)
     {
         _db = db;
         _aktivitetslogg = aktivitetslogg;
+        _email = email;
+        _logger = logger;
     }
 
     private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -142,7 +147,7 @@ public class AdminSupportController : ControllerBase
     [HttpPost("tickets/{id}/reply")]
     public async Task<IActionResult> Reply(Guid id, [FromBody] AgentReplyRequest req)
     {
-        var ticket = await _db.SupportTickets.FindAsync(id);
+        var ticket = await _db.SupportTickets.Include(t => t.CreatedByUser).FirstOrDefaultAsync(t => t.Id == id);
         if (ticket == null) return NotFound();
 
         _db.SupportTicketMessages.Add(new SupportTicketMessage
@@ -159,6 +164,28 @@ public class AdminSupportController : ControllerBase
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Ärende,
             $"Ärende svarat — {ticket.Subject}", req.IsInternal ? "Intern anteckning" : "Svar till medborgaren");
+
+        // Skickas som riktigt mejl bara för svar avsedda för medborgaren — en
+        // adress att skicka till måste finnas (anonym feedback utan ContactEmail
+        // har ingen). Ett Resend-fel ska aldrig få det redan sparade svaret att
+        // se ut som att det misslyckades, därför fångas felet och loggas istället.
+        if (!req.IsInternal)
+        {
+            var toEmail = ticket.ContactEmail ?? ticket.CreatedByUser?.Email;
+            var toName  = ticket.ContactName ?? ticket.CreatedByUser?.Name ?? "";
+            if (!string.IsNullOrWhiteSpace(toEmail))
+            {
+                try
+                {
+                    await _email.SendTicketReplyAsync(toEmail, toName, ticket.TicketNumber, ticket.Subject, req.Text);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Kunde inte skicka ärendesvar som mejl för ärende {TicketNumber}", ticket.TicketNumber);
+                }
+            }
+        }
+
         return Ok();
     }
 
