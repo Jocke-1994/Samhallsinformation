@@ -57,8 +57,14 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
     const matchande = polisenTyp || polisenOmrade ? matchandeBevakning(polisenTyp, polisenOmrade) : null
     if (!matchande) return null
 
+    // Samma ikon (🔔) betyder tvärtom i "allt"-läget (lägg till) — ett enda
+    // ogenomtänkt tryck fick tidigare ta bort en HEL bevakning direkt, utan
+    // bekräftelse, bara en 5-sekunders ångra-toast som lätt missas. Byggd om
+    // till samma öppna-en-meny-först-mönster som "allt"-lägets egen
+    // bevaknings-meny, så borttagning kräver ett andra, tydligt märkt tryck.
     async function taBortBevakning() {
       if (!matchande) return
+      setÖppen(false)
       const kopia = matchande
       await taBort(kopia.id)
       setToast({
@@ -70,13 +76,31 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
     return (
       <div className="relative shrink-0">
         <button
-          onClick={e => { e.stopPropagation(); taBortBevakning() }}
-          title="Ta bort den här bevakningen"
-          aria-label="Ta bort bevakning"
+          ref={knappRef}
+          onClick={e => { e.stopPropagation(); öppna() }}
+          title="Hantera den här bevakningen"
+          aria-label="Hantera bevakning"
           className="p-1.5 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors"
         >
           <span className="text-base leading-none">🔔</span>
         </button>
+
+        {öppen && createPortal(
+          <div
+            ref={menyRef}
+            style={{ position: 'fixed', top: menyPos.top, left: menyPos.left }}
+            className="z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1.5 min-w-[220px]"
+          >
+            <p className="px-3 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Bevakning</p>
+            <button
+              onClick={e => { e.stopPropagation(); taBortBevakning() }}
+              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              Ta bort den här bevakningen
+            </button>
+          </div>,
+          document.body,
+        )}
 
         {toast && createPortal(
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-3">
