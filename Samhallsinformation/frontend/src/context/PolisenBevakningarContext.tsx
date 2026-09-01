@@ -61,8 +61,15 @@ export function PolisenBevakningarProvider({ children }: { children: ReactNode }
   }, [isLoggedIn])
 
   // Tom lista = inget anpassat = allt syns (matchar backendens
-  // PolisenBevakningMatcher.Matches exakt).
+  // PolisenBevakningMatcher.Matches exakt) — men bara EFTER att hämtningen
+  // faktiskt svarat. Innan dess är listan också tom (initialt useState),
+  // och utan laddat-kollen visade Mitt flöde tyst ALLT från Polisen
+  // (inte bara ospecificerat, obegränsat, hela landet) under det korta
+  // fönstret precis efter inloggning/sidladdning innan bevakningarna hunnit
+  // hämtas — upptäckt live via en skärmdump med händelser från städer långt
+  // utanför en riktig, sparad bevakning.
   function matchar(typ: string | null, omrade: string | null): boolean {
+    if (!laddat) return false
     if (bevakningar.length === 0) return true
     return bevakningar.some(b => {
       const typOk    = b.kategorier === null || typ    === null || b.kategorier.has(typ)
