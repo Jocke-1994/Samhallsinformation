@@ -22,8 +22,7 @@ public class AdminUserDetailsController : ControllerBase
 
     public AdminUserDetailsController(AppDbContext db) => _db = db;
 
-    // Admin-variant av GET /api/user/polisen-bevakningar (UserPolisenBevakningController),
-    // read-only här — admin/support visar bevakningarna, ändrar dem inte åt användaren.
+    // Admin-variant av GET /api/user/polisen-bevakningar (UserPolisenBevakningController).
     [HttpGet("{id}/polisen-bevakningar")]
     public async Task<IActionResult> GetPolisenBevakningar(Guid id)
     {
@@ -32,12 +31,134 @@ public class AdminUserDetailsController : ControllerBase
             .OrderBy(b => b.CreatedAt)
             .ToListAsync();
 
-        return Ok(bevakningar.Select(b => new
+        return Ok(bevakningar.Select(BevakningTillDto));
+    }
+
+    // Admin/support-initierad skrivrätt på en användares bevakningar — löser
+    // att man annars måste slå på kallor_polisen_filter GLOBALT (exponerar
+    // funktionen för alla riktiga användare) bara för att kunna hjälpa en
+    // enskild användare rätta sina inställningar. Speglar
+    // UserPolisenBevakningController exakt, fast skopat mot {id} istället för
+    // CurrentUserId, och ChangedBy="admin" i stället för "user" i loggen.
+    [HttpPost("{id}/polisen-bevakningar")]
+    public async Task<IActionResult> CreatePolisenBevakning(Guid id, [FromBody] BevakningRequest req)
+    {
+        var antal = await _db.PolisenBevakningar.CountAsync(b => b.UserId == id);
+        if (antal >= UserPolisenBevakningController.MaxBevakningar)
+            return BadRequest($"Max {UserPolisenBevakningController.MaxBevakningar} bevakningar per användare.");
+
+        var bevakning = new PolisenBevakning
         {
-            b.Id,
-            Kategorier = b.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.KategorierJson),
-            Omraden    = b.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson),
-        }));
+            UserId         = id,
+            KategorierJson = req.Kategorier == null ? null : JsonSerializer.Serialize(req.Kategorier),
+            OmradenJson    = req.Omraden    == null ? null : JsonSerializer.Serialize(req.Omraden),
+        };
+        _db.PolisenBevakningar.Add(bevakning);
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId = id, Setting = "polisen_bevakning_skapad", OldValue = null,
+            NewValue = $"{req.Kategorier?.Count ?? 0} kategorier, {req.Omraden?.Count ?? 0} områden", ChangedBy = "admin",
+        });
+        await _db.SaveChangesAsync();
+
+        return Ok(BevakningTillDto(bevakning));
+    }
+
+    [HttpPut("{id}/polisen-bevakningar/{bevakningId}")]
+    public async Task<IActionResult> UpdatePolisenBevakning(Guid id, Guid bevakningId, [FromBody] BevakningRequest req)
+    {
+        var bevakning = await _db.PolisenBevakningar.FirstOrDefaultAsync(b => b.Id == bevakningId && b.UserId == id);
+        if (bevakning == null) return NotFound();
+
+        var gammaltVärde = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}";
+        bevakning.KategorierJson = req.Kategorier == null ? null : JsonSerializer.Serialize(req.Kategorier);
+        bevakning.OmradenJson    = req.Omraden    == null ? null : JsonSerializer.Serialize(req.Omraden);
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId = id, Setting = "polisen_bevakning_ändrad",
+            OldValue = gammaltVärde, NewValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}",
+            ChangedBy = "admin",
+        });
+        await _db.SaveChangesAsync();
+
+        return Ok(BevakningTillDto(bevakning));
+    }
+
+    [HttpDelete("{id}/polisen-bevakningar/{bevakningId}")]
+    public async Task<IActionResult> DeletePolisenBevakning(Guid id, Guid bevakningId)
+    {
+        var bevakning = await _db.PolisenBevakningar.FirstOrDefaultAsync(b => b.Id == bevakningId && b.UserId == id);
+        if (bevakning == null) return NotFound();
+
+        _db.PolisenBevakningar.Remove(bevakning);
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId = id, Setting = "polisen_bevakning_borttagen",
+            OldValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}", NewValue = null,
+            ChangedBy = "admin",
+        });
+        await _db.SaveChangesAsync();
+
+        return Ok();
+    }
+
+    private static object BevakningTillDto(PolisenBevakning b) => new
+    {
+        b.Id,
+        Kategorier = b.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.KategorierJson),
+        Omraden    = b.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson),
+    };
+
+    // Admin/support-variant av GET/PUT /api/user/sources (UserSourcesController)
+    // — samma "hjälp en användare rätta sina inställningar utan att slå på en
+    // flagga globalt"-motivering som bevakningarna ovan. En enskild
+    // toggle-endpoint (inte en full bulk-PUT) — admin ändrar bara
+    // aktiv/inaktiv, rör aldrig sortOrder (rent kosmetiskt, användarens eget
+    // drag-och-släpp).
+    [HttpGet("{id}/sources")]
+    public async Task<IActionResult> GetUserSources(Guid id)
+    {
+        var prefs = await _db.UserSourcePreferences
+            .Where(p => p.UserId == id)
+            .Include(p => p.Source)
+            .OrderBy(p => p.SortOrder)
+            .Select(p => new
+            {
+                sourceId  = p.SourceId,
+                shortName = p.Source.ShortName,
+                name      = p.Source.Name,
+                isActive  = p.IsActive,
+            })
+            .ToListAsync();
+
+        return Ok(prefs);
+    }
+
+    [HttpPut("{id}/sources/{sourceId:int}")]
+    public async Task<IActionResult> SetUserSourceActive(Guid id, int sourceId, [FromBody] SetSourceActiveRequest req)
+    {
+        var pref = await _db.UserSourcePreferences.FirstOrDefaultAsync(p => p.UserId == id && p.SourceId == sourceId);
+        var gammaltVärde = pref?.IsActive.ToString() ?? "false";
+        if (pref == null)
+        {
+            var nästaOrder = await _db.UserSourcePreferences.Where(p => p.UserId == id).CountAsync();
+            pref = new UserSourcePreference { UserId = id, SourceId = sourceId, IsActive = req.IsActive, SortOrder = nästaOrder };
+            _db.UserSourcePreferences.Add(pref);
+        }
+        else
+        {
+            pref.IsActive = req.IsActive;
+        }
+
+        if (gammaltVärde != req.IsActive.ToString())
+            _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+            {
+                UserId = id, Setting = $"source.{sourceId}.isActive",
+                OldValue = gammaltVärde, NewValue = req.IsActive.ToString(), ChangedBy = "admin",
+            });
+
+        await _db.SaveChangesAsync();
+        return Ok();
     }
 
     // Inställningshistorik för en enskild användare — UserSettingAuditLog har
@@ -167,3 +288,4 @@ public class AdminUserDetailsController : ControllerBase
 }
 
 public record AdminSaveEventRequest(Guid EventId);
+public record SetSourceActiveRequest(bool IsActive);
