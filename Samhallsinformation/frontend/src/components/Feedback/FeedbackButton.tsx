@@ -11,6 +11,8 @@ interface Props {
 
 export function FeedbackModal({ open, onClose }: Props) {
   const [message, setMessage] = useState('')
+  const [villHaÅterkoppling, setVillHaÅterkoppling] = useState(false)
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
 
@@ -23,7 +25,8 @@ export function FeedbackModal({ open, onClose }: Props) {
       await createTicket({
         message,
         channel: 'feedback',
-        contactEmail: email || undefined,
+        contactName: villHaÅterkoppling ? name : undefined,
+        contactEmail: villHaÅterkoppling ? email : undefined,
       })
       setStatus('success')
     } catch {
@@ -34,6 +37,8 @@ export function FeedbackModal({ open, onClose }: Props) {
   function handleClose() {
     onClose()
     setMessage('')
+    setVillHaÅterkoppling(false)
+    setName('')
     setEmail('')
     setStatus('idle')
   }
@@ -92,18 +97,49 @@ export function FeedbackModal({ open, onClose }: Props) {
               />
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                E-post <span className="text-slate-400 font-normal">(valfritt, bara om du vill ha svar)</span>
-              </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="din@email.se"
-                className="w-full text-sm rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                type="checkbox"
+                checked={villHaÅterkoppling}
+                onChange={e => setVillHaÅterkoppling(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-violet-600 focus:ring-violet-500"
               />
-            </div>
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                Jag vill ha återkoppling
+              </span>
+            </label>
+
+            {villHaÅterkoppling && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                    Namn <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="Ditt namn"
+                    className="w-full text-sm rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                    E-post <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="din@email.se"
+                    className="w-full text-sm rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                </div>
+              </>
+            )}
 
             {status === 'error' && (
               <p className="text-xs text-red-500">Något gick fel. Försök igen eller kontakta oss direkt.</p>
