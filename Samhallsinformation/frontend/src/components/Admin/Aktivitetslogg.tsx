@@ -20,6 +20,7 @@ interface LoggRad {
   vem?:       string
   ångrad?:    boolean
   ångraData?: ÅngraData
+  relateratÄrendeId?: string | null
 }
 
 // Notis-raderna är fortfarande mock — kräver en egen global lista över
@@ -108,6 +109,7 @@ function postTillRad(p: LoggPost): LoggRad {
     vem:       p.vem,
     ångrad:    p.ångrad,
     ångraData: p.ångraData,
+    relateratÄrendeId: p.relateratÄrendeId,
   }
 }
 
@@ -124,7 +126,11 @@ function exporteraCsv(rader: LoggRad[]) {
   URL.revokeObjectURL(url)
 }
 
-export default function Aktivitetslogg() {
+interface Props {
+  onÖppnaÄrende?: (id: string) => void
+}
+
+export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
   const [aktörFilter, setAktörFilter] = useState<AktörTyp | 'Alla'>('Alla')
   const [typFilter,   setTypFilter]   = useState<LoggTyp | 'Alla'>('Alla')
   const [tidsFilter,  setTidsFilter]  = useState<TidsFilter>('Alla')
@@ -357,6 +363,14 @@ export default function Aktivitetslogg() {
                       <p className="text-xs text-slate-400 mt-1.5 font-mono">
                         {rad.datum} {rad.tid}{rad.vem && ` · ${rad.vem}`}
                       </p>
+                      {rad.relateratÄrendeId && onÖppnaÄrende && (
+                        <button
+                          onClick={() => onÖppnaÄrende(rad.relateratÄrendeId!)}
+                          className="mt-2 text-xs font-medium text-violet-600 hover:text-violet-800 transition-colors"
+                        >
+                          Öppna ärende →
+                        </button>
+                      )}
                       {rad.ångraData && (
                         <div className="mt-2 flex items-center gap-2">
                           <button

@@ -12,5 +12,6 @@ public interface IAktivitetsloggService
         string detalj,
         string? gammaltVärde = null,
         string? nyttVärde = null,
-        bool test = false);
+        bool test = false,
+        Guid? relateratÄrendeId = null);
 }

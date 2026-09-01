@@ -76,7 +76,8 @@ public class SupportController : ControllerBase
 
         await _aktivitetslogg.LogAsync(
             AktörTyper.System, LoggTyper.Ärende,
-            $"Ärende öppnat — {ticket.Subject}", $"{ticket.ContactName ?? "Okänd"} — {ticket.Category}");
+            $"Ärende öppnat — {ticket.Subject}", $"{ticket.ContactName ?? "Okänd"} — {ticket.Category}",
+            relateratÄrendeId: ticket.Id);
 
         try
         {

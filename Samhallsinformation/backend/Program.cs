@@ -922,6 +922,20 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        // Länkar en Ärende-typad aktivitetsloggrad till sitt SupportTicket, så
+        // Aktivitetslogg/Översikt kan länka direkt till ärendet istället för
+        // att bara nämna det i text.
+        if (pendingMigrations.Contains("20260901092420_AddAdminActivityLogRelateratArendeId"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""AdminActivityLogs"" ADD COLUMN IF NOT EXISTS ""RelateratÄrendeId"" uuid;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260901092420_AddAdminActivityLogRelateratArendeId', '10.0.11')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 

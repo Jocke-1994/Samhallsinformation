@@ -33,6 +33,10 @@ public class AdminActivityLog
     public string?  GammaltVärde { get; set; } // breddar UserSettingAuditLogs OldValue/NewValue-mönster
     public string?  NyttVärde    { get; set; }
 
+    // Sätts för Typ=Ärende-rader — låter Aktivitetslogg/Översikt länka direkt
+    // till ärendet i Support-inbox istället för att bara nämna det i text.
+    public Guid?    RelateratÄrendeId { get; set; }
+
     public string?  AngraAnvandareId { get; set; }
     public string?  AngraEventId     { get; set; }
     public string?  AngraTitle       { get; set; }
