@@ -17,7 +17,7 @@ function KallaRad({ k, onRemove }: { k: Source; onRemove: (id: number) => void }
     <div className="py-2 group">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <a href={k.url ?? k.baseUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-slate-800 hover:text-violet-600 hover:underline leading-snug transition-colors">{k.name}</a>
+          <p className="text-sm font-medium text-slate-800 leading-snug truncate">{k.name}</p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <button
