@@ -45,7 +45,7 @@ export function FeedbackModal({ open, onClose }: Props) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[8500] flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-[8500] flex items-end sm:items-center justify-center p-4 pb-28 sm:pb-4 bg-black/40 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget) handleClose() }}
     >
       <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 flex flex-col gap-4">
