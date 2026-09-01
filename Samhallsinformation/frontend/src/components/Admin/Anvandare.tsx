@@ -1,15 +1,18 @@
 import { useState, useEffect, Fragment } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createActivityLogEntry } from '../../api/activityLog'
 import { useAuth } from '../../context/AuthContext'
 import {
   fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
   fetchAdminUserSavedEvents, unsaveAdminUserEvent,
   fetchAdminUserPolisenBevakningar, fetchAdminUserNotificationLog, fetchAdminUserSettingLog, type AdminUserDto,
+  createAdminUserPolisenBevakning, updateAdminUserPolisenBevakning, deleteAdminUserPolisenBevakning,
+  fetchAdminUserSources, setAdminUserSourceActive, type AdminPolisenBevakningDto,
 } from '../../api/adminUsers'
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import { checkEventLinkStatus } from '../../api/events'
 import type { PendingNotis } from '../../types/adminNotis'
+import KategoriFilterModal from '../Profile/MinaKallor/KategoriFilterModal'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd' | 'Raderas snart' | 'Raderat'
@@ -473,6 +476,7 @@ interface AnvandareProps {
 
 export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onPendingNotiser }: AnvandareProps) {
   const { aktivVy } = useAuth()
+  const queryClient = useQueryClient()
   const { data: adminUsers, isLoading: laddar, isError: laddningFel, refetch } = useQuery({
     queryKey: ['admin-users'],
     queryFn:  fetchAdminUsers,
@@ -556,6 +560,51 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     queryKey: ['admin-polisen-bevakningar', vald?.id],
     queryFn:  () => fetchAdminUserPolisenBevakningar(vald!.id),
     enabled:  !!vald,
+  })
+  const [redigerarBevakning, setRedigerarBevakning] = useState<AdminPolisenBevakningDto | 'ny' | null>(null)
+
+  function invalideraBevakningar() {
+    queryClient.invalidateQueries({ queryKey: ['admin-polisen-bevakningar', vald?.id] })
+    queryClient.invalidateQueries({ queryKey: ['admin-setting-log', vald?.id] })
+  }
+
+  const skapaBevakningMutation = useMutation({
+    mutationFn: (req: { kategorier: string[] | null; omraden: string[] | null }) =>
+      createAdminUserPolisenBevakning(vald!.id, req),
+    onSuccess: invalideraBevakningar,
+  })
+  const uppdateraBevakningMutation = useMutation({
+    mutationFn: ({ bevakningId, ...req }: { bevakningId: string; kategorier: string[] | null; omraden: string[] | null }) =>
+      updateAdminUserPolisenBevakning(vald!.id, bevakningId, req),
+    onSuccess: invalideraBevakningar,
+  })
+  const taBortBevakningMutation = useMutation({
+    mutationFn: (bevakningId: string) => deleteAdminUserPolisenBevakning(vald!.id, bevakningId),
+    onSuccess: invalideraBevakningar,
+  })
+
+  async function sparaBevakning(kategorier: string[] | null, omraden: string[] | null) {
+    if (redigerarBevakning === 'ny') {
+      await skapaBevakningMutation.mutateAsync({ kategorier, omraden })
+    } else if (redigerarBevakning) {
+      await uppdateraBevakningMutation.mutateAsync({ bevakningId: redigerarBevakning.id, kategorier, omraden })
+    }
+    setRedigerarBevakning(null)
+  }
+
+  const { data: valdaKällor = [], isLoading: källorLaddar } = useQuery({
+    queryKey: ['admin-user-sources', vald?.id],
+    queryFn:  () => fetchAdminUserSources(vald!.id),
+    enabled:  !!vald,
+  })
+
+  const växlaKällaMutation = useMutation({
+    mutationFn: ({ sourceId, isActive }: { sourceId: number; isActive: boolean }) =>
+      setAdminUserSourceActive(vald!.id, sourceId, isActive),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-sources', vald?.id] })
+      queryClient.invalidateQueries({ queryKey: ['admin-setting-log', vald?.id] })
+    },
   })
 
   const { data: notishistorik = [], isLoading: notishistorikLaddar } = useQuery({
@@ -982,28 +1031,81 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Polisen-bevakningar</p>
                   {bevakningarLaddar ? (
                     <p className="text-sm text-slate-400">Laddar...</p>
-                  ) : polisenBevakningar.length === 0 ? (
-                    <p className="text-sm text-slate-500">Inga bevakningar — får allt från Polisen.</p>
                   ) : (
-                    <div className="flex flex-col gap-3">
-                      {polisenBevakningar.map(b => (
-                        <div key={b.id} className="flex flex-col gap-2 border border-slate-100 rounded-lg p-2">
-                          <div>
-                            <p className="text-xs text-slate-400 mb-1">Typer</p>
-                            <div className="flex flex-wrap gap-1">
-                              {(b.kategorier ?? []).length > 0
-                                ? b.kategorier!.map(k => <span key={k} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k}</span>)
-                                : <span className="text-xs text-slate-400">Alla</span>}
+                    <>
+                      {polisenBevakningar.length === 0 ? (
+                        <p className="text-sm text-slate-500 mb-2">Inga bevakningar — får allt från Polisen.</p>
+                      ) : (
+                        <div className="flex flex-col gap-3 mb-2">
+                          {polisenBevakningar.map(b => (
+                            <div key={b.id} className="flex flex-col gap-2 border border-slate-100 rounded-lg p-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-slate-400 mb-1">Typer</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {(b.kategorier ?? []).length > 0
+                                      ? b.kategorier!.map(k => <span key={k} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k}</span>)
+                                      : <span className="text-xs text-slate-400">Alla</span>}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <button onClick={() => setRedigerarBevakning(b)} className="text-xs text-violet-600 hover:text-violet-800 font-medium">Ändra</button>
+                                  <button onClick={() => taBortBevakningMutation.mutate(b.id)} className="text-xs text-slate-400 hover:text-red-500 font-medium">Ta bort</button>
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-xs text-slate-400 mb-1">Områden</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {(b.omraden ?? []).length > 0
+                                    ? b.omraden!.map(o => <span key={o} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{o}</span>)
+                                    : <span className="text-xs text-slate-400">Alla</span>}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-400 mb-1">Områden</p>
-                            <div className="flex flex-wrap gap-1">
-                              {(b.omraden ?? []).length > 0
-                                ? b.omraden!.map(o => <span key={o} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{o}</span>)
-                                : <span className="text-xs text-slate-400">Alla</span>}
-                            </div>
-                          </div>
+                          ))}
+                        </div>
+                      )}
+                      <button onClick={() => setRedigerarBevakning('ny')} className="text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors">
+                        + Ny bevakning
+                      </button>
+                    </>
+                  )}
+                  {redigerarBevakning && (
+                    <KategoriFilterModal
+                      kallNamn="Polisen"
+                      initialKategorier={redigerarBevakning === 'ny' ? null : redigerarBevakning.kategorier}
+                      initialOmraden={redigerarBevakning === 'ny' ? null : redigerarBevakning.omraden}
+                      onSpara={sparaBevakning}
+                      onClose={() => setRedigerarBevakning(null)}
+                    />
+                  )}
+                </div>
+
+                {/* Aktiva källor — admin/support-skrivrätt via
+                    GET/PUT /api/admin/users/{id}/sources (admin-variant av
+                    UserSourcesController). Rör bara isActive, aldrig
+                    sortOrder (rent kosmetiskt, användarens eget
+                    drag-och-släpp i Mina källor). */}
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Aktiva källor</p>
+                  {källorLaddar ? (
+                    <p className="text-sm text-slate-400">Laddar...</p>
+                  ) : valdaKällor.length === 0 ? (
+                    <p className="text-sm text-slate-500">Inga källor tillagda.</p>
+                  ) : (
+                    <div className="flex flex-col gap-1.5">
+                      {valdaKällor.map(k => (
+                        <div key={k.sourceId} className="flex items-center justify-between gap-2">
+                          <span className="text-sm text-slate-700">{k.name}</span>
+                          <button
+                            onClick={() => växlaKällaMutation.mutate({ sourceId: k.sourceId, isActive: !k.isActive })}
+                            disabled={växlaKällaMutation.isPending}
+                            className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors disabled:opacity-50 ${
+                              k.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                          >
+                            {k.isActive ? 'Aktiv' : 'Inaktiv'}
+                          </button>
                         </div>
                       ))}
                     </div>

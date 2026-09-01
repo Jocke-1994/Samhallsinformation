@@ -29,6 +29,18 @@ export interface AdminPolisenBevakningDto {
   omraden:    string[] | null
 }
 
+export interface AdminUserSourceDto {
+  sourceId:  number
+  shortName: string
+  name:      string
+  isActive:  boolean
+}
+
+interface BevakningRequestBody {
+  kategorier: string[] | null
+  omraden:    string[] | null
+}
+
 export interface AdminSettingLogDto {
   setting:   string
   oldValue:  string | null
@@ -108,6 +120,37 @@ export async function fetchAdminUserPolisenBevakningar(id: string): Promise<Admi
   const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar`)
   if (!res.ok) throw new Error(`fetchAdminUserPolisenBevakningar: ${res.status}`)
   return res.json()
+}
+
+// Admin/support-skrivrätt på en användares bevakningar — löser att man
+// annars måste slå på kallor_polisen_filter GLOBALT bara för att kunna
+// hjälpa en enskild användare rätta sina inställningar.
+export async function createAdminUserPolisenBevakning(id: string, req: BevakningRequestBody): Promise<AdminPolisenBevakningDto> {
+  const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar`, { method: 'POST', body: JSON.stringify(req) })
+  if (!res.ok) throw new Error(`createAdminUserPolisenBevakning: ${res.status}`)
+  return res.json()
+}
+
+export async function updateAdminUserPolisenBevakning(id: string, bevakningId: string, req: BevakningRequestBody): Promise<AdminPolisenBevakningDto> {
+  const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar/${bevakningId}`, { method: 'PUT', body: JSON.stringify(req) })
+  if (!res.ok) throw new Error(`updateAdminUserPolisenBevakning: ${res.status}`)
+  return res.json()
+}
+
+export async function deleteAdminUserPolisenBevakning(id: string, bevakningId: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar/${bevakningId}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`deleteAdminUserPolisenBevakning: ${res.status}`)
+}
+
+export async function fetchAdminUserSources(id: string): Promise<AdminUserSourceDto[]> {
+  const res = await adminFetch(`/api/admin/users/${id}/sources`)
+  if (!res.ok) throw new Error(`fetchAdminUserSources: ${res.status}`)
+  return res.json()
+}
+
+export async function setAdminUserSourceActive(id: string, sourceId: number, isActive: boolean): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/sources/${sourceId}`, { method: 'PUT', body: JSON.stringify({ isActive }) })
+  if (!res.ok) throw new Error(`setAdminUserSourceActive: ${res.status}`)
 }
 
 export async function fetchAdminUserSettingLog(id: string): Promise<AdminSettingLogDto[]> {
