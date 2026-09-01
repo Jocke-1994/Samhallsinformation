@@ -1147,21 +1147,6 @@ using (var scope = app.Services.CreateScope())
     }
     await db.SaveChangesAsync();
 
-    // Lansering (session 43): kallor_polisen_filter och flode_sparat låg kvar
-    // påslagna i produktion från tidigare egna tester — upptäckt vid en
-    // live-koll av /api/feature-flags inför att Logga in/Skapa konto-knapparna
-    // skulle slås på. Kodens default för båda är av; återställ genom att ta
-    // bort overridena (rör bara raden om den faktiskt finns, idempotent).
-    var flaggorAttStanga = new[] { "kallor_polisen_filter", "flode_sparat" };
-    var overridesAttTaBort = await db.FeatureFlagOverrides
-        .Where(f => flaggorAttStanga.Contains(f.Key))
-        .ToListAsync();
-    if (overridesAttTaBort.Count > 0)
-    {
-        db.FeatureFlagOverrides.RemoveRange(overridesAttTaBort);
-        await db.SaveChangesAsync();
-    }
-
     // Seed admin-användare från env-variabler
     var adminEmail    = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
     var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
