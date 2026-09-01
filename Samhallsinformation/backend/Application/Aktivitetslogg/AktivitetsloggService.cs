@@ -23,7 +23,8 @@ public class AktivitetsloggService : IAktivitetsloggService
         string detalj,
         string? gammaltVärde = null,
         string? nyttVärde = null,
-        bool test = false)
+        bool test = false,
+        Guid? relateratÄrendeId = null)
     {
         var http = _httpContextAccessor.HttpContext;
 
@@ -44,6 +45,7 @@ public class AktivitetsloggService : IAktivitetsloggService
             GammaltVärde = gammaltVärde,
             NyttVärde    = nyttVärde,
             Test         = test,
+            RelateratÄrendeId = relateratÄrendeId,
             Ip           = http?.Connection.RemoteIpAddress?.ToString(),
             Enhet        = http?.Request.Headers["User-Agent"].ToString(),
         });

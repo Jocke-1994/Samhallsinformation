@@ -161,9 +161,12 @@ public class AdminSupportController : ControllerBase
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+        var ärendeNummer = $"SUP-{ticket.TicketNumber:D4}";
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Ärende,
-            $"Ärende svarat — {ticket.Subject}", req.IsInternal ? "Intern anteckning" : "Svar till medborgaren");
+            $"Ärende svarat — {ticket.Subject}",
+            req.IsInternal ? $"Intern anteckning — {ärendeNummer}" : $"Svar skickat till medborgaren — {ärendeNummer}",
+            relateratÄrendeId: ticket.Id);
 
         // Skickas som riktigt mejl bara för svar avsedda för medborgaren — en
         // adress att skicka till måste finnas (anonym feedback utan ContactEmail
@@ -201,7 +204,7 @@ public class AdminSupportController : ControllerBase
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Ärende,
             $"Ärendestatus ändrad — {ticket.Subject}", $"{gammalStatus} → {req.Status}",
-            gammaltVärde: gammalStatus, nyttVärde: req.Status);
+            gammaltVärde: gammalStatus, nyttVärde: req.Status, relateratÄrendeId: ticket.Id);
         return Ok();
     }
 
@@ -216,7 +219,8 @@ public class AdminSupportController : ControllerBase
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Ärende,
-            req.Archived ? $"Ärende arkiverat — {ticket.Subject}" : $"Ärende återställt från arkiv — {ticket.Subject}", "");
+            req.Archived ? $"Ärende arkiverat — {ticket.Subject}" : $"Ärende återställt från arkiv — {ticket.Subject}", "",
+            relateratÄrendeId: ticket.Id);
         return Ok();
     }
 
@@ -235,7 +239,7 @@ public class AdminSupportController : ControllerBase
             : (await _db.Users.FindAsync(req.UserId.Value))?.Name ?? "Okänd";
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Ärende,
-            $"Ärende tilldelat — {ticket.Subject}", tilldeladNamn);
+            $"Ärende tilldelat — {ticket.Subject}", tilldeladNamn, relateratÄrendeId: ticket.Id);
         return Ok();
     }
 

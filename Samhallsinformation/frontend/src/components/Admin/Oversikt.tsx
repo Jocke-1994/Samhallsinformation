@@ -26,7 +26,12 @@ function formatTid(iso: string): string {
     : d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
 }
 
-export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection) => void }) {
+interface Props {
+  onNavigate:      (s: AdminSection) => void
+  onÖppnaÄrende?:  (id: string) => void
+}
+
+export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
   const [öppenId, setÖppenId] = useState<string | null>(null)
 
   const { data: sources = [] } = useQuery({
@@ -129,6 +134,14 @@ export default function Oversikt({ onNavigate }: { onNavigate: (s: AdminSection)
                 {öppenId === h.id && (
                   <div className="px-6 pb-3 pl-[4.75rem] pr-6">
                     <p className="text-xs text-slate-500 leading-relaxed">{h.detalj}</p>
+                    {h.relateratÄrendeId && onÖppnaÄrende && (
+                      <button
+                        onClick={() => onÖppnaÄrende(h.relateratÄrendeId!)}
+                        className="mt-1.5 text-xs font-medium text-violet-600 hover:text-violet-800 transition-colors"
+                      >
+                        Öppna ärende →
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

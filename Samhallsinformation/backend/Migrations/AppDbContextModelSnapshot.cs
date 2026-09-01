@@ -67,6 +67,9 @@ namespace Samhallsinformation.Migrations
                     b.Property<string>("NyttVärde")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("RelateratÄrendeId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Rubrik")
                         .IsRequired()
                         .HasColumnType("TEXT");

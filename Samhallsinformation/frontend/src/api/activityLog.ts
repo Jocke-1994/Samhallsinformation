@@ -46,6 +46,7 @@ export interface LoggPost {
   nyttVärde?:    string | null
   arkiverad:     boolean
   test:          boolean
+  relateratÄrendeId?: string | null
 }
 
 export interface ActivityLogSammanfattning {

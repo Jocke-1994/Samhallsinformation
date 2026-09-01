@@ -355,7 +355,7 @@ export default function AdminPage() {
         <div className="flex-1 overflow-y-auto" style={{ padding: '2rem 3rem' }}>
           <div style={{ maxWidth: '1100px' }}>
 
-            {section === 'oversikt'    && <Oversikt onNavigate={setSection} />}
+            {section === 'oversikt'    && <Oversikt onNavigate={setSection} onÖppnaÄrende={öppnaÄrende} />}
             {section === 'kallor'      && <Kallhantering />}
             {section === 'sandlada'    && <Sandlada />}
             {section === 'felsökning'  && <Felsökning />}
@@ -397,7 +397,7 @@ export default function AdminPage() {
             {section === 'uppdateringar'  && <AdminUppdateringar />}
             {section === 'faq'            && <AdminFaq />}
             {section === 'rapporter'      && <Rapporter onNavigate={setSection} />}
-            {section === 'aktivitetslogg' && <Aktivitetslogg />}
+            {section === 'aktivitetslogg' && <Aktivitetslogg onÖppnaÄrende={öppnaÄrende} />}
             {section === 'impersonation'  && <Impersonation onNavigate={setSection} />}
             {section === 'feature-flags'  && (
               <div className="flex flex-col gap-6">

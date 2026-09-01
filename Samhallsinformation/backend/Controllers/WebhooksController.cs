@@ -111,7 +111,8 @@ public class WebhooksController : ControllerBase
 
         await _aktivitetslogg.LogAsync(
             AktörTyper.System, LoggTyper.Ärende,
-            $"Svar mottaget via e-post — {ticket.Subject}", "Mottaget via Resend inbound");
+            $"Svar mottaget via e-post — {ticket.Subject}", $"Mottaget via Resend inbound — SUP-{ticket.TicketNumber:D4}",
+            relateratÄrendeId: ticket.Id);
 
         return Ok();
     }
