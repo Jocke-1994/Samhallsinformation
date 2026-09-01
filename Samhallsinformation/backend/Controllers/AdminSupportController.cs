@@ -172,12 +172,11 @@ public class AdminSupportController : ControllerBase
         if (!req.IsInternal)
         {
             var toEmail = ticket.ContactEmail ?? ticket.CreatedByUser?.Email;
-            var toName  = ticket.ContactName ?? ticket.CreatedByUser?.Name ?? "";
             if (!string.IsNullOrWhiteSpace(toEmail))
             {
                 try
                 {
-                    await _email.SendTicketReplyAsync(toEmail, toName, ticket.TicketNumber, ticket.Subject, req.Text);
+                    await _email.SendTicketReplyAsync(toEmail, ticket.TicketNumber, ticket.Subject, req.Text);
                 }
                 catch (Exception ex)
                 {

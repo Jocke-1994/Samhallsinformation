@@ -110,13 +110,12 @@ public class ResendEmailService : IEmailService
         await SendAsync(_fromNoreply, toEmail, "Välkommen till Samhällsinformation", html);
     }
 
-    public async Task SendTicketReplyAsync(string toEmail, string toName, int ticketNumber, string subject, string replyText)
+    public async Task SendTicketReplyAsync(string toEmail, int ticketNumber, string subject, string replyText)
     {
         var replyTo = $"svar+{ticketNumber}@samhallsinformation.se";
         var html = $"""
             <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
               <h2 style="color:#7c3aed;margin-bottom:8px">Svar på ditt ärende — {subject}</h2>
-              <p style="color:#334155">Hej {toName},</p>
               <p style="color:#334155;white-space:pre-wrap">{System.Net.WebUtility.HtmlEncode(replyText)}</p>
               <p style="color:#64748b;font-size:13px">Du kan svara direkt på det här mejlet om du har följdfrågor.</p>
               <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
