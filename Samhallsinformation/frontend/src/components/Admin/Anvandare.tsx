@@ -552,19 +552,19 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     })))
   }, [kontoNotiser, onPendingNotiser])
 
-  const { data: polisenBevakningar = [] } = useQuery({
+  const { data: polisenBevakningar = [], isLoading: bevakningarLaddar } = useQuery({
     queryKey: ['admin-polisen-bevakningar', vald?.id],
     queryFn:  () => fetchAdminUserPolisenBevakningar(vald!.id),
     enabled:  !!vald,
   })
 
-  const { data: notishistorik = [] } = useQuery({
+  const { data: notishistorik = [], isLoading: notishistorikLaddar } = useQuery({
     queryKey: ['admin-notification-log', vald?.id],
     queryFn:  () => fetchAdminUserNotificationLog(vald!.id),
     enabled:  !!vald,
   })
 
-  const { data: installningshistorik = [] } = useQuery({
+  const { data: installningshistorik = [], isLoading: installningshistorikLaddar } = useQuery({
     queryKey: ['admin-setting-log', vald?.id],
     queryFn:  () => fetchAdminUserSettingLog(vald!.id),
     enabled:  !!vald,
@@ -980,7 +980,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     gamla enskilda "Polisen-filter" (en AND-kombination) */}
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Polisen-bevakningar</p>
-                  {polisenBevakningar.length === 0 ? (
+                  {bevakningarLaddar ? (
+                    <p className="text-sm text-slate-400">Laddar...</p>
+                  ) : polisenBevakningar.length === 0 ? (
                     <p className="text-sm text-slate-500">Inga bevakningar — får allt från Polisen.</p>
                   ) : (
                     <div className="flex flex-col gap-3">
@@ -1183,7 +1185,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           {/* ── Notishistorik ── */}
           {detaljFlik === 'notishistorik' && (
             <div>
-              {notishistorik.length === 0 ? (
+              {notishistorikLaddar ? (
+                <p className="px-6 py-10 text-center text-sm text-slate-400">Laddar...</p>
+              ) : notishistorik.length === 0 ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Inga notiser skickade till den här användaren.</p>
               ) : (
                 <table className="w-full text-sm">
@@ -1238,7 +1242,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               session 18, bara aldrig haft en vy förrän nu. */}
           {detaljFlik === 'installningshistorik' && (
             <div>
-              {installningshistorik.length === 0 ? (
+              {installningshistorikLaddar ? (
+                <p className="px-6 py-10 text-center text-sm text-slate-400">Laddar...</p>
+              ) : installningshistorik.length === 0 ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Ingen inställningshistorik för den här användaren.</p>
               ) : (
                 <table className="w-full text-sm">
