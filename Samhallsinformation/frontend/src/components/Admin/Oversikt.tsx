@@ -49,11 +49,14 @@ export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
     queryFn:  () => fetchAdminTickets(),
   })
 
-  // Filtrerad vy av den enhetliga aktivitetsloggen (#491 wave 1) — de 8
-  // senaste admin/system-händelserna, ingen egen härledning längre.
+  // Filtrerad vy av den enhetliga aktivitetsloggen (#491 wave 1) — de 14
+  // senaste admin/system-händelserna, ingen egen härledning längre. Höjt
+  // från 8 efter att ingestor-kollapsningen (#521) gjorde varje rad mer
+  // informationstät — 8 rader lämnade tomt utrymme i kortet där det förr
+  // alltid var fullt av rutinmässiga "inga nya händelser"-rader.
   const { data: aktivitetslogg } = useQuery({
     queryKey: ['admin-activity-log', 'oversikt'],
-    queryFn:  () => fetchAdminActivityLog({ gräns: 8 }),
+    queryFn:  () => fetchAdminActivityLog({ gräns: 14 }),
   })
 
   const aktivaKallor = sources.filter(s => s.isActive)
@@ -114,7 +117,7 @@ export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
         <div className="lg:col-span-2 lg:row-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <h3 className="text-base font-semibold text-slate-900">Senaste händelser</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Filtrerad vy av aktivitetsloggen — de 8 senaste admin/system-händelserna</p>
+            <p className="text-xs text-slate-400 mt-0.5">Filtrerad vy av aktivitetsloggen — de 14 senaste admin/system-händelserna</p>
           </div>
           <div className="divide-y divide-slate-50">
             {senasteHändelser.length === 0 ? (
