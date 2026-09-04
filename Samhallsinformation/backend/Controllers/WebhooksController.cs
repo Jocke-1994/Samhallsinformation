@@ -138,8 +138,17 @@ public class WebhooksController : ControllerBase
         if (Math.Abs((DateTimeOffset.UtcNow - when).TotalMinutes) > 5) return false;
 
         var secretUtanPrefix = secret.StartsWith("whsec_") ? secret["whsec_".Length..] : secret;
-        var secretBytes      = Convert.FromBase64String(secretUtanPrefix);
-        var signedContent    = $"{svixId}.{svixTimestamp}.{rawBody}";
+        byte[] secretBytes;
+        try
+        {
+            secretBytes = Convert.FromBase64String(secretUtanPrefix);
+        }
+        catch (FormatException)
+        {
+            _logger.LogError("RESEND_WEBHOOK_SECRET är inte giltig Base64 — kan inte verifiera inkommande webhooks.");
+            return false;
+        }
+        var signedContent = $"{svixId}.{svixTimestamp}.{rawBody}";
 
         using var hmac  = new HMACSHA256(secretBytes);
         var beräknad     = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(signedContent)));
