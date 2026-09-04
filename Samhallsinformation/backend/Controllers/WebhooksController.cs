@@ -98,13 +98,28 @@ public class WebhooksController : ControllerBase
         }
 
         var text = await _email.GetReceivedEmailTextAsync(emailId);
-        if (string.IsNullOrWhiteSpace(text)) return Ok();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            _logger.LogWarning(
+                "Resend-webhook: inget text/html-innehåll kunde hämtas för email_id {EmailId}, ärende {TicketNumber} — inget svar sparat.",
+                emailId, ticketNumber);
+            return Ok();
+        }
+
+        var sparadText = KlippBortCiterat(text);
+        if (string.IsNullOrWhiteSpace(sparadText))
+        {
+            _logger.LogWarning(
+                "Resend-webhook: hela innehållet för email_id {EmailId}, ärende {TicketNumber} tolkades som citerat/tidigare svar — inget nytt svar sparat. Rått innehåll (första 200 tecken): {RawPreview}",
+                emailId, ticketNumber, text.Length > 200 ? text[..200] : text);
+            return Ok();
+        }
 
         _db.SupportTicketMessages.Add(new SupportTicketMessage
         {
             TicketId   = ticket.Id,
             SenderType = "user",
-            Text       = KlippBortCiterat(text),
+            Text       = sparadText,
         });
         ticket.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
