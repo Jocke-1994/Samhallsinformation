@@ -35,14 +35,16 @@ public class WebhooksController : ControllerBase
     private readonly IEmailService _email;
     private readonly IConfiguration _config;
     private readonly IAktivitetsloggService _aktivitetslogg;
+    private readonly IPushNotificationService _push;
     private readonly ILogger<WebhooksController> _logger;
 
-    public WebhooksController(AppDbContext db, IEmailService email, IConfiguration config, IAktivitetsloggService aktivitetslogg, ILogger<WebhooksController> logger)
+    public WebhooksController(AppDbContext db, IEmailService email, IConfiguration config, IAktivitetsloggService aktivitetslogg, IPushNotificationService push, ILogger<WebhooksController> logger)
     {
         _db = db;
         _email = email;
         _config = config;
         _aktivitetslogg = aktivitetslogg;
+        _push = push;
         _logger = logger;
     }
 
@@ -128,6 +130,16 @@ public class WebhooksController : ControllerBase
             AktörTyper.System, LoggTyper.Ärende,
             $"Svar mottaget via e-post — {ticket.Subject}", $"Mottaget via Resend inbound — SUP-{ticket.TicketNumber:D4}",
             relateratÄrendeId: ticket.Id);
+
+        try
+        {
+            var frontendUrl = _config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
+            await PushDispatcher.DispatchTicketReplyAsync(_db, _push, frontendUrl, ticket);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Kunde inte skicka push för inbound-svar på ärende {TicketNumber}", ticket.TicketNumber);
+        }
 
         return Ok();
     }

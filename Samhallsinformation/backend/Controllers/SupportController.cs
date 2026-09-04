@@ -173,6 +173,17 @@ public class SupportController : ControllerBase
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+
+        try
+        {
+            var frontendUrl = _config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
+            await PushDispatcher.DispatchTicketReplyAsync(_db, _push, frontendUrl, ticket);
+        }
+        catch (Exception)
+        {
+            // Push-fel ska aldrig fela svaret — samma princip som Create() ovan.
+        }
+
         return Ok();
     }
 }

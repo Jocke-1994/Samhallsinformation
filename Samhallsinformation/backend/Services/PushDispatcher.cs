@@ -132,6 +132,36 @@ public static class PushDispatcher
         await SendToDevicesAsync(db, push, devices, title, body, url, sourceId: null, ct);
     }
 
+    // Notifierar alla Admin/Support-användare när en medborgare svarar på ett
+    // BEFINTLIGT ärende — via inloggat konto (SupportController.Reply) eller
+    // Resend inbound-mejl (WebhooksController.ResendInbound). Saknades helt
+    // innan; bara nya ärenden/konton triggade push. Ett agentsvar (utgående,
+    // AdminSupportController.Reply) triggar INTE detta — admin vet redan att
+    // de själva svarade.
+    public static async Task DispatchTicketReplyAsync(
+        AppDbContext db, IPushNotificationService push, string frontendUrl,
+        SupportTicket ticket, CancellationToken ct = default)
+    {
+        var adminIds = await db.Users
+            .Where(u => (u.Role == "Admin" || u.Role == "Support") && u.PushEnabled)
+            .Select(u => u.Id)
+            .ToListAsync(ct);
+
+        if (adminIds.Count == 0) return;
+
+        var devices = await db.UserDevices
+            .Where(d => adminIds.Contains(d.UserId))
+            .ToListAsync(ct);
+
+        if (devices.Count == 0) return;
+
+        var title = "Nytt svar på ärende";
+        var body  = $"SUP-{ticket.TicketNumber:D4} — {ticket.Subject}";
+        var url   = $"{frontendUrl.TrimEnd('/')}/admin";
+
+        await SendToDevicesAsync(db, push, devices, title, body, url, sourceId: null, ct);
+    }
+
     // Notifierar alla Admin/Support-användare när ett NYTT konto skapas
     // (lösenord eller Google, spelar ingen roll) — samma mottagarmönster som
     // DispatchNewTicketAsync ovan.
