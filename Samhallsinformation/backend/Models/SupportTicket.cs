@@ -15,7 +15,9 @@ public class SupportTicket
     public DateTime? ReminderAt    { get; set; }
     public string?  ReminderNote   { get; set; }
     public bool     IsArchived     { get; set; } = false;
-    public DateTime? FirstOpenedAt { get; set; } // null = oläst, satt vid första GET av ärendedetaljer
+    public DateTime? FirstOpenedAt     { get; set; } // satt vid första GET av ärendedetaljer, ändras aldrig igen
+    public DateTime? LastViewedAt      { get; set; } // satt vid VARJE GET av ärendedetaljer
+    public DateTime? LastUserMessageAt { get; set; } // senaste medborgar-meddelandet (skapelse, svar, e-post). Oläst = detta > LastViewedAt
     public DateTime CreatedAt      { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt      { get; set; } = DateTime.UtcNow;
 

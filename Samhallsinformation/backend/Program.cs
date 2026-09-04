@@ -936,6 +936,32 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        // Oläst-markeringen (FirstOpenedAt) återställdes aldrig efter första
+        // öppningen, så ett nytt svar på ett redan öppnat ärende gav ingen
+        // "gul plupp" igen. LastViewedAt uppdateras vid VARJE öppning,
+        // LastUserMessageAt vid varje medborgar-meddelande (skapelse, svar,
+        // Resend inbound) — oläst = LastUserMessageAt > LastViewedAt.
+        // Backfill: LastViewedAt = FirstOpenedAt (redan öppnade ärenden utan
+        // nyare svar förblir lästa), LastUserMessageAt = senaste user-raden.
+        if (pendingMigrations.Contains("20260904230047_AddTicketLastViewedAndLastUserMessage"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""SupportTickets"" ADD COLUMN IF NOT EXISTS ""LastViewedAt""      timestamptz;
+                ALTER TABLE ""SupportTickets"" ADD COLUMN IF NOT EXISTS ""LastUserMessageAt"" timestamptz;
+
+                UPDATE ""SupportTickets"" SET ""LastViewedAt"" = ""FirstOpenedAt"" WHERE ""FirstOpenedAt"" IS NOT NULL;
+
+                UPDATE ""SupportTickets"" st SET ""LastUserMessageAt"" = (
+                    SELECT MAX(m.""CreatedAt"") FROM ""SupportTicketMessages"" m
+                    WHERE m.""TicketId"" = st.""Id"" AND m.""SenderType"" = 'user'
+                );
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260904230047_AddTicketLastViewedAndLastUserMessage', '10.0.11')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 

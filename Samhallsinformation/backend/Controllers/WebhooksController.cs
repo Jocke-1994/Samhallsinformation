@@ -124,6 +124,7 @@ public class WebhooksController : ControllerBase
             Text       = sparadText,
         });
         ticket.UpdatedAt = DateTime.UtcNow;
+        ticket.LastUserMessageAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
         await _aktivitetslogg.LogAsync(
