@@ -63,6 +63,8 @@ public class AdminSupportController : ControllerBase
                 AssignedToName = t.AssignedToUser != null ? t.AssignedToUser.Name : null,
                 t.IsArchived,
                 t.FirstOpenedAt,
+                t.LastViewedAt,
+                t.LastUserMessageAt,
                 t.CreatedAt,
                 t.UpdatedAt,
             })
@@ -74,15 +76,14 @@ public class AdminSupportController : ControllerBase
     [HttpGet("tickets/{id}")]
     public async Task<IActionResult> GetTicket(Guid id)
     {
-        // Markera som läst (första öppningen) innan projektionen byggs, så
-        // svaret nedan redan speglar det nya värdet.
+        // Markera som läst — LastViewedAt uppdateras vid VARJE öppning (till
+        // skillnad från FirstOpenedAt, som bara sätts en gång) så ett nytt
+        // svar efter att ärendet redan lästs blir oläst igen.
         var entity = await _db.SupportTickets.FindAsync(id);
         if (entity == null) return NotFound();
-        if (entity.FirstOpenedAt == null)
-        {
-            entity.FirstOpenedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
-        }
+        entity.FirstOpenedAt ??= DateTime.UtcNow;
+        entity.LastViewedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
 
         var ticket = await _db.SupportTickets
             .Where(t => t.Id == id)
@@ -103,6 +104,8 @@ public class AdminSupportController : ControllerBase
                 t.ReminderNote,
                 t.IsArchived,
                 t.FirstOpenedAt,
+                t.LastViewedAt,
+                t.LastUserMessageAt,
                 t.CreatedAt,
                 t.UpdatedAt,
             })

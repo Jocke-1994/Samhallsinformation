@@ -98,7 +98,12 @@ export default function AdminPage() {
     queryFn: () => fetchAdminTickets(),
     refetchInterval: 30_000,
   })
-  const olästaTotalt = ärendenFörBadge.filter(a => !a.isArchived && !a.firstOpenedAt).length
+  // Oläst = aldrig öppnat, eller ett medborgar-svar kom in efter senaste
+  // öppningen — matchar samma logik som SupportInbox.tsx.
+  const olästaTotalt = ärendenFörBadge.filter(a =>
+    !a.isArchived && !!a.lastUserMessageAt &&
+    (!a.lastViewedAt || new Date(a.lastUserMessageAt) > new Date(a.lastViewedAt))
+  ).length
 
   const [section, setSection]             = useState<AdminSection>(
     aktivVy === 'Support' ? 'support-inbox' : 'oversikt'

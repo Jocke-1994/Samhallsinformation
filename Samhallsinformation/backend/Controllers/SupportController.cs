@@ -61,6 +61,7 @@ public class SupportController : ControllerBase
             CreatedByUserId = userId,
             ContactName     = user?.Name ?? req.ContactName,
             ContactEmail    = user?.Email ?? req.ContactEmail,
+            LastUserMessageAt = DateTime.UtcNow,
         };
         _db.SupportTickets.Add(ticket);
 
@@ -171,6 +172,7 @@ public class SupportController : ControllerBase
             Text         = req.Text,
         });
         ticket.UpdatedAt = DateTime.UtcNow;
+        ticket.LastUserMessageAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
 

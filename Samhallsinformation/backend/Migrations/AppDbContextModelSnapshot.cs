@@ -675,6 +675,12 @@ namespace Samhallsinformation.Migrations
                     b.Property<bool>("IsArchived")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("LastUserMessageAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastViewedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("ReminderAt")
                         .HasColumnType("TEXT");
 
