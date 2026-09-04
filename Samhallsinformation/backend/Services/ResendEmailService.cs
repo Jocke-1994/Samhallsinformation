@@ -8,14 +8,16 @@ using System.Text.RegularExpressions;
 public class ResendEmailService : IEmailService
 {
     private readonly HttpClient _http;
+    private readonly ILogger<ResendEmailService> _logger;
     private readonly string _fromNoreply = "noreply@samhallsinformation.se";
     private readonly string _fromSupport = "support@samhallsinformation.se";
 
-    public ResendEmailService(IConfiguration config)
+    public ResendEmailService(IConfiguration config, ILogger<ResendEmailService> logger)
     {
         var apiKey = config["RESEND_API_KEY"] ?? throw new InvalidOperationException("RESEND_API_KEY saknas");
         _http = new HttpClient { BaseAddress = new Uri("https://api.resend.com") };
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        _logger = logger;
     }
 
     public async Task SendPasswordResetAsync(string toEmail, string toName, string resetLink)
@@ -130,9 +132,15 @@ public class ResendEmailService : IEmailService
     public async Task<string?> GetReceivedEmailTextAsync(string emailId)
     {
         var res = await _http.GetAsync($"/emails/receiving/{emailId}");
-        if (!res.IsSuccessStatusCode) return null;
-
         var body = await res.Content.ReadAsStringAsync();
+        if (!res.IsSuccessStatusCode)
+        {
+            _logger.LogWarning(
+                "Resend: GET /emails/receiving/{EmailId} gav {StatusCode} — {Body}",
+                emailId, (int)res.StatusCode, body.Length > 300 ? body[..300] : body);
+            return null;
+        }
+
         using var doc = JsonDocument.Parse(body);
         var text = doc.RootElement.TryGetProperty("text", out var textEl) ? textEl.GetString() : null;
         if (!string.IsNullOrWhiteSpace(text)) return text;
@@ -142,7 +150,12 @@ public class ResendEmailService : IEmailService
         // HTML). Faller tillbaka på html-fältet istället för att tyst tappa
         // svaret helt.
         var html = doc.RootElement.TryGetProperty("html", out var htmlEl) ? htmlEl.GetString() : null;
-        return string.IsNullOrWhiteSpace(html) ? null : HtmlTillText(html);
+        if (!string.IsNullOrWhiteSpace(html)) return HtmlTillText(html);
+
+        _logger.LogWarning(
+            "Resend: GET /emails/receiving/{EmailId} gav 200 men både text och html var tomma — {Body}",
+            emailId, body.Length > 300 ? body[..300] : body);
+        return null;
     }
 
     private static string HtmlTillText(string html)
