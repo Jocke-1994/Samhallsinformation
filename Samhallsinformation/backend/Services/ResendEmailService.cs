@@ -3,6 +3,7 @@ namespace Samhallsinformation.Services;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 public class ResendEmailService : IEmailService
 {
@@ -133,7 +134,24 @@ public class ResendEmailService : IEmailService
 
         var body = await res.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(body);
-        return doc.RootElement.TryGetProperty("text", out var textEl) ? textEl.GetString() : null;
+        var text = doc.RootElement.TryGetProperty("text", out var textEl) ? textEl.GetString() : null;
+        if (!string.IsNullOrWhiteSpace(text)) return text;
+
+        // Resends "text"-fält är null om mejlet saknar en text/plain-del —
+        // vanligt för svar skickade från Outlook/Hotmails webbklient (bara
+        // HTML). Faller tillbaka på html-fältet istället för att tyst tappa
+        // svaret helt.
+        var html = doc.RootElement.TryGetProperty("html", out var htmlEl) ? htmlEl.GetString() : null;
+        return string.IsNullOrWhiteSpace(html) ? null : HtmlTillText(html);
+    }
+
+    private static string HtmlTillText(string html)
+    {
+        var utanScriptStyle = Regex.Replace(html, @"<(script|style)[^>]*>[\s\S]*?</\1>", "", RegexOptions.IgnoreCase);
+        var medRadbrytningar = Regex.Replace(utanScriptStyle, @"<(br|/p|/div|/li)\s*/?>", "\n", RegexOptions.IgnoreCase);
+        var utanTaggar = Regex.Replace(medRadbrytningar, "<[^>]+>", "");
+        var avkodad = System.Net.WebUtility.HtmlDecode(utanTaggar);
+        return Regex.Replace(avkodad, @"\n{3,}", "\n\n").Trim();
     }
 
     private async Task SendAsync(string from, string to, string subject, string html, string? replyTo = null)
