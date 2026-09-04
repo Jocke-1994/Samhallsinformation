@@ -111,6 +111,40 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 45 — 2026-09-04 / 2026-09-05
+**Obs:** Session 43 (2026-08-31, launch-prep-flaggor/FAQ/Nyheter/beta-badge + Resend inbound-funktionen byggd) och Session 44 (2026-09-01, tio PR:ar #519–528: ingestor-cykelfixar, admin-skrivrätt på Polisen-bevakningar/Aktiva källor, feature-flag-fixen) skedde men loggades bara i minnessystemet, aldrig hit. Se `project_launch_prep_session43_2026-08-31.md` i minnet för Session 43:s detaljer.
+
+**What was done:**
+- **Resend inbound (#518, byggd session 43) felsökt och verifierat fullt fungerande end-to-end**, via ett riktigt testärende (SUP-11) och upprepade riktiga Hotmail-svar — fyra separata, riktiga buggar hittade och fixade i tur och ordning, en diagnostik-logg-runda i taget:
+  1. **PR #535** — `VerifierarSignatur` kraschade (500, ohanterat `FormatException`) om `RESEND_WEBHOOK_SECRET` inte var giltig Base64, istället för att svara 401 som övriga ogiltiga-signatur-fall
+  2. **Faktisk rotorsak till att inget landade alls:** `RESEND_API_KEY` skapades ursprungligen (session 18) med bara **"Sending access"** — saknade behörighet för `GET /emails/receiving/{id}`. Användaren uppgraderade nyckeln till Full access i Resend-dashboarden, ingen kodändring
+  3. **PR #536** — Resends receiving-API returnerar `"text": null` om mejlet saknar en text/plain-del, vilket Outlook/Hotmails webbklient ofta gör (bara HTML). Lade till en html→text-fallback (enkel regex: strippar script/style, gör om br/p/div/li-slut till radbrytningar, avkodar HTML-entiteter)
+  4. **PR #537/#538** — la till varningsloggar för de tidigare tysta `return Ok()`-grenarna i `WebhooksController.ResendInbound` (tomt text/html-innehåll, hela citat-klippt) samt statuskod+svarskropp för själva Resend-anropet — det var den här loggningen som avslöjade rotorsak #2 rakt av, ingen gissning krävdes
+  5. **PR #539** — Outlooks webbklient citerar utan `>`-prefix eller en "skrev/wrote"-mening, bara ett rubrikblock (`Från: ... Skickat: ... Till: ... Ämne: ...`) ofta föregånget av en understreckad avdelare — `KlippBortCiterat` kände inte igen det, hela det citerade originalmejlet hamnade i den sparade texten. Verifierat live: användaren skrev bara "Test 6"/"Test 7", bara den texten sparas nu
+- **Flagg-fixen (#528, session 44) bekräftad hålla över FLERA efterföljande produktionsdeploys** — viktig nyans: #528 var själva deployen som tog bort den trasiga koden, så att flaggan överlevde DEN deployen bevisade ingenting (buggen slog bara till på en deploy som körs EFTER fixen redan ligger i produktion). `kallor_polisen_filter` kontrollerad (`GET /api/feature-flags`) efter varje efterföljande merge under kvällen (PR #535 t.o.m. #541) och höll sig `true` hela vägen — genuint verifierad nu
+- **Ny push-notis vid ärendesvar** (PR #540) — användaren märkte proaktivt att bara NYA ärenden/konton triggade push (`DispatchNewTicketAsync`/`DispatchNewUserAsync`), ett svar på ett BEFINTLIGT ärende (inloggat eller via Resend inbound-mejl) gav ingen notis alls. Ny `PushDispatcher.DispatchTicketReplyAsync`, samma Admin/Support+`PushEnabled`-mottagarmönster som redan fanns, kopplad in på båda ställena en medborgare kan svara. Agentens eget utgående svar triggar medvetet INTE detta. Verifierat live: push landade på både dator och mobil
+- **Oläst-markeringen i Support-inboxen återställs nu vid nya svar** (PR #541) — uppföljande upptäckt direkt efter push-fixen ("notisen kom, men ingen plupp i inboxen"). Rotorsak: oläst styrdes av `FirstOpenedAt`, satt EN gång och aldrig återställd. Ny modell: `LastViewedAt` (uppdateras vid VARJE öppning) + `LastUserMessageAt` (uppdateras vid varje medborgar-meddelande — skapelse, inloggat svar, Resend inbound). Oläst = `LastUserMessageAt > LastViewedAt`. Ny migration (`AddTicketLastViewedAndLastUserMessage`) med backfill (`LastViewedAt = FirstOpenedAt`, `LastUserMessageAt` = senaste user-meddelandets `CreatedAt`), samma raw-SQL-Postgres-mönster som redan etablerat. Verifierat live mot lokal SQLite (inte bara build/test): nytt ärende oläst, öppnat ärende läst, agent-svar bumpar `UpdatedAt` men lämnar ärendet läst
+- Alla sex PR:ar (#535–#541, sju räknat) verifierade med `dotnet build`/`dotnet test` (101/101) och för frontend-ändringarna `tsc -b` innan push, mergade av användaren löpande under kvällen
+- Sidospår: förklarade Railways nya `railway postgres`-CLI-kommandon (HA/PITR/PgBouncer) på användarens fråga — bedömt inte relevant vid nuvarande skala (en enda liten Postgres-instans), inget byggt
+
+**Problem och lösningar:**
+- Samma "verifiera, gissa inte"-princip som redan etablerad för kod tillämpades fyra gånger i rad på en levande tredjepartsintegration: varje gång ett fel dolde ett djupare fel (500-krasch dolde fel API-nyckel-behörighet, som dolde en innehålls-parsningsbugg, som dolde en citat-klippningslucka), löste vi det genom att lägga till riktad loggning och läsa Railway-loggen efter EN riktig testhändelse — aldrig genom att gissa vidare i koden
+- En API-nyckel skapad för ETT syfte (Resend "Sending access", session 18, bara för utgående mejl) begränsade tyst en helt annan funktion (läsa inkommande mejl) byggd månader senare på samma nyckel — värt att explicit kolla behörighetsomfånget på befintliga tredjepartsnycklar/tokens när en ny förmåga byggs ovanpå en redan existerande extern tjänst-koppling
+- En "oläst"-flagga modellerad som "har den NÅGONSIN öppnats" (sätts en gång) är en svagare garanti än "finns det aktivitet sedan jag senast tittade" — vid ny notis-/plupp-funktionalitet: kontrollera vilken av de två ett befintligt fält faktiskt modellerar innan man bygger vidare på det, inte anta att de är utbytbara
+- `python3` saknas fortfarande i PATH (samma kända kvirk som tidigare sessioner) — löst genom att parsa JSON-svar med `node -e` istället vid lokal curl-verifiering
+
+**Etablerat mönster:**
+- Vid en webhook/integration som svarar "lyckades" (200) men den förväntade sidoeffekten uteblir: behandla VARJE tyst `return`/no-op-gren i hanteraren som misstänkt och lägg till loggning i var och en, istället för att gissa vilken gren som är boven
+- En ny push-notistrigger (`DispatchXAsync`) ska tydligt definiera VEM som ska trigga den och vem som medvetet INTE ska — här: en medborgares svar ja, agentens eget svar nej, annars ser admin en falsk "oläst/ny aktivitet"-signal på sina egna handlingar
+- Innan en ny funktion byggs ovanpå en befintlig tredjepartsnyckel/token: verifiera dess faktiska behörighetsomfång explicit, anta inte att den redan täcker den nya operationen bara för att den fungerat för det ursprungliga syftet
+
+**Next session:**
+- PR #516 (Nyheter-sidan) och #517 (beta-badge) fortfarande medvetet omergade, väntar på att tajmas mot ett LinkedIn-inlägg
+- `showLoginButton`/`showRegisterButton` fortfarande avstängda i produktion — sista steget i launch-ordningen
+- Kvarstående pre-launch-tester (från en checklista gjord tidigare i sessionen, inga påbörjade): mobil genomgång av hela registrerings-/onboardingflödet, lösenordsåterställning end-to-end mot en riktig inkorg, GDPR-kontoradering (24h-ångerfönster) verifierad live, rate limiting under en trafiktopp av samtidiga registreringar
+
+---
+
 ### Session 42 — 2026-08-29 / 2026-08-30
 **What was done:**
 - **Feedback-knappens text villkorad på inloggning** (PR #509): "Hjälp & Feedback" för inloggade (fungerar som supportkanal för kontofrågor), bara "Feedback" för utloggade besökare som inte har ett konto att få hjälp med
