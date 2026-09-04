@@ -199,6 +199,11 @@ public class WebhooksController : ControllerBase
             if (rad.StartsWith('>')) { klippVid = i; break; }
             if (rad.StartsWith("On ") && rad.Contains("wrote:")) { klippVid = i; break; }
             if (rad.StartsWith("Den ") && rad.Contains("skrev")) { klippVid = i; break; }
+            // Outlooks webbklient citerar utan ">"-prefix eller "skrev"-mening —
+            // bara ett rubrikblock ("Från: ... Skickat: ... Till: ... Ämne: ...")
+            // ofta föregånget av en understreckad avdelare.
+            if (rad.StartsWith("Från:", StringComparison.OrdinalIgnoreCase)) { klippVid = i; break; }
+            if (rad.Length >= 3 && rad.All(c => c == '_')) { klippVid = i; break; }
         }
         return string.Join('\n', rader.Take(klippVid)).Trim();
     }
