@@ -13,10 +13,13 @@ using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 using Samhallsinformation.Services;
 
-// Tar emot Resends inbound-webhook (event "email.received") när någon svarar
-// på ett ärendesvar-mejl skickat till svar+{ticketNumber}@samhallsinformation.se
-// (se ResendEmailService.SendTicketReplyAsync). Webhooken innehåller bara
-// metadata — själva texten hämtas separat via Resends Received Emails-API.
+// Tar emot Resends inbound-webhook (event "email.received") — antingen ett
+// svar på ett ärendesvar-mejl (svar+{ticketNumber}@samhallsinformation.se, se
+// ResendEmailService.SendTicketReplyAsync) eller ett helt nytt mejl till
+// info@samhallsinformation.se, som öppnar ett nytt ärende. Resends inbound-
+// mottagning är kopplad på hela domänen (MX-nivå) — info@ landar redan här
+// utan ytterligare DNS-arbete. Webhooken innehåller bara metadata — själva
+// texten hämtas separat via Resends Received Emails-API.
 //
 // Signaturverifiering följer Svix egen dokumenterade algoritm (Resend
 // levererar webhooks via Svix): hemligheten (RESEND_WEBHOOK_SECRET, format
@@ -30,6 +33,7 @@ using Samhallsinformation.Services;
 public class WebhooksController : ControllerBase
 {
     private static readonly Regex TicketAdressMönster = new(@"^svar\+(\d+)@", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private const string InfoAdress = "info@samhallsinformation.se";
 
     private readonly AppDbContext _db;
     private readonly IEmailService _email;
@@ -73,20 +77,37 @@ public class WebhooksController : ControllerBase
         var data = root.GetProperty("data");
         var emailId = data.TryGetProperty("email_id", out var idEl) ? idEl.GetString() : null;
         var fromRaw = data.TryGetProperty("from", out var fromEl) ? fromEl.GetString() ?? "" : "";
+        var subjectRaw = data.TryGetProperty("subject", out var subjectEl) ? subjectEl.GetString() : null;
         var toAdresser = data.TryGetProperty("to", out var toEl)
             ? toEl.EnumerateArray().Select(e => e.GetString() ?? "").ToList()
             : [];
+        if (emailId == null) return Ok();
 
         var ticketAdress = toAdresser.FirstOrDefault(a => TicketAdressMönster.IsMatch(a));
-        if (ticketAdress == null || emailId == null) return Ok();
+        if (ticketAdress != null)
+        {
+            await HanteraSvarPåBefintligtÄrendeAsync(emailId, fromRaw, ticketAdress);
+            return Ok();
+        }
 
+        if (toAdresser.Any(a => ParseraEpostadress(a).Equals(InfoAdress, StringComparison.OrdinalIgnoreCase)))
+        {
+            await SkapaÄrendeFrånInfoMejlAsync(emailId, fromRaw, subjectRaw);
+            return Ok();
+        }
+
+        return Ok(); // annan mottagaradress vi inte hanterar
+    }
+
+    private async Task HanteraSvarPåBefintligtÄrendeAsync(string emailId, string fromRaw, string ticketAdress)
+    {
         var ticketNumber = int.Parse(TicketAdressMönster.Match(ticketAdress).Groups[1].Value);
         var fromEpost = ParseraEpostadress(fromRaw);
 
         var ticket = await _db.SupportTickets
             .Include(t => t.CreatedByUser)
             .FirstOrDefaultAsync(t => t.TicketNumber == ticketNumber);
-        if (ticket == null) return Ok();
+        if (ticket == null) return;
 
         // Spoofing-skydd: bara den redan registrerade kontaktadressen för
         // ärendet får lägga till meddelanden via mejl.
@@ -96,7 +117,7 @@ public class WebhooksController : ControllerBase
             _logger.LogWarning(
                 "Resend-webhook: avsändare {From} matchar inte ärende {TicketNumber}s registrerade adress — avvisat.",
                 fromEpost, ticketNumber);
-            return Ok();
+            return;
         }
 
         var text = await _email.GetReceivedEmailTextAsync(emailId);
@@ -105,7 +126,7 @@ public class WebhooksController : ControllerBase
             _logger.LogWarning(
                 "Resend-webhook: inget text/html-innehåll kunde hämtas för email_id {EmailId}, ärende {TicketNumber} — inget svar sparat.",
                 emailId, ticketNumber);
-            return Ok();
+            return;
         }
 
         var sparadText = KlippBortCiterat(text);
@@ -114,7 +135,7 @@ public class WebhooksController : ControllerBase
             _logger.LogWarning(
                 "Resend-webhook: hela innehållet för email_id {EmailId}, ärende {TicketNumber} tolkades som citerat/tidigare svar — inget nytt svar sparat. Rått innehåll (första 200 tecken): {RawPreview}",
                 emailId, ticketNumber, text.Length > 200 ? text[..200] : text);
-            return Ok();
+            return;
         }
 
         _db.SupportTicketMessages.Add(new SupportTicketMessage
@@ -141,8 +162,71 @@ public class WebhooksController : ControllerBase
         {
             _logger.LogError(ex, "Kunde inte skicka push för inbound-svar på ärende {TicketNumber}", ticket.TicketNumber);
         }
+    }
 
-        return Ok();
+    // Ett förstagångsmejl till info@ (ingen svar+-adress, inget befintligt
+    // ärende) — öppnar ett nytt ärende precis som SupportController.Create,
+    // bara med avsändaren som kontaktadress istället för en inloggad användare.
+    private async Task SkapaÄrendeFrånInfoMejlAsync(string emailId, string fromRaw, string? subjectRaw)
+    {
+        var fromAdress = ParseraEpostadress(fromRaw);
+        var fromNamn = ParseraVisningsnamn(fromRaw);
+
+        var text = await _email.GetReceivedEmailTextAsync(emailId);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            _logger.LogWarning(
+                "Resend-webhook: inget text/html-innehåll kunde hämtas för email_id {EmailId} till {InfoAdress} — inget ärende skapat.",
+                emailId, InfoAdress);
+            return;
+        }
+
+        var sparadText = KlippBortCiterat(text);
+        if (string.IsNullOrWhiteSpace(sparadText))
+        {
+            _logger.LogWarning(
+                "Resend-webhook: hela innehållet för email_id {EmailId} till {InfoAdress} tolkades som citerat — inget ärende skapat.",
+                emailId, InfoAdress);
+            return;
+        }
+
+        var nextNumber = (await _db.SupportTickets.MaxAsync(t => (int?)t.TicketNumber) ?? 0) + 1;
+        var ticket = new SupportTicket
+        {
+            TicketNumber      = nextNumber,
+            Subject           = string.IsNullOrWhiteSpace(subjectRaw) ? "Mejl till info@" : subjectRaw,
+            Category          = "Allmän förfrågan",
+            Channel           = "info-mejl",
+            ContactName       = fromNamn,
+            ContactEmail      = fromAdress,
+            InboundAddress    = InfoAdress,
+            LastUserMessageAt = DateTime.UtcNow,
+        };
+        _db.SupportTickets.Add(ticket);
+
+        _db.SupportTicketMessages.Add(new SupportTicketMessage
+        {
+            Ticket     = ticket,
+            SenderType = "user",
+            Text       = sparadText,
+        });
+
+        await _db.SaveChangesAsync();
+
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.System, LoggTyper.Ärende,
+            $"Ärende öppnat via {InfoAdress} — {ticket.Subject}", $"{ticket.ContactName ?? "Okänd"} — {ticket.Category}",
+            relateratÄrendeId: ticket.Id);
+
+        try
+        {
+            var frontendUrl = _config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
+            await PushDispatcher.DispatchNewTicketAsync(_db, _push, frontendUrl, ticket);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Kunde inte skicka push för nytt info@-ärende {TicketNumber}", ticket.TicketNumber);
+        }
     }
 
     private bool VerifierarSignatur(string rawBody)
@@ -195,6 +279,16 @@ public class WebhooksController : ControllerBase
     {
         try { return new MailAddress(raw).Address; }
         catch { return raw.Trim(); }
+    }
+
+    private static string? ParseraVisningsnamn(string raw)
+    {
+        try
+        {
+            var namn = new MailAddress(raw).DisplayName;
+            return string.IsNullOrWhiteSpace(namn) ? null : namn;
+        }
+        catch { return null; }
     }
 
     // Mejlklienter citerar ofta hela det tidigare svaret under det nya

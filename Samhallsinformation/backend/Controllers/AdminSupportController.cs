@@ -182,7 +182,7 @@ public class AdminSupportController : ControllerBase
             {
                 try
                 {
-                    await _email.SendTicketReplyAsync(toEmail, ticket.TicketNumber, ticket.Subject, req.Text);
+                    await _email.SendTicketReplyAsync(toEmail, ticket.TicketNumber, ticket.Subject, req.Text, ticket.InboundAddress);
                 }
                 catch (Exception ex)
                 {

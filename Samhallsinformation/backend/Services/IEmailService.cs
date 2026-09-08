@@ -15,8 +15,10 @@ public interface IEmailService
 
     // Agentsvar på ett supportärende. reply_to sätts till en plus-adress
     // (svar+{ticketNumber}@...) — svarar mottagaren på mejlet landar det via
-    // Resends inbound-webhook tillbaka i samma ärendetråd.
-    Task SendTicketReplyAsync(string toEmail, int ticketNumber, string subject, string replyText);
+    // Resends inbound-webhook tillbaka i samma ärendetråd. fromAddress låter
+    // svaret gå ut från samma adress ärendet kom in på (t.ex. info@) istället
+    // för standard support@.
+    Task SendTicketReplyAsync(string toEmail, int ticketNumber, string subject, string replyText, string? fromAddress = null);
 
     // Hämtar textinnehållet för ett inkommet mejl — webhooken levererar bara
     // metadata (avsändare/mottagare/id), själva texten hämtas separat.

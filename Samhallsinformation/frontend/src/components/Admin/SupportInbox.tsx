@@ -43,7 +43,7 @@ const SCHEMA_LABELS: Record<SchemaTyp, string> = {
   intern:   'Intern anteckning',
   tilldela: 'Tilldela ärende',
 }
-const KANAL_LABELS: Record<string, string> = { arendehantering: 'Ärende', feedback: 'Feedback' }
+const KANAL_LABELS: Record<string, string> = { arendehantering: 'Ärende', feedback: 'Feedback', 'info-mejl': 'Info-mejl' }
 
 function ticketNr(t: { ticketNumber: number }) {
   return `SUP-${String(t.ticketNumber).padStart(4, '0')}`
