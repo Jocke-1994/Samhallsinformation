@@ -672,6 +672,9 @@ namespace Samhallsinformation.Migrations
                     b.Property<DateTime?>("FirstOpenedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("InboundAddress")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("IsArchived")
                         .HasColumnType("INTEGER");
 

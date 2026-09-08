@@ -11,6 +11,7 @@ public class SupportTicket
     public Guid?    CreatedByUserId { get; set; }
     public string?  ContactName    { get; set; }
     public string?  ContactEmail   { get; set; }
+    public string?  InboundAddress { get; set; } // adressen mejlet kom in på (t.ex. info@), styr avsändare på svar
     public Guid?    AssignedToUserId { get; set; }
     public DateTime? ReminderAt    { get; set; }
     public string?  ReminderNote   { get; set; }

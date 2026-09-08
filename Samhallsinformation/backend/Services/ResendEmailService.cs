@@ -113,7 +113,7 @@ public class ResendEmailService : IEmailService
         await SendAsync(_fromNoreply, toEmail, "Välkommen till Samhällsinformation", html);
     }
 
-    public async Task SendTicketReplyAsync(string toEmail, int ticketNumber, string subject, string replyText)
+    public async Task SendTicketReplyAsync(string toEmail, int ticketNumber, string subject, string replyText, string? fromAddress = null)
     {
         var replyTo = $"svar+{ticketNumber}@samhallsinformation.se";
         var html = $"""
@@ -126,7 +126,7 @@ public class ResendEmailService : IEmailService
             </div>
             """;
 
-        await SendAsync(_fromSupport, toEmail, $"Svar på ditt ärende: {subject}", html, replyTo);
+        await SendAsync(fromAddress ?? _fromSupport, toEmail, $"Svar på ditt ärende: {subject}", html, replyTo);
     }
 
     public async Task<string?> GetReceivedEmailTextAsync(string emailId)
