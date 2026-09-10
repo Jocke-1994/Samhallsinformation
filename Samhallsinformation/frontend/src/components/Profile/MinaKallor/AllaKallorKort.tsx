@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import type { Source } from '../../../types'
 
-export default function AllaKallorKort({ sources, activeIds, onAdd }: {
+export default function AllaKallorKort({ sources, activeIds, onAdd, onRemove }: {
   sources:   Source[]
   activeIds: Set<number>
   onAdd:     (ids: number[]) => void
+  onRemove?: (id: number) => void
 }) {
   const [query, setQuery] = useState('')
 
@@ -43,7 +44,14 @@ export default function AllaKallorKort({ sources, activeIds, onAdd }: {
             <div key={k.id} className={`flex items-center justify-between px-6 py-3 gap-4 transition-colors ${active ? '' : 'hover:bg-slate-50'}`}>
               <span className={`text-sm font-medium truncate ${active ? 'text-slate-400' : 'text-slate-700'}`}>{k.name}</span>
               {active
-                ? <span className="text-xs text-green-600 font-medium shrink-0">Tillagd</span>
+                ? (onRemove
+                    ? <button
+                        onClick={() => onRemove(k.id)}
+                        className="shrink-0 px-3 py-1.5 bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 text-xs font-semibold rounded-lg transition-colors"
+                      >
+                        Ta bort
+                      </button>
+                    : <span className="text-xs text-green-600 font-medium shrink-0">Tillagd</span>)
                 : <button
                     onClick={() => onAdd([k.id])}
                     className="shrink-0 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg transition-colors"
