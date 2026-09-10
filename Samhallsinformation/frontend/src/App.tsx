@@ -127,9 +127,15 @@ function EmailVerificationBanner() {
   const { isLoggedIn, emailVerified, email } = useAuth()
   const flaggor = useFlags()
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle')
-  const [snoozedUntil, setSnoozedUntil] = useState<number>(
-    () => Number(localStorage.getItem(VERIFY_BANNER_SNOOZE_KEY) ?? 0)
-  )
+  // Nyckeln måste vara kontospecifik (inte en enda global nyckel) — annars
+  // slår ett snooze-klick på ETT konto igenom på VILKET konto som helst som
+  // loggar in på samma enhet inom 24h, även ett som aldrig klickat knappen.
+  const [snoozedUntil, setSnoozedUntil] = useState(0)
+
+  useEffect(() => {
+    if (!email) { setSnoozedUntil(0); return }
+    setSnoozedUntil(Number(localStorage.getItem(`${VERIFY_BANNER_SNOOZE_KEY}:${email}`) ?? 0))
+  }, [email])
 
   if (!isLoggedIn || emailVerified || !flaggor.konto_epost_paminnelse || Date.now() < snoozedUntil) return null
 
@@ -144,8 +150,9 @@ function EmailVerificationBanner() {
   }
 
   function handleSnooze() {
+    if (!email) return
     const until = Date.now() + VERIFY_BANNER_SNOOZE_MS
-    localStorage.setItem(VERIFY_BANNER_SNOOZE_KEY, String(until))
+    localStorage.setItem(`${VERIFY_BANNER_SNOOZE_KEY}:${email}`, String(until))
     setSnoozedUntil(until)
   }
 
