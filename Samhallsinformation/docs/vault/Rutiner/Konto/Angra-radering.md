@@ -7,41 +7,44 @@ uppdaterad: 2026-09-11
 # En användare ångrar en kontoradering
 
 Utlöses av: användaren (eller admin av misstag) begärde radering, och
-hör av sig inom 24-timmarsfönstret innan anonymiseringen faktiskt körs.
+hör av sig inom 24-timmarsfönstret innan raderingen faktiskt går igenom.
 
 ## Självbetjäning
-Finns INTE — ingen self-service-ångra. Kontot är spärrat direkt när
-raderingen begärs (`IsActive = false`), så användaren kan inte logga in
-för att ångra det själv. Det är ett medvetet designval (session 33) —
-samma säkerhetsmarginal som en vanlig kontospärrning.
+Finns inte idag — kontot spärras direkt när raderingen begärs, så
+användaren kan inte logga in för att ångra det själv. Ett förslag på en
+riktig självbetjäningslösning (en ångra-länk via mejl) finns sparad i
+[[../../Ideer/Sjalvbetjaning-angra-radering-via-mejllank|en idé]], inte
+byggd än.
 
 ## Om det kommer in som ett supportärende
-1. Verifiera att det verkligen är kontoägaren som hör av sig (samma
-   e-postadress som kontot, eventuellt en kompletterande fråga för att
-   bekräfta identitet — kontot går inte att logga in på just nu så du
-   kan inte be dem "logga in och visa")
-2. Kolla i Användarhantering om `DeletionScheduledAt` fortfarande ligger
-   i framtiden — om den redan passerat är kontot redan anonymiserat och
-   går INTE att återställa (se Gränser)
-3. Ångra raderingen enligt adminverktyget nedan
-4. Bekräfta för användaren att kontot är återaktiverat och att de kan
-   logga in igen
+1. Fråga vilken e-postadress kontot är registrerat på — jämför mot vad
+   du ser i Användarhantering
+2. **Osäker identitetskontroll just nu** — kontot går inte att logga in
+   på, så du kan inte be dem "logga in och visa". Be om något mer som
+   bara kontoägaren rimligen skulle veta (registrerat namn, vilka
+   källor de följt, ett tidigare ärendenummer) innan du går vidare. Det
+   här är en riktig lucka, se idén ovan för den framtida riktiga
+   lösningen
+3. Kolla i Användarhantering att raderingen fortfarande väntar (inte
+   redan genomförd) — annars går den inte att ångra, se Gränser
+4. Klicka **"Ångra radering"** på kontot
+5. Bekräfta för användaren att kontot är tillbaka och att de kan logga
+   in igen
 
 ## Adminverktyg / fallback
-Användarhantering → hitta kontot (går att söka på e-post även om kontot
-är spärrat) → **Ångra radering**.
-- Sätter `DeletionScheduledAt = null`, `IsActive = true`,
-  `SuspendedAt/SuspendedReason = null`
-- Fungerar bara medan `DeletionScheduledAt` fortfarande är i framtiden
+Användarhantering → sök upp kontot (funkar även spärrat, sök på e-post)
+→ knappen **"Ångra radering"**. Fungerar bara medan raderingen
+fortfarande väntar.
 
 ## Teknisk plats
 `POST /api/admin/users/{id}/cancel-deletion` (AdminUsersController.
-CancelDeletion). Se [[../../Funktioner/GDPR-verktyg]].
+CancelDeletion) — nollar `DeletionScheduledAt`, sätter `IsActive = true`,
+rensar `SuspendedAt`/`SuspendedReason`. Se [[../../Funktioner/GDPR-verktyg]].
 
 ## Gränser / vad du INTE ska göra
-- Om `UserDeletionBackgroundService` redan hunnit anonymisera kontot
-  (mer än 24h har gått) — namn/e-post/lösenord är redan överskrivna,
-  det går INTE att återställa. Var ärlig om det med användaren direkt,
-  låtsas inte att det går att fixa
-- Ångra aldrig en radering du inte kan verifiera begärdes av
-  kontoägaren själv
+- Om det redan gått mer än 24 timmar sen raderingen begärdes är kontot
+  redan anonymiserat — namn/e-post/lösenord är överskrivna, det går INTE
+  att återställa. Var ärlig om det direkt, låtsas inte att det går att
+  fixa
+- Ångra aldrig en radering om du inte känner dig rimligt säker på att
+  det verkligen är kontoägaren som ber om det (se punkt 2 ovan)
