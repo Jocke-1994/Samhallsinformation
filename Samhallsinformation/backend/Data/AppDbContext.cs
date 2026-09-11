@@ -35,6 +35,7 @@ public class AppDbContext : DbContext
     public DbSet<FaqItem>                    FaqItems                  => Set<FaqItem>();
     public DbSet<SiteSettings>               SiteSettings              => Set<SiteSettings>();
     public DbSet<MaintenanceBanner>          MaintenanceBanners        => Set<MaintenanceBanner>();
+    public DbSet<PushDispatchClaim>          PushDispatchClaims        => Set<PushDispatchClaim>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
