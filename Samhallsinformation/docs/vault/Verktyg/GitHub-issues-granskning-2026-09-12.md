@@ -51,12 +51,15 @@ att en stängning känns fel utan att du sett skillnaden.
 
 - **#42** (BankID-inloggning) — duplikat av #437, som är den senare/mer uppdaterade versionen
 - **#43** (Freja eID) — aldrig nämnd igen sedan skapelsen, sannolikt övergiven idé
-- **#46** (SPAR-integration) + **#55** (Samtycke vid SPAR) — SPAR revs bort helt ur produkten (session 24/25), kräver personnummer+BankID som inte finns. Båda troligen döda.
 - **#50/#51** (SMS-mottagare + rate limiting för SMS) — duplikat av #133/#134
 - **#116/#117** (Standardinställningar/Källinställningar) — beskriver en gammal mail/SMS-per-källa-notismodell, känd sedan session 25 att behöva en omdesign-beslut innan den är relevant igen
 - **#120–#123** (Testare-roll-klustret: dedikerad roll, bjuda in, hantera testarkonton, feedback-knapp) — verkar ha ersatts av en enklare lösning (Feedback-knapp + "Testare"-kategori i supportformuläret, bekräftat i session 46-diskussionen om Sök-funktionen)
 - **#127** (DISC: Launch-scope) + **#146** (Definiera funktionsomfång v1.0) — dubbletter av varandra, båda ersatta av de FAKTISKA launch-prep-sessionerna (24, 25, 27, 43-46) som aldrig loggades tillbaka till dessa issues
 - **#168** (Konto tvåkolumns grid-layout) — sannolikt från innan dagens Konto-sida-design fanns, matchar inte nuvarande enkolumns-kort-layout
+
+## Stängda efter granskningen
+- **#46/#55** (SPAR-integration + samtycke) — formellt stängda 2026-09-12,
+  inte bara ignorerade. Se [[../Beslut/Beslut - SPAR avfärdat]].
 
 ## Genuint fortfarande öppna, inget att göra åt just nu
 

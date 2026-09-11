@@ -16,7 +16,7 @@ Lanserade, live för besökare.
 TABLE grupp AS "Grupp", uiPlats AS "Var i appen", fallgropar AS "Fallgropar"
 FROM "Funktioner"
 WHERE status = "aktiv"
-SORT file.name ASC
+SORT grupp ASC, file.name ASC
 ```
 
 ## Pausade
