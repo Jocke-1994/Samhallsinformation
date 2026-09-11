@@ -1217,6 +1217,8 @@ using (var scope = app.Services.CreateScope())
             Svar = "Mina källor visar de myndigheter du redan följer och som syns i ditt flöde. Alla källor är den fullständiga listan att välja bland — där lägger du till fler." },
         new FaqItem { Kategori = "Uppdateringar", Publicerad = true, FlagKey = null, Fraga = "Var ser jag vad som är nytt i tjänsten?",
             Svar = "Klicka på Nyheter i sidomenyn om du är utloggad, eller Uppdateringar i profilmenyn om du är inloggad, för en lista över de senaste ändringarna." },
+        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = "konto_datahantering", Fraga = "Kan jag ångra en radering av mitt konto?",
+            Svar = "Ja, under de första 24 timmarna. Så fort du begär radering skickar vi ett mejl med en \"Avbryt raderingen\"-länk — klicka på den så återaktiveras kontot direkt, ingen inloggning krävs. Efter 24 timmar är kontot anonymiserat och går inte att återställa." },
     };
     foreach (var fraga in nyaFaqFragor)
     {
@@ -1224,6 +1226,27 @@ using (var scope = app.Services.CreateScope())
         {
             db.FaqItems.Add(fraga);
         }
+    }
+    await db.SaveChangesAsync();
+
+    // Aktiverar och uppdaterar de två GDPR-frågorna (radera konto,
+    // exportera data) nu när konto_datahantering slogs på (2026-09-11,
+    // PR #566) — de låg redan i den ursprungliga seed-datan men
+    // avpublicerade eftersom funktionen då var dold. Kopplas till flaggan
+    // så de följer den automatiskt framöver, och raderingssvaret
+    // uppdateras med den nya ångra-länken (PR för DeletionCancelToken).
+    var raderaKontoFaq = await db.FaqItems.FirstOrDefaultAsync(f => f.Fraga == "Hur tar jag bort mitt konto?");
+    if (raderaKontoFaq != null)
+    {
+        raderaKontoFaq.Publicerad = true;
+        raderaKontoFaq.FlagKey    = "konto_datahantering";
+        raderaKontoFaq.Svar       = "Gå till Konto → Datahantering och välj Radera konto. Kontot spärras direkt, men raderas inte förrän 24 timmar senare — vi skickar ett mejl med en länk du kan klicka för att ångra dig när som helst under de 24 timmarna.";
+    }
+    var exporteraDataFaq = await db.FaqItems.FirstOrDefaultAsync(f => f.Fraga == "Hur laddar jag ner min data?");
+    if (exporteraDataFaq != null)
+    {
+        exporteraDataFaq.Publicerad = true;
+        exporteraDataFaq.FlagKey    = "konto_datahantering";
     }
     await db.SaveChangesAsync();
 

@@ -12,6 +12,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
 import ConfirmEmailChangePage from './pages/ConfirmEmailChangePage'
+import CancelDeletionPage from './pages/CancelDeletionPage'
 import CookieConsent from './components/CookieConsent/CookieConsent'
 import OmPage from './pages/OmPage'
 import VillkorPage from './pages/VillkorPage'
@@ -263,6 +264,7 @@ export default function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
+          <Route path="/cancel-deletion" element={<CancelDeletionPage />} />
           <Route path="/profil" element={<ProfilePage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/om" element={<OmPage />} />

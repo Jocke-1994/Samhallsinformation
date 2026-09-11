@@ -728,4 +728,66 @@ public class AuthServiceTests
         Assert.False(result.Success);
         Assert.Equal(401, result.StatusCode);
     }
+
+    [Fact]
+    public async Task CancelDeletionAsync_ValidToken_ReactivatesAccount()
+    {
+        using var db = NewDb();
+        var user = new User
+        {
+            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
+            IsActive = false, SuspendedAt = DateTime.UtcNow, SuspendedReason = "Radering begärd",
+            DeletionScheduledAt = DateTime.UtcNow.AddHours(20), DeletionCancelToken = "valid-token",
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = NewService(db);
+
+        var result = await service.CancelDeletionAsync("valid-token");
+
+        Assert.True(result.Success);
+        var updated = await db.Users.FindAsync(user.Id);
+        Assert.True(updated!.IsActive);
+        Assert.Null(updated.DeletionScheduledAt);
+        Assert.Null(updated.DeletionCancelToken);
+        Assert.Null(updated.SuspendedAt);
+        Assert.Null(updated.SuspendedReason);
+    }
+
+    [Fact]
+    public async Task CancelDeletionAsync_UnknownToken_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var service = NewService(db);
+
+        var result = await service.CancelDeletionAsync("does-not-exist");
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+    }
+
+    // Simulerar att UserDeletionBackgroundService redan hunnit köra —
+    // DeletionScheduledAt kan i praktiken fortfarande stå kvar en kort
+    // stund efter att fristen passerat, men länken ska ändå sluta fungera.
+    [Fact]
+    public async Task CancelDeletionAsync_DeletionAlreadyPassed_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var user = new User
+        {
+            Name = "Ada", Email = "ada@example.com", PasswordHash = "x", IsActive = false,
+            DeletionScheduledAt = DateTime.UtcNow.AddMinutes(-5), DeletionCancelToken = "expired-token",
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = NewService(db);
+
+        var result = await service.CancelDeletionAsync("expired-token");
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.False((await db.Users.FindAsync(user.Id))!.IsActive);
+    }
 }

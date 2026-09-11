@@ -841,6 +841,9 @@ namespace Samhallsinformation.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DeletionCancelToken")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("DeletionScheduledAt")
                         .HasColumnType("TEXT");
 

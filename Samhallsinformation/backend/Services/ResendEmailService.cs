@@ -94,6 +94,27 @@ public class ResendEmailService : IEmailService
         await SendAsync(_fromSupport, toOldEmail, "Din e-postadress håller på att bytas", html);
     }
 
+    public async Task SendAccountDeletionScheduledAsync(string toEmail, string toName, string cancelLink, DateTime deletionScheduledAtUtc)
+    {
+        var stockholmTz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm");
+        var lokalTid = TimeZoneInfo.ConvertTimeFromUtc(deletionScheduledAtUtc, stockholmTz);
+        var html = $"""
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
+              <h2 style="color:#7c3aed;margin-bottom:8px">Ditt konto raderas snart</h2>
+              <p style="color:#334155">Hej {toName},</p>
+              <p style="color:#334155">Vi har tagit emot en begäran om att radera ditt Samhällsinformation-konto. Om du inte avbryter kommer kontot att raderas <strong>{lokalTid:d MMMM yyyy 'kl.' HH:mm}</strong>.</p>
+              <a href="{cancelLink}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
+                Avbryt raderingen
+              </a>
+              <p style="color:#64748b;font-size:13px">Var det inte du som begärde det här, eller har du ändrat dig? Klicka på knappen ovan när som helst innan tidpunkten ovan. Efter det går raderingen inte att ångra.</p>
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+              <p style="color:#94a3b8;font-size:12px">Samhällsinformation &mdash; opartisk myndighetsinformation</p>
+            </div>
+            """;
+
+        await SendAsync(_fromSupport, toEmail, "Ditt konto raderas snart — klicka för att avbryta", html);
+    }
+
     public async Task SendWelcomeAsync(string toEmail, string toName)
     {
         var html = $"""
