@@ -1,8 +1,10 @@
 # Flöde: ny idé
 
 Vad som borde hända, rent praktiskt, från att en idé dyker upp till att
-den antingen byggs eller läggs åt sidan. Första utkast (2026-09-12) —
-ändra fritt, det här är bara ett förslag att reagera på.
+den antingen byggs eller läggs åt sidan. Första utkast (2026-09-12),
+justerat efter svar samma dag. Viktigaste principen, bekräftad av dig:
+**vi ska aldrig tappa bort en idé, oavsett varifrån den kommer** — resten
+av det här dokumentet är bara detaljer kring HUR.
 
 Från användare:
 
@@ -16,16 +18,13 @@ riktig idé eller en vanlig supportfråga. Är det en idé — plocka ut den ur
 kort referens till vilket ärende den kom från så ursprunget inte tappas.
 
 
-Från support:
+Från support (ej aktuellt än):
 
-Ingen separat supportroll är aktiv än (se `Rutiner/`-notiserna) — den här
-grenen är teoretisk tills en andra supportperson finns. Tanken: den som
-sitter i Support-inboxen och märker ett mönster ("tre användare har frågat
-om samma sak den här veckan") ska kunna flagga det utan att själv behöva
-bygga det.
-
-**Vad borde hända:** samma väg som "Från användare" — en rå tanke här, med
-källan noterad.
+Borttagen tills en andra supportperson faktiskt finns — bara du har
+tillgång till Obsidian idag, så en support-person kan ändå inte skriva
+direkt hit. Bygg den här grenen med riktiga rutiner den dagen det faktiskt
+finns folk (troligen: eskalera till admin, som skriver ner tanken här å
+deras vägnar) — inte innan, ingen anledning att gissa i förväg.
 
 
 Från admin:
@@ -50,11 +49,18 @@ utan att behöva gå via den här mappen alls.
    `Beslut/Beslut - SPAR avfärdat.md`) så den inte dyker upp som ett
    oavslutat spöke senare
 
-## Öppna frågor (fyll i / ändra som du vill)
-- Ska "rå tanke här först" och "direkt som `Ideer/`-not" vara två
-  parallella vägar (beror på hur färdig tanken känns), eller ska ALLT
-  alltid gå via `1. Öppna_tankar/` innan den får bli en riktig idé-not?
-- Ska källan (användare/support/admin) sparas som ett eget fält när idén
-  blir en `Ideer/`-not, eller räcker det att nämna det i brödtexten?
-- Ska "Från support"-delen tas bort tills en andra supportperson faktiskt
-  finns, eller är det värt att ha nedskrivet i förväg?
+## Frågor — besvarade 2026-09-12
+- **Två parallella vägar (rå tanke ELLER direkt `Ideer/`-not), eller allt
+  via `1. Öppna_tankar/` först?** → Behåll båda vägarna, beror på hur
+  färdig tanken känns. `1. Öppna_tankar/` är tänkt för interna/lösa
+  funderingar, `Ideer/` mer för "det här låter faktiskt som en bra grej".
+  Du föreslog en möjlig framtida uppdelning ("öppna tankar_internt" vs.
+  "öppna tankar_användare") men vill inte bygga den förrän det faktiskt
+  behövs — huvudsaken är att ingen idé tappas bort, inte exakt vilken mapp
+  den ligger i under tiden.
+- **Ska källan (användare/support/admin) sparas som ett eget frontmatter-
+  fält?** → Inget nytt fält behövs — `Ideer/_Mall.md` har redan ett
+  `kalla`-fält (fritext, t.ex. "mejlfeedback session 38") som räcker precis
+  lika bra för "användarfeedback, ärende #123" eller liknande.
+- **Ska "Från support" tas bort tills en andra supportperson finns?** →
+  Ja, borttagen ovan (se anteckningen i den sektionen).
