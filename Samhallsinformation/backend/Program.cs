@@ -187,7 +187,23 @@ var forwardedHeadersOptions = new ForwardedHeadersOptions
 };
 forwardedHeadersOptions.KnownIPNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();
+
+// TILLFÄLLIGT (2026-09-11) — kapslar in UseForwardedHeaders med egen
+// loggning precis före/efter för att se i realtid om middleware:t
+// faktiskt ändrar RemoteIpAddress, eller om det körs utan effekt.
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Diag-Before-FH"] = context.Connection.RemoteIpAddress?.ToString() ?? "null";
+    await next();
+});
+
 app.UseForwardedHeaders(forwardedHeadersOptions);
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Diag-After-FH"] = context.Connection.RemoteIpAddress?.ToString() ?? "null";
+    await next();
+});
 
 app.UseCors();
 app.UseAuthentication();
