@@ -1285,6 +1285,15 @@ app.MapGet("/api/diag/ip", (HttpContext ctx) =>
         ipAddressParsedValue  = parsedAddress?.ToString(),
         commaSeparatedValues  = commaSeparated,
         commaSeparatedCount   = commaSeparated.Length,
+        // Läser direkt från SAMMA options-objekt middleware:t faktiskt
+        // använder (fångat via closure, inte en nykonstruerad kopia) — om
+        // .Clear() av någon anledning inte höll är det här det slutgiltiga
+        // beviset.
+        liveKnownProxiesCount    = forwardedHeadersOptions.KnownProxies.Count,
+        liveKnownIPNetworksCount = forwardedHeadersOptions.KnownIPNetworks.Count,
+        liveForwardedHeadersFlag = forwardedHeadersOptions.ForwardedHeaders.ToString(),
+        liveForwardLimit         = forwardedHeadersOptions.ForwardLimit,
+        liveRequireHeaderSymmetry = forwardedHeadersOptions.RequireHeaderSymmetry,
         xForwardedProto  = ctx.Request.Headers["X-Forwarded-Proto"].ToString(),
         // .Select istället för .ToDictionary — en dubblerad header-nyckel (t.ex.
         // flera X-Forwarded-For-rader genom flera proxy-hopp) hade fått
