@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchSources } from '../../../api/sources'
-import { fetchUserSources, saveUserSources, type SourcePrefUpdate } from '../../../api/userSources'
+import { fetchUserSources, saveUserSources, type SourcePrefUpdate, type UserSourcePref } from '../../../api/userSources'
 import LaggTillKort from './LaggTillKort'
 import AktivaKallorKort from './AktivaKallorKort'
 import RekommenderadeKallorKort from './RekommenderadeKallorKort'
@@ -32,9 +32,26 @@ export default function MinaKallor() {
     queryFn:  fetchUserSources,
   })
 
+  // Skriver mutationens egna indata direkt in i cachen istället för att bara
+  // invalidera och vänta på en ny GET — sparar en hel nätverksomgång, så en
+  // borttagen källa försvinner ur listan direkt när PUT:en lyckas istället
+  // för efter ytterligare en hämtning.
   const mutation = useMutation({
     mutationFn: saveUserSources,
-    onSuccess:  () => queryClient.invalidateQueries({ queryKey: ['user-sources'] }),
+    onSuccess: (_data, variables) => {
+      queryClient.setQueryData<UserSourcePref[]>(['user-sources'], (old = []) => {
+        const byId = new Map(old.map(p => [p.sourceId, p]))
+        for (const v of variables) {
+          byId.set(v.sourceId, {
+            sourceId:  v.sourceId,
+            shortName: byId.get(v.sourceId)?.shortName ?? sources.find(s => s.id === v.sourceId)?.shortName ?? '',
+            isActive:  v.isActive,
+            sortOrder: v.sortOrder,
+          })
+        }
+        return Array.from(byId.values())
+      })
+    },
   })
 
   const activeIds     = new Set(prefs.filter(p => p.isActive).map(p => p.sourceId))
