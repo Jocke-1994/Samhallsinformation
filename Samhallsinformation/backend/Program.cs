@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.Net.Http.Headers;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
@@ -18,12 +17,6 @@ using Samhallsinformation.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
-// TILLFÄLLIGT (2026-09-11) — felsöker varför ForwardedHeadersMiddleware
-// inte uppdaterar RemoteIpAddress i produktion trots en korrekt
-// X-Forwarded-For-header. Visar middleware:ts egna debug/warning-loggar
-// (t.ex. "Unknown proxy"/"Unparsable IP"/parameter-mismatch) rakt i
-// Railway-konsolen. Ta bort igen när felsökningen är klar.
-builder.Logging.AddFilter("Microsoft.AspNetCore.HttpOverrides", LogLevel.Debug);
 
 // Database — PostgreSQL på Railway (via DATABASE_URL eller PGHOST), SQLite lokalt
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
@@ -1256,58 +1249,6 @@ using (var scope = app.Services.CreateScope())
         }
     }
 }
-
-// TILLFÄLLIG diagnostik (2026-09-11) för att felsöka varför rate limiting
-// (5/min/IP) inte triggar i produktion — visar exakt vad backend ser för
-// klient-IP och rå X-Forwarded-For-header. Ta bort igen när felsökningen
-// är klar.
-app.MapGet("/api/diag/ip", (HttpContext ctx) =>
-{
-    var rawXff = ctx.Request.Headers["X-Forwarded-For"].ToString();
-    var parseOk = System.Net.IPEndPoint.TryParse(rawXff, out var parsedEndpoint);
-    var bareIpParseOk = System.Net.IPAddress.TryParse(rawXff, out var parsedAddress);
-    // Exakt samma anrop som ForwardedHeadersMiddleware använder internt
-    // (Microsoft.Net.Http.Headers-extensionen, inte en enkel .ToString())
-    // — X-Forwarded-For fanns KVAR oförändrad i headerlistan trots att
-    // middleware:t borde ha tagit bort den efter att ha konsumerat den,
-    // vilket bevisar att applyChanges aldrig blev sant där. Det här
-    // visar om det är just den här läsvägen som skiljer sig.
-    var commaSeparated = ctx.Request.Headers.GetCommaSeparatedValues("X-Forwarded-For");
-
-    return Results.Ok(new
-    {
-        // Versionsmarkör + processens starttid — för att entydigt bevisa om det
-        // verkligen är den senaste koden som kör, oavsett vad Railways UI säger.
-        diagVersion         = "v5-2026-09-11-2140",
-        processStartTimeUtc = System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime().ToString("o"),
-        remoteIpAddress = ctx.Connection.RemoteIpAddress?.ToString(),
-        remotePort      = ctx.Connection.RemotePort,
-        requestScheme   = ctx.Request.Scheme,
-        xForwardedFor    = rawXff,
-        xForwardedForLength = rawXff.Length,
-        xForwardedForBytes  = System.Text.Encoding.UTF8.GetBytes(rawXff),
-        ipEndPointTryParseOk = parseOk,
-        ipEndPointParsedValue = parsedEndpoint?.ToString(),
-        ipAddressTryParseOk   = bareIpParseOk,
-        ipAddressParsedValue  = parsedAddress?.ToString(),
-        commaSeparatedValues  = commaSeparated,
-        commaSeparatedCount   = commaSeparated.Length,
-        // Läser direkt från SAMMA options-objekt middleware:t faktiskt
-        // använder (fångat via closure, inte en nykonstruerad kopia) — om
-        // .Clear() av någon anledning inte höll är det här det slutgiltiga
-        // beviset.
-        liveKnownProxiesCount    = forwardedHeadersOptions.KnownProxies.Count,
-        liveKnownIPNetworksCount = forwardedHeadersOptions.KnownIPNetworks.Count,
-        liveForwardedHeadersFlag = forwardedHeadersOptions.ForwardedHeaders.ToString(),
-        liveForwardLimit         = forwardedHeadersOptions.ForwardLimit,
-        liveRequireHeaderSymmetry = forwardedHeadersOptions.RequireHeaderSymmetry,
-        xForwardedProto  = ctx.Request.Headers["X-Forwarded-Proto"].ToString(),
-        // .Select istället för .ToDictionary — en dubblerad header-nyckel (t.ex.
-        // flera X-Forwarded-For-rader genom flera proxy-hopp) hade fått
-        // ToDictionary att kasta ArgumentException.
-        allHeaders = ctx.Request.Headers.Select(h => $"{h.Key}: {h.Value}").ToList(),
-    });
-});
 
 app.MapControllers();
 
