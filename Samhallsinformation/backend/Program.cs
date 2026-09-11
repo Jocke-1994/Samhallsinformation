@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -152,6 +153,25 @@ builder.Services.AddHostedService<UserDeletionBackgroundService>();
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
+// Railway terminerar HTTPS vid sin egen edge-proxy och vidarebefordrar
+// internt — utan det här ser HttpContext.Connection.RemoteIpAddress
+// Railways interna proxy istället för den riktiga besökarens IP, vilket
+// gör per-IP-baserad rate limiting (nedan) verkningslös (bekräftat trasigt
+// i produktion 2026-09-11: 10 rafflade inloggningsförsök i rad, ingen
+// blockerades). KnownNetworks/KnownProxies rensas medvetet — Railway
+// exponerar ingen publik, stabil proxy-IP-lista att vitlista mot, och
+// ForwardLimit=1 gör att bara det ALLRA sista hoppet litas på (den enda
+// part som kan nå Kestrel direkt är Railways egen proxy, ingen extern
+// anropare kan nå fram och spoofa X-Forwarded-For förbi den).
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    ForwardLimit     = 1,
+};
+forwardedHeadersOptions.KnownIPNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 app.UseCors();
 app.UseAuthentication();
