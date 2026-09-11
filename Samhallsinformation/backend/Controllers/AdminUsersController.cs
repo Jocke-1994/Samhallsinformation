@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
+using Samhallsinformation.Services;
 
 [ApiController]
 [Route("api/admin/users")]
@@ -14,11 +15,15 @@ public class AdminUsersController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IAktivitetsloggService _aktivitetslogg;
+    private readonly IEmailService _email;
+    private readonly string _frontendUrl;
 
-    public AdminUsersController(AppDbContext db, IAktivitetsloggService aktivitetslogg)
+    public AdminUsersController(AppDbContext db, IAktivitetsloggService aktivitetslogg, IEmailService email, IConfiguration config)
     {
         _db = db;
         _aktivitetslogg = aktivitetslogg;
+        _email = email;
+        _frontendUrl = config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
     }
 
     private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -112,12 +117,17 @@ public class AdminUsersController : ControllerBase
         user.SuspendedAt       ??= DateTime.UtcNow;
         user.SuspendedReason     = "Radering begärd (GDPR) — raderas automatiskt om 24 timmar om ingen avbryter det";
         user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24);
+        user.DeletionCancelToken = Guid.NewGuid().ToString("N");
 
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Konto,
             $"Radering begärd — {user.Name}",
             $"Verkställs {user.DeletionScheduledAt:yyyy-MM-dd HH:mm} UTC om ingen avbryter");
+
+        var cancelLink = $"{_frontendUrl.TrimEnd('/')}/cancel-deletion?token={user.DeletionCancelToken}";
+        _ = _email.SendAccountDeletionScheduledAsync(user.Email, user.Name, cancelLink, user.DeletionScheduledAt.Value);
+
         return Ok(new { deletionScheduledAt = user.DeletionScheduledAt });
     }
 
@@ -132,6 +142,7 @@ public class AdminUsersController : ControllerBase
             return BadRequest(new { error = "Ingen radering är schemalagd för det här kontot." });
 
         user.DeletionScheduledAt = null;
+        user.DeletionCancelToken = null;
         user.IsActive            = true;
         user.SuspendedAt         = null;
         user.SuspendedReason     = null;

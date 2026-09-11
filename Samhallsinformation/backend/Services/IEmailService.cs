@@ -13,6 +13,12 @@ public interface IEmailService
     // på, bara en heads-up om att kontot håller på att byta bort den.
     Task SendEmailChangeNoticeAsync(string toOldEmail, string toName, string newEmail);
 
+    // Skickas i samma ögonblick en radering (självbetjäning ELLER admin)
+    // begärs — annars märker användaren bara att kontot är borta. Länken
+    // bevisar identitet i sig (bara kontoägarens inkorg tar emot den),
+    // ingen inloggning krävs för att klicka den.
+    Task SendAccountDeletionScheduledAsync(string toEmail, string toName, string cancelLink, DateTime deletionScheduledAtUtc);
+
     // Agentsvar på ett supportärende. reply_to sätts till en plus-adress
     // (svar+{ticketNumber}@...) — svarar mottagaren på mejlet landar det via
     // Resends inbound-webhook tillbaka i samma ärendetråd. fromAddress låter

@@ -29,4 +29,9 @@ public interface IAuthService
     Task<AuthResult> ConfirmEmailChangeAsync(string token);
 
     Task<AuthResult> CancelEmailChangeAsync(Guid userId);
+
+    // Konsumerar DeletionCancelToken (satt av både self-service- och
+    // admin-initierad radering) — kräver ingen inloggning, token:et är
+    // beviset på identitet eftersom bara kontoägarens inkorg fick länken.
+    Task<AuthResult> CancelDeletionAsync(string token);
 }

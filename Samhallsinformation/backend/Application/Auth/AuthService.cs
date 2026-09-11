@@ -353,6 +353,28 @@ public class AuthService : IAuthService
         return AuthResult.Ok("Bytet är avbrutet");
     }
 
+    public async Task<AuthResult> CancelDeletionAsync(string token)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.DeletionCancelToken == token);
+        if (user == null)
+            return AuthResult.Fail(400, "Länken är ogiltig eller har redan använts.");
+        if (user.DeletionScheduledAt == null || user.DeletionScheduledAt < DateTime.UtcNow)
+            return AuthResult.Fail(400, "Länken har gått ut — kontot är antingen redan raderat eller raderingen redan avbruten. Kontakta support om du behöver hjälp.");
+
+        user.DeletionScheduledAt = null;
+        user.DeletionCancelToken = null;
+        user.IsActive            = true;
+        user.SuspendedAt         = null;
+        user.SuspendedReason     = null;
+
+        await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.System, LoggTyper.Konto,
+            $"Radering avbruten via mejllänk — {user.Name}", "Kontot återaktiverat");
+
+        return AuthResult.Ok("Raderingen är avbruten — ditt konto är tillbaka.");
+    }
+
     private async Task<AuthResult> IssueTokensAsync(User user, bool isNewUser = false)
     {
         var accessToken         = _tokens.GenerateAccessToken(user);
