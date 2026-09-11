@@ -1234,6 +1234,18 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// TILLFÄLLIG diagnostik (2026-09-11) för att felsöka varför rate limiting
+// (5/min/IP) inte triggar i produktion — visar exakt vad backend ser för
+// klient-IP och rå X-Forwarded-For-header. Ta bort igen när felsökningen
+// är klar.
+app.MapGet("/api/diag/ip", (HttpContext ctx) => Results.Ok(new
+{
+    remoteIpAddress = ctx.Connection.RemoteIpAddress?.ToString(),
+    xForwardedFor    = ctx.Request.Headers["X-Forwarded-For"].ToString(),
+    xForwardedProto  = ctx.Request.Headers["X-Forwarded-Proto"].ToString(),
+    allHeaders       = ctx.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString()),
+}));
+
 app.MapControllers();
 
 app.Run();
