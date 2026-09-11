@@ -162,48 +162,39 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 // Railway terminerar HTTPS vid sin egen edge-proxy och vidarebefordrar
-// internt — utan det här ser HttpContext.Connection.RemoteIpAddress
-// Railways interna proxy istället för den riktiga besökarens IP, vilket
-// gör per-IP-baserad rate limiting (nedan) verkningslös (bekräftat trasigt
-// i produktion 2026-09-11: 10 rafflade inloggningsförsök i rad, ingen
-// blockerades). KnownNetworks/KnownProxies rensas medvetet — Railway
-// exponerar ingen publik, stabil proxy-IP-lista att vitlista mot, och
-// ForwardLimit=1 gör att bara det ALLRA sista hoppet litas på (den enda
-// part som kan nå Kestrel direkt är Railways egen proxy, ingen extern
-// anropare kan nå fram och spoofa X-Forwarded-For förbi den).
-//
-// Bara XForwardedFor efterfrågas — INTE XForwardedProto. Bekräftat via
-// /api/diag/ip (2026-09-11) att Railway aldrig skickar X-Forwarded-Proto
-// (de använder X-Original-Proto istället, ett icke-standardnamn).
-// ForwardedHeadersOptions.RequireHeaderSymmetry är true som standard, så
-// att efterfråga BÅDA fick hela vidarebefordran att tyst avbrytas — X-
-// Forwarded-For hade 1 värde, X-Forwarded-Proto 0, mismatchen fick
-// middleware:t att retunera utan att applicera något alls (bekräftat i
-// ASP.NET Cores egen källkod, ForwardedHeadersMiddleware.cs).
+// internt — utan det här ser HttpContext.Connection.RemoteIpAddress en av
+// Railways interna proxy-hopp istället för den riktiga besökarens IP,
+// vilket gör per-IP-baserad rate limiting (nedan) verkningslös (bekräftat
+// trasigt i produktion 2026-09-11: 10 rafflade inloggningsförsök i rad,
+// ingen blockerades). Felsökt grundligt med ett tillfälligt
+// diagnostikendpoint (/api/diag/ip, borttaget igen) — två separata
+// missförstånd, båda hittade genom att verifiera live istället för att
+// gissa:
+//  1. Bara XForwardedFor efterfrågas, inte XForwardedProto — Railway
+//     skickar den senare inkonsekvent (ibland alls inte, de har egna
+//     X-Original-Proto/X-Original-For-headrar också). Onödigt ändå,
+//     appen bryr sig bara om klient-IP:n här.
+//  2. ForwardLimit måste vara null (bearbeta HELA kedjan), INTE 1.
+//     Railway har TVÅ hopp, inte ett: en yttre edge OCH en intern
+//     regional proxy — X-Forwarded-For innehåller kedjan "<riktig
+//     klient-IP>, <Railways interna proxy-IP>". Med ForwardLimit=1
+//     vecklade middleware:t bara upp DET SISTA (närmaste) hoppet i stället
+//     för att fortsätta hela vägen till den riktiga klienten — bekräftat
+//     genom att kapsla in middleware:t med egen loggning precis
+//     före/efter och se RemoteIpAddress byta till fel värde i realtid.
+// KnownIPNetworks/KnownProxies rensas medvetet — Railway exponerar ingen
+// publik, stabil proxy-IP-lista att vitlista mot. Ingen risk att en
+// extern anropare spoofar X-Forwarded-For förbi Railways edge, eftersom
+// containern bara är nåbar via Railways eget nät, aldrig direkt från
+// internet.
 var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor,
-    ForwardLimit     = 1,
+    ForwardLimit     = null,
 };
 forwardedHeadersOptions.KnownIPNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();
-
-// TILLFÄLLIGT (2026-09-11) — kapslar in UseForwardedHeaders med egen
-// loggning precis före/efter för att se i realtid om middleware:t
-// faktiskt ändrar RemoteIpAddress, eller om det körs utan effekt.
-app.Use(async (context, next) =>
-{
-    context.Response.Headers["X-Diag-Before-FH"] = context.Connection.RemoteIpAddress?.ToString() ?? "null";
-    await next();
-});
-
 app.UseForwardedHeaders(forwardedHeadersOptions);
-
-app.Use(async (context, next) =>
-{
-    context.Response.Headers["X-Diag-After-FH"] = context.Connection.RemoteIpAddress?.ToString() ?? "null";
-    await next();
-});
 
 app.UseCors();
 app.UseAuthentication();
