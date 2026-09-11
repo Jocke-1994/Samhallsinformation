@@ -116,6 +116,22 @@ export async function cancelUserDeletion(id: string): Promise<void> {
   }
 }
 
+export async function sendAdminUserPasswordReset(id: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/send-password-reset`, { method: 'POST' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `sendAdminUserPasswordReset: ${res.status}`)
+  }
+}
+
+export async function resendAdminUserVerification(id: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/resend-verification`, { method: 'POST' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `resendAdminUserVerification: ${res.status}`)
+  }
+}
+
 export async function fetchAdminUserPolisenBevakningar(id: string): Promise<AdminPolisenBevakningDto[]> {
   const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar`)
   if (!res.ok) throw new Error(`fetchAdminUserPolisenBevakningar: ${res.status}`)
