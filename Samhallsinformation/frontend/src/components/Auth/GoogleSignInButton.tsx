@@ -11,7 +11,9 @@ export interface GoogleProfile {
 interface Props {
   onError: (message: string) => void
   onStart?: () => void
-  onSuccess?: (profile: GoogleProfile) => void
+  // isNewUser: true om Google-inloggningen skapade ett nytt konto, false om
+  // den loggade in på ett redan befintligt (lösenords- eller Google-baserat).
+  onSuccess?: (profile: GoogleProfile, isNewUser: boolean) => void
 }
 
 // Enbart för visning (t.ex. sammanfattningssteget i onboarding) — inte en
@@ -44,9 +46,9 @@ export default function GoogleSignInButton({ onError, onStart, onSuccess }: Prop
     }
     onStart?.()
     try {
-      await loginWithGoogle(credentialResponse.credential, true)
+      const isNewUser = await loginWithGoogle(credentialResponse.credential, true)
       const profile = decodeGoogleProfile(credentialResponse.credential)
-      onSuccess?.(profile ?? { email: '', name: '' })
+      onSuccess?.(profile ?? { email: '', name: '' }, isNewUser)
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Något gick fel med Google-inloggningen')
     }

@@ -314,6 +314,7 @@ public class AuthController : ControllerBase
                 refreshToken = result.Tokens.RefreshToken,
                 name         = result.Tokens.Name,
                 role         = result.Tokens.Role,
+                isNewUser    = result.Tokens.IsNewUser,
             });
 
         return Ok(new { message = result.Message });
