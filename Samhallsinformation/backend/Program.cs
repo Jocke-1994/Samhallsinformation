@@ -17,6 +17,12 @@ using Samhallsinformation.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+// TILLFÄLLIGT (2026-09-11) — felsöker varför ForwardedHeadersMiddleware
+// inte uppdaterar RemoteIpAddress i produktion trots en korrekt
+// X-Forwarded-For-header. Visar middleware:ts egna debug/warning-loggar
+// (t.ex. "Unknown proxy"/"Unparsable IP"/parameter-mismatch) rakt i
+// Railway-konsolen. Ta bort igen när felsökningen är klar.
+builder.Logging.AddFilter("Microsoft.AspNetCore.HttpOverrides", LogLevel.Debug);
 
 // Database — PostgreSQL på Railway (via DATABASE_URL eller PGHOST), SQLite lokalt
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
