@@ -14,6 +14,10 @@ Sedan PR #566 (2026-09-11) syns "Datahantering"-kortet som standard för
 alla inloggade användare: **Konto → Datahantering → Radera konto**. Be
 användaren göra det själv om de kan logga in — snabbast för alla.
 
+Ett mejl med en ångra-länk skickas automatiskt så fort raderingen
+begärs (se [[Angra-radering]]) — nämn gärna det för användaren så de
+vet vad de kan förvänta sig om de ändrar sig.
+
 ## Om det kommer in som ett supportärende
 1. Fråga om användaren kan logga in på kontot (de flesta kan — då pekar
    du bara på självbetjäningen ovan)
