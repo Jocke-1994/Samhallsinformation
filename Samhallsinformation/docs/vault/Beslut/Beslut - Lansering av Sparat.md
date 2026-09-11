@@ -24,3 +24,15 @@ uttalat datum eller villkor satt än.
 ## Kvarstående
 Bara timing — inget uttalat datum, ingen blockering kvar utöver en
 UI-översyn.
+
+## Ny fråga 2026-09-12 — verifierad, inte ett hinder
+Du misstänkte att Polisens artiklar försvinner efter ett tag, vilket skulle
+göra en sparad händelses länk värdelös. **Testade det direkt (2026-09-12):**
+hämtade två Polisen-artiklar från juni 2026 (tre månader gamla) live —
+båda svarade 200 och innehöll fortfarande sin riktiga text. Bekräftar
+alltså INTE att artiklar försvinner, åtminstone inte inom tre månader.
+
+Full analys: [[../Ideer/Sparat-lankarnas-livslangd]]. Ingen anledning att
+skrota eller bygga om Sparat baserat på det här — men flaggar det som en
+öppen fråga där, ifall du har ett konkret exempel på en död länk du redan
+stött på (då blir det värt att undersöka den specifika artikeltypen).

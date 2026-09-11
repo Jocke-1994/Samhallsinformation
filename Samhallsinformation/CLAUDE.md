@@ -83,6 +83,18 @@ de är klara (se regeln ovan), men inga nya skapas. Se
   — nästa gång "## Session Log" börjar närma sig samma storlek igen, arkivera
   proaktivt de äldsta sessionerna på nytt (samma arkivfil, lägg dem sist) utan
   att vänta på att användaren påpekar det.
+- **Håll `docs/vault/1. Öppna_tankar/Öppna frågor.md` i synk** (sedan
+  2026-09-12): varje gång en `## Öppna frågor`-sektion läggs till i en
+  vault-not, lägg samtidigt till en rad i den filen. När användaren
+  besvarar en fråga i notens egen fil, ta bort raden härifrån. Grundorsaken:
+  användaren tappade bort vilka anteckningar som väntade på svar när
+  frågorna bara låg utspridda i enskilda filer — en enda samlad lista löser
+  det, men bara om den faktiskt hålls uppdaterad varje gång, inte bara vid
+  skapandet.
+- **Nämn aldrig en GitHub-issue bara med sitt nummer** (sedan 2026-09-12):
+  skriv alltid vad den handlar om också, t.ex. "#116 (Standardinställningar
+  för allvarlighetsfilter)". Användaren går inte gärna in på GitHub för att
+  slå upp vad ett nummer betyder.
 
 ---
 

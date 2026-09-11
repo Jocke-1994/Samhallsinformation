@@ -31,11 +31,16 @@ prioriteringar bara leva i sessionsloggar — det är hela poängen med det.
   på LinkedIn-timing
 - Rate limiting under en TRAFIKTOPP (flera SAMTIDIGA registreringar, inte
   bara sekventiella försök) — bör testas om igen efter fixen ovan
-- **#144 (staging-miljö)** — flyttad hit 2026-09-12, du signalerade att den
-  bör bli "ganska prio". En riktig lucka (produktion är enda miljön idag)
-  — separat databas, test-SMS/e-post-gateway, BankID-sandbox. Inte
+- **Staging-miljö** — flyttad hit 2026-09-12, du signalerade att den bör
+  bli "ganska prio". En riktig lucka (produktion är enda miljön idag) —
+  separat databas, test-SMS/e-post-gateway, BankID-sandbox. Inte
   blockerande för att öppna login/register, men värt att prioritera högre
   än övriga backlog-punkter
+- **Riktig impersonation-backend** (admin kan faktiskt logga in som en
+  användare för att se vad de ser, inte bara `Impersonation.tsx`s
+  frontend-mock med påhittade sessioner) — flyttad hit 2026-09-12, du vill
+  bygga den ganska snart. Detta blockerar i sin tur impersonation-loggning
+  i aktivitetsloggen (se nedan)
 
 ## 🟢 Flaggade avvikelser, kräver ett beslut (inte akut)
 
@@ -44,14 +49,25 @@ detaljer på varje.
 
 - **#298** — generisk källprenumerationsmodell vs. den Polisen-specifika
   lösningen som faktiskt byggdes. Behåll som är, eller bygg ut generiskt?
-- **#111** — automatisk ärendearkivering (7 dagar/36 månader) önskas
-  fortfarande, eller är den manuella knappen tillräcklig?
-- **#109** — Support-dashboard med inbyggd hjälpguide, litet jobb om
-  önskat
-- **#128** — räcker `NewsItem.tsx`s expand-mekanik, eller vill ni ha en
-  riktig händelsedetaljvy?
-- **#157** — fortfarande fullt giltig, `betaConfig.ts` är fortfarande bara
-  en statisk placeholder
+- **Automatisk ärendearkivering (7 dagar/36 månader)** — **Beslutat
+  2026-09-12:** manuell knapp räcker så länge ärendevolymen är låg. Om det
+  börjar komma ~20 ärenden/dag, ta upp automatiken igen då — inte förrän
+- **Support-dashboard med inbyggd hjälpguide** — en helt egen ingångssida
+  för Support-rollen (inte bara dagens filtrerade adminpanel), som visar:
+  öppna ärenden, driftstatus, planerat underhåll, och en intern
+  "supportguide" med expanderbara hjälpkort (typ "Hur låser jag upp ett
+  spärrat nummer?"). Bekräftat 2026-09-12: ja, det stämmer med hur du
+  tänkte dig det. Litet jobb om/när det önskas, ingen brådska själv
+- **Händelsedetaljvy (egen sida/modal per händelse)** — idag klickar man
+  på ett kort i flödet och det expanderar direkt inline (`NewsItem.tsx`) —
+  visar redan rubrik, källa, tid, innehåll och en länk till originalet.
+  Det här issuet föreslår en RIKTIG separat vy istället (egen route/modal,
+  delbar länk), plus "relaterade händelser från samma källa" som en
+  eventuell extra funktion. Ingen brådska — dagens expand-mekanik täcker
+  det mesta redan
+- **Beta-kampanjhantering i adminpanelen** — `betaConfig.ts` är fortfarande
+  en statisk textfil, inte en riktig adminfunktion. **Bekräftat
+  2026-09-12:** ska göras men inte prioriterat — ni har inga användare än
 
 ## Öppna, avgränsade produktidéer (från Obsidian Idéer/)
 
@@ -81,109 +97,157 @@ detaljer på varje.
 - **#36-38** (fler ingestors) — bekräftat: du vill kunna se över det här
   relativt ofta (både nya källor och fler kanaler på redan befintliga).
   Ingen enskild uppgift, snarare en stående vana — inget att bygga just nu
-- **#52** (daglig sammanfattning) — förklaring: användaren väljer kanal
-  (e-post/SMS/push), tid, frekvens (daglig/veckovis/bara viktiga
-  händelser) och vilka källor som ska ingå i en sammanställd sammanfattning
-  istället för enskilda notiser i realtid. Hänger ihop med SMS-frågan
-  (#133/#134) och push-modellen. Inte utbruten i en egen `Ideer/`-not än
-  — gör det när/om den faktiskt plockas upp, ingen brådska att göra det i
-  förväg
-- **#66** (FAQ publik) — förklaring: en FAQ nåbar UTAN inloggning (skiljer
-  sig från dagens FAQ, som bara syns inloggad). Innehåller även två
-  konkreta delar värda att känna till: en **SMS-mallsektion** (visar alla
-  SMS-mallar systemet skickar, så en mottagare kan jämföra ett riktigt SMS
-  mot mallen för att verifiera äkthet — inte att SMS:et i sig bevisar
-  något) och en manuellt uppdaterbar sektion för **kända driftstörningar
-  hos teleoperatörer**. Väntar dels på beslut om publik-vs-inloggad FAQ
-  (känt sedan session 42), dels på SMS-kanalen som helhet
-- **#68** (ansök om att bli källa) — din oro (namn, URL, hur hämtar vi
-  datan) är redan exakt vad issuet självt specar för formuläret. Det som
-  INTE finns nedskrivet är den interna RUTINEN för vad som händer efter
-  en ansökan kommit in (hur bedömer vi/integrerar en ny källa tekniskt) —
-  helt rimligt att lämna ogjort tills funktionen faktiskt byggs, samma
-  princip som "Från support" i [[Flöde ny idé]]
-- **#124-125** (releaser↔versioner) — bekräftat: hänger ihop med
-  changelog-arbetet, kommer hanteras inom kort
-- **#133-134** (SMS) — bekräftat: kostnadsfråga, kopplat till
+- **Daglig sammanfattning** (kanal + tid + frekvens + källval för en
+  sammanställd sammanfattning istället för enskilda realtidsnotiser) —
+  hänger ihop med SMS-frågan och push-modellen. **Bekräftat 2026-09-12:**
+  ses över om/när det blir aktuellt, ingen brådska
+- **Publik FAQ (utan inloggning)** — **Avfärdat 2026-09-12, GitHub-issuet
+  stängt:** FAQ förblir inloggad-bara, besökare hänvisas till
+  kundtjänstboten istället. Samma beslut gäller SMS-mallsektionen (bara
+  aktuell om SMS byggs som notifieringskanal) och den manuellt
+  uppdaterbara sektionen för kända driftstörningar hos teleoperatörer —
+  ingen av dem blir aktuell utan publik FAQ. Se
+  [[../Ideer/FAQ for utloggade besokare|FAQ för utloggade besökare]]
+- **Ansök om att bli källa** (formulär för myndigheter: namn, kontakt, URL
+  till RSS/API, beskrivning) — din oro om vilken info som behövs är redan
+  exakt vad formuläret självt specar. Det som saknas är den interna RUTINEN
+  för vad som händer EFTER en ansökan (hur bedömer/integrerar vi en ny
+  källa tekniskt). **Du är öppen för en skiss av den rutinen** — inte
+  gjort än, säg till om du vill att jag gör ett första utkast
+- **Releaser↔versioner-koppling** (visa vilka ärenden/versioner hör ihop)
+  — bekräftat: hänger ihop med changelog-arbetet, kommer hanteras inom kort
+- **SMS som notifieringskanal** — bekräftat: kostnadsfråga, kopplat till
   [[../Beslut/Beslut - Monetisering|Beslut - Monetisering]]. Ser mörkt ut
   om det tillkommer en löpande kostnad utan bestämd intäktsmodell
-- **#135** (undersökningar) — bekräftat: genuint intressant, men du
-  funderar på om förslag ändå kommer in organiskt från användare när de
-  finns. Ingen brådska, ingen ny information att lägga till
-- **#144** (staging-miljö) — **flyttad till 🟡 nedan**, du signalerade att
-  den bör vara högre prioriterad än "ingen brådska"
-- **#173** (formell självläkning för ingestorer) — förklaring: idag kan en
-  skrivoperation (t.ex. spara ett telefonnummer) tekniskt misslyckas tyst
-  — användaren tror det sparades, systemet vet inte om det. Idén: verifiera
-  kritiska skrivningar mot databasen efteråt, kö:a om och försök igen
-  automatiskt vid fel (med backoff), och larma admin om en källa varit
-  tyst längre än förväntat. Stort infra-jobb, ingen brådska idag
-- **#175** (köhantering i support-inbox) — förklaring: när fler än en
-  supportperson finns ska var och en bara se ÄRENDEN TILLDELADE TILL DEM
-  (inte hela inkorgen), plus fritext-taggar för att kategorisera/filtrera
-  ärenden. Samma "inte relevant förrän en andra supportperson finns"-läge
-  som "Från support" i [[Flöde ny idé]] och #109
-- **#335** (Nyheter-sidans avgränsningstext) — verifierat: korrekt
-  fortfarande INTE gjort, och ska inte göras än — den är uttryckligen
-  villkorad på att login/register-knapparna blir publikt synliga och
-  användbara, vilket de fortfarande inte är. Inget att åtgärda just nu
-- **#434** (FAQ — rätta innehåll + nya frågor) — verifierat i koden,
-  **delvis klart, inte helt besvarat:**
-  - ✅ Del 1 (rätta felaktigt innehåll om radera konto/dataexport) — klar,
-    kopplad till den riktiga GDPR-mekanismen med ångra-länk
-  - ✅ Del 3, delvis — Google-inloggning, lösenordsbyte, namn/e-post-byte,
-    Alla källor-skillnaden, "vad är nytt" och ångra-radering finns redan
-    som frågor. **Saknas fortfarande:** "Vad är skillnaden på Alla
-    händelser och Mitt flöde?", frågan om Polisen-typfilter
-    (Polisen-bevakningar), kontospärrning, och en länk till `/villkor`
-  - ❌ Del 2 (dynamiska svar baserat på källstatus, t.ex. "källan X är
-    pausad just nu") — inte påbörjad alls
-  - Del 4 (innehåll för `flode_sparat`/`notif_push`) — korrekt oskrivet,
-    väntar på att de flaggorna faktiskt slås på
-  - Rekommendation: håll öppen, den är inte klar
-- **#437** (BankID) — bekräftat: en önskan, men samma återkommande
-  kostnadsfråga som #133/#134, kopplat till
+- **Undersökningar/enkäter till användare** — bekräftat: genuint
+  intressant, men du funderar på om förslag ändå kommer in organiskt från
+  användare när de finns. Ingen brådska
+- **Internt forum** — flyttad hit från kandidatlistan (inte en död idé,
+  bara inte aktuellt förrän det finns fler användare/behov av det)
+- **Staging-miljö** — **flyttad till 🟡 ovan**, du signalerade att den bör
+  vara högre prioriterad än "ingen brådska"
+- **Formell självläkning för ingestorer** (verifiera kritiska skrivningar
+  mot databasen efteråt, kö:a om och försök igen automatiskt vid fel, larma
+  admin om en källa varit tyst längre än förväntat) — **Bekräftat
+  2026-09-12: ska absolut göras, men ingen bestämd tidpunkt än**
+- **Köhantering i support-inbox** (varje agent ser bara sina egna
+  tilldelade ärenden + fritext-taggar för kategorisering) — **Delvis
+  avfärdat 2026-09-12, kommenterat på GitHub:** att begränsa varje agent
+  till sin egen kö känns för komplicerat (oklart vem som skulle tilldela)
+  — alla i supporten ska se alla ärenden. Fritext-taggningen är
+  fortfarande en öppen, oberoende idé. Bara relevant när en andra
+  supportperson finns, precis som Support-dashboarden ovan
+- **Nyheter-sidans avgränsningstext** (förklara skillnaden mellan den
+  publika Nyheter-sidan och den inloggade Uppdateringar-sidan) —
+  verifierat: korrekt fortfarande inte gjort, och ska inte göras än — den
+  är uttryckligen villkorad på att login/register-knapparna blir publikt
+  synliga och användbara, vilket de fortfarande inte är
+- **FAQ — rätta innehåll + nya frågor** — verifierat i koden, **delvis
+  klart, inte helt, du håller med om att hålla den öppen:**
+  - ✅ Rätta felaktigt innehåll om radera konto/dataexport — klar, kopplad
+    till den riktiga GDPR-mekanismen med ångra-länk
+  - ✅ Delvis — Google-inloggning, lösenordsbyte, namn/e-post-byte, Alla
+    källor-skillnaden, "vad är nytt" och ångra-radering finns redan som
+    frågor. **Saknas fortfarande:** "Vad är skillnaden på Alla händelser
+    och Mitt flöde?", frågan om Polisen-typfilter (Polisen-bevakningar),
+    kontospärrning, och en länk till `/villkor`
+  - ❌ Dynamiska svar baserat på källstatus (t.ex. "källan X är pausad just
+    nu") — inte påbörjad alls
+  - Innehåll för `flode_sparat`/`notif_push` — korrekt oskrivet, väntar på
+    att de flaggorna faktiskt slås på
+- **BankID-inloggning** — bekräftat: en önskan, men samma återkommande
+  kostnadsfråga, kopplat till
   [[../Beslut/Beslut - Monetisering|Beslut - Monetisering]]
-- **#491** (aktivitetslogg wave 2/3) — förklaring: wave 1 (admin/system-
-  händelser) är klar och byggd. **Wave 2** = vanliga användares egna
-  handlingar (temaval, Mina källor-ändringar, Sparat) i samma logg —
-  medvetet senare eftersom IP+enhet+historik på en mycket större, mindre
-  betrodd volym är en tyngre GDPR-fråga, och måste räknas in i GDPR-
-  exporten när den byggs ut. Tre konkreta luckor kvar även inom det som
-  redan är byggt: Impersonation-loggning (blockerad — ingen riktig
-  impersonation-backend finns än), en "Arkivera"-knapp i UI:t (datamodellen
-  finns, ingen knapp), och en mekanism för att tagga test-/betakonton vid
-  källan (fältet finns, inget sätter det). Ingen brådska på någon av delarna
+- **Enhetlig aktivitetslogg, återstående delar** — wave 1 (admin/system-
+  händelser) är klar och byggd. Tre konkreta luckor kvar:
+  - **Impersonation-loggning** — blockerad, ingen riktig
+    impersonation-BACKEND finns än (bara en frontend-mock,
+    `Impersonation.tsx`, som visar påhittade sessioner utan att faktiskt
+    logga in som användaren). **Du vill bumpa detta högre** — se
+    impersonation-raden i 🟡-sektionen ovan (tillagd 2026-09-12)
+  - **"Arkivera"-knapp i UI:t** — förtydligande av vad jag menade: fältet
+    i databasen som markerar en logg-rad som arkiverad finns redan
+    (`Arkiverad`), och FILTRET som döljer arkiverade rader från
+    standardvyn finns redan (`visaArkiverade`) — men det finns ingen KNAPP
+    någonstans i gränssnittet som en admin faktiskt kan klicka på för att
+    sätta det fältet. Rörledningen finns, bara själva strömbrytaren saknas
+  - **Test-/betakonto-taggning** — samma sak: fältet finns i databasen,
+    men inget skriver till det någonstans — ingen mekanism känner
+    igen ett test-/betakonto för att sätta flaggan automatiskt
+  - Wave 2 (vanliga användares egna handlingar — temaval, Mina
+    källor-ändringar, Sparat) medvetet senare, tyngre GDPR-fråga på en
+    mycket större volym, måste räknas in i GDPR-exporten när den byggs ut
 
 ## Kandidater att stänga/arkivera (din bedömning, inte gjort än)
 
-#42, #43, #50, #51, #116, #117, #120-123, #127, #138, #146, #168 — se
-granskningen för varför var och en är en kandidat. (#46/#55 redan stängda
-2026-09-12, se [[../Beslut/Beslut - SPAR avfärdat]]. #141 hålls medvetet
-öppen — se [[../Beslut/Beslut - Monetisering]].)
+**Bekräftat 2026-09-12:** du går inte gärna in på GitHub för att slå upp
+vad ett nummer betyder — så här är listan med vad varje kandidat faktiskt
+handlar om, inte bara siffror (sparat som stående regel framöver):
+
+- **Logga in med BankID** — duplikat, samma sak som "BankID"-punkten ovan
+- **Logga in med Freja eID** — aldrig nämnd igen sedan den skapades,
+  sannolikt en övergiven idé
+- **Lägg till SMS-mottagare med verifieringskod** + **Rate limiting för
+  SMS-verifiering** — duplikat av SMS-punkten ovan
+- **Standardinställningar för allvarlighetsfilter/pausläge/testnotis** +
+  **Källinställningar med expanderbara mottagaroverrides** — beskriver en
+  gammal mail/SMS-per-källa-notismodell, känd sedan session 25 att behöva
+  ett omdesign-beslut innan den är relevant igen
+- **Testare-roll-klustret** (dedikerad testroll, bjuda in testare,
+  hantera testarkonton, feedback-knapp för testare) — verkar redan
+  ersatt av en enklare lösning (Feedback-knappen + en "Testare"-kategori
+  i supportformuläret)
+- **"Launch-scope"-diskussion** + **"Definiera funktionsomfång v1.0"** —
+  två dubbletter av varandra, båda redan ersatta av de faktiska
+  launch-prep-sessionerna som aldrig loggades tillbaka till dem
+- **Konto-sidans tvåkolumns grid-layout** — sannolikt från innan dagens
+  Konto-sida-design fanns, matchar inte nuvarande enkolumns-kort-layout
+
+(SPAR-integrationen + samtycke redan stängda 2026-09-12, se
+[[../Beslut/Beslut - SPAR avfärdat]]. Gåvor/donationer hålls medvetet
+öppen — se [[../Beslut/Beslut - Monetisering]]. Internt forum flyttat till
+"genuint öppna" ovan — inte en dublett/död idé, bara inte aktuellt än.)
 
 ## Andra anteckningar som väntar på ditt svar (tillagt 2026-09-12)
 Gick igenom hela valvet efter din fråga om fler filer med obesvarade
 öppna frågor. Dessa har genuint olösta frågor — resten (`Vad ar
 nytt-modal.md` m.fl.) är redan färdigsvarade eller redo för pipeline:
 
-- **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — kräver att
-  du faktiskt testar på telefonen (fungerar undermapp-vault-läget i
-  Obsidian Git-pluginet på mobil, eller behövs fallback-git-appen direkt?)
-  plus ett beslut om Bot-valvet ska vara eget repo eller en fristående mapp
-- **[[../Ideer/FAQ for utloggade besokare|FAQ for utloggade besökare]]** —
-  samma underliggande fråga som GitHub #66 ovan: ska FAQ vara helt
-  inloggad (som idag), helt publik, eller delad i två delmängder?
+- **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — noten har
+  faktiskt redan en steg-för-steg-guide (rubrikerna "Steg — Desktop" och
+  "Steg — Mobil" i samma fil), du kanske missade att den fanns. Läs igenom
+  den och säg till om något steg är otydligt eller om du vill ha den mer
+  detaljerad (skärmdumpar osv) — annars är den redo att följas som den är.
+  Två öppna frågor kvar där (fungerar undermapp-vault-läget på riktig
+  mobil, och Bot-valvet som eget repo eller fristående mapp) kan bara
+  besvaras genom att du faktiskt provar
+- FAQ för utloggade besökare — **redan besvarad ovan** (samma fråga som
+  GitHub-issuet om publik FAQ) — borttagen härifrån
 - **[[../Beslut/Beslut - Polisen-bevakningar egna tester|Beslut - Polisen-bevakningar, egna tester]]**
-  — INTE bara en timingfråga: enligt noten aktiverade du en bevakning men
-  fick aldrig någon avisering, okänd orsak. Värt att kolla om det
-  fortfarande stämmer eller om det löste sig av sig självt
+  — förslag för morgondagens test: välj EN kommun (inte en storstad — för
+  hög volym) och lämna typ-filtret tomt (alla typer), eller tvärtom en
+  bred storstad men bara en typ som inte händer varje dag (t.ex.
+  "Försvunnen person" eller "Skottlossning" snarare än "Trafikolycka").
+  Målet är minst en träff inom något dygn utan att du dränks. Innan du
+  testar: dubbelkolla att push fortfarande är påslagen i Konto (samma
+  två-oberoende-orsaker-fälla som admin-tystnaden i session 30 — global
+  mute OCH enhetens egen notiskanal måste båda vara på)
 - **[[../Beslut/Beslut - Lansering av Sparat|Beslut - Lansering av Sparat]]**
-  och **[[../Beslut/Beslut - Lansering av Push-notiser|Beslut - Lansering av Push-notiser]]**
-  — båda `status: öppen`, ren timingfråga (inget datum/villkor satt),
-  ingen brådska men bra att veta att de ligger olösta
+  — din oro om döda Polisen-länkar **verifierad och inte bekräftad:**
+  testade två Polisen-artiklar från juni 2026 (3 månader gamla) live just
+  nu, båda svarade 200 med texten intakt. Full analys, rekommendation att
+  inte bygga om Sparat baserat på det här:
+  [[../Ideer/Sparat-lankarnas-livslangd]]. Ingen kvarstående blockering
+  utöver den ursprungliga UI-översynen
+- **[[../Beslut/Beslut - Lansering av Push-notiser|Beslut - Lansering av Push-notiser]]**
+  — fortfarande `status: öppen`, ren timingfråga, ingen ny information
 
 ## Obsidian-täckning, fortfarande ofullständig
+
+Ren transparens, inte en uppgiftslista — jag skrev den här så du vet
+exakt vad som redan finns dokumenterat kontra vad som saknas, inte för
+att be dig strukturera upp något. Ingen åtgärd krävs om du inte själv vill
+prioritera att täcka igen luckorna.
 
 Nya Funktioner-noter skapade 2026-09-12: Autentisering,
 Onboarding-wizard, Lösenordsåterställning, GDPR-verktyg, Kontouppgifter,

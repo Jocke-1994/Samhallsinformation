@@ -9,6 +9,10 @@ frontmatter varje gång du öppnar den här sidan. Lägg till en ny funktions-
 eller FAQ-not med rätt fält, och den dyker upp här av sig själv. Inget att
 komma ihåg att uppdatera.
 
+**Väntar något på ditt svar?** Se
+[[1. Öppna_tankar/Öppna frågor|Öppna frågor]] — en samlad lista över allt
+i valvet som genuint väntar på dig, oavsett vilken mapp det ligger i.
+
 ## Aktiva
 Lanserade, live för besökare.
 

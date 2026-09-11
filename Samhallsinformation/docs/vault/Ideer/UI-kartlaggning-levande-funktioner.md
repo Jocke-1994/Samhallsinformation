@@ -1,6 +1,6 @@
 ---
 typ: ide
-status: fragor-olosta  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
 uiGodkand: ej-bedomd
 beroenden: "Frontend-testinfrastruktur (Vitest + React Testing Library) — hänger delvis ihop men är inte ett hårt krav för att påbörja själva kartläggningen"
 prioritet: ej-bedomd
@@ -33,13 +33,18 @@ har fortfarande noll testtäckning — den här kartläggningen är delvis
 förutsättningen för att veta VAD som är värt att testa först (inga tester
 skrivs för funktioner som ändå ska tas bort).
 
-## Öppna frågor
-- Var börjar kartläggningen — en yta i taget (t.ex. Konto-sidan) eller en
-  bred men grund första passering över allt?
-- Ska detta göras som en enda stor genomgång, eller trancher per
-  admin-vy/support-vy/användare/besökare?
-- Behöver frontend-testinfrastrukturen (Vitest m.m.) finnas på plats INNAN
-  kartläggningen börjar, eller kan de gå parallellt?
+## Frågor — besvarade 2026-09-12
+- **Var börjar kartläggningen?** → Din metod duger fint: lista allt först,
+  bocka av en i taget. Ingen anledning att komplicera det mer än så.
+- **En stor genomgång, eller trancher per yta?** → Trancher, prioriterade
+  **användare > besökare > admin** (support hoppas över — ingen aktiv
+  supportroll använder sin egen yta idag).
+- **Behöver Vitest m.m. finnas på plats INNAN kartläggningen börjar?** →
+  Ja, jag menade exakt testinfrastrukturen som idag inte finns alls i
+  frontend (ingen Vitest/React Testing Library uppsatt än) — inte något
+  annat. Svaret på själva frågan: nej, de kan gå parallellt. Kartläggningen
+  (vad ska vara kvar, vad saknas) kräver inga tester i sig — testinfran
+  behövs först när ni faktiskt ska SKRIVA tester för det som blir kvar.
 
 ## Kopplat
 - [[../Verktyg/Claudes-tankar|Claudes tankar]] — ursprungsdiskussionen
