@@ -32,7 +32,7 @@ export default function KontoInfo({
         {/* Namn */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Visningsnamn</label>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
               value={namn.value}
@@ -42,7 +42,7 @@ export default function KontoInfo({
             />
             <button
               onClick={onSaveNamn}
-              className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow shrink-0"
+              className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow w-full sm:w-auto sm:shrink-0"
             >
               Spara
             </button>
@@ -54,7 +54,7 @@ export default function KontoInfo({
         {/* E-post */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">E-postadress</label>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
               value={epost.value}
@@ -65,14 +65,14 @@ export default function KontoInfo({
             {!requiresPassword && (
               <button
                 onClick={onRequestEmailChange}
-                className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow shrink-0"
+                className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow w-full sm:w-auto sm:shrink-0"
               >
                 Skicka bekräftelse
               </button>
             )}
           </div>
           {requiresPassword && (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="password"
                 value={emailPassword}
@@ -82,7 +82,7 @@ export default function KontoInfo({
               />
               <button
                 onClick={onRequestEmailChange}
-                className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow shrink-0"
+                className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow w-full sm:w-auto sm:shrink-0"
               >
                 Skicka bekräftelse
               </button>
