@@ -1243,7 +1243,10 @@ app.MapGet("/api/diag/ip", (HttpContext ctx) => Results.Ok(new
     remoteIpAddress = ctx.Connection.RemoteIpAddress?.ToString(),
     xForwardedFor    = ctx.Request.Headers["X-Forwarded-For"].ToString(),
     xForwardedProto  = ctx.Request.Headers["X-Forwarded-Proto"].ToString(),
-    allHeaders       = ctx.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString()),
+    // .Select istället för .ToDictionary — en dubblerad header-nyckel (t.ex.
+    // flera X-Forwarded-For-rader genom flera proxy-hopp) hade fått
+    // ToDictionary att kasta ArgumentException.
+    allHeaders = ctx.Request.Headers.Select(h => $"{h.Key}: {h.Value}").ToList(),
 }));
 
 app.MapControllers();
