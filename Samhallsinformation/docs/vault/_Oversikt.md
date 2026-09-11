@@ -68,6 +68,17 @@ FROM "FAQ"
 SORT file.name ASC
 ```
 
+## Rutiner
+Vad du faktiskt gör när en användare ber om hjälp med något — grunda
+alltid svaret i den faktiska koden/mekanismen, inte minnet.
+
+```dataview
+TABLE kategori AS "Kategori", uppdaterad AS "Senast kollad mot koden"
+FROM "Rutiner"
+WHERE status = "aktiv"
+SORT kategori ASC, file.name ASC
+```
+
 ## Öppna beslut
 
 ```dataview
@@ -82,6 +93,6 @@ Fallback-vy om ovanstående grupperingar missar något (t.ex. felstavad status).
 
 ```dataview
 TABLE status AS "Status", grupp AS "Grupp", typ AS "Typ"
-FROM "Funktioner" OR "FAQ"
+FROM "Funktioner" OR "FAQ" OR "Rutiner"
 SORT status ASC, file.name ASC
 ```
