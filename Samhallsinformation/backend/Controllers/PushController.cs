@@ -113,6 +113,35 @@ public class PushController : ControllerBase
         return Ok(logs);
     }
 
+    // Anropas av service workern (sw.js) INNAN en notis visas — first-claim-
+    // wins så en notis bara visas på EN av användarens enheter, inte alla
+    // som råkar vara online samtidigt. AllowAnonymous eftersom en bakgrunds-
+    // service-worker inte pålitligt har en färsk JWT (kan väckas av en push
+    // utan att någon flik är öppen) — claimId är en slumpad engångs-Guid som
+    // bara någonsin skickats till just den här användarens egna enheter via
+    // deras krypterade push-kanal, så den fungerar som sin egen spärr.
+    // Ett okänt claimId (redan uttömt av en cleanup, eller aldrig funnits)
+    // svarar "claimed: true" — fail-open, hellre en extra notis än att en
+    // riktig händelse aldrig visas någonstans. Load-check-save (inte en
+    // atomär UPDATE ... WHERE — ExecuteUpdateAsync stöds inte av InMemory-
+    // providern testsviten använder) — ett teoretiskt race mellan två
+    // enheter som claimar i EXAKT samma millisekund kan ge en dubbelvisad
+    // notis i sällsynta fall, aldrig sämre än beteendet innan den här
+    // funktionen fanns.
+    [HttpPost("claim")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Claim([FromBody] ClaimRequest req)
+    {
+        var claim = await _db.PushDispatchClaims.FirstOrDefaultAsync(c => c.Id == req.ClaimId);
+        if (claim == null) return Ok(new { claimed = true });
+        if (claim.ClaimedAt != null) return Ok(new { claimed = false });
+
+        claim.ClaimedAt = DateTime.UtcNow;
+        claim.ClaimedByDeviceId = req.DeviceId;
+        await _db.SaveChangesAsync();
+        return Ok(new { claimed = true });
+    }
+
     // Anonym — frontend behöver den publika nyckeln för pushManager.subscribe(),
     // innan användaren nödvändigtvis är inloggad i den flödet.
     [HttpGet("public-key")]
@@ -218,3 +247,4 @@ public record SubscribeKeys(string P256dh, string Auth);
 public record UnsubscribeRequest(string Endpoint);
 public record PushSettingsRequest(bool? PushEnabled, bool? PushNyaHandelser, bool? PushNyVersion);
 public record NewVersionRequest(string Version, string Message);
+public record ClaimRequest(Guid ClaimId, Guid DeviceId);

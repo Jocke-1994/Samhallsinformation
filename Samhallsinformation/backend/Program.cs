@@ -962,6 +962,24 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        if (pendingMigrations.Contains("20260911113746_AddPushDispatchClaims"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""PushDispatchClaims"" (
+                    ""Id""                uuid NOT NULL,
+                    ""UserId""            uuid NOT NULL,
+                    ""ClaimedByDeviceId"" uuid,
+                    ""ClaimedAt""         timestamptz,
+                    ""CreatedAt""         timestamptz NOT NULL,
+                    CONSTRAINT ""PK_PushDispatchClaims"" PRIMARY KEY (""Id"")
+                );
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260911113746_AddPushDispatchClaims', '10.0.12')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 

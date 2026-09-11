@@ -15,7 +15,7 @@ namespace Samhallsinformation.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
             modelBuilder.Entity("Samhallsinformation.Models.AdminActivityLog", b =>
                 {
@@ -542,6 +542,29 @@ namespace Samhallsinformation.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("PolisenBevakningar");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.PushDispatchClaim", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ClaimedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ClaimedByDeviceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PushDispatchClaims");
                 });
 
             modelBuilder.Entity("Samhallsinformation.Models.RefreshToken", b =>
