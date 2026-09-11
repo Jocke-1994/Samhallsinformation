@@ -164,9 +164,18 @@ var app = builder.Build();
 // ForwardLimit=1 gör att bara det ALLRA sista hoppet litas på (den enda
 // part som kan nå Kestrel direkt är Railways egen proxy, ingen extern
 // anropare kan nå fram och spoofa X-Forwarded-For förbi den).
+//
+// Bara XForwardedFor efterfrågas — INTE XForwardedProto. Bekräftat via
+// /api/diag/ip (2026-09-11) att Railway aldrig skickar X-Forwarded-Proto
+// (de använder X-Original-Proto istället, ett icke-standardnamn).
+// ForwardedHeadersOptions.RequireHeaderSymmetry är true som standard, så
+// att efterfråga BÅDA fick hela vidarebefordran att tyst avbrytas — X-
+// Forwarded-For hade 1 värde, X-Forwarded-Proto 0, mismatchen fick
+// middleware:t att retunera utan att applicera något alls (bekräftat i
+// ASP.NET Cores egen källkod, ForwardedHeadersMiddleware.cs).
 var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor,
     ForwardLimit     = 1,
 };
 forwardedHeadersOptions.KnownIPNetworks.Clear();
