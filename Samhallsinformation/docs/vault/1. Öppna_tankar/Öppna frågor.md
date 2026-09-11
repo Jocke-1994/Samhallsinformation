@@ -24,8 +24,10 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   — testa igen (förslag finns i [[_Prioritering]]), och rapportera om du
   fick en avisering eller inte
 - **[[../Ideer/Sparat-lankarnas-livslangd|Sparat-lankarnas-livslangd]]** —
-  har du ett konkret exempel på en sparad händelse vars länk faktiskt gått
-  död?
+  rotorsaken är hittad och bekräftad (Polisen byter URL vid
+  kategoriuppdatering, ingestorn dedupar fel, skapar en duplicerad rad).
+  Kvarstående fråga: ska den döda länk-varningen försöka HITTA den nya
+  URL:en automatiskt, eller räcker det att bara varna som idag?
 - **[[../Ideer/Mobil-design-handelsekort|Mobil-design-handelsekort]]** —
   Direction D eller E för Polisen-händelsekorten?
 - **[[../Ideer/Bottom bar (mobil)|Bottom bar (mobil)]]** — väntar på Sök

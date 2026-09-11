@@ -25,14 +25,18 @@ uttalat datum eller villkor satt än.
 Bara timing — inget uttalat datum, ingen blockering kvar utöver en
 UI-översyn.
 
-## Ny fråga 2026-09-12 — verifierad, inte ett hinder
-Du misstänkte att Polisens artiklar försvinner efter ett tag, vilket skulle
-göra en sparad händelses länk värdelös. **Testade det direkt (2026-09-12):**
-hämtade två Polisen-artiklar från juni 2026 (tre månader gamla) live —
-båda svarade 200 och innehöll fortfarande sin riktiga text. Bekräftar
-alltså INTE att artiklar försvinner, åtminstone inte inom tre månader.
+## Ny fråga 2026-09-12 — riktig bugg hittad, inte "artiklar försvinner"
+Du misstänkte att Polisens artiklar försvinner efter ett tag. Ett första
+stickprov (två slumpade artiklar) motsade det — men du hittade sedan ett
+konkret eget exempel (en sparad händelse från 21 augusti, död länk), och
+det ledde till den faktiska rotorsaken: **Polisen byter URL på en
+händelse när kategorin uppdateras** (t.ex. "Övrigt" → "Mord/dråp" efter
+vidare utredning), och vår ingestor känner inte igen den nya URL:en som
+samma händelse — skapar en duplicerad rad istället för att uppdatera den
+befintliga. Den gamla länken dör då på riktigt, permanent, för den som
+sparat den.
 
-Full analys: [[../Ideer/Sparat-lankarnas-livslangd]]. Ingen anledning att
-skrota eller bygga om Sparat baserat på det här — men flaggar det som en
-öppen fråga där, ifall du har ett konkret exempel på en död länk du redan
-stött på (då blir det värt att undersöka den specifika artikeltypen).
+Full analys + rekommendation: [[../Ideer/Sparat-lankarnas-livslangd]].
+Ingen brådska att fixa i natt, men en riktig, avgränsad bugg att ta med
+nästa gång ni jobbar med Polisen-ingestorn — inte ett argument för att
+skrota Sparat.
