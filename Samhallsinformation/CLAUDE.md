@@ -76,6 +76,13 @@ de är klara (se regeln ovan), men inga nya skapas. Se
   odetekterad i produktion i över ett halvår trots grönt enhetstest — testet
   bevisade att LOGIKEN var rätt, inte att den faktiskt kördes mot rätt data i
   produktionens nätverkstopologi.
+- **Håll CLAUDE.md lagom stort** (sedan 2026-09-12): filen arkiverades
+  2026-09-12 (1372 → ~590 rader, sessioner 1–28 flyttade till
+  `docs/SESSIONSLOGG_ARKIV.md`) eftersom den blivit för lång för att faktiskt
+  läsas inför en ny session. Det här är en löpande vana, inte en engångsstädning
+  — nästa gång "## Session Log" börjar närma sig samma storlek igen, arkivera
+  proaktivt de äldsta sessionerna på nytt (samma arkivfil, lägg dem sist) utan
+  att vänta på att användaren påpekar det.
 
 ---
 

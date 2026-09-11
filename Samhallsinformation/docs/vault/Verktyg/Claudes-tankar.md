@@ -22,7 +22,7 @@ var 5-10:e — att köra ett par snabba liveverifieringar mot produktion av
 saker som är svåra att enhetstesta (rate limiting, CORS, riktiga
 DNS/mejlleveranser). Det behöver inte vara jag som gör det, men det
 behöver hända oftare än "när något känns fel".
-- → **Gjort 2026-09-12, utan uttryckligt svar från dig här** — du kommenterade inte den här punkten specifikt, men lade in den som en regel i CLAUDE.md (Övriga regler) eftersom den kändes lågrisk och du sa generellt att du gillade tankarna. Säg till om du INTE vill ha den som en stående vana, så tar jag bort den igen.
+- → **Bekräftat 2026-09-12** — du trodde först att det var samma sak som den redan fixade rate limiting-buggen (session 45), men det är en separat, framåtblickande vana (kolla rate limiting/CORS/DNS/mejl regelbundet, inte bara när något känns fel). Nu bekräftad, kvar som regel i CLAUDE.md.
 
 ## Zombie-issues är dyrare än de ser ut
 20 av 60 öppna issues var redan klara, flera sedan flera MÅNADER tillbaka.
@@ -59,7 +59,8 @@ CLAUDE.md:s roll smalnar av till "de senaste 5-10 sessionerna + en länk
 till Obsidian för allt äldre" — historiken finns redan kvar i git-loggen
 om något behöver grävas fram.
 - kan du lösa det på ett snyggt sätt så varför inte, jag är öppen för förslag på förbättringar.
-- → **Gjort 2026-09-12:** CLAUDE.md smalnat av från 1372 till ~570 rader. Sessioner 1–28 flyttade oförändrade till `docs/SESSIONSLOGG_ARKIV.md`, sessioner 29–47 ligger kvar direkt i CLAUDE.md. En kort pekare länkar till arkivfilen. Samma mönster kan upprepas löpande — arkivera de äldsta sessionerna igen när listan växer sig lång nästa gång.
+- → **Gjort 2026-09-12:** CLAUDE.md smalnat av från 1372 till ~570 rader. Sessioner 1–28 flyttade oförändrade till `docs/SESSIONSLOGG_ARKIV.md`, sessioner 29–47 ligger kvar direkt i CLAUDE.md. En kort pekare länkar till arkivfilen.
+- → **Bekräftat 2026-09-12:** du bad mig hålla koll på det här löpande, inte bara som en engångsstädning. Tillagt som en stående regel i CLAUDE.md (Övriga regler) — jag arkiverar proaktivt de äldsta sessionerna igen nästa gång filen börjar bli lika lång, utan att du behöver be om det.
 
 ## Frontend har fortfarande noll testtäckning
 Bekräftat sedan tidigare sessioner, men värt att lyfta igen i ljuset av
