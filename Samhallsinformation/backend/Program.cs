@@ -1253,22 +1253,39 @@ using (var scope = app.Services.CreateScope())
 // (5/min/IP) inte triggar i produktion — visar exakt vad backend ser för
 // klient-IP och rå X-Forwarded-For-header. Ta bort igen när felsökningen
 // är klar.
-app.MapGet("/api/diag/ip", (HttpContext ctx) => Results.Ok(new
+app.MapGet("/api/diag/ip", (HttpContext ctx) =>
 {
-    // Versionsmarkör + processens starttid — för att entydigt bevisa om det
-    // verkligen är den senaste koden som kör, oavsett vad Railways UI säger.
-    diagVersion         = "v3-2026-09-11-2115",
-    processStartTimeUtc = System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime().ToString("o"),
-    remoteIpAddress = ctx.Connection.RemoteIpAddress?.ToString(),
-    remotePort      = ctx.Connection.RemotePort,
-    requestScheme   = ctx.Request.Scheme,
-    xForwardedFor    = ctx.Request.Headers["X-Forwarded-For"].ToString(),
-    xForwardedProto  = ctx.Request.Headers["X-Forwarded-Proto"].ToString(),
-    // .Select istället för .ToDictionary — en dubblerad header-nyckel (t.ex.
-    // flera X-Forwarded-For-rader genom flera proxy-hopp) hade fått
-    // ToDictionary att kasta ArgumentException.
-    allHeaders = ctx.Request.Headers.Select(h => $"{h.Key}: {h.Value}").ToList(),
-}));
+    var rawXff = ctx.Request.Headers["X-Forwarded-For"].ToString();
+    // Testar TryParse (och en bytenivå-koll för dolda tecken) direkt här,
+    // exakt samma anrop som ForwardedHeadersMiddleware gör internt — för
+    // att bevisa/motbevisa om parsningen av headervärdet är det som
+    // faktiskt misslyckas i produktion.
+    var parseOk = System.Net.IPEndPoint.TryParse(rawXff, out var parsedEndpoint);
+    var bareIpParseOk = System.Net.IPAddress.TryParse(rawXff, out var parsedAddress);
+
+    return Results.Ok(new
+    {
+        // Versionsmarkör + processens starttid — för att entydigt bevisa om det
+        // verkligen är den senaste koden som kör, oavsett vad Railways UI säger.
+        diagVersion         = "v4-2026-09-11-2130",
+        processStartTimeUtc = System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime().ToString("o"),
+        remoteIpAddress = ctx.Connection.RemoteIpAddress?.ToString(),
+        remotePort      = ctx.Connection.RemotePort,
+        requestScheme   = ctx.Request.Scheme,
+        xForwardedFor    = rawXff,
+        xForwardedForLength = rawXff.Length,
+        xForwardedForBytes  = System.Text.Encoding.UTF8.GetBytes(rawXff),
+        ipEndPointTryParseOk = parseOk,
+        ipEndPointParsedValue = parsedEndpoint?.ToString(),
+        ipAddressTryParseOk   = bareIpParseOk,
+        ipAddressParsedValue  = parsedAddress?.ToString(),
+        xForwardedProto  = ctx.Request.Headers["X-Forwarded-Proto"].ToString(),
+        // .Select istället för .ToDictionary — en dubblerad header-nyckel (t.ex.
+        // flera X-Forwarded-For-rader genom flera proxy-hopp) hade fått
+        // ToDictionary att kasta ArgumentException.
+        allHeaders = ctx.Request.Headers.Select(h => $"{h.Key}: {h.Value}").ToList(),
+    });
+});
 
 app.MapControllers();
 
