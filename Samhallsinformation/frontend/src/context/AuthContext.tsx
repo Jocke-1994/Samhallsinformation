@@ -11,7 +11,10 @@ interface AuthContextType {
   emailVerified: boolean
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string, acceptedTerms: boolean) => Promise<void>
-  loginWithGoogle: (idToken: string, acceptedTerms: boolean) => Promise<void>
+  // Returnerar om Google-inloggningen skapade ett NYTT konto eller loggade in
+  // på ett redan befintligt — OnboardingPage använder det för att hoppa
+  // förbi Källor-guiden helt vid en inloggning på ett befintligt konto.
+  loginWithGoogle: (idToken: string, acceptedTerms: boolean) => Promise<boolean>
   logout: () => void
   byttVy: (vy: SystemRoll) => void
   refreshSession: () => Promise<void>
@@ -64,7 +67,7 @@ function parseEmailVerified(token: string): boolean {
   return decodePayload(token)?.['emailVerified'] === 'true'
 }
 
-async function authRequest(url: string, body: object): Promise<TokenPair & { role: string; name: string }> {
+async function authRequest(url: string, body: object): Promise<TokenPair & { role: string; name: string; isNewUser?: boolean }> {
   const res = await fetch(url, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -149,9 +152,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     applyTokens(data)
   }
 
-  async function loginWithGoogle(idToken: string, acceptedTerms: boolean): Promise<void> {
+  async function loginWithGoogle(idToken: string, acceptedTerms: boolean): Promise<boolean> {
     const data = await authRequest(`${API_BASE}/api/auth/google`, { idToken, acceptedTerms })
     applyTokens(data)
+    return data.isNewUser ?? false
   }
 
   function logout() {

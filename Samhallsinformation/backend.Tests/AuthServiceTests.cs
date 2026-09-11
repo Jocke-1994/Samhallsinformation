@@ -563,6 +563,7 @@ public class AuthServiceTests
 
         Assert.True(result.Success);
         Assert.Equal("access-token", result.Tokens!.AccessToken);
+        Assert.True(result.Tokens.IsNewUser);
 
         var created = await db.Users.SingleAsync();
         Assert.Equal("ny@example.com", created.Email);
@@ -570,6 +571,11 @@ public class AuthServiceTests
         Assert.NotNull(created.TermsAcceptedAt);
     }
 
+    // Reproducerar en riktig, live-rapporterad bugg (2026-09-12): en Google-
+    // inloggning på /register mot en e-post som redan har ett lösenordskonto
+    // drog användaren genom hela Källor-onboardingguiden som om kontot vore
+    // nytt, med risk att skriva över redan sparade källval. IsNewUser=false
+    // här är vad OnboardingPage använder för att hoppa förbi guiden helt.
     [Fact]
     public async Task GoogleLoginAsync_ExistingEmail_LogsInWithoutCreatingDuplicate()
     {
@@ -590,6 +596,7 @@ public class AuthServiceTests
         var result = await service.GoogleLoginAsync("good-token", acceptedTerms: true);
 
         Assert.True(result.Success);
+        Assert.False(result.Tokens!.IsNewUser);
         Assert.Single(db.Users);
     }
 

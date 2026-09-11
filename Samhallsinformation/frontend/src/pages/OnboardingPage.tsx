@@ -206,7 +206,16 @@ export default function OnboardingPage() {
                 <GoogleSignInButton
                   onStart={() => { setKontoFel(null); setGoogleLoading(true) }}
                   onError={message => { setKontoFel(message); setGoogleLoading(false) }}
-                  onSuccess={profile => {
+                  onSuccess={(profile, isNewUser) => {
+                    if (!isNewUser) {
+                      // Redan ett befintligt konto (lösenords- eller Google-
+                      // baserat) — det här var i praktiken en inloggning, inte
+                      // en registrering. Hoppa förbi hela guiden precis som
+                      // /login redan gör, annars riskerar Källor-steget att
+                      // skriva över redan sparade källval på ett riktigt konto.
+                      navigate(redirect, { replace: true })
+                      return
+                    }
                     setName(profile.name)
                     setEmail(profile.email)
                     setKontoSkapat(true)

@@ -1,6 +1,6 @@
 namespace Samhallsinformation.Application.Auth;
 
-public record AuthTokens(string AccessToken, string RefreshToken, string Name, string Role);
+public record AuthTokens(string AccessToken, string RefreshToken, string Name, string Role, bool IsNewUser = false);
 
 public class AuthResult
 {
