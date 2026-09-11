@@ -62,6 +62,13 @@ oavsett vilken synk-mekanism som väljs nedan.
    - Alternativ (webhook/push vid varje FAQ-ändring) är mer omedelbart men
      kräver autentiserad webhook, delad hemlighet, felhantering om boten är
      nere — inte värt det för FAQ-innehåll. Föreslår att inte bygga det.
+   - **Lättare mellanväg, tillagd 2026-09-12:** en "ping"-webhook som bara
+     säger "något har ändrats, hämta om nu" — inget innehåll i pinget,
+     boten pollar bara om direkt via samma `GET /api/faq` den redan
+     använder. Löser fördröjningen vid t.ex. en pågående incident utan att
+     bygga en full push-integration (inget schema att komma överens om,
+     bara en trigger). Inte beslutat, men värt att ha med om ren polling
+     känns för långsam.
 
 4. **Cross-project-avstämning**
    - Vi kan bara bygga vår egen halva (punkt 1–2, plus dokumentera
@@ -72,8 +79,25 @@ oavsett vilken synk-mekanism som väljs nedan.
 ## Öppna frågor
 - Ska punkt 1–2 (flagg-filtrering + `UpdatedAt`) byggas nu som en
   fristående förbättring, eller vänta tills kundtjänstbot-sidan är redo?
-- Pollingintervall — någon känsla för hur färsk FAQ-informationen
-  faktiskt behöver vara (minuter/timmar/en gång per dygn)?
+- Pollingintervall — lutar mot en gång per dygn som bas (FAQ ändras
+  sällan), ev. kombinerat med ping-idén ovan för de sällsynta fallen det
+  brådskar. Inget bestämt.
+
+## Tillägg 2026-09-12 — tre-läges-status för flaggor (större, separat idé)
+Uppföljande fråga från dig: räcker på/av, eller behövs ett tredje läge —
+"lanserad men tillfälligt pausad, ingen känd ETA" — skilt från "finns
+inte alls"? Konkret exempel: push-notiser tillfälligt avstängda pga en
+pågående incident. En bot som bara ser "av" kan antingen låtsas att
+funktionen inte finns, eller svara fel — ingen bra om något faktiskt är
+trasigt just nu. Med ett tredje läge skulle boten istället kunna svara
+"det här är känt och tillfälligt, kontakta supporten" — mer hjälpsamt än
+båda ytterligheterna.
+
+Det här är en riktig lucka, men en EGEN, större uppgift — den rör
+`FeatureFlagOverrides`, `featureFlags.ts`, adminpanelens UI och FAQ-
+kopplingen samtidigt, inte bara `/api/faq`. Medvetet inte en del av
+grundfixet (punkt 1 ovan), som bara handlar om binär filtrering. Sparad
+här som en uppföljande idé — inte beslutad, inte scopad i detalj än.
 
 ## Kopplat
 - Kundtjänstbot-projektets #220 (periodisk KB-synk, redan känt sedan
