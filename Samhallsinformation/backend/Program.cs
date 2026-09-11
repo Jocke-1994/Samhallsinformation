@@ -1249,7 +1249,13 @@ using (var scope = app.Services.CreateScope())
 // är klar.
 app.MapGet("/api/diag/ip", (HttpContext ctx) => Results.Ok(new
 {
+    // Versionsmarkör + processens starttid — för att entydigt bevisa om det
+    // verkligen är den senaste koden som kör, oavsett vad Railways UI säger.
+    diagVersion         = "v3-2026-09-11-2115",
+    processStartTimeUtc = System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime().ToString("o"),
     remoteIpAddress = ctx.Connection.RemoteIpAddress?.ToString(),
+    remotePort      = ctx.Connection.RemotePort,
+    requestScheme   = ctx.Request.Scheme,
     xForwardedFor    = ctx.Request.Headers["X-Forwarded-For"].ToString(),
     xForwardedProto  = ctx.Request.Headers["X-Forwarded-Proto"].ToString(),
     // .Select istället för .ToDictionary — en dubblerad header-nyckel (t.ex.
