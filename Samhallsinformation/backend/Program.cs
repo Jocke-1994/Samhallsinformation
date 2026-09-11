@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Net.Http.Headers;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
@@ -1256,18 +1257,21 @@ using (var scope = app.Services.CreateScope())
 app.MapGet("/api/diag/ip", (HttpContext ctx) =>
 {
     var rawXff = ctx.Request.Headers["X-Forwarded-For"].ToString();
-    // Testar TryParse (och en bytenivå-koll för dolda tecken) direkt här,
-    // exakt samma anrop som ForwardedHeadersMiddleware gör internt — för
-    // att bevisa/motbevisa om parsningen av headervärdet är det som
-    // faktiskt misslyckas i produktion.
     var parseOk = System.Net.IPEndPoint.TryParse(rawXff, out var parsedEndpoint);
     var bareIpParseOk = System.Net.IPAddress.TryParse(rawXff, out var parsedAddress);
+    // Exakt samma anrop som ForwardedHeadersMiddleware använder internt
+    // (Microsoft.Net.Http.Headers-extensionen, inte en enkel .ToString())
+    // — X-Forwarded-For fanns KVAR oförändrad i headerlistan trots att
+    // middleware:t borde ha tagit bort den efter att ha konsumerat den,
+    // vilket bevisar att applyChanges aldrig blev sant där. Det här
+    // visar om det är just den här läsvägen som skiljer sig.
+    var commaSeparated = ctx.Request.Headers.GetCommaSeparatedValues("X-Forwarded-For");
 
     return Results.Ok(new
     {
         // Versionsmarkör + processens starttid — för att entydigt bevisa om det
         // verkligen är den senaste koden som kör, oavsett vad Railways UI säger.
-        diagVersion         = "v4-2026-09-11-2130",
+        diagVersion         = "v5-2026-09-11-2140",
         processStartTimeUtc = System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime().ToString("o"),
         remoteIpAddress = ctx.Connection.RemoteIpAddress?.ToString(),
         remotePort      = ctx.Connection.RemotePort,
@@ -1279,6 +1283,8 @@ app.MapGet("/api/diag/ip", (HttpContext ctx) =>
         ipEndPointParsedValue = parsedEndpoint?.ToString(),
         ipAddressTryParseOk   = bareIpParseOk,
         ipAddressParsedValue  = parsedAddress?.ToString(),
+        commaSeparatedValues  = commaSeparated,
+        commaSeparatedCount   = commaSeparated.Length,
         xForwardedProto  = ctx.Request.Headers["X-Forwarded-Proto"].ToString(),
         // .Select istället för .ToDictionary — en dubblerad header-nyckel (t.ex.
         // flera X-Forwarded-For-rader genom flera proxy-hopp) hade fått
