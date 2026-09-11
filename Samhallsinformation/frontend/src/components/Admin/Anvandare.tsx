@@ -8,6 +8,7 @@ import {
   fetchAdminUserPolisenBevakningar, fetchAdminUserNotificationLog, fetchAdminUserSettingLog, type AdminUserDto,
   createAdminUserPolisenBevakning, updateAdminUserPolisenBevakning, deleteAdminUserPolisenBevakning,
   fetchAdminUserSources, setAdminUserSourceActive, type AdminPolisenBevakningDto,
+  sendAdminUserPasswordReset, resendAdminUserVerification,
 } from '../../api/adminUsers'
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import { checkEventLinkStatus } from '../../api/events'
@@ -495,6 +496,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   const [raderaFel, setRaderaFel]               = useState<string | null>(null)
   const [enkildRollÄndring, setEnkildRollÄndring] = useState<Användare | null>(null)
   const [impersonationMål, setImpersonationMål]   = useState<Användare | null>(null)
+  const [skickarLösenordsåterställning, setSkickarLösenordsåterställning] = useState(false)
+  const [skickarVerifieringsmail, setSkickarVerifieringsmail]             = useState(false)
+  const [mejlFeedback, setMejlFeedback]                                   = useState<string | null>(null)
 
   const filtrerade = användare.filter(u => {
     if (rollFilter !== 'Alla' && !u.roller.includes(rollFilter)) return false
@@ -631,6 +635,31 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   function öppnaDetalj(u: Användare) {
     setVald(u)
     setDetaljFlik('oversikt')
+    setMejlFeedback(null)
+  }
+
+  async function skickaLösenordsåterställning(u: Användare) {
+    setSkickarLösenordsåterställning(true); setMejlFeedback(null)
+    try {
+      await sendAdminUserPasswordReset(u.id)
+      setMejlFeedback('Återställningsmejl skickat.')
+    } catch (err) {
+      setMejlFeedback(err instanceof Error ? err.message : 'Något gick fel')
+    } finally {
+      setSkickarLösenordsåterställning(false)
+    }
+  }
+
+  async function skickaVerifieringsmail(u: Användare) {
+    setSkickarVerifieringsmail(true); setMejlFeedback(null)
+    try {
+      await resendAdminUserVerification(u.id)
+      setMejlFeedback('Verifieringsmejl skickat.')
+    } catch (err) {
+      setMejlFeedback(err instanceof Error ? err.message : 'Något gick fel')
+    } finally {
+      setSkickarVerifieringsmail(false)
+    }
   }
 
   const { data: sparadeHändelser = [], refetch: refetchSparat } = useQuery({
@@ -1185,14 +1214,21 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-300 cursor-not-allowed">
                   Ändra roller
                 </button>
-                <button className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
-                  Skicka lösenordsåterställning
+                <button
+                  onClick={() => skickaLösenordsåterställning(vald)}
+                  disabled={skickarLösenordsåterställning}
+                  className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition-colors">
+                  {skickarLösenordsåterställning ? 'Skickar…' : 'Skicka lösenordsåterställning'}
                 </button>
                 {vald.kontaktuppgifter.some(k => !k.verifierad) && (
-                  <button className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
-                    Skicka verifieringsmail
+                  <button
+                    onClick={() => skickaVerifieringsmail(vald)}
+                    disabled={skickarVerifieringsmail}
+                    className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition-colors">
+                    {skickarVerifieringsmail ? 'Skickar…' : 'Skicka verifieringsmail'}
                   </button>
                 )}
+                {mejlFeedback && <p className="text-xs text-slate-500">{mejlFeedback}</p>}
                 {vald.status === 'Avstängd' && (
                   <button onClick={() => aktiveraEnkild(vald)}
                     className="text-left px-4 py-2.5 rounded-xl border border-green-200 text-sm text-green-700 hover:bg-green-50 transition-colors">

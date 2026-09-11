@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Controllers;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -25,12 +26,12 @@ public class AdminUsersControllerTests
         return new AppDbContext(options);
     }
 
-    private static AdminUsersController NewController(AppDbContext db) => new(db, Substitute.For<IAktivitetsloggService>(), Substitute.For<IEmailService>(), Substitute.For<IConfiguration>())
+    private static AdminUsersController NewController(AppDbContext db, IAuthService? auth = null) => new(db, Substitute.For<IAktivitetsloggService>(), Substitute.For<IEmailService>(), auth ?? Substitute.For<IAuthService>(), Substitute.For<IConfiguration>())
     {
         ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) } },
     };
 
-    private static AdminUsersController NewController(AppDbContext db, Guid callerId) => new(db, Substitute.For<IAktivitetsloggService>(), Substitute.For<IEmailService>(), Substitute.For<IConfiguration>())
+    private static AdminUsersController NewController(AppDbContext db, Guid callerId) => new(db, Substitute.For<IAktivitetsloggService>(), Substitute.For<IEmailService>(), Substitute.For<IAuthService>(), Substitute.For<IConfiguration>())
     {
         ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(
             new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, callerId.ToString()) }, "TestAuth")) } },
@@ -293,6 +294,64 @@ public class AdminUsersControllerTests
         var controller = NewController(db);
 
         var result = await controller.SetStatus(Guid.NewGuid(), new SetUserStatusRequest(false, null));
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task SendPasswordReset_KnownUser_CallsAuthServiceWithUsersEmail()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var auth = Substitute.For<IAuthService>();
+        auth.RequestPasswordResetAsync("ada@example.com").Returns(AuthResult.Ok("Om e-postadressen finns skickas ett återställningsmejl"));
+
+        var controller = NewController(db, auth);
+        var result = await controller.SendPasswordReset(user.Id);
+
+        Assert.IsType<OkObjectResult>(result);
+        await auth.Received(1).RequestPasswordResetAsync("ada@example.com");
+    }
+
+    [Fact]
+    public async Task SendPasswordReset_UnknownUser_ReturnsNotFound()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var result = await controller.SendPasswordReset(Guid.NewGuid());
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task ResendVerification_KnownUser_CallsAuthServiceWithUsersId()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var auth = Substitute.For<IAuthService>();
+        auth.ResendVerificationAsync(user.Id).Returns(AuthResult.Ok("Ett nytt bekräftelsemejl har skickats"));
+
+        var controller = NewController(db, auth);
+        var result = await controller.ResendVerification(user.Id);
+
+        Assert.IsType<OkObjectResult>(result);
+        await auth.Received(1).ResendVerificationAsync(user.Id);
+    }
+
+    [Fact]
+    public async Task ResendVerification_UnknownUser_ReturnsNotFound()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var result = await controller.ResendVerification(Guid.NewGuid());
 
         Assert.IsType<NotFoundResult>(result);
     }
