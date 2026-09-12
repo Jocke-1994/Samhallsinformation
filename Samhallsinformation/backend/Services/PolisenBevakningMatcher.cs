@@ -18,6 +18,22 @@ public static class PolisenBevakningMatcher
         "Sammanfattning natt", "Sammanfattning kväll och natt",
     ];
 
+    // Sammanfattningar taggas av Polisen med ett HELT LÄN som Geography,
+    // aldrig en kommun — en kommun-baserad bevakning kan därför aldrig
+    // begränsa dem meningsfullt. Enda sättet att matcha dem alls är en
+    // bevakning utan områdesbegränsning, vilket ger sammanfattningar från
+    // HELA Sverige istället för bara den egna regionen (upptäckt 2026-09-12).
+    // Avslagna som push-standard av det skälet — fortsätter synas i Mitt
+    // flöde precis som förut om en bevakning matchar, bara push-utskicket
+    // exkluderar dem.
+    public static readonly string[] SammanfattningsKategorier =
+    [
+        "Sammanfattning natt", "Sammanfattning kväll och natt",
+    ];
+
+    public static bool ArSammanfattning(string? eventType) =>
+        ExtractTyp(eventType) is string typ && SammanfattningsKategorier.Contains(typ);
+
     // Matchar mot det redan strukturerade EventType-fältet (PolisenRssIngestor,
     // PR #373) — INTE Title. Verifierat mot skarp data (2026-08-19): titeln har
     // ett datumprefix ("14 augusti 13.05, Bedrägeri, ..."), så Title.StartsWith

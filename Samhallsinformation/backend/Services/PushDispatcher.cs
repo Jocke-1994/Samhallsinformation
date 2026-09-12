@@ -64,6 +64,12 @@ public static class PushDispatcher
         AppDbContext db, IPushNotificationService push, string frontendUrl,
         Source source, List<Guid> recipientIds, List<CanonicalEvent> insertedEvents, CancellationToken ct)
     {
+        // Sammanfattningar pushas aldrig (se PolisenBevakningMatcher.ArSammanfattning)
+        // — syns fortfarande i Mitt flöde om en bevakning matchar, den filtreringen
+        // rör bara frontend och är oberoende av det här.
+        insertedEvents = insertedEvents.Where(ev => !PolisenBevakningMatcher.ArSammanfattning(ev.EventType)).ToList();
+        if (insertedEvents.Count == 0) return;
+
         var bevakningarByUser = (await db.PolisenBevakningar
                 .Where(b => recipientIds.Contains(b.UserId))
                 .ToListAsync(ct))
