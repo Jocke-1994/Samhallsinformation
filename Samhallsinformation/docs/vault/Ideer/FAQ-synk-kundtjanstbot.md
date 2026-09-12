@@ -76,12 +76,25 @@ oavsett vilken synk-mekanism som väljs nedan.
      projektet (#220 där). Nästa steg: samma mönster som session 47 — en
      självständig, kontextfull fråga till den sessionen, med länk hit.
 
-## Öppna frågor
-- Ska punkt 1–2 (flagg-filtrering + `UpdatedAt`) byggas nu som en
-  fristående förbättring, eller vänta tills kundtjänstbot-sidan är redo?
-- Pollingintervall — lutar mot en gång per dygn som bas (FAQ ändras
-  sällan), ev. kombinerat med ping-idén ovan för de sällsynta fallen det
-  brådskar. Inget bestämt.
+## Öppna frågor — förtydligade 2026-09-12
+- **Bygga nu eller vänta?** Konkret: punkt 1 (`GET /api/faq` slutar visa
+  frågor vars funktion är avstängd) och punkt 2 (spara NÄR en fråga
+  senast ändrades) är två små, ofarliga förbättringar på VÅR sida —
+  de fungerar oavsett om kundtjänstboten någonsin läser dem. Frågan är
+  bara PRIORITET: bygga dem redan nu (en liten, isolerad uppgift, ingen
+  nytta förrän boten faktiskt pollar men inte heller någon risk), eller
+  vänta tills ni faktiskt bestämt er för att koppla ihop projekten (då
+  slipper man bygga något i förväg som visar sig behöva ändras)?
+- **Pollingintervall — vad frågan egentligen handlar om:** hur ofta SKA
+  kundtjänstboten hämta vår FAQ-lista på nytt (t.ex. en gång i timmen,
+  en gång per dygn)? Det bestämmer hur snabbt en ändring du gör i FAQ
+  (ny fråga, redigerat svar, en funktion stängs av) syns för boten. Ett
+  kort intervall (varje timme) känns onödigt eftersom FAQ ändras sällan;
+  ett långt (en gång per dygn) räcker troligen, kombinerat med
+  ping-idén för de sällsynta gångerna det brådskar. Den här siffran
+  bestäms egentligen i KUNDTJÄNSTBOT-projektet (de äger pollingen), inte
+  här — vår del är bara att se till att `/api/faq` alltid är sanningsenlig
+  oavsett när den läses.
 
 ## Tillägg 2026-09-12 — tre-läges-status för flaggor (större, separat idé)
 Uppföljande fråga från dig: räcker på/av, eller behövs ett tredje läge —

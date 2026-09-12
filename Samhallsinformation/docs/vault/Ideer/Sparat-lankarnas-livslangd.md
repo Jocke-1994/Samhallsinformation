@@ -1,6 +1,6 @@
 ---
 typ: ide
-status: fragor-olosta  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
 uiGodkand: ej-bedomd
 beroenden: "Ingen — rotorsaken är bekräftad (Polisen byter URL vid kategoriuppdatering, ingestorn dedupar fel). Redo att scopas som en riktig bugg."
 prioritet: ej-bedomd
@@ -76,12 +76,26 @@ när det är läge (inte i natt):
 Ingen brådska ikväll — bra att ha nedskrivet till nästa gång du är vid
 datorn.
 
+## Svar 2026-09-12 — feasibility på "hitta automatiskt"
+Du var osäker på hur bra en auto-hitta-funktion faktiskt skulle vara.
+Mitt konkreta underlag: i det verkliga exemplet var `publishedAt` OCH
+`content` bokstavligen identiska mellan den gamla och nya raden (bara
+`title`/`url`/`eventType` skilde) — så en matchning på
+`sourceId + publishedAt + content` hade hittat rätt här med 100%
+träffsäkerhet. Inte en garanti för ALLA framtida fall (om Polisen någon
+gång även ändrar brödtexten samtidigt som kategorin bryts matchningen),
+men tillräckligt pålitligt för att vara värt att bygga som ett rimligt
+förstaförsök, med den vanliga varningen kvar som fallback när ingen match
+hittas.
+
+**Rekommenderad ordning:** bygg duplicerings-fixet (punkt 1, förhindrar
+NYA dubbletter) och en "hitta ersättningslänk"-koll i `link-status`-
+endpointen (punkt 2) tillsammans — den senare behövs ändå för att
+retroaktivt hjälpa redan sparade händelser som blev dubblerade INNAN
+fixet fanns, inte bara nya.
+
 ## Öppna frågor
-- Vill du att den döda länk-varningen ska försöka HITTA rätt nya URL
-  automatiskt (matcha på tid+innehåll), eller räcker det att bara varna
-  som idag?
-- Ska duplicerings-fixet (ingestor-sidan) prioriteras för sig, oberoende
-  av vad som händer med redan sparade händelser?
+- Ingen kvar — redo att scopas som en riktig uppgift när det är läge.
 
 ## Kopplat
 - [[../Beslut/Beslut - Lansering av Sparat]]

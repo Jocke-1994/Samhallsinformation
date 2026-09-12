@@ -11,19 +11,27 @@ prioriteringar bara leva i sessionsloggar — det är hela poängen med det.
 
 ## 🔴 Blockerar publik lansering
 
-1. **Rate limiting fungerar inte i produktion** — bekräftat trasigt
-   2026-09-11 (10 rafflade inloggningsförsök, ingen blockerades). Trolig
-   orsak: saknad `ForwardedHeaders`-middleware bakom Railways proxy.
-   Registrerings-/inloggningsendpointen är i praktiken oskyddad mot
-   spam/brute-force just nu. **Detta bör lösas INNAN
-   `showLoginButton`/`showRegisterButton` slås på.**
-2. **`showLoginButton`/`showRegisterButton`** fortfarande av — sista steget
-   i launch-ordningen, väntar på ovanstående + resten av mobiltestet nedan
-3. **Google-inloggning, kontokoppling** — det enda Google-scenariot som
-   ALDRIG testats live (session 29): ett Google-konto vars e-post redan
-   har ett lösenordskonto. Vad händer faktiskt?
-4. **`/login`-sidan, hela mobilgenomgången** — aldrig separat testad, bara
-   `/register` hittills
+1. **Rate limiting** — ✅ **Rättad slutsats 2026-09-12: den här punkten var
+   inaktuell.** Rate limiting-buggen (bekräftat trasig 2026-09-11) fixades
+   och verifierades live samma helg — `ForwardedHeaders`-middlewaren
+   korrigerad för Railways dubbla proxylager, live-testad med 8 rafflade
+   inloggningsförsök (401×5 sen 429×3). Fungerar. Den här punkten skrevs
+   in i granskningen INNAN fixen, borde ha uppdaterats direkt — ber om
+   ursäkt för förvirringen
+2. **`showLoginButton`/`showRegisterButton`** fortfarande av — bekräftat:
+   förblir av tills testerna nedan är gjorda och du känner dig nöjd
+3. **Google-inloggning mot en e-post som redan har ett lösenordskonto** —
+   ✅ **Klargjort 2026-09-12, kod-läst istället för gissat:**
+   `AuthService.GoogleLoginAsync` letar upp kontot på e-post, oavsett hur
+   det ursprungligen skapades (lösenord eller Google) — hittas ett
+   befintligt konto loggas man rakt in på DET kontot, ingen ny rad skapas,
+   inget fel, ingen extra bekräftelse krävs (Google har redan bevisat
+   e-postägarskapet via OAuth). Kombinerat med `isNewUser`-flaggan (fixad
+   tidigare i den här sessionen) hoppar `OnboardingPage` dessutom över
+   guiden i det här fallet — bekräftat både i kod och i tidigare
+   sessionstest. Ingen kvarstående osäkerhet, stryks som blockerare
+4. **`/login`-sidan, mobilgenomgången** — enligt dig redan testad. Litar på
+   ditt minne, stryks som blockerare
 
 ## 🟡 Rekommenderat innan lansering, inte blockerande
 
@@ -47,8 +55,11 @@ prioriteringar bara leva i sessionsloggar — det är hela poängen med det.
 Se [[Verktyg/GitHub-issues-granskning-2026-09-12|full granskning]] för
 detaljer på varje.
 
-- **#298** — generisk källprenumerationsmodell vs. den Polisen-specifika
-  lösningen som faktiskt byggdes. Behåll som är, eller bygg ut generiskt?
+- **Generisk källfiltermodell vs. Polisen-specifik lösning** — **Besvarat
+  2026-09-12:** inte emot att bygga ut det till fler källor, men ser
+  nyttan som liten just nu — Polisen har filter för att det kommer väldigt
+  mycket information därifrån, övriga källor har inte alls samma volym.
+  Behåll Polisen-specifikt, ta upp igen om en annan källas volym växer
 - **Automatisk ärendearkivering (7 dagar/36 månader)** — **Beslutat
   2026-09-12:** manuell knapp räcker så länge ärendevolymen är låg. Om det
   börjar komma ~20 ärenden/dag, ta upp automatiken igen då — inte förrän

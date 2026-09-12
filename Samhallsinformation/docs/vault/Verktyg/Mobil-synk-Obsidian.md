@@ -5,6 +5,9 @@ status: att-gora  # giltiga värden: att-gora | pagaende | klart
 
 # Mobilsynk för Obsidian (SI-valvet + framtida Bot-valv)
 
+**Avvaktas 2026-09-12** — inte prioriterat just nu, planen ligger kvar
+oförändrad för när det blir aktuellt.
+
 Plan för att kunna skriva ner tankar/frågor i valvet från mobilen när man
 inte är vid datorn, per projekt. Bakgrund: den här SI-vaulten ligger i
 `Samhallsinformation/docs/vault/` — en undermapp i hela kodrepot, inte ett

@@ -1,7 +1,7 @@
 ---
 typ: ide
-status: fragor-olosta  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
-uiGodkand: nej
+status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+uiGodkand: ja
 beroenden: "Bottom navigation bar väntar på detta, eller på att Sök byggs — se Ideer/Bottom bar (mobil).md"
 prioritet: ej-bedomd
 pipelineNr: ""
@@ -52,8 +52,11 @@ Ingen av dessa är blockerande i sig — bara saker att ha koll på om E väljs
 istället för D.
 
 ## Status
-Pausad — väntar på ett beslut mellan D och E. Bottom navigation bar
-(se `Ideer/Bottom bar (mobil).md`) väntar i sin tur delvis på det här.
+**Beslutat 2026-09-12: Direction E** — "mer clean". Redo att byggas. De
+fyra observationerna ovan är inte blockerande, bara saker att ha koll på
+under byggnationen (särskilt expand-pilens synlighet i stängt läge).
+Bottom navigation bar (se `Ideer/Bottom bar (mobil).md`) väntar i sin tur
+delvis på det här.
 
 ## Kopplat
 - `Ideer/Bottom bar (mobil).md`

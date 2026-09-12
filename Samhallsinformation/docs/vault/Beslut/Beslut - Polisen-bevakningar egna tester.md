@@ -29,3 +29,23 @@ gå live samtidigt som funktionen. Värt en egen felsökningsrunda:
 webbläsarens prenumerationsstatus, `User.PushEnabled`, och om
 `PolisenBevakningMatcher` faktiskt matchade någon skarp händelse under
 testperioden.
+
+## Omtest 2026-09-12 — resultatet oklart, en ny riktig lucka hittad
+Du utökade dina befintliga bevakningar med fler, men svaret säger inte om
+du faktiskt fick en avisering den här gången eller inte — **behöver ett
+rakt svar på det** för att kunna gå vidare.
+
+Samtidigt hittade du en verklig, bekräftad lucka: **det finns ingenstans i
+adminpanelen där man kan se en användares push-inställningar** (`Anvandare.
+tsx` har noll referenser till `PushEnabled`/`PushNyaHandelser`, och inget
+backend-endpoint exponerar det för admin — bara självbetjänings-endpoints
+för den inloggade användaren själv, verifierat i koden 2026-09-12). Din
+egen beskrivna omväg ("aktivera push i feature flag, logga in som
+användaren själv, aktivera/avaktivera där") är alltså den enda vägen som
+faktiskt finns idag — och du har rätt i att det inte borde behöva vara så.
+
+## Öppna frågor
+- Fick du en avisering vid dagens omtest eller inte?
+- Ska admin-insyn i en användares push-inställningar (läsläge räcker för
+  felsökning, inget krav på att kunna ÄNDRA dem åt användaren) byggas som
+  en egen liten uppgift?
