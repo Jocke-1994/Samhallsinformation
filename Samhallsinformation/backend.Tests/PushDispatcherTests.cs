@@ -255,6 +255,52 @@ public class PushDispatcherTests
         await push.DidNotReceiveWithAnyArgs().SendAsync(default!, default!, default!, default, default, default);
     }
 
+    // Sammanfattningar taggas av Polisen med ett helt LÄN som Geography, inte
+    // en kommun — den enda bevakningen som NÅGONSIN kan matcha en sådan är en
+    // utan områdesbegränsning (annars matchar en kommunlista aldrig ett
+    // länsnamn). Det gav sammanfattningar från hela Sverige i push, upptäckt
+    // 2026-09-12 — nu medvetet avslaget som push-standard oavsett bevakning.
+    [Fact]
+    public async Task DispatchNewEventsAsync_PolisenSammanfattning_NeverPushesEvenWithMatchingBevakning()
+    {
+        using var db = NewDb();
+        var (user, source, _) = SeedPolisenSubscriber(db);
+        db.PolisenBevakningar.Add(new PolisenBevakning
+        {
+            UserId         = user.Id,
+            KategorierJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Sammanfattning natt" }),
+            OmradenJson    = null,
+        });
+        db.SaveChanges();
+        var events = new List<CanonicalEvent> { MakeEvent(source.Id, "Jönköpings län", "Sammanfattning natt") };
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: events);
+
+        await push.DidNotReceiveWithAnyArgs().SendAsync(default!, default!, default!, default, default, default);
+    }
+
+    [Fact]
+    public async Task DispatchNewEventsAsync_PolisenMixOfSammanfattningAndRealEvent_OnlyPushesReal()
+    {
+        using var db = NewDb();
+        var (_, source, device) = SeedPolisenSubscriber(db);
+        var events = new List<CanonicalEvent>
+        {
+            MakeEvent(source.Id, "Jönköpings län", "Sammanfattning natt"),
+            MakeEvent(source.Id, "Göteborg", "Trafikolycka"),
+        };
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 2, insertedEvents: events);
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(),
+            Arg.Is<string>(b => b!.Contains("Trafikolycka") && !b.Contains("Sammanfattning")),
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task DispatchNewEventsAsync_PolisenMultipleMatches_UsesGenericCountMessage()
     {
