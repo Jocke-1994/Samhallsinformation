@@ -15,9 +15,11 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
 ## Väntar på ditt svar
 
 - **[[../Beslut/Beslut - Polisen-bevakningar egna tester|Beslut - Polisen-bevakningar, egna tester]]**
-  — fick du en avisering vid dagens omtest eller inte? Dessutom en ny,
-  bekräftad lucka: ingen admin-vy visar en användares push-inställningar
-  alls. Ska det byggas som en egen liten uppgift?
+  — inväntar besked: ingen avisering ännu, men bara ~1h in i testet, du
+  avvaktar några timmar till innan det räknas som ett riktigt "nej".
+  Dessutom en ny, bekräftad lucka att ta ställning till: ingen admin-vy
+  visar en användares push-inställningar alls — ska det byggas som en
+  egen liten uppgift?
 - **[[../Ideer/FAQ-synk-kundtjanstbot|FAQ-synk-kundtjanstbot]]** —
   förtydligat i noten vad frågan faktiskt handlar om. Ren prioritetsfråga
   nu: bygg de två små, ofarliga FAQ-fixarna redan nu, eller vänta tills ni

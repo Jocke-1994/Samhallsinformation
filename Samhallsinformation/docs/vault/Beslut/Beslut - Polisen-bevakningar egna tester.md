@@ -45,7 +45,9 @@ användaren själv, aktivera/avaktivera där") är alltså den enda vägen som
 faktiskt finns idag — och du har rätt i att det inte borde behöva vara så.
 
 ## Öppna frågor
-- Fick du en avisering vid dagens omtest eller inte?
+- **Fick du en avisering?** Svar 2026-09-12: inte än, men bevakningarna
+  har bara varit aktiva ~1 timme — inte en slutsats än, du avvaktar
+  ytterligare några timmar innan det räknas som ett verkligt "nej"
 - Ska admin-insyn i en användares push-inställningar (läsläge räcker för
   felsökning, inget krav på att kunna ÄNDRA dem åt användaren) byggas som
   en egen liten uppgift?
