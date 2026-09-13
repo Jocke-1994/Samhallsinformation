@@ -1,8 +1,8 @@
 ---
 typ: ide
-status: fragor-olosta  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: i-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
 uiGodkand: ej-bedomd
-beroenden: "Detta är det tidigare parkerade epic #203 i kundtjänstbot-projektet (se FAQ-synk-kundtjanstbot.md) — nu aktiverat"
+beroenden: "Vår sida klar (PR #576). Väntar nu på kundtjänstbot-projektets Claude-tool-use-integration mot endpointen (deras issue #237)"
 prioritet: ej-bedomd
 pipelineNr: ""
 kalla: "session 2026-09-13, spec-fråga från kundtjänstbot-projektets Claude-session"
@@ -173,9 +173,15 @@ missbruk.
 - Ny, egen rate-limit-policy (20–30/min/IP)
 - Default `pageSize` lägre (10)
 
-**Inte byggt än** — väntar på ditt (Joakims) godkännande i den här
-sessionen att sätta igång. Kundtjänstbot-sidan väntar på exakt
-endpoint-path/metod innan de bygger sin Claude-tool-use-integration.
+**✅ Byggt och mergat 2026-09-13** (PR #576) — `GET /api/events/search-public`
+i produktion. Query-parametrar: `geography`, `sokord`, `eventType`,
+`shortName`, `from`, `to`, `page`, `pageSize` (default 10, max 100).
+Ingen autentisering, egen rate-limit-policy (30/min/IP). 7 nya
+enhetstester, verifierat live lokalt (filter, `sourcesSearched` tomt
+vid okänd källa, 429 efter rate-limit-taket).
+
+Skickat tillbaka till kundtjänstbot-sessionen: exakt path/metod, redo
+för deras Claude-tool-use-integration.
 
 ## Kopplat
 - [[FAQ-synk-kundtjanstbot]] — deras epic #203, nu aktiverat
