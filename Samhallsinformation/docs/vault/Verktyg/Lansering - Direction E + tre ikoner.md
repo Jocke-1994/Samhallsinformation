@@ -72,7 +72,16 @@ krävs samma sorts arbete som gjordes där.
 
 ## 7. Avstängningsbar (feature-flag)?
 Ja, alla tre — `kallor_polisen_filter`, `flode_sparat`, `flode_dela`.
-Samtliga `defaultAktiv: false` idag.
+
+**Rättelse 2026-09-13 (upptäckt av dig, inte av min ursprungliga
+genomgång):** min första kontroll kollade bara kodens `defaultAktiv` i
+`featureFlags.ts`, inte den faktiska admin-overriden i produktion. Live
+kontroll mot `GET /api/feature-flags` visar att `kallor_polisen_filter`
+faktiskt har en override satt till `true` — **Bevakningar är alltså
+redan LIVE i produktion**, inte avstängd som jag skrev här. `flode_sparat`
+och `flode_dela` har ingen override och är fortfarande faktiskt av.
+Lärdom: kontrollera alltid den EFFEKTIVA statusen (default + override),
+aldrig bara kodens default, när frågan är "är det här live nu".
 
 ## 8. Loggad (UserSettingAuditLog för kontoändringar)?
 - **Bevakning:** Ja — skapad/ändrad/borttagen loggas (session 42).
@@ -107,18 +116,26 @@ förstås inte aktuellt förrän den kodas.
 - **Dela:** N/A — ingen lista, bara en knapp.
 
 ## Sammanfattning
+**Riktig statusuppdatering 2026-09-13: Bevakning är redan LIVE** (se
+rättelsen under punkt 7) — inte längre bara "skarpt testad", faktiskt
+påslagen för alla användare just nu. Sparat och Dela är fortfarande av.
+
 **Riktiga gap hittade:** ingen admin-insyn i Dela (punkt 2/4), tom FAQ
 för Bevakning och ingen FAQ alls för Sparat/Dela (punkt 5), ingen
 kundtjänstbot-info för något av de tre (punkt 6), GDPR-luckan för Dela
-(punkt 9 — redan fixad). Inget av detta är blockerande för att fortsätta
-UTVECKLA vidare, men bör lösas innan respektive flagga slås på skarpt.
+(punkt 9 — redan fixad). Eftersom Bevakning nu är live väger den tomma
+FAQ:n (`FAQ - Polisen-bevakningar.md`) och avsaknaden av admin-insyn i
+Dela tyngre än när de skrevs — Bevakning är inte längre en framtida
+flagga, den används på riktigt idag.
 
 **Redan i ordning:** alla tre bakom avstängningsbara flaggor (punkt 7),
 Bevakning och Sparat GDPR-täckta och (Bevakning) loggad. Bevakning är
-dessutom redan skarpt testad av dig i produktion.
+dessutom redan skarpt testad av dig i produktion — och nu bekräftat
+faktiskt aktiverad, inte bara testad.
 
-**Ingen aktivering sker som en följd av den här anteckningen** — den är
-bara en statuskoll, per din instruktion.
+**Ingen aktivering skedde som en följd av att SKRIVA den här
+anteckningen** — Bevaknings-flaggan slogs på separat av dig, upptäckt
+här via en live-kontroll, inte orsakad av den.
 
 ## Kopplat
 - `Verktyg/Checklista-innan-lansering.md`
