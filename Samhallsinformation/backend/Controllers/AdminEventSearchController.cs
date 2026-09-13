@@ -3,6 +3,7 @@ namespace Samhallsinformation.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application;
 using Samhallsinformation.Data;
 
 // Historisk händelsesökning för admin och support (källa/tid/plats/datum) —
@@ -83,10 +84,16 @@ public class AdminEventSearchController : ControllerBase
             query = query.Where(e => EF.Functions.Like(e.Title, $"%{sokord}%") || EF.Functions.Like(e.Content, $"%{sokord}%"));
 
         if (from.HasValue)
-            query = query.Where(e => e.PublishedAt >= from.Value);
+        {
+            var fromUtc = DateTimeQueryHelpers.EnsureUtcKind(from.Value);
+            query = query.Where(e => e.PublishedAt >= fromUtc);
+        }
 
         if (to.HasValue)
-            query = query.Where(e => e.PublishedAt <= to.Value);
+        {
+            var toUtc = DateTimeQueryHelpers.EnsureUtcKind(to.Value);
+            query = query.Where(e => e.PublishedAt <= toUtc);
+        }
 
         var total = await query.CountAsync();
         var events = await query

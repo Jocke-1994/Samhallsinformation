@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -62,10 +63,16 @@ public class EventsController : ControllerBase
         }
 
         if (from.HasValue)
-            query = query.Where(e => e.PublishedAt >= from.Value);
+        {
+            var fromUtc = DateTimeQueryHelpers.EnsureUtcKind(from.Value);
+            query = query.Where(e => e.PublishedAt >= fromUtc);
+        }
 
         if (to.HasValue)
-            query = query.Where(e => e.PublishedAt <= to.Value);
+        {
+            var toUtc = DateTimeQueryHelpers.EnsureUtcKind(to.Value);
+            query = query.Where(e => e.PublishedAt <= toUtc);
+        }
 
         if (national.HasValue)
             query = query.Where(e => e.IsNational == national.Value);
@@ -140,10 +147,16 @@ public class EventsController : ControllerBase
             query = query.Where(e => EF.Functions.Like(e.Title, $"%{sokord}%") || EF.Functions.Like(e.Content, $"%{sokord}%"));
 
         if (from.HasValue)
-            query = query.Where(e => e.PublishedAt >= from.Value);
+        {
+            var fromUtc = DateTimeQueryHelpers.EnsureUtcKind(from.Value);
+            query = query.Where(e => e.PublishedAt >= fromUtc);
+        }
 
         if (to.HasValue)
-            query = query.Where(e => e.PublishedAt <= to.Value);
+        {
+            var toUtc = DateTimeQueryHelpers.EnsureUtcKind(to.Value);
+            query = query.Where(e => e.PublishedAt <= toUtc);
+        }
 
         var total = await query.CountAsync();
         var events = await query
