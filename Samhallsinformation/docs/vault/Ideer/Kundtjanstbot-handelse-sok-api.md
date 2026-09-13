@@ -183,6 +183,26 @@ vid okänd källa, 429 efter rate-limit-taket).
 Skickat tillbaka till kundtjänstbot-sessionen: exakt path/metod, redo
 för deras Claude-tool-use-integration.
 
+## Bugg hittad och fixad live, 2026-09-13: 500 utan felkropp på from/to
+Kundtjänstbot-projektet testade endpointen innan de började bygga och
+hittade en tom 500:a för `from`/`to` utan tidszon (`2026-09-13`,
+`2026-09-13T00:00:00` — bara `...Z`-suffixade strängar fungerade).
+**Rotorsak (verifierad mot Npgsqls dokumentation, inte gissad):** sedan
+Npgsql 6 kastar drivrutinen ett undantag när ett `DateTime` med
+`Kind=Unspecified` (vilket en sträng UTAN `Z` binds som) jämförs mot en
+`timestamptz`-kolumn (`Events.PublishedAt`). Reproducerar inte mot
+SQLite lokalt — osynlig tills en extern konsument utan kontroll över
+exakt strängformat körde in i den.
+
+**Fixat (PR #577, mergad):** ny `DateTimeQueryHelpers.EnsureUtcKind()`
+normaliserar `from`/`to` till `Kind=Utc` innan de används i frågan — vi
+valde alternativ (a), acceptera fler format, istället för (b) strikt
+validering + 400. Exakt samma latenta bugg fanns identisk i `GetEvents`
+(huvudflödet) och admin-Händelsesök, aldrig triggad där eftersom
+frontend alltid skickar `toISOString()` — fixad på alla tre ställen.
+**Verifierat live i produktion** efter merge: alla tre rapporterade
+format (`2026-09-13`, `2026-09-13T00:00:00`, `...Z`) ger nu 200.
+
 ## Kopplat
 - [[FAQ-synk-kundtjanstbot]] — deras epic #203, nu aktiverat
 - [[Kundtjanstbot-launch-readiness]] — varför frågan om skarpa
