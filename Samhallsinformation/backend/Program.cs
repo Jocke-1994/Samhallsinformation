@@ -94,6 +94,22 @@ builder.Services.AddRateLimiter(options =>
             Window      = TimeSpan.FromMinutes(1),
             QueueLimit  = 0,
         }));
+
+    // /api/events/search-public — byggd för kundtjänstbotens
+    // "fråga om skarpa händelser"-funktion (deras issue #237, spec i
+    // docs/vault/Ideer/Kundtjanstbot-handelse-sok-api.md). Anropas per
+    // chattmeddelande, inte per sidladdning som övriga /api/events —
+    // egen, generösare policy än auth-inloggning men INTE oskyddad som
+    // resten av /api/events (som saknar rate limit helt).
+    options.AddPolicy("eventssearch", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
+            Window      = TimeSpan.FromMinutes(1),
+            QueueLimit  = 0,
+        }));
+
     options.OnRejected = async (context, ct) =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
