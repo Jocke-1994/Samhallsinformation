@@ -1,6 +1,6 @@
 ---
 typ: index
-uppdaterad: 2026-09-12
+uppdaterad: 2026-09-13
 ---
 
 # Öppna frågor — allt som väntar på ditt svar, på ett ställe
@@ -15,19 +15,12 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
 ## Väntar på ditt svar
 
 - **[[../Beslut/Beslut - Polisen-bevakningar egna tester|Beslut - Polisen-bevakningar, egna tester]]**
-  — inväntar besked: ingen avisering ännu, men bara ~1h in i testet, du
-  avvaktar några timmar till innan det räknas som ett riktigt "nej".
-  Dessutom en ny, bekräftad lucka att ta ställning till: ingen admin-vy
-  visar en användares push-inställningar alls — ska det byggas som en
-  egen liten uppgift?
+  — inväntar besked om du fått en avisering än. Push-insynen (läs OCH
+  skriv) är nu byggd, den delen av frågan är löst
 - **[[../Ideer/FAQ-synk-kundtjanstbot|FAQ-synk-kundtjanstbot]]** —
   förtydligat i noten vad frågan faktiskt handlar om. Ren prioritetsfråga
   nu: bygg de två små, ofarliga FAQ-fixarna redan nu, eller vänta tills ni
   bestämt er för att koppla ihop projekten?
-- **[[../Verktyg/Checklista-innan-lansering|Checklista innan lansering]]**
-  — ny, formaliserad från din tanke i [[Flöde ny idé]]. Fem förslag på fler
-  punkter (avstängningsbar/loggad/GDPR-täckt/mobiltestad/ärligt tomt-läge)
-  väntar på ditt godkännande eller strykning
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,
