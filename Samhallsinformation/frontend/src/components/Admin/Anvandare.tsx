@@ -9,6 +9,7 @@ import {
   createAdminUserPolisenBevakning, updateAdminUserPolisenBevakning, deleteAdminUserPolisenBevakning,
   fetchAdminUserSources, setAdminUserSourceActive, type AdminPolisenBevakningDto,
   sendAdminUserPasswordReset, resendAdminUserVerification,
+  fetchAdminUserPushSettings,
 } from '../../api/adminUsers'
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import { checkEventLinkStatus } from '../../api/events'
@@ -602,6 +603,12 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     enabled:  !!vald,
   })
 
+  const { data: pushInstallningar, isLoading: pushLaddar } = useQuery({
+    queryKey: ['admin-user-push-settings', vald?.id],
+    queryFn:  () => fetchAdminUserPushSettings(vald!.id),
+    enabled:  !!vald,
+  })
+
   const växlaKällaMutation = useMutation({
     mutationFn: ({ sourceId, isActive }: { sourceId: number; isActive: boolean }) =>
       setAdminUserSourceActive(vald!.id, sourceId, isActive),
@@ -1137,6 +1144,43 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                           </button>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Push-inställningar — läsläge, ingen skrivrätt (fanns
+                    ingenstans i admin innan, upptäckt 2026-09-12). Endpoint/
+                    P256dh/Auth exponeras avsiktligt inte, se controllern. */}
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Push-notiser</p>
+                  {pushLaddar ? (
+                    <p className="text-sm text-slate-400">Laddar...</p>
+                  ) : !pushInstallningar ? (
+                    <p className="text-sm text-slate-500">Kunde inte hämtas.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${pushInstallningar.pushEnabled ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                          Push {pushInstallningar.pushEnabled ? 'på' : 'av'}
+                        </span>
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${pushInstallningar.pushNyaHandelser ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                          Ny händelse {pushInstallningar.pushNyaHandelser ? 'på' : 'av'}
+                        </span>
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${pushInstallningar.pushNyVersion ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                          Ny version {pushInstallningar.pushNyVersion ? 'på' : 'av'}
+                        </span>
+                      </div>
+                      {pushInstallningar.enheter.length === 0 ? (
+                        <p className="text-xs text-slate-400">Inga registrerade enheter.</p>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          {pushInstallningar.enheter.map(e => (
+                            <p key={e.id} className="text-xs text-slate-500">
+                              {e.deviceName || e.platform || 'Okänd enhet'} · senast sedd {new Date(e.lastSeenAt).toLocaleDateString('sv-SE')}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

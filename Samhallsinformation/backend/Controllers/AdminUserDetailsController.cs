@@ -206,6 +206,34 @@ public class AdminUserDetailsController : ControllerBase
         return Ok(log);
     }
 
+    // Läsläge på en användares push-inställningar — fanns tidigare ingenstans
+    // i admin, upptäckt 2026-09-12 när en riktig produktionsanvändare
+    // felsökte varför push uteblev och admin inte kunde se något alls.
+    // Bara läs — att ÄNDRA en användares inställningar åt dem är inte
+    // efterfrågat, det är fortfarande deras eget val i Konto → Push-notiser.
+    // Endpoint/P256dh/Auth (UserDevice) exponeras avsiktligt inte — de är
+    // känsliga push-prenumerationsuppgifter utan diagnostiskt värde här.
+    [HttpGet("{id}/push-settings")]
+    public async Task<IActionResult> GetPushSettings(Guid id)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user == null) return NotFound();
+
+        var enheter = await _db.UserDevices
+            .Where(d => d.UserId == id)
+            .OrderByDescending(d => d.LastSeenAt)
+            .Select(d => new { d.Id, d.DeviceName, d.Platform, d.RegisteredAt, d.LastSeenAt })
+            .ToListAsync();
+
+        return Ok(new
+        {
+            user.PushEnabled,
+            user.PushNyaHandelser,
+            user.PushNyVersion,
+            Enheter = enheter,
+        });
+    }
+
     // Admin/support-variant av GET /api/user/saved-events
     // (UserSavedEventsController) — samma tabell, men för valfri användare
     // istället för den inloggade. Returnerar händelsedetaljer (inte bara

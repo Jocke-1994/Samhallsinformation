@@ -59,6 +59,21 @@ export interface AdminNotificationLogDto {
   errorMessage: string | null
 }
 
+export interface AdminUserPushDeviceDto {
+  id:           string
+  deviceName:   string
+  platform:     string
+  registeredAt: string
+  lastSeenAt:   string
+}
+
+export interface AdminUserPushSettingsDto {
+  pushEnabled:      boolean
+  pushNyaHandelser: boolean
+  pushNyVersion:    boolean
+  enheter:          AdminUserPushDeviceDto[]
+}
+
 export interface AdminSavedEventDto {
   eventId:     string
   title:       string
@@ -178,6 +193,12 @@ export async function fetchAdminUserSettingLog(id: string): Promise<AdminSetting
 export async function fetchAdminUserNotificationLog(id: string): Promise<AdminNotificationLogDto[]> {
   const res = await adminFetch(`/api/admin/users/${id}/notification-log`)
   if (!res.ok) throw new Error(`fetchAdminUserNotificationLog: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchAdminUserPushSettings(id: string): Promise<AdminUserPushSettingsDto> {
+  const res = await adminFetch(`/api/admin/users/${id}/push-settings`)
+  if (!res.ok) throw new Error(`fetchAdminUserPushSettings: ${res.status}`)
   return res.json()
 }
 
