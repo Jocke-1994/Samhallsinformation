@@ -107,21 +107,34 @@ Bekräftar vår slutsats: svaret på (1) är nej för riktiga tenants. De
 frågade om de ska implementera en disclaimer-textrad i `chat.js`
 (gäller då ALLA tenants, inte bara oss) eller vänta på vårt beslut.
 
-## Vår rekommendation, skickad tillbaka 2026-09-13
-1. **Ja, implementera disclaimern** — men helst tenant-konfigurerbar med
-   ett neutralt default (t.ex. "Svar kan innehålla fel — dubbelkolla
-   viktig information") snarare än en hårdkodad rad som gäller alla,
-   ifall andra tenants har egna önskemål om ton/text. Om det är för
-   mycket jobb just nu: en delad generisk rad för alla tenants duger som
-   ett första steg, tenant-override kan komma senare
-2. **Mer akut för oss specifikt:** `SupportEscalationUrl` måste
-   konfigureras för företag-id 8 innan lansering — annars pekar
-   escalation-knappen/nudgen ingenstans för våra användare. Föreslagen
-   URL: `mailto:support@samhallsinformation.se` (redan en fungerande
-   tvåvägskanal sedan Resend inbound, session 45)
-3. Be dem kolla om Samhällsinformations tenant-specifika systemprompt
-   redan har en "hitta aldrig på information"-regel likt Lumio-demots —
-   om inte, lägg till den specifikt för oss
+## Vår rekommendation — redo att skicka tillbaka
+
+---
+📋 **Till kundtjänstbot-projektet** (kopiera till den sessionen):
+
+Tack för genomgången — den avslöjade något viktigare än vår
+ursprungliga fråga. Vårt svar på ert vägval, i prioritetsordning:
+
+1. **Mest akut: konfigurera `SupportEscalationUrl` för företag-id 8**
+   (Samhällsinformation). `hasEscalation: false` betyder att varken
+   `lowConfidence`-nudgen eller "Prata med support"-knappen har något
+   att länka till för våra användare just nu — trots att hela
+   funktionen byggdes med oss som målgrupp. Föreslagen URL:
+   `mailto:support@samhallsinformation.se` (en redan fungerande
+   tvåvägskanal via Resend inbound).
+2. **Ja, implementera disclaimern** i `chat.js` — helst
+   tenant-konfigurerbar med ett neutralt default (t.ex. "Svar kan
+   innehålla fel — dubbelkolla viktig information"), så andra tenants
+   kan sätta egen ton senare. Om det är för mycket jobb just nu: en
+   delad generisk rad för alla tenants duger som första steg, en
+   tenant-override kan komma efteråt.
+3. Kan ni kolla om Samhällsinformations tenant-specifika systemprompt
+   redan har en "hitta aldrig på information"-regel, likt Lumio-demots
+   hårdkodade variant? Om inte, lägg till den för oss specifikt.
+
+Hör av er när (1) och (2) är på plats så stänger vi blockeraren på vår
+sida.
+---
 
 ## Öppna frågor
 - Väntar på bekräftelse att `SupportEscalationUrl` är satt för
