@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.FeatureFlags;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -20,14 +21,23 @@ public class FaqController : ControllerBase
         _aktivitetslogg = aktivitetslogg;
     }
 
+    // Filtrerar nu även på flaggans EFFEKTIVA status (kodens default +
+    // admins ev. avvikelse), inte bara Publicerad — annars skulle en extern
+    // konsument (kundtjänstboten, se docs/vault/Ideer/FAQ-synk-
+    // kundtjanstbot.md) kunna svara på frågor om avstängda funktioner, något
+    // vår egen frontend redan skyddar sig mot genom att filtrera om det en
+    // gång till klientsidan (FaqKort.tsx, oförändrad, ofarlig dubblering).
     [HttpGet]
     public async Task<IActionResult> GetFaq()
     {
+        var overrides = await _db.FeatureFlagOverrides.ToDictionaryAsync(f => f.Key, f => f.Value);
         var items = await _db.FaqItems
             .Where(f => f.Publicerad)
             .OrderBy(f => f.CreatedAt)
             .ToListAsync();
-        return Ok(items);
+
+        var synliga = items.Where(f => f.FlagKey == null || FeatureFlagDefaults.IsEffectivelyActive(f.FlagKey, overrides));
+        return Ok(synliga);
     }
 
     [HttpGet("/api/admin/faq")]
@@ -72,6 +82,7 @@ public class FaqController : ControllerBase
         item.Svar       = req.Svar;
         item.Publicerad = req.Publicerad;
         item.FlagKey    = req.FlagKey;
+        item.UpdatedAt  = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
         var detalj = publiceradFörut != req.Publicerad

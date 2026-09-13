@@ -16,4 +16,11 @@ public class FaqItem
     /// </summary>
     public string?  FlagKey    { get; set; }
     public DateTime CreatedAt  { get; set; } = DateTime.UtcNow;
+    /// <summary>
+    /// Sätts om vid varje redigering (CreateFaq/UpdateFaq) — låter en extern
+    /// konsument (t.ex. kundtjänstboten, se docs/vault/Ideer/FAQ-synk-
+    /// kundtjanstbot.md) fråga "vad har ändrats sedan sist" istället för att
+    /// hämta om hela listan varje gång.
+    /// </summary>
+    public DateTime UpdatedAt  { get; set; } = DateTime.UtcNow;
 }
