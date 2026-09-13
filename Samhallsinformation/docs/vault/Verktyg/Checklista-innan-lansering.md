@@ -66,3 +66,6 @@ eftertanke än resten av listan.
 - [[../Funktioner/Anvandarhantering-admin]] — punkt 2 tillämpad idag
 - [[../Rutiner/Konto/Push-installningar]] — policyn för punkt 2:s
   skrivrätt i praktiken
+- [[Lansering - Direction E + tre ikoner]] — första gången hela
+  checklistan tillämpad mot ett riktigt funktionspaket (2026-09-13),
+  inte bara en enskild punkt
