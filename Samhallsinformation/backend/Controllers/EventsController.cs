@@ -2,6 +2,7 @@ namespace Samhallsinformation.Controllers;
 
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -85,6 +86,83 @@ public class EventsController : ControllerBase
         var evt = await _db.Events.FindAsync(id);
         if (evt is null) return NotFound();
         return Ok(evt);
+    }
+
+    // Publik sök-endpoint byggd för kundtjänstbotens "fråga om skarpa
+    // händelser"-funktion (deras issue #237, full spec i
+    // docs/vault/Ideer/Kundtjanstbot-handelse-sok-api.md). Samma fuzzy
+    // geography/fritext-mönster som AdminEventSearchController, men
+    // skopad till bara publicerade källor och utan admin-auth — därför
+    // en egen, snävare rate-limit-policy istället för adminens
+    // rollskydd (anropas per chattmeddelande, inte per sidladdning).
+    //
+    // sourcesSearched svarar ärligt på "vilka källor kollades faktiskt"
+    // — API:et kan aldrig lova "bekräftat inget hänt", bara "inga
+    // träffar bland dessa källor" (samma källkravsprincip som resten
+    // av produkten).
+    [HttpGet("search-public")]
+    [EnableRateLimiting("eventssearch")]
+    public async Task<IActionResult> SearchPublic(
+        [FromQuery] string? geography = null,
+        [FromQuery] string? sokord = null,
+        [FromQuery] string? eventType = null,
+        [FromQuery] string? shortName = null,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        if (pageSize > 100) pageSize = 100;
+        if (page < 1) page = 1;
+
+        var publishedSources = await _db.Sources
+            .Where(s => s.IsPublished)
+            .Select(s => new { s.Id, s.ShortName })
+            .ToListAsync();
+
+        var candidateSources = publishedSources.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(shortName))
+            candidateSources = candidateSources.Where(s => s.ShortName == shortName);
+
+        var sourcesSearched = candidateSources.Select(s => s.ShortName).Distinct().OrderBy(n => n).ToList();
+        var sourceIds       = candidateSources.Select(s => s.Id).ToList();
+        var sourceNameById  = publishedSources.ToDictionary(s => s.Id, s => s.ShortName);
+
+        var query = _db.Events.Where(e => sourceIds.Contains(e.SourceId)).AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(geography))
+            query = query.Where(e => e.Geography != null && EF.Functions.Like(e.Geography, $"%{geography}%"));
+
+        if (!string.IsNullOrWhiteSpace(eventType))
+            query = query.Where(e => e.EventType == eventType);
+
+        if (!string.IsNullOrWhiteSpace(sokord))
+            query = query.Where(e => EF.Functions.Like(e.Title, $"%{sokord}%") || EF.Functions.Like(e.Content, $"%{sokord}%"));
+
+        if (from.HasValue)
+            query = query.Where(e => e.PublishedAt >= from.Value);
+
+        if (to.HasValue)
+            query = query.Where(e => e.PublishedAt <= to.Value);
+
+        var total = await query.CountAsync();
+        var events = await query
+            .OrderByDescending(e => e.PublishedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var result = events.Select(e => new
+        {
+            title      = e.Title,
+            content    = e.Content,
+            sourceName = sourceNameById.GetValueOrDefault(e.SourceId, "Okänd källa"),
+            sourceUrl  = e.Url,
+            location   = e.Geography,
+            timestamp  = e.PublishedAt,
+        });
+
+        return Ok(new { total, page, pageSize, sourcesSearched, events = result });
     }
 
     // Kollar reaktivt om en händelses källänk fortfarande lever, t.ex. innan
