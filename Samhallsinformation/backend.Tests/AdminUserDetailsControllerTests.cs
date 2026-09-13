@@ -60,4 +60,71 @@ public class AdminUserDetailsControllerTests
         Assert.DoesNotContain("p256dh-key", json);
         Assert.DoesNotContain("auth-secret", json);
     }
+
+    [Fact]
+    public async Task SetPushSettings_UnknownUser_ReturnsNotFound()
+    {
+        using var db = NewDb();
+        var controller = new AdminUserDetailsController(db);
+
+        var result = await controller.SetPushSettings(Guid.NewGuid(), new PushSettingsRequest(true, null, null));
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    // PATCH-semantik: bara det skickade fältet ändras, precis som
+    // självbetjäningens PushController.SaveSettings — annars skulle en admin
+    // som bara vill slå på "Ny händelse" åt en användare tyst nolla resten.
+    [Fact]
+    public async Task SetPushSettings_OnlySetsProvidedField_LeavesOthersUntouched()
+    {
+        using var db = NewDb();
+        var user = new User
+        {
+            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
+            PushEnabled = false, PushNyaHandelser = false, PushNyVersion = true,
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var controller = new AdminUserDetailsController(db);
+        await controller.SetPushSettings(user.Id, new PushSettingsRequest(true, null, null));
+
+        var updated = await db.Users.FindAsync(user.Id);
+        Assert.True(updated!.PushEnabled);
+        Assert.False(updated.PushNyaHandelser);
+        Assert.True(updated.PushNyVersion);
+    }
+
+    [Fact]
+    public async Task SetPushSettings_ActualChange_WritesAuditLogAsAdmin()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x", PushEnabled = false };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var controller = new AdminUserDetailsController(db);
+        await controller.SetPushSettings(user.Id, new PushSettingsRequest(true, null, null));
+
+        var log = Assert.Single(db.UserSettingAuditLogs);
+        Assert.Equal("push_enabled", log.Setting);
+        Assert.Equal("False", log.OldValue);
+        Assert.Equal("True", log.NewValue);
+        Assert.Equal("admin", log.ChangedBy);
+    }
+
+    [Fact]
+    public async Task SetPushSettings_NoActualChange_WritesNoAuditLog()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x", PushEnabled = true };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var controller = new AdminUserDetailsController(db);
+        await controller.SetPushSettings(user.Id, new PushSettingsRequest(true, null, null));
+
+        Assert.Empty(db.UserSettingAuditLogs);
+    }
 }

@@ -202,6 +202,20 @@ export async function fetchAdminUserPushSettings(id: string): Promise<AdminUserP
   return res.json()
 }
 
+// Bara PATCH-semantik (skicka bara det fält som ska ändras) — samma
+// motivering som självbetjäningens PushController.SaveSettings, annars
+// nollar en ensam ändring tyst de andra två fälten.
+// Policy: används bara när användaren SJÄLV bett om ändringen (t.ex. via
+// ett supportärende) — se Rutiner/Konto/Push-installningar.md.
+export async function setAdminUserPushSettings(id: string, req: {
+  pushEnabled?: boolean
+  pushNyaHandelser?: boolean
+  pushNyVersion?: boolean
+}): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/push-settings`, { method: 'PUT', body: JSON.stringify(req) })
+  if (!res.ok) throw new Error(`setAdminUserPushSettings: ${res.status}`)
+}
+
 export async function fetchAdminUserSavedEvents(id: string): Promise<AdminSavedEventDto[]> {
   const res = await adminFetch(`/api/admin/users/${id}/saved-events`)
   if (!res.ok) throw new Error(`fetchAdminUserSavedEvents: ${res.status}`)
