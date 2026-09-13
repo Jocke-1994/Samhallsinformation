@@ -21,11 +21,10 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
 
 ## Väntar på ditt svar
 
-- **[[../Ideer/Dela händelse|Dela händelse]]** — byggd 2026-09-13 bakom
-  ny flagga `flode_dela` (avstängd). Kvarstående fråga: är det här samma
-  idé som session 38:s (dela till sparade kontakter/grupper INOM appen,
-  ett eget socialt lager), eller en avsiktligt skild, enklare funktion?
-  Det byggda är den enkla varianten oavsett svar
+- **[[../Ideer/Dela händelse|Dela händelse]]** — byggd (bakom avstängd
+  flagga `flode_dela`, PR #574). Enda kvarvarande frågan: är det här en
+  enklare v1 av session 38:s idé (dela till sparade kontakter/grupper),
+  eller en helt egen, avsiktligt minimal funktion?
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,

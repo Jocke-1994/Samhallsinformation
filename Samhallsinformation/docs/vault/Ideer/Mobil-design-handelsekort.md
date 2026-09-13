@@ -51,12 +51,48 @@ Fyra saker jag skulle vilja se lösta innan E byggs:
 Ingen av dessa är blockerande i sig — bara saker att ha koll på om E väljs
 istället för D.
 
+**Svar 2026-09-13:** #2 (ikonplacering i rad 3, se nedan) godkänd. #4
+(chevronen) — ok att alltid ha den synlig, inte bara vid expand.
+
+## Scope-gap: Direction E fungerar bara för Polisen
+Direction E:s rad 2 ("vad + var") bygger på `eventType`/`geography` —
+båda fälten är i praktiken bara ifyllda för Polisen-händelser (samma
+begränsning som `kallor_polisen_filter`/bevakningarna). Andra källor
+(SMHI, Krisinformation, m.fl.) skulle inte kunna använda samma radlayout
+rakt av utan de fälten.
+
+**Beslut 2026-09-13:** blanda inte design mellan källor — hellre hålla
+alla källor i samma layout (D) tills vidare än att ha D och E sida vid
+sida i samma flöde. Öppet för att mocka upp Direction E (eller en
+motsvarande enhetlig design) för fler källor senare, men inget bråttom
+och inget beslutat om hur den skulle se ut för källor utan
+eventType/geography.
+
+## De tre ikonerna (Bevakning/Sparat/Dela) i Direction E
+Mockup: https://claude.ai/code/artifact/828719bf-2216-47b2-9537-6d549051f323
+("Kortets tre ikoner") — visar 🔔 (Polisen-bevakning), 🔖/📑 (Sparat) och
+🔗 (Dela) tillsammans i både nuvarande layout (D) och Direction E, på
+desktop och mobil.
+
+**Godkänt 2026-09-13:** ikonernas placering i rad 3 (tillsammans med
+"Källa · tid") ser bra ut. Se ovan för chevron-svaret.
+
+**Explicit instruktion 2026-09-13: inget av detta (Direction E eller de
+tre ikonerna) ska aktiveras i produktion ännu** — följ
+`Verktyg/Checklista-innan-lansering.md` innan lansering. Se
+`Verktyg/Lansering - Direction E + tre ikoner.md` för en genomgång av
+checklistan mot det här paketet.
+
 ## Status
-**Beslutat 2026-09-12: Direction E** — "mer clean". Redo att byggas. De
-fyra observationerna ovan är inte blockerande, bara saker att ha koll på
-under byggnationen (särskilt expand-pilens synlighet i stängt läge).
+**Beslutat 2026-09-12: Direction E** — "mer clean". De fyra
+observationerna ovan är inte blockerande (#2 och #4 nu uttryckligen
+godkända/besvarade). Kod inte påbörjad — väntar på launch-checklistan
+(se ovan) innan aktivering, inte på fler designbeslut.
 Bottom navigation bar (se `Ideer/Bottom bar (mobil).md`) väntar i sin tur
 delvis på det här.
 
 ## Kopplat
 - `Ideer/Bottom bar (mobil).md`
+- `Ideer/Dela händelse.md`
+- `Verktyg/Checklista-innan-lansering.md`
+- `Verktyg/Lansering - Direction E + tre ikoner.md`
