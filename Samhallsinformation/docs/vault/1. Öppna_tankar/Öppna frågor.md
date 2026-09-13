@@ -21,12 +21,11 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
 
 ## Väntar på ditt svar
 
-- **[[../Ideer/Dela händelse|Dela händelse]]** — ny idé, formaliserad.
-  Är den samma sak som en äldre delnings-idé från session 38 (dela till
-  sparade kontakter/grupper) fast enklare, eller en helt egen minimal
-  funktion? Plus tre tekniska vägval (webbläsarens delningsmeny/kopiera
-  länk/specifika kanaler, dela till oss eller primärkällan, mäta
-  användning eller inte)
+- **[[../Ideer/Dela händelse|Dela händelse]]** — byggd 2026-09-13 bakom
+  ny flagga `flode_dela` (avstängd). Kvarstående fråga: är det här samma
+  idé som session 38:s (dela till sparade kontakter/grupper INOM appen,
+  ett eget socialt lager), eller en avsiktligt skild, enklare funktion?
+  Det byggda är den enkla varianten oavsett svar
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,

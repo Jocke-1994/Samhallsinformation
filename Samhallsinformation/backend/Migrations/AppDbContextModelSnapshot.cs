@@ -219,6 +219,26 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("EmailVerificationTokens");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.EventShareLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("SharedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EventShareLogs");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.FaqItem", b =>
                 {
                     b.Property<Guid>("Id")

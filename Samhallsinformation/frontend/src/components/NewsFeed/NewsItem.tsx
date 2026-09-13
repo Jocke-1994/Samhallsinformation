@@ -6,7 +6,7 @@ import PrenumerationsKlocka from './PrenumerationsKlocka'
 import { useAuth } from '../../context/AuthContext'
 import { useSavedEvents } from '../../context/SavedEventsContext'
 import { useFlags } from '../../context/FeatureFlagsContext'
-import { checkEventLinkStatus } from '../../api/events'
+import { checkEventLinkStatus, logEventShare } from '../../api/events'
 
 interface Props {
   event: CanonicalEvent
@@ -65,6 +65,7 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
   const { sparade, toggleSparad } = useSavedEvents()
   const [expanded, setExpanded] = useState(false)
   const [länkStatus, setLänkStatus] = useState<'unknown' | 'checking' | 'dead'>('unknown')
+  const [delaFeedback, setDelaFeedback] = useState<string | null>(null)
   const ärSparad = sparade.has(event.id)
   const cfg = SEVERITY_CONFIG[event.severity]
 
@@ -95,6 +96,35 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
       setLänkStatus('unknown')
     } else {
       setLänkStatus('dead')
+    }
+  }
+
+  // Delar alltid källänken (inte vår egen sida) — grundprincipen om
+  // källkrav/transparens (CLAUDE.md) gäller lika mycket här. Loggas oavsett
+  // om delningen faktiskt fullföljs — ett klick på Dela är signalen vi vill
+  // mäta, inte om OS-menyn stängdes utan val. navigator.share() ger samma
+  // sorts delningsmeny som t.ex. Instagram (kontakter/appar installerade på
+  // ENHETEN, inte något vi bygger kanal för kanal) — stöds brett på mobil,
+  // inte tillförlitligt på desktop, där vi istället kopierar länken direkt.
+  async function handleDela(e: React.MouseEvent) {
+    e.stopPropagation()
+    logEventShare(event.id)
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: event.title, url: event.url })
+      } catch {
+        // Avbruten/nekad delning (AbortError) — inget att visa användaren för
+      }
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(event.url)
+      setDelaFeedback('Länk kopierad!')
+      setTimeout(() => setDelaFeedback(null), 2000)
+    } catch {
+      // Urklipp kan nekas av webbläsaren — inget bra att göra åt det här
     }
   }
 
@@ -164,6 +194,21 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
             >
               <span className="text-base leading-none">{ärSparad ? '🔖' : '📑'}</span>
             </button>
+          )}
+
+          {flaggor.flode_dela && (
+            <button
+              onClick={handleDela}
+              title="Dela källänken"
+              aria-label="Dela"
+              className="p-1.5 -my-1.5 rounded-full shrink-0 text-slate-300 hover:text-slate-500 dark:hover:text-slate-300 transition-colors"
+            >
+              <span className="text-base leading-none">🔗</span>
+            </button>
+          )}
+
+          {delaFeedback && (
+            <span className="shrink-0 text-violet-600 dark:text-violet-400 font-medium">{delaFeedback}</span>
           )}
         </div>
       </div>

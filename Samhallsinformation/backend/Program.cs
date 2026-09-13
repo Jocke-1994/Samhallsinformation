@@ -1016,6 +1016,26 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        // EventShareLog — en rad per klick på "Dela" i NewsItem.tsx, ren
+        // analytics (vem, vilken händelse, när). UserId är null för
+        // anonyma/utloggade delningar.
+        if (pendingMigrations.Contains("20260913043717_AddEventShareLog"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""EventShareLogs"" (
+                    ""Id""       uuid NOT NULL,
+                    ""EventId""  uuid NOT NULL,
+                    ""UserId""   uuid,
+                    ""SharedAt"" timestamptz NOT NULL,
+                    CONSTRAINT ""PK_EventShareLogs"" PRIMARY KEY (""Id"")
+                );
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260913043717_AddEventShareLog', '10.0.12')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 

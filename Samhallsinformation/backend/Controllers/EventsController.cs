@@ -1,8 +1,10 @@
 namespace Samhallsinformation.Controllers;
 
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
+using Samhallsinformation.Models;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -109,5 +111,22 @@ public class EventsController : ControllerBase
         }
 
         return Ok(new { alive });
+    }
+
+    // Ren analytics — loggas vid varje klick på "Dela" (NewsItem.tsx), oavsett
+    // om delningen faktiskt fullföljs eller avbryts i webbläsarens/OS:ets egen
+    // delningsmeny. Ingen [Authorize] (delning ska funka utloggad också), men
+    // UseAuthentication populerar ändå User-claims om en inloggad användare
+    // råkade skicka med sin token — då sparas UserId, annars null.
+    [HttpPost("{id:guid}/share")]
+    public async Task<IActionResult> LogShare(Guid id)
+    {
+        Guid? userId = null;
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (claim != null && Guid.TryParse(claim, out var parsed)) userId = parsed;
+
+        _db.EventShareLogs.Add(new EventShareLog { EventId = id, UserId = userId });
+        await _db.SaveChangesAsync();
+        return Ok();
     }
 }
