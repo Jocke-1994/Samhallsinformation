@@ -17,6 +17,14 @@ riktig idé eller en vanlig supportfråga. Är det en idé — plocka ut den ur
 ärendet och skriv ner den som en rå tanke här i `1. Öppna_tankar/`, med en
 kort referens till vilket ärende den kom från så ursprunget inte tappas.
 
+**Svara alltid användaren** (tillägg 2026-09-12), såvida de inte själva
+skrivit att de inte behöver svar:
+- Är det en bra idé, kanske behöver du mer info — fråga
+- Är det inte en bra idé just nu (t.ex. kostnadsskäl) — säg det, och
+  varför. Exempel: *"Tack för ditt förslag — på grund av kostnaden för
+  BankID är det inte ett alternativ idag, men skulle förutsättningarna
+  ändras kommer möjligheten ses över igen."*
+
 
 Från support (ej aktuellt än):
 
@@ -64,3 +72,17 @@ utan att behöva gå via den här mappen alls.
   lika bra för "användarfeedback, ärende #123" eller liknande.
 - **Ska "Från support" tas bort tills en andra supportperson finns?** →
   Ja, borttagen ovan (se anteckningen i den sektionen).
+
+
+Innan en nya funktion ska gå live, (med live innebär att användare kan använda den).
+- Den ska vara testat
+- Om det är en funktion som kan slås av eller på av en användare, så ska den fungera i användare detaljvyn.
+- Det ska finnas rutiner för hur den ska användas.
+- Det ska finnas rutiner för admin/support hur man hanterar inkommande frågor.
+- FAQ info
+- Kund-bot info.
+- Fler saker?
+
+**Formaliserad 2026-09-12** → [[../Verktyg/Checklista-innan-lansering|Checklista innan lansering]]
+(med fem förslag på fler punkter, bl.a. avstängningsbar/loggad/GDPR-täckt/
+mobiltestad/ärligt tomt-läge — dina att godkänna eller stryka)

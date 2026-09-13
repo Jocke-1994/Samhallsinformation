@@ -24,6 +24,10 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   förtydligat i noten vad frågan faktiskt handlar om. Ren prioritetsfråga
   nu: bygg de två små, ofarliga FAQ-fixarna redan nu, eller vänta tills ni
   bestämt er för att koppla ihop projekten?
+- **[[../Verktyg/Checklista-innan-lansering|Checklista innan lansering]]**
+  — ny, formaliserad från din tanke i [[Flöde ny idé]]. Fem förslag på fler
+  punkter (avstängningsbar/loggad/GDPR-täckt/mobiltestad/ärligt tomt-läge)
+  väntar på ditt godkännande eller strykning
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,
