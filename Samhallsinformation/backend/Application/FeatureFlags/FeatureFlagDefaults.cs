@@ -14,6 +14,7 @@ public static class FeatureFlagDefaults
     {
         ["flode_olasta_badge"]        = false,
         ["flode_sparat"]              = false,
+        ["flode_dela"]                = false,
         ["kallor_lagg_till"]          = false,
         ["kallor_aktiva"]             = true,
         ["kallor_rekommenderade"]     = false,
