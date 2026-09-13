@@ -36,6 +36,7 @@ public class AppDbContext : DbContext
     public DbSet<SiteSettings>               SiteSettings              => Set<SiteSettings>();
     public DbSet<MaintenanceBanner>          MaintenanceBanners        => Set<MaintenanceBanner>();
     public DbSet<PushDispatchClaim>          PushDispatchClaims        => Set<PushDispatchClaim>();
+    public DbSet<EventShareLog>              EventShareLogs            => Set<EventShareLog>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

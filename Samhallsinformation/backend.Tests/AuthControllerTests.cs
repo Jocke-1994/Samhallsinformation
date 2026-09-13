@@ -118,4 +118,21 @@ public class AuthControllerTests
         Assert.Equal("Nova", updated!.DisplayName);
         Assert.Equal("Joakim R.", updated.Name);
     }
+
+    [Fact]
+    public async Task ExportMe_IncludesDeladeHandelser()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Joakim Rehn", Email = "joakim@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        db.EventShareLogs.Add(new EventShareLog { EventId = Guid.NewGuid(), UserId = user.Id });
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db, user.Id);
+        var result = Assert.IsType<OkObjectResult>(await controller.ExportMe());
+
+        var delade = result.Value!.GetType().GetProperty("DeladeHandelser")!.GetValue(result.Value);
+        Assert.NotNull(delade);
+        Assert.Single((System.Collections.IEnumerable)delade!);
+    }
 }
