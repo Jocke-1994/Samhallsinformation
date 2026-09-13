@@ -32,6 +32,13 @@ prioriteringar bara leva i sessionsloggar — det är hela poängen med det.
    sessionstest. Ingen kvarstående osäkerhet, stryks som blockerare
 4. **`/login`-sidan, mobilgenomgången** — enligt dig redan testad. Litar på
    ditt minne, stryks som blockerare
+5. **Kundtjänstboten redo för fler användare?** — Ny 2026-09-13, tillagd
+   på din begäran inför att slå på punkt 2. Boten är byggd i ett separat
+   projekt vi inte äger kodbasen till — kan inte avgöras härifrån utan
+   att fråga den sessionen. Se
+   [[../Ideer/Kundtjanstbot-launch-readiness|Kundtjänstbot-launch-readiness]]
+   för ett färdigt, kopierbart meddelande till kundtjänstbot-projektets
+   Claude-session. Väntar på ditt beslut att skicka det + deras svar
 
 ## 🟡 Rekommenderat innan lansering, inte blockerande
 

@@ -18,6 +18,10 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   halva byggd (PR #573). Ett färdigt meddelande att kopiera till
   kundtjänstbot-projektets Claude-session ligger klart i noten (punkt 4)
   — bara att byta ut produktions-URL:en och skicka när du vill
+- **[[../Ideer/Kundtjanstbot-launch-readiness|Kundtjänstbot-launch-readiness]]**
+  — ny, inför att öppna login/register publikt. Ett färdigt meddelande
+  att kopiera till kundtjänstbot-projektets Claude-session ligger klart
+  i noten — frågar om botens nuvarande osäkerhets-hantering/disclaimer
 
 ## Väntar på ditt svar
 
