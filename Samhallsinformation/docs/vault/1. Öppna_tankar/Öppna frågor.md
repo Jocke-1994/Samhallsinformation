@@ -19,6 +19,15 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   kundtjänstbot-projektets Claude-session ligger klart i noten (punkt 4)
   — bara att byta ut produktions-URL:en och skicka när du vill
 
+## Väntar på ditt svar
+
+- **[[../Ideer/Dela händelse|Dela händelse]]** — ny idé, formaliserad.
+  Är den samma sak som en äldre delnings-idé från session 38 (dela till
+  sparade kontakter/grupper) fast enklare, eller en helt egen minimal
+  funktion? Plus tre tekniska vägval (webbläsarens delningsmeny/kopiera
+  länk/specifika kanaler, dela till oss eller primärkällan, mäta
+  användning eller inte)
+
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,
   planen ligger kvar
