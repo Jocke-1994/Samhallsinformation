@@ -1016,6 +1016,22 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        // UpdatedAt på FaqItems — låter en extern konsument (kundtjänstboten)
+        // fråga "vad har ändrats sedan sist". Backfill = CreatedAt, samma
+        // mönster som andra nya timestamptz-kolumner.
+        if (pendingMigrations.Contains("20260913040901_AddFaqItemUpdatedAt"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""FaqItems"" ADD COLUMN IF NOT EXISTS ""UpdatedAt"" timestamptz;
+                UPDATE ""FaqItems"" SET ""UpdatedAt"" = ""CreatedAt"" WHERE ""UpdatedAt"" IS NULL;
+                ALTER TABLE ""FaqItems"" ALTER COLUMN ""UpdatedAt"" SET NOT NULL;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260913040901_AddFaqItemUpdatedAt', '10.0.12')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 
