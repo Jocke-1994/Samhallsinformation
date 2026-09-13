@@ -22,6 +22,10 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   — ny, inför att öppna login/register publikt. Ett färdigt meddelande
   att kopiera till kundtjänstbot-projektets Claude-session ligger klart
   i noten — frågar om botens nuvarande osäkerhets-hantering/disclaimer
+- **[[../Ideer/Kundtjanstbot-handelse-sok-api|Kundtjänstbot-handelse-sok-api]]**
+  — kundtjänstbot-projektet vill bygga en "fråga om skarpa händelser"-
+  funktion, 7 spec-frågor besvarade utifrån faktisk kod. Väntar på ditt
+  godkännande att bygga den föreslagna nya publika sök-endpointen
 
 ## Väntar på ditt svar
 

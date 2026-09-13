@@ -123,4 +123,5 @@ här som en uppföljande idé — inte beslutad, inte scopad i detalj än.
 - Kundtjänstbot-projektets #220 (periodisk KB-synk, redan känt sedan
   session 47)
 - Kundtjänstbot-projektets #203 (fullt live function-calling mot
-  events-API, parkerat, separat och större)
+  events-API) — **inte längre parkerat, plockat upp 2026-09-13:** se
+  [[Kundtjanstbot-handelse-sok-api]] för fullständig spec-genomgång
