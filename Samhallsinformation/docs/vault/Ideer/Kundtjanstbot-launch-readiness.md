@@ -136,7 +136,43 @@ Hör av er när (1) och (2) är på plats så stänger vi blockeraren på vår
 sida.
 ---
 
+## Allvarligare fynd, 2026-09-13: hallucinationsrisk om live-händelser
+Du testade själv direkt mot kundtjänstbotens Claude-session: "om någon
+skriver 'Vad har hänt i Stockholm idag?' — kan du svara på det?" Svaret
+var ärligt men avslöjande: **oklart/oskyddat.** Boten har ingen egen
+tillgång till Samhällsinformations faktiska händelsedata (den är en
+KB+Claude-bot för "hur använder jag appen", inte en sökmotor mot
+skarpa händelser). Utan en systemprompt som EXPLICIT säger åt Claude
+att inte försöka svara på såna frågor, är risken att den gissar utifrån
+sin egen allmänna tränade kunskap — precis den sortens hallucination
+projektets grundprincip (`CLAUDE.md`: "Källkrav — ingen information
+visas utan en verifierad primär källa") finns till för att förhindra.
+Det här väger tyngre än disclaimer-frågan: en disclaimer varnar för att
+boten KAN ha fel, men förhindrar inte att den faktiskt HITTAR PÅ en
+händelse en användare sedan agerar på.
+
+**Konkret förslag på systemprompt-tillägg** (för Samhällsinformations
+tenant-specifika prompt, inte en global ändring):
+
+> Du svarar ENDAST på frågor om hur appen Samhällsinformation fungerar
+> (funktioner, konto, inställningar, källor, notiser, Bevakningar,
+> Sparat, Dela). Du har INGEN tillgång till appens faktiska
+> live-händelsedata (polisrapporter, trafikinformation, väder,
+> myndighetsmeddelanden). Om en användare frågar om en SPECIFIK
+> händelse (t.ex. "Vad har hänt i Stockholm idag?", "Finns det en
+> trafikolycka i Göteborg?", "Har det hänt ett brott nära mig?") ska du
+> ALDRIG gissa eller svara med information du inte har verifierad
+> tillgång till. Förklara istället att du inte har tillgång till
+> realtidshändelser, och hänvisa till att söka direkt i appens flöde
+> (Mitt flöde eller Alla händelser, med källfilter) där all information
+> kommer direkt från verifierade myndighetskällor.
+
+Detta är nu det viktigaste av de tre fynden — mer akut än både
+`SupportEscalationUrl` och disclaimern.
+
 ## Öppna frågor
+- Väntar på bekräftelse att systemprompt-tillägget (ovan) är infört för
+  Samhällsinformations tenant
 - Väntar på bekräftelse att `SupportEscalationUrl` är satt för
   företag-id 8, och att disclaimer-beslutet (generisk vs.
   tenant-konfigurerbar) är genomfört

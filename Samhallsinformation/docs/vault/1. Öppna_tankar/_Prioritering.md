@@ -35,15 +35,16 @@ prioriteringar bara leva i sessionsloggar — det är hela poängen med det.
 5. **Kundtjänstboten redo för fler användare?** — Svar mottaget
    2026-09-13 från kundtjänstbot-projektet (se
    [[../Ideer/Kundtjanstbot-launch-readiness|Kundtjänstbot-launch-readiness]]
-   för fullständigt svar). Kärnfynd: ingen disclaimer finns idag för
-   riktiga tenants, och en verklig, mer akut lucka hittades på köpet —
-   `SupportEscalationUrl` är inte konfigurerad för Samhällsinformation
-   (företag-id 8) trots att eskalering-till-support byggdes specifikt
-   för oss. **Kvarstår som blockerare tills** (a) escalation-URL:en är
-   satt (förslag: `mailto:support@samhallsinformation.se`) och (b) en
-   disclaimer faktiskt syns i chattfönstret — bollen ligger nu hos
-   kundtjänstbot-projektet att implementera, vi har skickat vår
-   rekommendation tillbaka
+   för fullständigt svar). **Allvarligaste fyndet, hittat via en egen
+   direkt fråga till deras bot:** oskyddad hallucinationsrisk — frågar
+   en användare boten "Vad har hänt i Stockholm idag?" finns idag ingen
+   systemprompt-spärr som hindrar den från att GISSA ett påhittat svar
+   om en verklig händelse, rakt emot projektets kärnprincip om
+   källkrav. Väger tyngre än de två andra fynden (ingen disclaimer för
+   riktiga tenants, `SupportEscalationUrl` saknas för företag-id 8).
+   **Kvarstår som blockerare tills alla tre är åtgärdade** — konkret
+   systemprompt-text föreslagen i noten, bollen ligger hos
+   kundtjänstbot-projektet
 
 ## 🟡 Rekommenderat innan lansering, inte blockerande
 
