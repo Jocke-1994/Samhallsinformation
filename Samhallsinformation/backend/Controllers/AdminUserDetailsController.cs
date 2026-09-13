@@ -234,6 +234,42 @@ public class AdminUserDetailsController : ControllerBase
         });
     }
 
+    // Skrivrätt tillagd 2026-09-13 — bara läge räckte inte i praktiken:
+    // en användare hör ofta av sig till supporten och BER om att en
+    // inställning ändras (t.ex. "jag får inga notiser, kan ni slå på det
+    // igen?"), och supporten hade inget sätt att göra det åt dem. Samma
+    // PATCH-semantik (nullable fält, bara satta värden skrivs) som
+    // självbetjänings-varianten (PushController.SaveSettings), som redan
+    // definierar PushSettingsRequest. Policy, inte teknik: ska bara
+    // användas när ANVÄNDAREN SJÄLV bett om ändringen — se Rutiner.
+    [HttpPut("{id}/push-settings")]
+    public async Task<IActionResult> SetPushSettings(Guid id, [FromBody] PushSettingsRequest req)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user == null) return NotFound();
+
+        void Logga(string setting, bool gammalt, bool? nytt)
+        {
+            if (!nytt.HasValue || nytt.Value == gammalt) return;
+            _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+            {
+                UserId = id, Setting = setting,
+                OldValue = gammalt.ToString(), NewValue = nytt.Value.ToString(), ChangedBy = "admin",
+            });
+        }
+
+        Logga("push_enabled",        user.PushEnabled,      req.PushEnabled);
+        Logga("push_nya_handelser",  user.PushNyaHandelser, req.PushNyaHandelser);
+        Logga("push_ny_version",     user.PushNyVersion,    req.PushNyVersion);
+
+        if (req.PushEnabled.HasValue)      user.PushEnabled      = req.PushEnabled.Value;
+        if (req.PushNyaHandelser.HasValue) user.PushNyaHandelser = req.PushNyaHandelser.Value;
+        if (req.PushNyVersion.HasValue)    user.PushNyVersion    = req.PushNyVersion.Value;
+
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
     // Admin/support-variant av GET /api/user/saved-events
     // (UserSavedEventsController) — samma tabell, men för valfri användare
     // istället för den inloggade. Returnerar händelsedetaljer (inte bara

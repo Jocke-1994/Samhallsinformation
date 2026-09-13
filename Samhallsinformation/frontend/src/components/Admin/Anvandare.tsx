@@ -9,7 +9,7 @@ import {
   createAdminUserPolisenBevakning, updateAdminUserPolisenBevakning, deleteAdminUserPolisenBevakning,
   fetchAdminUserSources, setAdminUserSourceActive, type AdminPolisenBevakningDto,
   sendAdminUserPasswordReset, resendAdminUserVerification,
-  fetchAdminUserPushSettings,
+  fetchAdminUserPushSettings, setAdminUserPushSettings,
 } from '../../api/adminUsers'
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import { checkEventLinkStatus } from '../../api/events'
@@ -231,6 +231,9 @@ const SETTING_LABEL: Record<string, string> = {
   polisen_bevakning_skapad:     'Polisen-bevakning skapad',
   polisen_bevakning_ändrad:     'Polisen-bevakning ändrad',
   polisen_bevakning_borttagen:  'Polisen-bevakning borttagen',
+  push_enabled:                 'Push (globalt) på/av',
+  push_nya_handelser:           'Push · Ny händelse på/av',
+  push_ny_version:              'Push · Ny version på/av',
 }
 const NOTIF_LOG_CHANNEL_CLS: Record<string, string> = { push: 'bg-sky-100 text-sky-700' }
 const NOTIF_LOG_CHANNEL_FALLBACK_CLS = 'bg-slate-100 text-slate-600'
@@ -607,6 +610,15 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     queryKey: ['admin-user-push-settings', vald?.id],
     queryFn:  () => fetchAdminUserPushSettings(vald!.id),
     enabled:  !!vald,
+  })
+
+  const andraPushMutation = useMutation({
+    mutationFn: (req: { pushEnabled?: boolean; pushNyaHandelser?: boolean; pushNyVersion?: boolean }) =>
+      setAdminUserPushSettings(vald!.id, req),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-push-settings', vald?.id] })
+      queryClient.invalidateQueries({ queryKey: ['admin-setting-log', vald?.id] })
+    },
   })
 
   const växlaKällaMutation = useMutation({
@@ -1148,11 +1160,15 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   )}
                 </div>
 
-                {/* Push-inställningar — läsläge, ingen skrivrätt (fanns
-                    ingenstans i admin innan, upptäckt 2026-09-12). Endpoint/
-                    P256dh/Auth exponeras avsiktligt inte, se controllern. */}
+                {/* Push-inställningar — skrivrätt tillagd 2026-09-13. Policy,
+                    inte teknik: bara ändra åt en användare när DE SJÄLVA bett
+                    om det (t.ex. via ett supportärende) — se
+                    Rutiner/Konto/Push-installningar.md. Endpoint/P256dh/Auth
+                    exponeras fortfarande aldrig, se controllern. */}
                 <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Push-notiser</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">
+                    Push-notiser <span className="normal-case text-slate-300 font-normal">— ändra bara om användaren själv bett om det</span>
+                  </p>
                   {pushLaddar ? (
                     <p className="text-sm text-slate-400">Laddar...</p>
                   ) : !pushInstallningar ? (
@@ -1160,15 +1176,27 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   ) : (
                     <div className="flex flex-col gap-2">
                       <div className="flex flex-wrap gap-1.5">
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${pushInstallningar.pushEnabled ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                        <button
+                          onClick={() => andraPushMutation.mutate({ pushEnabled: !pushInstallningar.pushEnabled })}
+                          disabled={andraPushMutation.isPending}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${pushInstallningar.pushEnabled ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                        >
                           Push {pushInstallningar.pushEnabled ? 'på' : 'av'}
-                        </span>
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${pushInstallningar.pushNyaHandelser ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                        </button>
+                        <button
+                          onClick={() => andraPushMutation.mutate({ pushNyaHandelser: !pushInstallningar.pushNyaHandelser })}
+                          disabled={andraPushMutation.isPending}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${pushInstallningar.pushNyaHandelser ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                        >
                           Ny händelse {pushInstallningar.pushNyaHandelser ? 'på' : 'av'}
-                        </span>
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${pushInstallningar.pushNyVersion ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                        </button>
+                        <button
+                          onClick={() => andraPushMutation.mutate({ pushNyVersion: !pushInstallningar.pushNyVersion })}
+                          disabled={andraPushMutation.isPending}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${pushInstallningar.pushNyVersion ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                        >
                           Ny version {pushInstallningar.pushNyVersion ? 'på' : 'av'}
-                        </span>
+                        </button>
                       </div>
                       {pushInstallningar.enheter.length === 0 ? (
                         <p className="text-xs text-slate-400">Inga registrerade enheter.</p>
