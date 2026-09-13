@@ -32,19 +32,20 @@ prioriteringar bara leva i sessionsloggar — det är hela poängen med det.
    sessionstest. Ingen kvarstående osäkerhet, stryks som blockerare
 4. **`/login`-sidan, mobilgenomgången** — enligt dig redan testad. Litar på
    ditt minne, stryks som blockerare
-5. **Kundtjänstboten redo för fler användare?** — Svar mottaget
-   2026-09-13 från kundtjänstbot-projektet (se
-   [[../Ideer/Kundtjanstbot-launch-readiness|Kundtjänstbot-launch-readiness]]
-   för fullständigt svar). **Allvarligaste fyndet, hittat via en egen
-   direkt fråga till deras bot:** oskyddad hallucinationsrisk — frågar
-   en användare boten "Vad har hänt i Stockholm idag?" finns idag ingen
-   systemprompt-spärr som hindrar den från att GISSA ett påhittat svar
-   om en verklig händelse, rakt emot projektets kärnprincip om
-   källkrav. Väger tyngre än de två andra fynden (ingen disclaimer för
-   riktiga tenants, `SupportEscalationUrl` saknas för företag-id 8).
-   **Kvarstår som blockerare tills alla tre är åtgärdade** — konkret
-   systemprompt-text föreslagen i noten, bollen ligger hos
-   kundtjänstbot-projektet
+5. **Kundtjänstboten redo för fler användare?** — Utvecklingen tog en
+   egen väg: hallucinationsrisken (boten kunde gissa ett påhittat svar
+   om en verklig händelse) löstes inte genom att blockera frågan
+   hårdare, utan genom att bygga en riktig sök-endpoint
+   (`GET /api/events/search-public`, PR #576/#577) och koppla in den
+   via Claude tool-use på kundtjänstbot-sidan (deras PR #238) — se
+   [[../Ideer/Kundtjanstbot-handelse-sok-api|Kundtjänstbot-handelse-sok-api]].
+   **✅ Systemprompt v2 (instruerar boten att använda verktyget, aldrig
+   gissa utöver det som returneras) är insatt av dig 2026-09-13** — den
+   allvarligaste av de tre ursprungliga fynden är löst.
+   **Kvarstår, status okänd:** disclaimer i chattfönstret för riktiga
+   tenants, och om `SupportEscalationUrl` faktiskt konfigurerats för
+   företag-id 8 (se [[../Ideer/Kundtjanstbot-launch-readiness|Kundtjänstbot-launch-readiness]])
+   — inget bekräftat svar mottaget på de två än
 
 ## 🟡 Rekommenderat innan lansering, inte blockerande
 

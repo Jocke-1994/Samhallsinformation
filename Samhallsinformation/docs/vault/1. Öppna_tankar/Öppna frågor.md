@@ -22,11 +22,9 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   — ny, inför att öppna login/register publikt. Ett färdigt meddelande
   att kopiera till kundtjänstbot-projektets Claude-session ligger klart
   i noten — frågar om botens nuvarande osäkerhets-hantering/disclaimer
-- **[[../Ideer/Kundtjanstbot-handelse-sok-api|Kundtjänstbot-handelse-sok-api]]**
-  — vår sida klar (`GET /api/events/search-public`, PR #576, mergad).
-  Väntar nu bara på att kundtjänstbot-projektet bygger sin
-  Claude-tool-use-integration mot endpointen — inget kvar att göra
-  härifrån
+  och om `SupportEscalationUrl` konfigurerats för företag-id 8 (den
+  allvarligaste delfrågan, hallucinationsrisken, är löst separat — se
+  [[../Ideer/Kundtjanstbot-handelse-sok-api|Kundtjänstbot-handelse-sok-api]])
 
 ## Väntar på ditt svar
 

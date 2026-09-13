@@ -2,7 +2,7 @@
 typ: ide
 status: i-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
 uiGodkand: ej-bedomd
-beroenden: "Vår sida klar (PR #576, #577). Kundtjänstbotens verktygsintegration byggd (deras PR #238). Väntar på att de sätter in den uppdaterade systemprompten nedan"
+beroenden: "Klart på båda sidor: vår sida (PR #576, #577), deras verktygsintegration (PR #238) och systemprompt v2 (insatt 2026-09-13)"
 prioritet: ej-bedomd
 pipelineNr: ""
 kalla: "session 2026-09-13, spec-fråga från kundtjänstbot-projektets Claude-session"
@@ -211,7 +211,9 @@ uttryckligen att boten INTE har tillgång till live-händelsedata och ska
 avböja såna frågor — motsäger nu det nybyggda verktyget. Bad dem byta ut
 bara den delen, resten (ämnesspärr, prompt injection-skydd) oförändrat.
 
-**Fullständig uppdaterad systemprompt (v2), redo att sättas in av dem:**
+**✅ Insatt av dig 2026-09-13** (manuellt i kundtjänstbotens admin-ruta
+för tenanten — ren data, ingen kod/PR). Fullständig text nedan sparad
+för spårbarhet:
 
 ```
 Du är en AI-driven kundtjänstbot för Samhällsinformation — en webbsida som
