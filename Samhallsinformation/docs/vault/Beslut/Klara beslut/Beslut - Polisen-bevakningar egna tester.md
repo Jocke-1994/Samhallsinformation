@@ -1,10 +1,15 @@
 ---
 typ: beslut
-status: öppen
+status: stängd
 datum: 2026-08-19
 ---
 
 # Beslut - Polisen-bevakningar, egna tester klara?
+
+## ✅ Bekräftat klart 2026-09-13
+Push fungerar — 3 aviseringar mottagna. Både den ursprungliga tekniska
+frågan (fick du notiser?) och sidospåret (admin-insyn i push-
+inställningar) är nu lösta. Flaggan kan slås på när du vill.
 
 Byggd och fungerande (PR #483-485), men flaggan hålls medvetet avstängd
 tills du själv kört tester i skarp produktion (så du kan se hur många
