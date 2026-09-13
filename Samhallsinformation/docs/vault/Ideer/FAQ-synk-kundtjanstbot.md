@@ -1,6 +1,6 @@
 ---
 typ: ide
-status: fragor-olosta  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
 uiGodkand: ej-bedomd
 beroenden: "Kräver ett litet motsvarande arbete i det separata kundtjänstbot-projektet (deras #220) — den här planen täcker bara vår sida"
 prioritet: ej-bedomd
@@ -35,22 +35,18 @@ kunna svara på frågor om något som inte ens syns i appen. Måste lösas
 oavsett vilken synk-mekanism som väljs nedan.
 
 ## Föreslagen ordning
-1. **Fixa filtreringsluckan i `/api/faq`** (görs oavsett synkval)
-   - Flytta flagg-effektiv-status till backend: en liten statisk dictionary
-     med samma `defaultAktiv`-värden som redan finns i `featureFlags.ts`,
-     sammanslagen med `FeatureFlagOverrides`.
-   - `GET /api/faq` returnerar bara frågor där `Publicerad = true` OCH
-     (`FlagKey` är null ELLER flaggan är aktiv just nu).
-   - Sidovinst: `FaqKort.tsx` kan sluta göra flaggfiltreringen själv.
-   - Risk: två källor till samma `defaultAktiv`-sanning (frontend +
-     backend) kan glida isär om en ny flagga bara läggs till på ena
-     stället — kräver disciplin, eller på sikt en enda källa.
+1. ✅ **Fixa filtreringsluckan i `/api/faq`** — **byggt 2026-09-13, PR #573.**
+   `Application/FeatureFlags/FeatureFlagDefaults.cs` speglar
+   `defaultAktiv`-värdena, sammanslaget med `FeatureFlagOverrides`.
+   `GET /api/faq` returnerar nu bara frågor där `Publicerad = true` OCH
+   (`FlagKey` är null ELLER flaggan är effektivt aktiv). `FaqKort.tsx`
+   rördes medvetet inte — dess egen filtrering är nu bara en ofarlig
+   dubblering, inte borttagen. Risken (två källor till `defaultAktiv` kan
+   glida isär) kvarstår, ohanterad — kräver disciplin vid framtida flaggor.
 
-2. **Lägg till `UpdatedAt` på `FaqItem`**
-   - Bara `CreatedAt` finns idag. En extern poller behöver kunna fråga
-     "vad har ändrats sedan sist" istället för att hämta om ALLT varje
-     gång. Litet tillägg — migration + sätt `UpdatedAt` vid varje
-     `UpdateFaq`.
+2. ✅ **`UpdatedAt` på `FaqItem`** — **byggt 2026-09-13, samma PR.** Sätts
+   vid varje `UpdateFaq`, migration med backfill från `CreatedAt` i
+   produktion.
 
 3. **Synk-mekanism — rekommendation: periodisk polling** (matchar #220)
    - Kundtjänstboten pollar `GET /api/faq` med jämna mellanrum (t.ex. varje
@@ -70,21 +66,32 @@ oavsett vilken synk-mekanism som väljs nedan.
      bara en trigger). Inte beslutat, men värt att ha med om ren polling
      känns för långsam.
 
-4. **Cross-project-avstämning**
-   - Vi kan bara bygga vår egen halva (punkt 1–2, plus dokumentera
-     `/api/faq`-kontraktet). Själva pollingen byggs i kundtjänstbot-
-     projektet (#220 där). Nästa steg: samma mönster som session 47 — en
-     självständig, kontextfull fråga till den sessionen, med länk hit.
+4. **Cross-project-avstämning — vår halva är klar, redo att skicka**
+   Vår sida (punkt 1–2) är byggd. Nästa steg görs i kundtjänstbot-
+   projektet — här är ett färdigt meddelande att kopiera dit när du vill:
 
-## Öppna frågor — förtydligade 2026-09-12
-- **Bygga nu eller vänta?** Konkret: punkt 1 (`GET /api/faq` slutar visa
-  frågor vars funktion är avstängd) och punkt 2 (spara NÄR en fråga
-  senast ändrades) är två små, ofarliga förbättringar på VÅR sida —
-  de fungerar oavsett om kundtjänstboten någonsin läser dem. Frågan är
-  bara PRIORITET: bygga dem redan nu (en liten, isolerad uppgift, ingen
-  nytta förrän boten faktiskt pollar men inte heller någon risk), eller
-  vänta tills ni faktiskt bestämt er för att koppla ihop projekten (då
-  slipper man bygga något i förväg som visar sig behöva ändras)?
+   ---
+   📋 **Till kundtjänstbot-projektet** (kopiera till den sessionen):
+
+   Samhällsinformation-projektet har nu byggt sin halva av FAQ-synken som
+   redan är känd hos er som #220 (periodisk KB-synk). Kontraktet:
+   `GET https://[produktions-URL]/api/faq` — publikt, ingen autentisering,
+   returnerar en JSON-lista av `{ id, kategori, fraga, svar, flagKey,
+   createdAt, updatedAt }` för ENDAST de frågor som just nu faktiskt är
+   synliga för en riktig besökare (redan filtrerat på både publicerad-
+   status och om den kopplade funktionen är aktiv — ni behöver inte
+   duplicera den logiken). `updatedAt` sätts om vid varje redigering, så
+   ni kan avgöra om något ändrats sedan er senaste hämtning utan att
+   jämföra hela listan. Rekommenderat pollingintervall från vår sida: en
+   gång per dygn räcker troligen (FAQ ändras sällan), men det är ert val.
+   Hör av er om ni vill ha något annat i svaret.
+   ---
+
+   Byt ut `[produktions-URL]` mot den riktiga adressen innan du skickar.
+
+## Öppna frågor — status 2026-09-13
+- ✅ **Bygga nu eller vänta?** Besvarat: du ville ha det fixat så snart som
+  möjligt, du ser potential i funktionen. Byggt (se punkt 1–2 ovan).
 - **Pollingintervall — vad frågan egentligen handlar om:** hur ofta SKA
   kundtjänstboten hämta vår FAQ-lista på nytt (t.ex. en gång i timmen,
   en gång per dygn)? Det bestämmer hur snabbt en ändring du gör i FAQ

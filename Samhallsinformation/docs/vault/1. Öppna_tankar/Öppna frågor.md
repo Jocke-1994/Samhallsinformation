@@ -12,15 +12,12 @@ jag samtidigt till en rad här. När du besvarar frågan i notens egen fil,
 strimlar jag bort raden härifrån vid nästa genomgång — den här listan
 ska bara innehålla det som GENUINT väntar på dig just nu.
 
-## Väntar på ditt svar
+## Väntar på en åtgärd från dig (inte en fråga — allt är redan beslutat)
 
-- **[[../Beslut/Beslut - Polisen-bevakningar egna tester|Beslut - Polisen-bevakningar, egna tester]]**
-  — inväntar besked om du fått en avisering än. Push-insynen (läs OCH
-  skriv) är nu byggd, den delen av frågan är löst
-- **[[../Ideer/FAQ-synk-kundtjanstbot|FAQ-synk-kundtjanstbot]]** —
-  förtydligat i noten vad frågan faktiskt handlar om. Ren prioritetsfråga
-  nu: bygg de två små, ofarliga FAQ-fixarna redan nu, eller vänta tills ni
-  bestämt er för att koppla ihop projekten?
+- **[[../Ideer/FAQ-synk-kundtjanstbot|FAQ-synk-kundtjanstbot]]** — vår
+  halva byggd (PR #573). Ett färdigt meddelande att kopiera till
+  kundtjänstbot-projektets Claude-session ligger klart i noten (punkt 4)
+  — bara att byta ut produktions-URL:en och skicka när du vill
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,
