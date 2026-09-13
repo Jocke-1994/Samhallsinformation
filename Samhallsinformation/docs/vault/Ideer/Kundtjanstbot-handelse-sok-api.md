@@ -103,6 +103,50 @@ transparent om vad som faktiskt kollades, utan att påstå total
 täckning. Det här är samma "källkrav/ingen tolkning"-princip som
 gäller resten av produkten.
 
+## Uppföljningsfrågor från dem, 2026-09-13 (svarat)
+
+**Krav: `sourcesSearched` ska vara ett riktigt JSON-fält, inte muntlig
+konvention.** Godkänt och inbakat i speccen nedan — ett fält på
+toppnivå i svaret (`["Polisen", "SMHI", "Krisinformation",
+"Trafikverket"]`), inte per händelse. Om `shortName`-filtret är satt
+blir listan bara den ena källan; annars alla `IsPublished`-källors
+`ShortName`, distinkt.
+
+**Hur lång är `content` typiskt?** Mätt live mot produktion (inte
+gissat), 2026-09-13:
+| Källa | Min | Median | Max | (urval) |
+|---|---|---|---|---|
+| Polisen | 14 | 34 | 110 | 50 senaste |
+| SMHI | 314 | 341 | 843 | 20 senaste |
+| Krisinformation | 29 | 324 | 2516 | 20 senaste |
+| Trafikverket | 0 | 0 | 178 | 20 senaste (ofta TOM) |
+
+Stor spridning — Polisen är en mening, Krisinformation kan vara en hel
+artikel (upp till ~2500 tecken sett här, ingen hård övre gräns
+garanterad från vår sida). Trafikverket har ofta helt tomt `content`
+(fältet finns men kan vara `""`). Rekommendation: trunkera själva om
+ni vill hålla nere kostnad/svarstid — vi sätter ingen gräns på vår
+sida, och ett tomt content-fält är ett giltigt, förväntat värde (inte
+en bugg) för Trafikverket-händelser.
+
+## Slutgiltig svarsform (uppdaterad)
+```json
+{
+  "total": 3,
+  "sourcesSearched": ["Polisen", "SMHI", "Krisinformation", "Trafikverket"],
+  "events": [
+    {
+      "title": "...",
+      "content": "...",
+      "sourceName": "Polisen",
+      "sourceUrl": "https://...",
+      "location": "Göteborg",
+      "timestamp": "2026-09-13T18:22:33Z"
+    }
+  ]
+}
+```
+
 **7. Autentisering och rate limit?**
 Idag: `GET /api/events` har **ingen autentisering och ingen rate
 limit alls** — vår enda rate limiter är scopad till `/api/auth/*`
@@ -116,18 +160,22 @@ minut/IP, generöst för legitim chattanvändning men ett golv mot
 missbruk.
 
 ## Föreslaget nästa steg
-Bygga en ny endpoint, t.ex. `GET /api/events/search-public` (namn ej
-låst), som kombinerar:
+**Kundtjänstbot-projektet har bekräftat 2026-09-13: specen räcker,
+"bygg på".** Bygga en ny endpoint, t.ex. `GET /api/events/search-public`
+(namn ej låst), som kombinerar:
 - Publicerad-filtret från `GetEvents`
 - Fuzzy `geography`/fritext-`sokord`/`eventType`/`from`/`to` från
   admin-sökningen
-- `SourceName` joinad in
-- Ny, egen rate-limit-policy
+- `SourceName`/`Url` omdöpt till `sourceName`/`sourceUrl` i svaret,
+  `Content`→`content` (inte "summary")
+- Nytt toppnivå-fält `sourcesSearched` (lista av sökta källors
+  `ShortName`) — se svarsformen ovan
+- Ny, egen rate-limit-policy (20–30/min/IP)
 - Default `pageSize` lägre (10)
 
-**Inte byggt än** — väntar på ditt godkännande att bygga det, eller på
-ett svar från kundtjänstbot-sessionen om ovanstående räcker som spec
-innan vi kodar.
+**Inte byggt än** — väntar på ditt (Joakims) godkännande i den här
+sessionen att sätta igång. Kundtjänstbot-sidan väntar på exakt
+endpoint-path/metod innan de bygger sin Claude-tool-use-integration.
 
 ## Kopplat
 - [[FAQ-synk-kundtjanstbot]] — deras epic #203, nu aktiverat
