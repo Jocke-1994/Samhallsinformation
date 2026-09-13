@@ -236,6 +236,20 @@ public class AuthController : ControllerBase
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();
 
+        // Delade händelser (EventShareLog) — upptäckt 2026-09-13 att den här
+        // saknades i exporten trots att den kopplas mot UserId när man delar
+        // inloggad. Samma mönster som sparadeHandelser ovan.
+        var deladeHandelser = await (
+            from d in _db.EventShareLogs
+            where d.UserId == userId
+            join e in _db.Events on d.EventId equals e.Id into eJ
+            from e in eJ.DefaultIfEmpty()
+            join src in _db.Sources on e.SourceId equals src.Id into srcJ
+            from src in srcJ.DefaultIfEmpty()
+            orderby d.SharedAt descending
+            select new { Titel = e != null ? e.Title : "Okänd/borttagen händelse", Kalla = src != null ? src.ShortName : "Okänd källa", d.SharedAt }
+        ).ToListAsync();
+
         var ärendeIds = ärenden.Select(a => a.Id).ToList();
         var meddelanden = await _db.SupportTicketMessages
             .Where(m => ärendeIds.Contains(m.TicketId) && !m.IsInternal)
@@ -257,6 +271,7 @@ public class AuthController : ControllerBase
             Konto = new { user.Name, user.Email, user.CreatedAt, user.AuthProvider, user.EmailVerified },
             Kallor = kallor,
             SparadeHandelser = sparadeHandelser,
+            DeladeHandelser = deladeHandelser,
             PolisenBevakningar = polisenBevakningar,
             Notisinstallningar = new
             {
