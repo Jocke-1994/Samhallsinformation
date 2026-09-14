@@ -10,9 +10,11 @@ import {
   fetchAdminUserSources, setAdminUserSourceActive, type AdminPolisenBevakningDto,
   sendAdminUserPasswordReset, resendAdminUserVerification,
   fetchAdminUserPushSettings, setAdminUserPushSettings,
+  explainAdminUserEvent, type AdminExplainEventDto,
 } from '../../api/adminUsers'
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import { checkEventLinkStatus } from '../../api/events'
+import { searchEvents, type AdminSearchEvent } from '../../api/eventSearch'
 import type { PendingNotis } from '../../types/adminNotis'
 import KategoriFilterModal from '../Profile/MinaKallor/KategoriFilterModal'
 
@@ -630,6 +632,44 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     },
   })
 
+  // Förklara-händelse — supportverktyg (inte en editerbar inställning): visar
+  // varför en given händelse syns/inte syns i DEN HÄR användarens Mitt flöde,
+  // istället för att en supportagent ska behöva räkna ut det manuellt utifrån
+  // Aktiva källor + Polisen-bevakningar ovan. Skopat på vald.id, nollställs
+  // när en annan användare väljs (samma useEffect nedan som andra vald-scopade
+  // states i den här filen).
+  const [forklaraSokord, setForklaraSokord] = useState('')
+  const [forklaraTraffar, setForklaraTraffar] = useState<AdminSearchEvent[]>([])
+  const [forklaraSoker, setForklaraSoker] = useState(false)
+  const [forklaratEvent, setForklaratEvent] = useState<AdminSearchEvent | null>(null)
+  const [forklaring, setForklaring] = useState<AdminExplainEventDto | null>(null)
+  const [forklaringLaddar, setForklaringLaddar] = useState(false)
+
+  async function sokForklaraHandelse() {
+    if (!forklaraSokord.trim()) return
+    setForklaraSoker(true)
+    setForklaratEvent(null)
+    setForklaring(null)
+    try {
+      const resultat = await searchEvents({ sokord: forklaraSokord.trim(), pageSize: 5 })
+      setForklaraTraffar(resultat.events)
+    } finally {
+      setForklaraSoker(false)
+    }
+  }
+
+  async function valjForklaraHandelse(ev: AdminSearchEvent) {
+    if (!vald) return
+    setForklaratEvent(ev)
+    setForklaring(null)
+    setForklaringLaddar(true)
+    try {
+      setForklaring(await explainAdminUserEvent(vald.id, ev.id))
+    } finally {
+      setForklaringLaddar(false)
+    }
+  }
+
   const { data: notishistorik = [], isLoading: notishistorikLaddar } = useQuery({
     queryKey: ['admin-notification-log', vald?.id],
     queryFn:  () => fetchAdminUserNotificationLog(vald!.id),
@@ -655,6 +695,10 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     setVald(u)
     setDetaljFlik('oversikt')
     setMejlFeedback(null)
+    setForklaraSokord('')
+    setForklaraTraffar([])
+    setForklaratEvent(null)
+    setForklaring(null)
   }
 
   async function skickaLösenordsåterställning(u: Användare) {
@@ -1156,6 +1200,72 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                           </button>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Förklara händelse — läsläge, ändrar inget. Söker mot samma
+                    /api/admin/events/search som Händelsesök, kör sen
+                    GET .../explain-event/{eventId} som svarar utifrån Aktiva
+                    källor + Polisen-bevakningar ovan (samma prioritetsordning
+                    som NewsFeed.tsx). Byggd som ett supportverktyg — svarar på
+                    "varför ser/ser inte den här användaren händelse X" utan
+                    att en agent ska behöva räkna ut det för hand. */}
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Förklara en händelse</p>
+                  <div className="flex gap-1.5 mb-2">
+                    <input
+                      type="text"
+                      value={forklaraSokord}
+                      onChange={e => setForklaraSokord(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') sokForklaraHandelse() }}
+                      placeholder="Sök på titel, t.ex. Misshandel Gotland"
+                      className="flex-1 min-w-0 text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                    />
+                    <button
+                      onClick={sokForklaraHandelse}
+                      disabled={forklaraSoker || !forklaraSokord.trim()}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 disabled:opacity-50 transition-colors shrink-0"
+                    >
+                      {forklaraSoker ? 'Söker…' : 'Sök'}
+                    </button>
+                  </div>
+
+                  {forklaraTraffar.length > 0 && !forklaratEvent && (
+                    <div className="flex flex-col gap-1 mb-2">
+                      {forklaraTraffar.map(ev => (
+                        <button
+                          key={ev.id}
+                          onClick={() => valjForklaraHandelse(ev)}
+                          className="text-left text-xs text-slate-600 hover:bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 truncate"
+                        >
+                          {ev.title}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {forklaratEvent && (
+                    <div className="border border-slate-100 rounded-lg p-2.5">
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <p className="text-xs text-slate-700 font-medium">{forklaratEvent.title}</p>
+                        <button
+                          onClick={() => { setForklaratEvent(null); setForklaring(null) }}
+                          className="text-xs text-slate-400 hover:text-slate-600 shrink-0"
+                        >
+                          Ny sökning
+                        </button>
+                      </div>
+                      {forklaringLaddar ? (
+                        <p className="text-xs text-slate-400">Kontrollerar…</p>
+                      ) : forklaring && (
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${forklaring.visasIMittFlode ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                            {forklaring.visasIMittFlode ? 'Visas' : 'Visas inte'}
+                          </span>
+                          <p className="text-xs text-slate-600">{forklaring.anledning}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

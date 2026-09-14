@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
+using Samhallsinformation.Services;
 
 // Läsvyer (och, för Sparat, skrivvyer) på en enskild användares konto, till
 // Anvandare.tsx-detaljpanelen. Egen controller (inte AdminUsersController,
@@ -325,6 +326,39 @@ public class AdminUserDetailsController : ControllerBase
             await _db.SaveChangesAsync();
         }
         return Ok();
+    }
+
+    // Förklarar för admin/support VARFÖR (eller varför inte) en given
+    // händelse syns i en given användares Mitt flöde — samma fråga en
+    // supportagent annars måste lista ut manuellt (öppna Mina källor +
+    // bevakningarna och räkna ut det för hand). Läser bara, ändrar inget.
+    // Tre nivåer, samma prioritetsordning som NewsFeed.tsx (mittEvents):
+    // (1) källan inte aktiv → visas inte alls, (2) icke-Polisen-källa aktiv
+    // → visas alltid, (3) Polisen → PolisenBevakningMatcher.Explain avgör.
+    [HttpGet("{id}/explain-event/{eventId}")]
+    public async Task<IActionResult> ExplainEvent(Guid id, Guid eventId)
+    {
+        var ev = await _db.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+        if (ev == null) return NotFound("Händelsen hittades inte.");
+
+        var pref = await _db.UserSourcePreferences
+            .Include(p => p.Source)
+            .FirstOrDefaultAsync(p => p.UserId == id && p.SourceId == ev.SourceId);
+
+        var sourceName = pref?.Source?.ShortName
+            ?? (await _db.Sources.Where(s => s.Id == ev.SourceId).Select(s => s.ShortName).FirstOrDefaultAsync())
+            ?? "okänd källa";
+
+        if (pref == null || !pref.IsActive)
+            return Ok(new { visasIMittFlode = false, anledning = $"Prenumererar inte på {sourceName}." });
+
+        if (sourceName != "Polisen")
+            return Ok(new { visasIMittFlode = true, anledning = $"Prenumererar på {sourceName} — inget ytterligare filter för den källan." });
+
+        var bevakningar = await _db.PolisenBevakningar.Where(b => b.UserId == id).ToListAsync();
+        var (matchar, anledning, _) = PolisenBevakningMatcher.Explain(ev, bevakningar);
+
+        return Ok(new { visasIMittFlode = matchar, anledning });
     }
 
     // Omvänd uppslagning: för en lista händelse-ID:n, vilka användare har

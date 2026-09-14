@@ -64,4 +64,43 @@ public static class PolisenBevakningMatcher
 
         return false;
     }
+
+    // Som Matches(), men för admin-förklaringen (AdminUserDetailsController.
+    // ExplainEvent) — säger VILKEN bevakning som matchade och varför, i
+    // klartext, istället för bara sant/falskt. Läns-medveten på samma sätt
+    // som frontendens matcharLän (PolisenBevakningarContext.tsx, fixad
+    // 2026-09-14) — en sammanfattnings läns-geografi ("Jönköpings län")
+    // matchar en kommun-baserad bevakning om NÅGON av bevakningens kommuner
+    // ligger i det länet, aldrig via en exakt strängjämförelse.
+    public static (bool Matchar, string Anledning, Guid? BevakningId) Explain(CanonicalEvent ev, List<PolisenBevakning> bevakningar)
+    {
+        if (bevakningar.Count == 0)
+            return (true, "Ingen bevakning satt — allt från Polisen syns i Mitt flöde.", null);
+
+        var typ = ExtractTyp(ev.EventType);
+        var lan = ev.Geography != null && SvenskaLan.LanKommuner.ContainsKey(ev.Geography) ? ev.Geography : null;
+        var omrade = lan == null ? ev.Geography : null;
+
+        foreach (var b in bevakningar)
+        {
+            var kategorier = b.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.KategorierJson);
+            var omraden    = b.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson);
+
+            var typOk = kategorier == null || typ == null || kategorier.Contains(typ);
+            var omradeOk =
+                omraden == null ? true :
+                lan != null     ? SvenskaLan.KommunerILan(lan).Any(omraden.Contains) :
+                omrade == null  ? true :
+                omraden.Contains(omrade);
+
+            if (typOk && omradeOk)
+            {
+                var typDel    = kategorier == null ? "alla typer" : string.Join(", ", kategorier);
+                var omradeDel = omraden    == null ? "alla områden" : string.Join(", ", omraden);
+                return (true, $"Matchar bevakningen: {typDel} · {omradeDel}.", b.Id);
+            }
+        }
+
+        return (false, $"Matchar ingen av dina {bevakningar.Count} bevakning(ar).", null);
+    }
 }
