@@ -202,6 +202,23 @@ export async function fetchAdminUserPushSettings(id: string): Promise<AdminUserP
   return res.json()
 }
 
+export interface AdminExplainEventDto {
+  visasIMittFlode: boolean
+  anledning:       string
+}
+
+// Svarar på "varför ser/ser inte den här användaren händelse X" — ett
+// supportverktyg, inte något som ändrar något. Se
+// AdminUserDetailsController.ExplainEvent.
+export async function explainAdminUserEvent(id: string, eventId: string): Promise<AdminExplainEventDto> {
+  const res = await adminFetch(`/api/admin/users/${id}/explain-event/${eventId}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `explainAdminUserEvent: ${res.status}`)
+  }
+  return res.json()
+}
+
 // Bara PATCH-semantik (skicka bara det fält som ska ändras) — samma
 // motivering som självbetjäningens PushController.SaveSettings, annars
 // nollar en ensam ändring tyst de andra två fälten.
