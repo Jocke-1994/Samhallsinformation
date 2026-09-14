@@ -9,7 +9,7 @@ import type { CanonicalEvent, Source } from '../../types'
 import { useAuth } from '../../context/AuthContext'
 import { usePolisenBevakningar } from '../../context/PolisenBevakningarContext'
 import { useSavedEvents } from '../../context/SavedEventsContext'
-import { extraheraPolisenTyp, extraheraPolisenOmrade } from '../Profile/MinaKallor/kallorUtils'
+import { extraheraPolisenTyp, extraheraPolisenOmrade, länFörGeografi } from '../Profile/MinaKallor/kallorUtils'
 import { useFlags } from '../../context/FeatureFlagsContext'
 
 type ViewMode = 'Allt' | 'Mitt'
@@ -59,7 +59,7 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()
   const flaggor = useFlags()
-  const { matchar } = usePolisenBevakningar()
+  const { matchar, matcharLän } = usePolisenBevakningar()
   const { sparade } = useSavedEvents()
   const [mittUnderflik, setMittUnderflik] = useState<MittUnderflik>('Flöde')
 
@@ -107,15 +107,24 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
   // källor. Polisen-händelser filtreras dessutom mot dina bevakningar (ELLER
   // mellan bevakningarna — matchar() returnerar true rakt av om du inte
   // skapat någon bevakning ännu, "allt från Polisen" fortfarande standard).
+  // Polisens sammanfattningar ("Sammanfattning natt"/"kväll och natt") har
+  // ett HELT LÄN som geografi, inte en kommun — extraheraPolisenOmrade
+  // hittar dem aldrig (fel nivå), så de matchas istället läns-medvetet via
+  // matcharLän (se PolisenBevakningarContext.tsx), annars visas de från
+  // hela Sverige oavsett bevakning.
   const mittEvents = useMemo(() =>
     sortedEvents.filter(event => {
       if (!activeSourceIds.has(event.sourceId)) return false
       if (sourceMap[event.sourceId] !== 'Polisen') return true
       const typ    = extraheraPolisenTyp(event.eventType)
       const omrade = extraheraPolisenOmrade(event.geography)
+      if (omrade === null) {
+        const län = länFörGeografi(event.geography)
+        if (län !== null) return matcharLän(typ, län)
+      }
       return matchar(typ, omrade)
     }),
-    [sortedEvents, sourceMap, activeSourceIds, matchar]
+    [sortedEvents, sourceMap, activeSourceIds, matchar, matcharLän]
   )
 
   // Bara händelser som redan finns i det hämtade fönstret (senaste 50) kan
