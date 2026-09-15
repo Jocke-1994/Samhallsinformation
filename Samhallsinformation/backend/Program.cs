@@ -1302,6 +1302,44 @@ using (var scope = app.Services.CreateScope())
     }
     await db.SaveChangesAsync();
 
+    // Ny FAQ-fråga om skräppost (session 49) — flera redan live mejlflöden
+    // (bekräftelselänk vid registrering/e-postbyte, lösenordsåterställning,
+    // ärendesvar via Resend inbound) saknade en förklaring av att mejl kan
+    // hamna i skräpposten, särskilt för Hotmail/Outlook-adresser (känt
+    // domänrykte-problem, se feedback/minnesanteckningar session 41/43 —
+    // inte fixbart med en DNS-post). FlagKey = null eftersom frågan gäller
+    // flera oberoende, redan aktiva funktioner, inte en enskild flagga.
+    if (!await db.FaqItems.AnyAsync(f => f.Fraga == "Varför hittar jag inte mejlet ni sagt att ni skickat?"))
+    {
+        db.FaqItems.Add(new FaqItem
+        {
+            Kategori   = "Konto",
+            Publicerad = true,
+            FlagKey    = null,
+            Fraga      = "Varför hittar jag inte mejlet ni sagt att ni skickat?",
+            Svar       = "Kolla din skräppost/spam-mapp — bekräftelselänkar, lösenordsåterställning och svar på supportärenden hamnar ibland där, särskilt om du har en Hotmail- eller Outlook-adress. Hittar du mejlet där, markera avsändaren som säker så hamnar framtida mejl rätt. Är det fortfarande borta efter några minuter, hör av dig via Feedback-knappen i sidomenyn.",
+        });
+        await db.SaveChangesAsync();
+    }
+
+    // Ny FAQ-fråga om Polisen-bevakningar (session 49) — kallor_polisen_filter
+    // är faktiskt AKTIVERAD i produktion (bekräftat live, session 48) men
+    // hade ingen enda FAQ-post som förklarade vad en bevakning är. FlagKey
+    // kopplad till samma flagga så frågan döljs automatiskt om den någonsin
+    // stängs av igen.
+    if (!await db.FaqItems.AnyAsync(f => f.Fraga == "Vad är en Polisen-bevakning?"))
+    {
+        db.FaqItems.Add(new FaqItem
+        {
+            Kategori   = "Mina källor",
+            Publicerad = true,
+            FlagKey    = "kallor_polisen_filter",
+            Fraga      = "Vad är en Polisen-bevakning?",
+            Svar       = "En bevakning ger dig träffar på specifika typer av händelser i ett visst område, t.ex. \"trafikolyckor i Göteborg\" eller \"alla händelser i Stenungsund\". Du hittar den under Mina källor, på Polisen-kortet — lägg till upp till 5 oberoende bevakningar samtidigt. Har du ingen bevakning skapad visas och notifieras du om alla Polisens händelser som vanligt.",
+        });
+        await db.SaveChangesAsync();
+    }
+
     // Seed admin-användare från env-variabler
     var adminEmail    = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
     var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
