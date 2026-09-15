@@ -1068,6 +1068,43 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        // Uppdateringar/UppdateringsPunkter — databas-backad changelog,
+        // ersätter tre frikopplade hårdkodade listor (publika Nyheter-sidan,
+        // profilens Uppdateringar-flik, och admin-mockens INITIAL_UPPDATERINGAR).
+        if (pendingMigrations.Contains("20260915132930_AddUppdateringar"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""Uppdateringar"" (
+                    ""Id""         uuid NOT NULL,
+                    ""Titel""      text NOT NULL,
+                    ""Datum""      timestamptz NOT NULL,
+                    ""Publicerad"" boolean NOT NULL,
+                    ""CreatedAt""  timestamptz NOT NULL,
+                    ""UpdatedAt""  timestamptz NOT NULL,
+                    CONSTRAINT ""PK_Uppdateringar"" PRIMARY KEY (""Id"")
+                );
+
+                CREATE TABLE IF NOT EXISTS ""UppdateringsPunkter"" (
+                    ""Id""            uuid NOT NULL,
+                    ""UppdateringId"" uuid NOT NULL,
+                    ""Typ""           text NOT NULL,
+                    ""Plats""         text NOT NULL,
+                    ""Text""          text NOT NULL,
+                    ""Synlighet""     text NOT NULL,
+                    ""Ordning""       integer NOT NULL,
+                    CONSTRAINT ""PK_UppdateringsPunkter"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_UppdateringsPunkter_Uppdateringar_UppdateringId""
+                        FOREIGN KEY (""UppdateringId"") REFERENCES ""Uppdateringar"" (""Id"") ON DELETE CASCADE
+                );
+
+                CREATE INDEX IF NOT EXISTS ""IX_UppdateringsPunkter_UppdateringId"" ON ""UppdateringsPunkter"" (""UppdateringId"");
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260915132930_AddUppdateringar', '10.0.12')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 
@@ -1337,6 +1374,84 @@ using (var scope = app.Services.CreateScope())
             Fraga      = "Vad är en Polisen-bevakning?",
             Svar       = "En bevakning ger dig träffar på specifika typer av händelser i ett visst område, t.ex. \"trafikolyckor i Göteborg\" eller \"alla händelser i Stenungsund\". Du hittar den under Mina källor, på Polisen-kortet — lägg till upp till 5 oberoende bevakningar samtidigt. Har du ingen bevakning skapad visas och notifieras du om alla Polisens händelser som vanligt.",
         });
+        await db.SaveChangesAsync();
+    }
+
+    // Seed Uppdateringar (session 49) — bara vid tomt bord, admin äger
+    // innehållet därefter (samma mönster som FAQ-seedet ovan). Migrerar in
+    // det som tidigare var den hårdkodade UPDATES-arrayen i
+    // UppdateringarPage.tsx (efter PR #581:s städning av inloggad-bara
+    // poster) som riktiga DB-rader — samtliga punkter Synlighet="alla"
+    // eftersom det är den nuvarande, redan korrekta sanningen. Datumen är
+    // approximativa (källan hade bara månad+år-precision), men i rätt
+    // inbördes ordning.
+    if (!db.Uppdateringar.Any())
+    {
+        var uppdateringar = new (string Titel, DateTime Datum, (string Typ, string Text)[] Punkter)[]
+        {
+            ("Logga in och skapa konto", new DateTime(2026, 9, 15, 0, 0, 0, DateTimeKind.Utc), new[]
+            {
+                ("nytt", "Skapa konto och logga in är nu öppet för alla — du kan följa dina källor och få e-postbekräftelser på ett riktigt konto"),
+                ("nytt", "Fortsätt med Google — skapa konto eller logga in direkt med ditt Google-konto"),
+            }),
+            ("Varning innan trasig länk", new DateTime(2026, 8, 30, 0, 0, 0, DateTimeKind.Utc), new[]
+            {
+                ("nytt", "Innan \"Läs mer\" öppnar en artikel kollar vi att källänken fortfarande fungerar hos myndigheten, och varnar annars istället för att skicka dig till en död sida"),
+            }),
+            ("Installationsbar app (Android)", new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc), new[]
+            {
+                ("nytt", "Går att installera som en egen app på hemskärmen på Android"),
+            }),
+            ("Chatt-hjälp tillagd", new DateTime(2026, 7, 10, 0, 0, 0, DateTimeKind.Utc), new[]
+            {
+                ("nytt", "En chattfunktion för snabb hjälp har lagts till direkt på sajten"),
+            }),
+            ("SMHI är tillagd som källa", new DateTime(2026, 6, 25, 0, 0, 0, DateTimeKind.Utc), new[]
+            {
+                ("nytt", "SMHI har lagts till som källa — nyheter och rapporter från Sveriges meteorologiska och hydrologiska institut"),
+                ("fixat", "Förbättrat stabilitet och buggfixar"),
+            }),
+            ("Kemikalieinspektionen är tillagd som källa", new DateTime(2026, 6, 20, 0, 0, 0, DateTimeKind.Utc), new[]
+            {
+                ("nytt", "Kemikalieinspektionen har lagts till som källa att se information ifrån"),
+            }),
+            ("Förbättrad sidmeny", new DateTime(2026, 6, 15, 0, 0, 0, DateTimeKind.Utc), new[]
+            {
+                ("förbättrat", "Om, Nyheter och Feedback ligger nu direkt under källlistan för snabbare åtkomst"),
+                ("förbättrat", "Växla mellan mörkt och ljust läge — ikonen ligger nu bredvid logotypen istället"),
+            }),
+            ("Fyra nya myndigheter", new DateTime(2026, 6, 10, 0, 0, 0, DateTimeKind.Utc), new[]
+            {
+                ("nytt", "4 källor har lagts till; Folkhälsomyndigheten, Livsmedelsverket, Läkemedelsverket och Trafikverket"),
+            }),
+            ("Tjänsten är live", new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc), new[]
+            {
+                ("nytt", "samhallsinformation.se är nu tillgänglig för alla"),
+                ("nytt", "Händelser och nyheter från Polisen och Krisinformation i ett samlat flöde under Samhällsinfo"),
+                ("nytt", "Filtrera flödet per källa via sidomenyn"),
+                ("nytt", "Knappen \"Om\" förklarar tjänstens funktioner och mål"),
+                ("nytt", "En Feedback-knapp för att ge återkoppling om tjänsten"),
+                ("förbättrat", "Stabilitet och förbättringar"),
+            }),
+        };
+
+        foreach (var (titel, datum, punkter) in uppdateringar)
+        {
+            var uppdatering = new Uppdatering { Titel = titel, Datum = datum, Publicerad = true };
+            db.Uppdateringar.Add(uppdatering);
+            for (var i = 0; i < punkter.Length; i++)
+            {
+                db.UppdateringsPunkter.Add(new UppdateringsPunkt
+                {
+                    UppdateringId = uppdatering.Id,
+                    Typ           = punkter[i].Typ,
+                    Plats         = "Allmänt",
+                    Text          = punkter[i].Text,
+                    Synlighet     = "alla",
+                    Ordning       = i,
+                });
+            }
+        }
         await db.SaveChangesAsync();
     }
 

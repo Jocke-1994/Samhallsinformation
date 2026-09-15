@@ -846,6 +846,68 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("SupportTicketScheduledActions");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.Uppdatering", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Datum")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Publicerad")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Titel")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Uppdateringar");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.UppdateringsPunkt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Ordning")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Plats")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Synlighet")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Typ")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UppdateringId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UppdateringId");
+
+                    b.ToTable("UppdateringsPunkter");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1333,6 +1395,17 @@ namespace Samhallsinformation.Migrations
                     b.Navigation("ReassignToUser");
 
                     b.Navigation("Ticket");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.UppdateringsPunkt", b =>
+                {
+                    b.HasOne("Samhallsinformation.Models.Uppdatering", "Uppdatering")
+                        .WithMany()
+                        .HasForeignKey("UppdateringId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Uppdatering");
                 });
 
             modelBuilder.Entity("Samhallsinformation.Models.UserDevice", b =>

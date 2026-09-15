@@ -71,22 +71,9 @@ export interface Kalla {
   tillagdISystem:  string
 }
 
-// Uppdateringar
-export interface ChangeEntry {
-  type: 'nytt' | 'förbättrat' | 'fixat'
-  text: string
-  summary: string
-  section?: ProfileSection
-  linkText?: string
-  highlightId?: string
-}
-
-export interface Release {
-  version: string
-  date: string
-  changes: ChangeEntry[]
-}
-
+// Uppdateringar — changelog-formen (Release/ChangeEntry) flyttad till
+// api/uppdateringar.ts när den blev databas-backad (session 49). KändBugg/
+// KommandeVersion är en annan sorts innehåll (inte release-format), kvar här.
 export interface KändBugg {
   text: string
   allvar: 'låg' | 'medel' | 'hög'

@@ -1,96 +1,19 @@
 import { useState } from 'react'
 import { useSwipeable } from 'react-swipeable'
+import { useQuery } from '@tanstack/react-query'
 import Sidebar from '../components/Sidebar/Sidebar'
+import { fetchUppdateringar, type PunktTyp } from '../api/uppdateringar'
 
-interface Change {
-  type: 'nytt' | 'förbättrat' | 'fixat'
-  text: string
+const TYP_CONFIG: Record<PunktTyp, { label: string; pill: string }> = {
+  'ny-funktion':  { label: 'Nytt',         pill: 'bg-violet-100 text-violet-700' },
+  'förbättring':  { label: 'Förbättrat',   pill: 'bg-amber-100 text-amber-700'  },
+  'buggfix':      { label: 'Fixat',        pill: 'bg-green-100 text-green-700'  },
+  'känt-problem': { label: 'Känt problem', pill: 'bg-red-100 text-red-700'      },
+  'kommer-snart': { label: 'Kommer snart', pill: 'bg-emerald-100 text-emerald-700' },
 }
 
-interface Update {
-  title: string
-  date: string
-  changes: Change[]
-}
-
-const UPDATES: Update[] = [
-  {
-    title: 'Logga in och skapa konto',
-    date: 'September 2026',
-    changes: [
-      { type: 'nytt', text: 'Skapa konto och logga in är nu öppet för alla — du kan följa dina källor och få e-postbekräftelser på ett riktigt konto' },
-      { type: 'nytt', text: 'Fortsätt med Google — skapa konto eller logga in direkt med ditt Google-konto' },
-    ],
-  },
-  {
-    title: 'Varning innan trasig länk',
-    date: 'Augusti 2026',
-    changes: [
-      { type: 'nytt', text: 'Innan "Läs mer" öppnar en artikel kollar vi att källänken fortfarande fungerar hos myndigheten, och varnar annars istället för att skicka dig till en död sida' },
-    ],
-  },
-  {
-    title: 'Installationsbar app (Android)',
-    date: 'Juli 2026',
-    changes: [
-      { type: 'nytt', text: 'Går att installera som en egen app på hemskärmen på Android' },
-    ],
-  },
-  {
-    title: 'Chatt-hjälp tillagd',
-    date: 'Juli 2026',
-    changes: [
-      { type: 'nytt', text: 'En chattfunktion för snabb hjälp har lagts till direkt på sajten' },
-    ],
-  },
-  {
-    title: 'SMHI är tillagd som källa',
-    date: 'Juni 2026',
-    changes: [
-      { type: 'nytt',       text: 'SMHI har lagts till som källa — nyheter och rapporter från Sveriges meteorologiska och hydrologiska institut' },
-      { type: 'fixat',      text: 'Förbättrat stabilitet och buggfixar' },
-    ],
-  },
-  {
-    title: 'Kemikalieinspektionen är tillagd som källa',
-    date: 'Juni 2026',
-    changes: [
-      { type: 'nytt', text: 'Kemikalieinspektionen har lagts till som källa att se information ifrån' },
-    ],
-  },
-  {
-    title: 'Förbättrad sidmeny',
-    date: 'Juni 2026',
-    changes: [
-      { type: 'förbättrat', text: 'Om, Nyheter och Feedback ligger nu direkt under källlistan för snabbare åtkomst' },
-      { type: 'förbättrat', text: 'Växla mellan mörkt och ljust läge — ikonen ligger nu bredvid logotypen istället' },
-    ],
-  },
-  {
-    title: 'Fyra nya myndigheter',
-    date: 'Juni 2026',
-    changes: [
-      { type: 'nytt', text: '4 källor har lagts till; Folkhälsomyndigheten, Livsmedelsverket, Läkemedelsverket och Trafikverket' },
-    ],
-  },
-  {
-    title: 'Tjänsten är live',
-    date: 'Juni 2026',
-    changes: [
-      { type: 'nytt',       text: 'samhallsinformation.se är nu tillgänglig för alla' },
-      { type: 'nytt',       text: 'Händelser och nyheter från Polisen och Krisinformation i ett samlat flöde under Samhällsinfo' },
-      { type: 'nytt',       text: 'Filtrera flödet per källa via sidomenyn' },
-      { type: 'nytt',       text: 'Knappen "Om" förklarar tjänstens funktioner och mål' },
-      { type: 'nytt',       text: 'En Feedback-knapp för att ge återkoppling om tjänsten' },
-      { type: 'förbättrat', text: 'Stabilitet och förbättringar' },
-    ],
-  },
-]
-
-const TYPE_CONFIG: Record<Change['type'], { label: string; pill: string }> = {
-  nytt:       { label: 'Nytt',       pill: 'bg-violet-100 text-violet-700' },
-  förbättrat: { label: 'Förbättrat', pill: 'bg-amber-100 text-amber-700'  },
-  fixat:      { label: 'Fixat',      pill: 'bg-green-100 text-green-700'  },
+function formatDatum(iso: string): string {
+  return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 export default function UppdateringarPage() {
@@ -103,7 +26,18 @@ export default function UppdateringarPage() {
     touchEventOptions: { passive: false },
   })
 
-  const [latest, ...older] = UPDATES
+  const { data: uppdateringar = [] } = useQuery({
+    queryKey: ['uppdateringar'],
+    queryFn:  fetchUppdateringar,
+  })
+
+  // Besökare (utloggade) — bara punkter märkta "alla" ska synas här. En
+  // release utan några synliga punkter kvar visas inte alls.
+  const besökarvänliga = uppdateringar
+    .map(u => ({ ...u, punkter: u.punkter.filter(p => p.synlighet === 'alla') }))
+    .filter(u => u.punkter.length > 0)
+
+  const [latest, ...older] = besökarvänliga
 
   return (
     <div className="flex h-full bg-slate-50 dark:bg-slate-900">
@@ -139,58 +73,62 @@ export default function UppdateringarPage() {
             Vad som är nytt i tjänsten — uppdateras när något som påverkar dig som användare förändras.
           </p>
 
-          {/* Senaste uppdatering — framhävd */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md overflow-hidden mb-6">
-            <div className="bg-gradient-to-br from-violet-600 to-violet-800 px-8 py-6 flex items-center justify-between gap-4">
-              <div>
-                <span className="text-xs font-bold text-violet-300 uppercase tracking-widest">Senaste</span>
-                <h2 className="text-2xl font-extrabold text-white tracking-tight mt-1">{latest.title}</h2>
-                <p className="text-violet-200 text-sm mt-1">{latest.date}</p>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-2xl backdrop-blur-sm shrink-0">
-                🚀
-              </div>
-            </div>
-            <div className="px-8 py-5 flex flex-col gap-3">
-              {latest.changes.map((c, i) => {
-                const cfg = TYPE_CONFIG[c.type]
-                return (
-                  <div key={i} className="flex items-start gap-3">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.pill}`}>
-                      {cfg.label}
-                    </span>
-                    <span className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{c.text}</span>
+          {latest && (
+            <>
+              {/* Senaste uppdatering — framhävd */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md overflow-hidden mb-6">
+                <div className="bg-gradient-to-br from-violet-600 to-violet-800 px-8 py-6 flex items-center justify-between gap-4">
+                  <div>
+                    <span className="text-xs font-bold text-violet-300 uppercase tracking-widest">Senaste</span>
+                    <h2 className="text-2xl font-extrabold text-white tracking-tight mt-1">{latest.titel}</h2>
+                    <p className="text-violet-200 text-sm mt-1">{formatDatum(latest.datum)}</p>
                   </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Äldre uppdateringar */}
-          {older.length > 0 && (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm divide-y divide-slate-100 dark:divide-slate-700">
-              {older.map(update => (
-                <div key={update.title} className="px-8 py-5">
-                  <div className="flex items-baseline gap-3 mb-3">
-                    <span className="text-base font-bold text-slate-900 dark:text-slate-100">{update.title}</span>
-                    <span className="text-xs text-slate-400 font-medium">{update.date}</span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {update.changes.map((c, i) => {
-                      const cfg = TYPE_CONFIG[c.type]
-                      return (
-                        <div key={i} className="flex items-start gap-2.5">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.pill}`}>
-                            {cfg.label}
-                          </span>
-                          <span className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{c.text}</span>
-                        </div>
-                      )
-                    })}
+                  <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-2xl backdrop-blur-sm shrink-0">
+                    🚀
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="px-8 py-5 flex flex-col gap-3">
+                  {latest.punkter.map(p => {
+                    const cfg = TYP_CONFIG[p.typ]
+                    return (
+                      <div key={p.id} className="flex items-start gap-3">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.pill}`}>
+                          {cfg.label}
+                        </span>
+                        <span className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{p.text}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Äldre uppdateringar */}
+              {older.length > 0 && (
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm divide-y divide-slate-100 dark:divide-slate-700">
+                  {older.map(update => (
+                    <div key={update.id} className="px-8 py-5">
+                      <div className="flex items-baseline gap-3 mb-3">
+                        <span className="text-base font-bold text-slate-900 dark:text-slate-100">{update.titel}</span>
+                        <span className="text-xs text-slate-400 font-medium">{formatDatum(update.datum)}</span>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {update.punkter.map(p => {
+                          const cfg = TYP_CONFIG[p.typ]
+                          return (
+                            <div key={p.id} className="flex items-start gap-2.5">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.pill}`}>
+                                {cfg.label}
+                              </span>
+                              <span className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{p.text}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
         </div>
