@@ -1,55 +1,12 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
-import type { ChangeEntry, Release, KändBugg, KommandeVersion } from '../../types'
+import { useQuery } from '@tanstack/react-query'
+import type { KändBugg, KommandeVersion } from '../../types'
 import { useFlags } from '../../context/FeatureFlagsContext'
+import { fetchUppdateringar, type PunktTyp } from '../../api/uppdateringar'
 
-const RELEASES: Release[] = [
-  {
-    version: '0.5.0',
-    date: '25 juni 2026',
-    changes: [
-      { type: 'nytt', summary: 'Trafikverket', text: 'Vägtrafikhändelser i realtid — olyckor, vägarbeten och framkomlighetsstörningar från Trafikverkets API' },
-      { type: 'nytt', summary: 'Folkhälsomyndigheten', text: 'Nyheter om smittskydd och folksjukdomar direkt från Folkhälsomyndigheten' },
-      { type: 'nytt', summary: 'Livsmedelsverket', text: 'Matåterkallelser och livsmedelssäkerhet från Livsmedelsverket' },
-      { type: 'nytt', summary: 'Läkemedelsverket', text: 'Säkerhetsvarningar och läkemedelsåterkallelser från Läkemedelsverket' },
-      { type: 'nytt', summary: 'Kemikalieinspektionen', text: 'Nyheter om kemikalier och kemikaliesäkerhet från Kemikalieinspektionen (KEMI)' },
-    ],
-  },
-  {
-    version: '0.4.0',
-    date: '9 mars 2026',
-    changes: [
-      { type: 'nytt', summary: 'Profilsida', text: 'Din profilsida är nu tillgänglig — hantera källor, notifieringar och kontoinställningar', section: 'mina-kallor', linkText: 'hantera källor', highlightId: 'aktiva-kallor' },
-      { type: 'nytt', summary: 'Notifieringar: geo-filter', text: 'Filtrera notiser per stad eller län för att bara få information som berör dig', section: 'notifieringar', linkText: 'Filtrera notiser per stad eller län', highlightId: 'globala-installningar' },
-      { type: 'nytt', summary: 'Konto: dataexport', text: 'Du kan nu ladda ner all information vi har om dig som en fil', section: 'konto', linkText: 'ladda ner', highlightId: 'datahantering' },
-    ],
-  },
-  {
-    version: '0.3.0',
-    date: '16 februari 2026',
-    changes: [
-      { type: 'nytt', summary: 'Nyhetsflöde', text: 'Nyhetsflöde med navigering mellan olika myndigheter i menyn till vänster' },
-      { type: 'nytt', summary: 'Källor: multi-follow', text: 'Stöd för att följa flera myndigheter samtidigt' },
-      { type: 'förbättrat', summary: 'Flöde: deduplicering', text: 'Samma nyhet visas inte längre flera gånger' },
-    ],
-  },
-  {
-    version: '0.2.0',
-    date: '12 februari 2026',
-    changes: [
-      { type: 'nytt', summary: 'Polisen: RSS', text: 'Nyheter från Polisen hämtas nu automatiskt' },
-      { type: 'nytt', summary: 'Webbgränssnitt', text: 'Grundläggande webbgränssnitt för att visa händelser' },
-      { type: 'nytt', summary: 'Databas', text: 'Information sparas nu i en databas' },
-    ],
-  },
-  {
-    version: '0.1.0',
-    date: '1 februari 2026',
-    changes: [
-      { type: 'nytt', summary: 'Lansering', text: 'Första versionen av tjänsten lanserad' },
-    ],
-  },
-]
+function formatDatum(iso: string): string {
+  return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' })
+}
 
 const KANDA_BUGGAR: KändBugg[] = [
   {
@@ -70,10 +27,12 @@ const PA_GANG: KommandeVersion | null = {
   plannedDate: 'Höst 2026',
 }
 
-const TYPE_CONFIG: Record<ChangeEntry['type'], { label: string; pill: string }> = {
-  nytt:       { label: 'Nytt',       pill: 'bg-violet-100 text-violet-700' },
-  förbättrat: { label: 'Förbättrat', pill: 'bg-amber-100 text-amber-700'  },
-  fixat:      { label: 'Fixat',      pill: 'bg-green-100 text-green-700'  },
+const TYPE_CONFIG: Record<PunktTyp, { label: string; pill: string }> = {
+  'ny-funktion':  { label: 'Nytt',         pill: 'bg-violet-100 text-violet-700' },
+  'förbättring':  { label: 'Förbättrat',   pill: 'bg-amber-100 text-amber-700'  },
+  'buggfix':      { label: 'Fixat',        pill: 'bg-green-100 text-green-700'  },
+  'känt-problem': { label: 'Känt problem', pill: 'bg-red-100 text-red-700'      },
+  'kommer-snart': { label: 'Kommer snart', pill: 'bg-emerald-100 text-emerald-700' },
 }
 
 const ALLVAR_CONFIG: Record<KändBugg['allvar'], { bar: string; bg: string; label: string; labelColor: string }> = {
@@ -83,60 +42,45 @@ const ALLVAR_CONFIG: Record<KändBugg['allvar'], { bar: string; bg: string; labe
 }
 
 export default function Uppdateringar() {
-  const navigate = useNavigate()
   const flaggor = useFlags()
-  const latest = RELEASES[0]
+  const { data: uppdateringar = [] } = useQuery({
+    queryKey: ['uppdateringar'],
+    queryFn:  fetchUppdateringar,
+  })
+  const [latest, ...historik] = uppdateringar
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [buggFilter, setBuggFilter] = useState<KändBugg['allvar'] | 'alla'>('alla')
 
-  function toggleVersion(version: string) {
+  function toggleVersion(id: string) {
     setExpanded(prev => {
       const next = new Set(prev)
-      if (next.has(version)) next.delete(version)
-      else next.add(version)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }
 
-  const kortSenaste = flaggor.uppdateringar_senaste ? (
+  const kortSenaste = flaggor.uppdateringar_senaste && latest ? (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden">
       <div className="bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-between gap-4" style={{ padding: '1.5rem 2rem' }}>
         <div>
-          <span className="text-xs font-bold text-violet-300 uppercase tracking-widest">Senaste version</span>
-          <h2 className="text-3xl font-extrabold text-white tracking-tight mt-1">v{latest.version}</h2>
-          <p className="text-violet-200 text-sm mt-1">{latest.date}</p>
+          <span className="text-xs font-bold text-violet-300 uppercase tracking-widest">Senaste</span>
+          <h2 className="text-2xl font-extrabold text-white tracking-tight mt-1">{latest.titel}</h2>
+          <p className="text-violet-200 text-sm mt-1">{formatDatum(latest.datum)}</p>
         </div>
         <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-2xl backdrop-blur-sm shrink-0">
           🚀
         </div>
       </div>
       <div style={{ padding: '1.25rem 2rem' }} className="flex flex-col gap-2.5">
-        {latest.changes.map((c, i) => {
-          const cfg = TYPE_CONFIG[c.type]
+        {latest.punkter.map(p => {
+          const cfg = TYPE_CONFIG[p.typ]
           return (
-            <div key={i} className="flex items-start gap-3">
+            <div key={p.id} className="flex items-start gap-3">
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.pill}`}>
                 {cfg.label}
               </span>
-              {c.linkText && c.section ? (() => {
-                const idx = c.text.indexOf(c.linkText)
-                const before = c.text.slice(0, idx)
-                const after = c.text.slice(idx + c.linkText.length)
-                return (
-                  <span className="text-sm text-slate-700 leading-relaxed">
-                    {before}
-                    <button
-                      onClick={() => navigate(`/profil?section=${c.section}`, { state: { highlightId: c.highlightId } })}
-                      className="font-semibold text-violet-600 hover:underline transition-colors"
-                    >
-                      {c.linkText}
-                    </button>
-                    {after}
-                  </span>
-                )
-              })() : (
-                <span className="text-sm text-slate-700 leading-relaxed">{c.text}</span>
-              )}
+              <span className="text-sm text-slate-700 leading-relaxed">{p.text}</span>
             </div>
           )
         })}
@@ -263,26 +207,26 @@ export default function Uppdateringar() {
         </div>
       </div>
       <div className="divide-y divide-slate-100">
-        {RELEASES.slice(1).map(release => {
-          const isOpen = expanded.has(release.version)
+        {historik.map(release => {
+          const isOpen = expanded.has(release.id)
           return (
-            <div key={release.version}>
+            <div key={release.id}>
               <button
-                onClick={() => toggleVersion(release.version)}
+                onClick={() => toggleVersion(release.id)}
                 style={{ padding: '1rem 2.5rem' }}
                 className="w-full flex items-start justify-between hover:bg-slate-50 transition-colors text-left"
               >
                 <div className="flex flex-col gap-2">
                   <div className="flex items-baseline gap-3">
-                    <span className="text-base font-bold text-slate-900">v{release.version}</span>
-                    <span className="text-xs text-slate-400 font-medium">{release.date}</span>
+                    <span className="text-base font-bold text-slate-900">{release.titel}</span>
+                    <span className="text-xs text-slate-400 font-medium">{formatDatum(release.datum)}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {release.changes.map((c, i) => {
-                      const cfg = TYPE_CONFIG[c.type]
+                    {release.punkter.map(p => {
+                      const cfg = TYPE_CONFIG[p.typ]
                       return (
-                        <span key={i} className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.pill}`}>
-                          {c.summary}
+                        <span key={p.id} className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.pill}`}>
+                          {p.plats}
                         </span>
                       )
                     })}
@@ -292,14 +236,14 @@ export default function Uppdateringar() {
               </button>
               {isOpen && (
                 <div style={{ padding: '0 2.5rem 1.25rem' }} className="flex flex-col gap-2">
-                  {release.changes.map((c, i) => {
-                    const cfg = TYPE_CONFIG[c.type]
+                  {release.punkter.map(p => {
+                    const cfg = TYPE_CONFIG[p.typ]
                     return (
-                      <div key={i} className="flex items-start gap-2.5">
+                      <div key={p.id} className="flex items-start gap-2.5">
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.pill}`}>
                           {cfg.label}
                         </span>
-                        <span className="text-sm text-slate-600 leading-relaxed">{c.text}</span>
+                        <span className="text-sm text-slate-600 leading-relaxed">{p.text}</span>
                       </div>
                     )
                   })}

@@ -37,6 +37,8 @@ public class AppDbContext : DbContext
     public DbSet<MaintenanceBanner>          MaintenanceBanners        => Set<MaintenanceBanner>();
     public DbSet<PushDispatchClaim>          PushDispatchClaims        => Set<PushDispatchClaim>();
     public DbSet<EventShareLog>              EventShareLogs            => Set<EventShareLog>();
+    public DbSet<Uppdatering>                Uppdateringar             => Set<Uppdatering>();
+    public DbSet<UppdateringsPunkt>          UppdateringsPunkter       => Set<UppdateringsPunkt>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -253,6 +255,13 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<SiteSettings>(entity =>
         {
             entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<UppdateringsPunkt>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UppdateringId);
+            entity.HasOne(e => e.Uppdatering).WithMany().HasForeignKey(e => e.UppdateringId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -1,29 +1,17 @@
 import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sendNewVersionNotice } from '../../api/push'
-
-type Typ    = 'ny-funktion' | 'förbättring' | 'buggfix' | 'känt-problem' | 'kommer-snart'
-type Status = 'utkast' | 'publicerad'
-
-interface UppdateringsPunkt {
-  id:    number
-  typ:   Typ
-  plats: string
-  text:  string
-}
-
-interface Uppdatering {
-  id:      number
-  titel:   string
-  datum:   string
-  status:  Status
-  punkter: UppdateringsPunkt[]
-}
+import {
+  fetchAdminUppdateringar, createUppdatering, updateUppdatering, deleteUppdatering,
+  type Uppdatering, type UppdateringRequest, type UppdateringsPunkt, type PunktRequest,
+  type PunktTyp, type Synlighet,
+} from '../../api/uppdateringar'
 
 // ---------------------------------------------------------------------------
 // Konfiguration
 // ---------------------------------------------------------------------------
 
-const TYP_CONFIG: Record<Typ, { label: string; pill: string; pillAktiv: string; dot: string }> = {
+const TYP_CONFIG: Record<PunktTyp, { label: string; pill: string; pillAktiv: string; dot: string }> = {
   'ny-funktion':  { label: 'Ny funktion',  dot: 'bg-violet-500',  pill: 'border-slate-200 text-slate-500 hover:bg-slate-50',              pillAktiv: 'bg-violet-100 text-violet-700 border-violet-200'   },
   'förbättring':  { label: 'Förbättring',  dot: 'bg-amber-400',   pill: 'border-slate-200 text-slate-500 hover:bg-slate-50',              pillAktiv: 'bg-amber-100 text-amber-700 border-amber-200'       },
   'buggfix':      { label: 'Buggfix',      dot: 'bg-green-500',   pill: 'border-slate-200 text-slate-500 hover:bg-slate-50',              pillAktiv: 'bg-green-100 text-green-700 border-green-200'       },
@@ -31,7 +19,7 @@ const TYP_CONFIG: Record<Typ, { label: string; pill: string; pillAktiv: string; 
   'kommer-snart': { label: 'Kommer snart', dot: 'bg-emerald-500', pill: 'border-slate-200 text-slate-500 hover:bg-slate-50',              pillAktiv: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
 }
 
-const TYP_PILL_LISTA: Record<Typ, string> = {
+const TYP_PILL_LISTA: Record<PunktTyp, string> = {
   'ny-funktion':  'bg-violet-100 text-violet-700 border border-violet-200',
   'förbättring':  'bg-amber-100 text-amber-700 border border-amber-200',
   'buggfix':      'bg-green-100 text-green-700 border border-green-200',
@@ -39,74 +27,20 @@ const TYP_PILL_LISTA: Record<Typ, string> = {
   'kommer-snart': 'bg-emerald-100 text-emerald-700 border border-emerald-200',
 }
 
-const STATUS_CONFIG: Record<Status, { label: string; pill: string }> = {
-  'utkast':     { label: 'Utkast',     pill: 'bg-slate-100 text-slate-500 border border-slate-200' },
-  'publicerad': { label: 'Publicerad', pill: 'bg-green-100 text-green-700 border border-green-200' },
-}
-
-const ALLA_TYPER:    Array<Typ | 'Alla'>    = ['Alla', 'ny-funktion', 'förbättring', 'buggfix', 'känt-problem', 'kommer-snart']
-const ALLA_STATUSAR: Array<Status | 'Alla'> = ['Alla', 'publicerad', 'utkast']
+const ALLA_TYPER:    Array<PunktTyp | 'Alla'>  = ['Alla', 'ny-funktion', 'förbättring', 'buggfix', 'känt-problem', 'kommer-snart']
+const ALLA_STATUSAR: Array<'publicerad' | 'utkast' | 'Alla'> = ['Alla', 'publicerad', 'utkast']
 const PLATS_OPTIONS = ['Allmänt', 'Nyhetsflöde', 'Mina källor', 'Notifieringar', 'Konto']
-const ALLA_TYPER_FORM = Object.keys(TYP_CONFIG) as Typ[]
+const ALLA_TYPER_FORM = Object.keys(TYP_CONFIG) as PunktTyp[]
 
-// ---------------------------------------------------------------------------
-// Mock-data
-// ---------------------------------------------------------------------------
-
-let nästaReleaseId = 5
-let nästaRadId     = 500
-
-const INITIAL_UPPDATERINGAR: Uppdatering[] = [
-  {
-    id: 1, titel: 'v0.4.0 – Profilsida & nya funktioner', datum: '2026-03-09', status: 'publicerad',
-    punkter: [
-      { id: 101, typ: 'ny-funktion', plats: 'Mina källor',   text: 'Profilsida lanserad — hantera källor, notifieringar och kontoinställningar på ett ställe.' },
-      { id: 102, typ: 'ny-funktion', plats: 'Notifieringar', text: 'Geografiskt filter — filtrera notiser per stad eller län för att bara få relevant information.' },
-      { id: 103, typ: 'ny-funktion', plats: 'Konto',         text: 'Dataexport — ladda ner all information vi har om dig som en fil.' },
-    ],
-  },
-  {
-    id: 2, titel: 'v0.3.0 – Nyhetsflöde', datum: '2026-02-16', status: 'publicerad',
-    punkter: [
-      { id: 201, typ: 'ny-funktion', plats: 'Nyhetsflöde', text: 'Nyhetsflöde med navigering mellan olika myndigheter i menyn.' },
-      { id: 202, typ: 'ny-funktion', plats: 'Mina källor',  text: 'Stöd för att följa flera myndigheter samtidigt.' },
-      { id: 203, typ: 'förbättring', plats: 'Nyhetsflöde', text: 'Deduplicering — samma nyhet visas inte längre flera gånger.' },
-    ],
-  },
-  {
-    id: 3, titel: 'Kända problem – mars 2026', datum: '2026-03-20', status: 'publicerad',
-    punkter: [
-      { id: 301, typ: 'känt-problem', plats: 'Notifieringar', text: 'SMS-notiser kan skickas med upp till 5 minuters fördröjning. Åtgärdas i v0.5.0.' },
-      { id: 302, typ: 'känt-problem', plats: 'Konto',         text: 'BankID-session avslutas i sällsynta fall utan förvarning. Under utredning.' },
-    ],
-  },
-  {
-    id: 4, titel: 'v0.5.0 – Notifieringar & betatestning', datum: '2026-05-01', status: 'utkast',
-    punkter: [
-      { id: 401, typ: 'ny-funktion',  plats: 'Notifieringar', text: 'Stör ej-schema — sätt tysta timmar så att notiser inte skickas under natten.' },
-      { id: 402, typ: 'buggfix',      plats: 'Notifieringar', text: 'SMS-fördröjning vid hög belastning är nu åtgärdad.' },
-      { id: 403, typ: 'buggfix',      plats: 'Konto',         text: 'BankID-sessioner avslutas inte längre oväntat.' },
-      { id: 404, typ: 'kommer-snart', plats: 'Allmänt',       text: 'Betatestning av ny källintegration startar inom kort — intresserade betatestare kontaktas.' },
-    ],
-  },
-]
-
-// ---------------------------------------------------------------------------
-// Hjälpare
-// ---------------------------------------------------------------------------
-
-function typSummary(punkter: UppdateringsPunkt[]) {
-  const seen = new Map<Typ, number>()
+function typSummary(punkter: { typ: PunktTyp }[]) {
+  const seen = new Map<PunktTyp, number>()
   for (const p of punkter) seen.set(p.typ, (seen.get(p.typ) ?? 0) + 1)
   return Array.from(seen.entries()).map(([typ, antal]) => ({ typ, antal }))
 }
 
 // ---------------------------------------------------------------------------
 // Skicka "Ny version"-notis — riktig, fristående funktion (kopplad mot
-// PushDispatcher.DispatchNewVersionAsync). Medvetet INTE kopplad till
-// listan/formuläret nedan, som fortfarande är helt dekorativt i väntan på
-// den större ombyggnaden (schemalagd publicering, se minnesanteckningen
-// project_uppdateringar_schemalagd_publicering_spec).
+// PushDispatcher.DispatchNewVersionAsync). Fristående från listan nedan.
 // ---------------------------------------------------------------------------
 
 function SkickaNyVersionKort() {
@@ -207,43 +141,49 @@ function TaBortModal({ titel, onBekräfta, onStäng }: {
 // Formulärpanel
 // ---------------------------------------------------------------------------
 
-interface FormData {
-  titel:   string
-  datum:   string
-  status:  Status
-  punkter: UppdateringsPunkt[]
+interface PunktFormRad extends PunktRequest {
+  radId: number
 }
 
-function nyPunkt(): UppdateringsPunkt {
-  return { id: nästaRadId++, typ: 'ny-funktion', plats: 'Allmänt', text: '' }
+function nyPunkt(radId: number): PunktFormRad {
+  return { radId, typ: 'ny-funktion', plats: 'Allmänt', text: '', synlighet: 'alla' }
 }
+
+let nästaRadId = 0
 
 function FormPanel({ redigerar, onSpara, onStäng }: {
   redigerar: Uppdatering | null
-  onSpara:   (data: FormData, publicera: boolean) => void
+  onSpara:   (data: UppdateringRequest) => void
   onStäng:   () => void
 }) {
-  const [titel,   setTitel]   = useState(redigerar?.titel ?? '')
-  const [datum,   setDatum]   = useState(redigerar?.datum ?? new Date().toISOString().split('T')[0])
-  const [status,  setStatus]  = useState<Status>(redigerar?.status ?? 'utkast')
-  const [punkter, setPunkter] = useState<UppdateringsPunkt[]>(
-    redigerar?.punkter && redigerar.punkter.length > 0 ? redigerar.punkter : [nyPunkt()]
+  const [titel,      setTitel]      = useState(redigerar?.titel ?? '')
+  const [datum,      setDatum]      = useState(redigerar?.datum.split('T')[0] ?? new Date().toISOString().split('T')[0])
+  const [publicerad, setPublicerad] = useState(redigerar?.publicerad ?? false)
+  const [punkter,    setPunkter]    = useState<PunktFormRad[]>(
+    redigerar && redigerar.punkter.length > 0
+      ? redigerar.punkter.map(p => ({ radId: nästaRadId++, typ: p.typ, plats: p.plats, text: p.text, synlighet: p.synlighet }))
+      : [nyPunkt(nästaRadId++)]
   )
 
-  function addPunkt() { setPunkter(prev => [...prev, nyPunkt()]) }
+  function addPunkt() { setPunkter(prev => [...prev, nyPunkt(nästaRadId++)]) }
 
-  function removePunkt(id: number) {
-    setPunkter(prev => prev.filter(p => p.id !== id))
+  function removePunkt(radId: number) {
+    setPunkter(prev => prev.filter(p => p.radId !== radId))
   }
 
-  function updatePunkt<K extends keyof UppdateringsPunkt>(id: number, key: K, val: UppdateringsPunkt[K]) {
-    setPunkter(prev => prev.map(p => p.id === id ? { ...p, [key]: val } : p))
+  function updatePunkt<K extends keyof PunktFormRad>(radId: number, key: K, val: PunktFormRad[K]) {
+    setPunkter(prev => prev.map(p => p.radId === radId ? { ...p, [key]: val } : p))
   }
 
   const kanSpara = titel.trim() !== '' && punkter.length > 0 && punkter.every(p => p.text.trim() !== '')
 
   function spara(publicera: boolean) {
-    onSpara({ titel: titel.trim(), datum, status: publicera ? 'publicerad' : status, punkter }, publicera)
+    onSpara({
+      titel: titel.trim(),
+      datum: new Date(datum).toISOString(),
+      publicerad: publicera,
+      punkter: punkter.map(({ typ, plats, text, synlighet }) => ({ typ, plats, text, synlighet })),
+    })
   }
 
   return (
@@ -269,7 +209,7 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
               type="text"
               value={titel}
               onChange={e => setTitel(e.target.value)}
-              placeholder="T.ex. 'v0.5.0 – Notifieringar & buggfixar'"
+              placeholder="T.ex. 'Logga in och skapa konto'"
               className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
           </div>
@@ -288,12 +228,14 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Status</label>
               <div className="flex gap-2 h-[42px]">
-                {(['utkast', 'publicerad'] as Status[]).map(s => (
-                  <button key={s} onClick={() => setStatus(s)}
+                {([false, true] as boolean[]).map(p => (
+                  <button key={String(p)} onClick={() => setPublicerad(p)}
                     className={`flex-1 rounded-xl text-sm font-medium border transition-colors ${
-                      status === s ? STATUS_CONFIG[s].pill : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+                      publicerad === p
+                        ? (p ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200')
+                        : 'border-slate-200 text-slate-400 hover:bg-slate-50'
                     }`}>
-                    {STATUS_CONFIG[s].label}
+                    {p ? 'Publicerad' : 'Utkast'}
                   </button>
                 ))}
               </div>
@@ -310,7 +252,7 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
           {/* Punkter */}
           <div className="flex flex-col gap-3">
             {punkter.map((p, idx) => (
-              <div key={p.id} className="border border-slate-200 rounded-xl overflow-hidden">
+              <div key={p.radId} className="border border-slate-200 rounded-xl overflow-hidden">
 
                 {/* Topprad: nummer + typ-pills + plats + ta bort */}
                 <div className="bg-slate-50 px-3 py-2 flex items-center gap-2 flex-wrap">
@@ -319,7 +261,7 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
                   {/* Typ-pills */}
                   <div className="flex gap-1 flex-wrap flex-1">
                     {ALLA_TYPER_FORM.map(t => (
-                      <button key={t} onClick={() => updatePunkt(p.id, 'typ', t)}
+                      <button key={t} onClick={() => updatePunkt(p.radId, 'typ', t)}
                         className={`text-xs font-medium px-2 py-0.5 rounded-full border transition-colors ${
                           p.typ === t ? TYP_CONFIG[t].pillAktiv : TYP_CONFIG[t].pill
                         }`}>
@@ -331,7 +273,7 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
                   {/* Plats */}
                   <select
                     value={p.plats}
-                    onChange={e => updatePunkt(p.id, 'plats', e.target.value)}
+                    onChange={e => updatePunkt(p.radId, 'plats', e.target.value)}
                     className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:border-violet-400 shrink-0"
                   >
                     {PLATS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
@@ -339,7 +281,7 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
 
                   {/* Ta bort */}
                   <button
-                    onClick={() => removePunkt(p.id)}
+                    onClick={() => removePunkt(p.radId)}
                     disabled={punkter.length === 1}
                     className="text-slate-300 hover:text-red-400 disabled:opacity-30 transition-colors text-sm shrink-0"
                     title="Ta bort rad"
@@ -353,10 +295,25 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
                   <input
                     type="text"
                     value={p.text}
-                    onChange={e => updatePunkt(p.id, 'text', e.target.value)}
+                    onChange={e => updatePunkt(p.radId, 'text', e.target.value)}
                     placeholder="Beskriv ändringen kort och tydligt..."
                     className="w-full text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none bg-transparent"
                   />
+                </div>
+
+                {/* Synlighet — vem ser den här punkten */}
+                <div className="px-3 pb-2.5 flex items-center gap-2">
+                  <span className="text-[11px] text-slate-400 shrink-0">Syns för</span>
+                  {(['alla', 'inloggade'] as Synlighet[]).map(s => (
+                    <button key={s} onClick={() => updatePunkt(p.radId, 'synlighet', s)}
+                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
+                        p.synlighet === s
+                          ? 'bg-slate-800 text-white border-slate-800'
+                          : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+                      }`}>
+                      {s === 'alla' ? 'Alla (även besökare)' : 'Endast inloggade'}
+                    </button>
+                  ))}
                 </div>
               </div>
             ))}
@@ -388,7 +345,7 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
             disabled={!kanSpara}
             className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
           >
-            {redigerar?.status === 'publicerad' ? 'Uppdatera' : 'Publicera'}
+            {redigerar?.publicerad ? 'Uppdatera' : 'Publicera'}
           </button>
         </div>
 
@@ -402,42 +359,63 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
 // ---------------------------------------------------------------------------
 
 export default function AdminUppdateringar() {
-  const [uppdateringar, setUppdateringar] = useState<Uppdatering[]>(INITIAL_UPPDATERINGAR)
-  const [typFilter,     setTypFilter]     = useState<Typ | 'Alla'>('Alla')
-  const [statusFilter,  setStatusFilter]  = useState<Status | 'Alla'>('Alla')
+  const queryClient = useQueryClient()
+  const { data: uppdateringar = [] } = useQuery({
+    queryKey: ['admin-uppdateringar'],
+    queryFn:  fetchAdminUppdateringar,
+  })
+
+  const [typFilter,     setTypFilter]     = useState<PunktTyp | 'Alla'>('Alla')
+  const [statusFilter,  setStatusFilter]  = useState<'publicerad' | 'utkast' | 'Alla'>('Alla')
   const [panelÖppen,    setPanelÖppen]    = useState(false)
   const [redigerar,     setRedigerar]     = useState<Uppdatering | null>(null)
   const [taBort,        setTaBort]        = useState<Uppdatering | null>(null)
 
+  function invalidera() {
+    queryClient.invalidateQueries({ queryKey: ['admin-uppdateringar'] })
+    queryClient.invalidateQueries({ queryKey: ['uppdateringar'] })
+  }
+
+  const createMutation = useMutation({ mutationFn: createUppdatering, onSuccess: invalidera })
+  const updateMutation = useMutation({
+    mutationFn: (vars: { id: string; req: UppdateringRequest }) => updateUppdatering(vars.id, vars.req),
+    onSuccess:  invalidera,
+  })
+  const deleteMutation = useMutation({ mutationFn: deleteUppdatering, onSuccess: invalidera })
+
   const filtrerade = uppdateringar.filter(u => {
-    if (statusFilter !== 'Alla' && u.status !== statusFilter) return false
+    if (statusFilter !== 'Alla' && (statusFilter === 'publicerad') !== u.publicerad) return false
     if (typFilter !== 'Alla' && !u.punkter.some(p => p.typ === typFilter)) return false
     return true
-  }).sort((a, b) => b.datum.localeCompare(a.datum))
+  })
 
-  function öppnaSkapa()              { setRedigerar(null); setPanelÖppen(true) }
-  function öppnaRedigera(u: Uppdatering) { setRedigerar(u);   setPanelÖppen(true) }
-  function stängPanel()              { setPanelÖppen(false); setRedigerar(null) }
+  function öppnaSkapa()                 { setRedigerar(null); setPanelÖppen(true) }
+  function öppnaRedigera(u: Uppdatering) { setRedigerar(u);    setPanelÖppen(true) }
+  function stängPanel()                 { setPanelÖppen(false); setRedigerar(null) }
 
-  function spara(data: FormData, _publicera: boolean) {
+  function spara(data: UppdateringRequest) {
     if (redigerar) {
-      setUppdateringar(prev => prev.map(u => u.id === redigerar.id ? { ...u, ...data } : u))
+      updateMutation.mutate({ id: redigerar.id, req: data })
     } else {
-      setUppdateringar(prev => [{ id: nästaReleaseId++, ...data }, ...prev])
+      createMutation.mutate(data)
     }
     stängPanel()
   }
 
   function togglePublicerad(u: Uppdatering) {
-    setUppdateringar(prev => prev.map(x =>
-      x.id === u.id ? { ...x, status: x.status === 'publicerad' ? 'utkast' : 'publicerad' } : x
-    ))
+    const req: UppdateringRequest = {
+      titel:      u.titel,
+      datum:      u.datum,
+      publicerad: !u.publicerad,
+      punkter:    u.punkter.map(({ typ, plats, text, synlighet }: UppdateringsPunkt) => ({ typ, plats, text, synlighet })),
+    }
+    updateMutation.mutate({ id: u.id, req })
   }
 
   const antal = {
     totalt:      uppdateringar.length,
-    publicerade: uppdateringar.filter(u => u.status === 'publicerad').length,
-    utkast:      uppdateringar.filter(u => u.status === 'utkast').length,
+    publicerade: uppdateringar.filter(u => u.publicerad).length,
+    utkast:      uppdateringar.filter(u => !u.publicerad).length,
   }
 
   return (
@@ -446,7 +424,7 @@ export default function AdminUppdateringar() {
       {taBort && (
         <TaBortModal
           titel={taBort.titel}
-          onBekräfta={() => { setUppdateringar(prev => prev.filter(u => u.id !== taBort.id)); setTaBort(null) }}
+          onBekräfta={() => { deleteMutation.mutate(taBort.id); setTaBort(null) }}
           onStäng={() => setTaBort(null)}
         />
       )}
@@ -481,10 +459,10 @@ export default function AdminUppdateringar() {
               <button key={t} onClick={() => setTypFilter(t)}
                 className={`text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
                   typFilter === t
-                    ? t === 'Alla' ? 'bg-violet-100 text-violet-700' : TYP_PILL_LISTA[t as Typ]
+                    ? t === 'Alla' ? 'bg-violet-100 text-violet-700' : TYP_PILL_LISTA[t as PunktTyp]
                     : 'text-slate-500 hover:bg-slate-100'
                 }`}>
-                {t === 'Alla' ? 'Alla typer' : TYP_CONFIG[t as Typ].label}
+                {t === 'Alla' ? 'Alla typer' : TYP_CONFIG[t as PunktTyp].label}
               </button>
             ))}
           </div>
@@ -494,7 +472,7 @@ export default function AdminUppdateringar() {
                 className={`text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
                   statusFilter === s ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:bg-slate-100'
                 }`}>
-                {s === 'Alla' ? 'Alla statusar' : STATUS_CONFIG[s as Status].label}
+                {s === 'Alla' ? 'Alla statusar' : s === 'publicerad' ? 'Publicerad' : 'Utkast'}
               </button>
             ))}
           </div>
@@ -519,8 +497,7 @@ export default function AdminUppdateringar() {
           </thead>
           <tbody className="divide-y divide-slate-50">
             {filtrerade.map(u => {
-              const summary     = typSummary(u.punkter)
-              const statusCfg   = STATUS_CONFIG[u.status]
+              const summary = typSummary(u.punkter)
               return (
                 <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-3">
@@ -536,21 +513,23 @@ export default function AdminUppdateringar() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-500 font-mono whitespace-nowrap">{u.datum}</td>
+                  <td className="px-4 py-3 text-sm text-slate-500 font-mono whitespace-nowrap">{u.datum.split('T')[0]}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border whitespace-nowrap ${statusCfg.pill}`}>
-                      {statusCfg.label}
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border whitespace-nowrap ${
+                      u.publicerad ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'
+                    }`}>
+                      {u.publicerad ? 'Publicerad' : 'Utkast'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
                       <button onClick={() => togglePublicerad(u)}
                         className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors whitespace-nowrap ${
-                          u.status === 'publicerad'
+                          u.publicerad
                             ? 'border-slate-200 text-slate-500 hover:bg-slate-50'
                             : 'border-green-200 text-green-700 hover:bg-green-50'
                         }`}>
-                        {u.status === 'publicerad' ? 'Avpublicera' : 'Publicera'}
+                        {u.publicerad ? 'Avpublicera' : 'Publicera'}
                       </button>
                       <button onClick={() => öppnaRedigera(u)}
                         className="text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
