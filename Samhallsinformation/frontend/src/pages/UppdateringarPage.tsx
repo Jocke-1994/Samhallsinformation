@@ -16,32 +16,17 @@ interface Update {
 const UPDATES: Update[] = [
   {
     title: 'Logga in och skapa konto',
-    date: 'Augusti 2026',
+    date: 'September 2026',
     changes: [
       { type: 'nytt', text: 'Skapa konto och logga in är nu öppet för alla — du kan följa dina källor och få e-postbekräftelser på ett riktigt konto' },
       { type: 'nytt', text: 'Fortsätt med Google — skapa konto eller logga in direkt med ditt Google-konto' },
     ],
   },
   {
-    title: 'Säkrare konton',
-    date: 'Augusti 2026',
-    changes: [
-      { type: 'nytt',       text: 'E-postbekräftelse vid registrering — en banderoll påminner tills adressen är verifierad' },
-      { type: 'förbättrat', text: 'Byte av e-postadress kräver nu en bekräftelselänk till den nya adressen innan bytet gäller' },
-    ],
-  },
-  {
     title: 'Varning innan trasig länk',
     date: 'Augusti 2026',
     changes: [
-      { type: 'nytt', text: 'Innan "Läs mer" öppnar en sparad artikel kollar vi att källänken fortfarande fungerar hos myndigheten, och varnar annars istället för att skicka dig till en död sida' },
-    ],
-  },
-  {
-    title: 'Hjälp & Feedback',
-    date: 'Augusti 2026',
-    changes: [
-      { type: 'förbättrat', text: 'Feedback-knappen heter nu Hjälp & Feedback för inloggade — den fungerar även som kontaktväg för frågor om ditt konto' },
+      { type: 'nytt', text: 'Innan "Läs mer" öppnar en artikel kollar vi att källänken fortfarande fungerar hos myndigheten, och varnar annars istället för att skicka dig till en död sida' },
     ],
   },
   {
