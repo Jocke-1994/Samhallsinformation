@@ -1391,47 +1391,47 @@ using (var scope = app.Services.CreateScope())
         {
             ("Logga in och skapa konto", new DateTime(2026, 9, 15, 0, 0, 0, DateTimeKind.Utc), new[]
             {
-                ("nytt", "Skapa konto och logga in är nu öppet för alla — du kan följa dina källor och få e-postbekräftelser på ett riktigt konto"),
-                ("nytt", "Fortsätt med Google — skapa konto eller logga in direkt med ditt Google-konto"),
+                ("ny-funktion", "Skapa konto och logga in är nu öppet för alla — du kan följa dina källor och få e-postbekräftelser på ett riktigt konto"),
+                ("ny-funktion", "Fortsätt med Google — skapa konto eller logga in direkt med ditt Google-konto"),
             }),
             ("Varning innan trasig länk", new DateTime(2026, 8, 30, 0, 0, 0, DateTimeKind.Utc), new[]
             {
-                ("nytt", "Innan \"Läs mer\" öppnar en artikel kollar vi att källänken fortfarande fungerar hos myndigheten, och varnar annars istället för att skicka dig till en död sida"),
+                ("ny-funktion", "Innan \"Läs mer\" öppnar en artikel kollar vi att källänken fortfarande fungerar hos myndigheten, och varnar annars istället för att skicka dig till en död sida"),
             }),
             ("Installationsbar app (Android)", new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc), new[]
             {
-                ("nytt", "Går att installera som en egen app på hemskärmen på Android"),
+                ("ny-funktion", "Går att installera som en egen app på hemskärmen på Android"),
             }),
             ("Chatt-hjälp tillagd", new DateTime(2026, 7, 10, 0, 0, 0, DateTimeKind.Utc), new[]
             {
-                ("nytt", "En chattfunktion för snabb hjälp har lagts till direkt på sajten"),
+                ("ny-funktion", "En chattfunktion för snabb hjälp har lagts till direkt på sajten"),
             }),
             ("SMHI är tillagd som källa", new DateTime(2026, 6, 25, 0, 0, 0, DateTimeKind.Utc), new[]
             {
-                ("nytt", "SMHI har lagts till som källa — nyheter och rapporter från Sveriges meteorologiska och hydrologiska institut"),
-                ("fixat", "Förbättrat stabilitet och buggfixar"),
+                ("ny-funktion", "SMHI har lagts till som källa — nyheter och rapporter från Sveriges meteorologiska och hydrologiska institut"),
+                ("buggfix", "Förbättrat stabilitet och buggfixar"),
             }),
             ("Kemikalieinspektionen är tillagd som källa", new DateTime(2026, 6, 20, 0, 0, 0, DateTimeKind.Utc), new[]
             {
-                ("nytt", "Kemikalieinspektionen har lagts till som källa att se information ifrån"),
+                ("ny-funktion", "Kemikalieinspektionen har lagts till som källa att se information ifrån"),
             }),
             ("Förbättrad sidmeny", new DateTime(2026, 6, 15, 0, 0, 0, DateTimeKind.Utc), new[]
             {
-                ("förbättrat", "Om, Nyheter och Feedback ligger nu direkt under källlistan för snabbare åtkomst"),
-                ("förbättrat", "Växla mellan mörkt och ljust läge — ikonen ligger nu bredvid logotypen istället"),
+                ("förbättring", "Om, Nyheter och Feedback ligger nu direkt under källlistan för snabbare åtkomst"),
+                ("förbättring", "Växla mellan mörkt och ljust läge — ikonen ligger nu bredvid logotypen istället"),
             }),
             ("Fyra nya myndigheter", new DateTime(2026, 6, 10, 0, 0, 0, DateTimeKind.Utc), new[]
             {
-                ("nytt", "4 källor har lagts till; Folkhälsomyndigheten, Livsmedelsverket, Läkemedelsverket och Trafikverket"),
+                ("ny-funktion", "4 källor har lagts till; Folkhälsomyndigheten, Livsmedelsverket, Läkemedelsverket och Trafikverket"),
             }),
             ("Tjänsten är live", new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc), new[]
             {
-                ("nytt", "samhallsinformation.se är nu tillgänglig för alla"),
-                ("nytt", "Händelser och nyheter från Polisen och Krisinformation i ett samlat flöde under Samhällsinfo"),
-                ("nytt", "Filtrera flödet per källa via sidomenyn"),
-                ("nytt", "Knappen \"Om\" förklarar tjänstens funktioner och mål"),
-                ("nytt", "En Feedback-knapp för att ge återkoppling om tjänsten"),
-                ("förbättrat", "Stabilitet och förbättringar"),
+                ("ny-funktion", "samhallsinformation.se är nu tillgänglig för alla"),
+                ("ny-funktion", "Händelser och nyheter från Polisen och Krisinformation i ett samlat flöde under Samhällsinfo"),
+                ("ny-funktion", "Filtrera flödet per källa via sidomenyn"),
+                ("ny-funktion", "Knappen \"Om\" förklarar tjänstens funktioner och mål"),
+                ("ny-funktion", "En Feedback-knapp för att ge återkoppling om tjänsten"),
+                ("förbättring", "Stabilitet och förbättringar"),
             }),
         };
 
