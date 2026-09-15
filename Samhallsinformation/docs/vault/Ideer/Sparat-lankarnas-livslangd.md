@@ -1,10 +1,10 @@
 ---
 typ: ide
-status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: i-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ej-bedomd
 beroenden: "Ingen — rotorsaken är bekräftad (Polisen byter URL vid kategoriuppdatering, ingestorn dedupar fel). Redo att scopas som en riktig bugg."
 prioritet: ej-bedomd
-pipelineNr: ""
+pipelineNr: "#4"
 kalla: "Beslut - Lansering av Sparat.md, fråga 2026-09-12"
 ---
 

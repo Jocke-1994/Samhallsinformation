@@ -1,11 +1,11 @@
 ---
 typ: ide
-status: i-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: lanserad  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ja
 beroenden: ""
 prioritet: ej-bedomd
 pipelineNr: ""
-kalla: "session 2026-09-13 (idé skriven direkt i Ideer/), kopplad till en äldre idé från session 38 (2026-08)"
+kalla: "session 2026-09-13 (idé skriven direkt i Ideer/), kopplad till en äldre idé från session 38 (2026-08) — skeppad PR #574, bakom flaggan flode_dela (session 49, rättat status 2026-09-15)"
 ---
 
 # Dela en händelse

@@ -1,6 +1,6 @@
 ---
 typ: ide
-status: fragor-olosta  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: fragor-olosta  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ej-bedomd  # giltiga värden: ja | nej | ej-bedomd
 beroenden: "Väntar på att appen faktiskt har flera tunga destinationer att navigera mellan — se Öppna frågor. Inte en kodfråga just nu."
 prioritet: ej-bedomd  # giltiga värden: hog | medel | lag | ej-bedomd

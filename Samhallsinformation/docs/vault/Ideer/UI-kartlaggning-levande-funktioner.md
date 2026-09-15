@@ -1,10 +1,10 @@
 ---
 typ: ide
-status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: i-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ej-bedomd
 beroenden: "Frontend-testinfrastruktur (Vitest + React Testing Library) — hänger delvis ihop men är inte ett hårt krav för att påbörja själva kartläggningen"
 prioritet: ej-bedomd
-pipelineNr: ""
+pipelineNr: "#5"
 kalla: "Claudes-tankar.md, svar 2026-09-12 på punkten om noll testtäckning i frontend"
 ---
 

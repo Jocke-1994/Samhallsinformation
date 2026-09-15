@@ -1,11 +1,11 @@
 ---
 typ: ide
-status: i-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: lanserad  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ej-bedomd
 beroenden: "Klart på båda sidor: vår sida (PR #576, #577), deras verktygsintegration (PR #238) och systemprompt v2 (insatt 2026-09-13)"
 prioritet: ej-bedomd
 pipelineNr: ""
-kalla: "session 2026-09-13, spec-fråga från kundtjänstbot-projektets Claude-session"
+kalla: "session 2026-09-13, spec-fråga från kundtjänstbot-projektets Claude-session — skeppad, rättat status 2026-09-15"
 ---
 
 # Kundtjänstboten vill fråga om skarpa händelser — sök-API-spec

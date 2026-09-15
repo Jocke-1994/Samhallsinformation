@@ -1,10 +1,10 @@
 ---
 typ: ide
-status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: i-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ja
 beroenden: "Bottom navigation bar väntar på detta, eller på att Sök byggs — se Ideer/Bottom bar (mobil).md"
 prioritet: ej-bedomd
-pipelineNr: ""
+pipelineNr: "#2"
 kalla: "session 47 (2026-09-09), mockup-iteration för Polisen-händelsekort på mobil"
 ---
 

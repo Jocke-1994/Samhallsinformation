@@ -1,6 +1,6 @@
 ---
 typ: ide
-status: ide  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: ide  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ej-bedomd  # giltiga värden: ja | nej | ej-bedomd
 beroenden: ""  # kort text — vad måste finnas/vara klart innan detta kan byggas?
 prioritet: ej-bedomd  # giltiga värden: hog | medel | lag | ej-bedomd

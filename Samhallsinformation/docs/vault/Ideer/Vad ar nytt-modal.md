@@ -1,10 +1,10 @@
 ---
 typ: ide
-status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: i-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ej-bedomd  # giltiga värden: ja | nej | ej-bedomd
-beroenden: "Ingen schemalagd publicering krävs — byggs som en kryssruta på dagens manuella changelog-redigering (planerar man in en uppdatering kan man bocka i att den ska visas som Vad är nytt). Uppdateringar-innehållets separata problem (stannar vid v0.5.0) är ett eget, fristående jobb, ingen hård blockering."
+beroenden: "Ingen schemalagd publicering krävs — byggs som en kryssruta på dagens manuella changelog-redigering (nu databas-backad sedan 2026-09-15, PR #582/#583 — det gamla blockerande problemet med föråldrat Uppdateringar-innehåll är löst)."
 prioritet: ej-bedomd  # giltiga värden: hog | medel | lag | ej-bedomd
-pipelineNr: ""
+pipelineNr: "#6"
 kalla: "session 30"
 ---
 

@@ -1,6 +1,6 @@
 ---
 typ: ide
-status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ej-bedomd
 beroenden: "Kräver ett litet motsvarande arbete i det separata kundtjänstbot-projektet (deras #220) — den här planen täcker bara vår sida"
 prioritet: ej-bedomd

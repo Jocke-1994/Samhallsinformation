@@ -1,10 +1,10 @@
 ---
 typ: ide
-status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | avfardad
+status: i-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ej-bedomd  # giltiga värden: ja | nej | ej-bedomd
 beroenden: "Ingen kod krävs — PWABuilder paketerar dagens PWA rakt av för Android. Kräver assetlinks.json i .well-known/ och Lighthouse-poäng ≥ 80."
 prioritet: ej-bedomd  # giltiga värden: hog | medel | lag | ej-bedomd
-pipelineNr: ""
+pipelineNr: "#3"
 kalla: "session 2026-08-27, uppföljning efter push-notis-diagnos för admin"
 ---
 
