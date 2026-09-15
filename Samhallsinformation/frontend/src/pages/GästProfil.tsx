@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import BetaBadge from '../components/common/BetaBadge'
 import { useFlags } from '../context/FeatureFlagsContext'
 import { isSektionSynlig } from '../lib/featureFlags'
 
@@ -50,7 +51,10 @@ function InloggningsModal({ onClose, onLogin, mode }: { onClose: () => void; onL
         {/* Header */}
         <div className="bg-gradient-to-br from-violet-600 to-violet-800 px-6 py-6 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-white">{isLogIn ? 'Logga in' : 'Skapa konto'}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-white">{isLogIn ? 'Logga in' : 'Skapa konto'}</h2>
+              <BetaBadge />
+            </div>
             <p className="text-violet-200 text-sm mt-0.5">
               {isLogIn ? 'Välkommen tillbaka' : 'Kom igång med Samhällsinformation'}
             </p>

@@ -6,6 +6,7 @@ import { fetchSources } from '../api/sources'
 import { saveUserSources, type SourcePrefUpdate } from '../api/userSources'
 import AllaKallorKort from '../components/Profile/MinaKallor/AllaKallorKort'
 import GoogleSignInButton from '../components/Auth/GoogleSignInButton'
+import BetaBadge from '../components/common/BetaBadge'
 import type { Source } from '../types'
 
 type Steg = 'konto' | 'kallor' | 'klart'
@@ -136,7 +137,10 @@ export default function OnboardingPage() {
           {steg === 'konto' && (
             <div>
               <div className="text-center mb-6">
-                <h1 className="text-xl font-bold text-slate-900">Skapa konto</h1>
+                <div className="flex items-center justify-center gap-2">
+                  <h1 className="text-xl font-bold text-slate-900">Skapa konto</h1>
+                  <BetaBadge />
+                </div>
                 <p className="text-sm text-slate-500 mt-1">Kom igång på under en minut.</p>
               </div>
               <form onSubmit={handleKontoNasta} className="flex flex-col gap-4">
