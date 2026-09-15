@@ -43,7 +43,7 @@ const SCHEMA_LABELS: Record<SchemaTyp, string> = {
   intern:   'Intern anteckning',
   tilldela: 'Tilldela ärende',
 }
-const KANAL_LABELS: Record<string, string> = { arendehantering: 'Ärende', feedback: 'Feedback' }
+const KANAL_LABELS: Record<string, string> = { arendehantering: 'Ärende', feedback: 'Feedback', 'info-mejl': 'Info-mejl' }
 
 function ticketNr(t: { ticketNumber: number }) {
   return `SUP-${String(t.ticketNumber).padStart(4, '0')}`
@@ -615,7 +615,13 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onÖppna
   const pågående  = aktiva.filter(a => a.status === 'Under behandling').length
   const hanterade = aktiva.filter(a => a.status === 'Hanterat').length
 
-  const oläst = (a: AdminTicketListItemDto) => !a.isArchived && !a.firstOpenedAt
+  // Oläst = aldrig öppnat, ELLER ett medborgar-svar har kommit in EFTER
+  // senaste öppningen — inte bara "aldrig öppnat" som innan (då försvann
+  // plupp-markeringen permanent efter första öppningen, även om ärendet
+  // fick ett nytt svar långt senare).
+  const oläst = (a: AdminTicketListItemDto) =>
+    !a.isArchived && !!a.lastUserMessageAt &&
+    (!a.lastViewedAt || new Date(a.lastUserMessageAt) > new Date(a.lastViewedAt))
   const olästaÄrenden = aktiva.filter(a => a.channel === 'arendehantering' && oläst(a)).length
   const olästaFeedback = aktiva.filter(a => a.channel === 'feedback' && oläst(a)).length
 
@@ -709,7 +715,7 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onÖppna
             <tbody className="divide-y divide-slate-100">
               {filtrerade.map(a => {
                 const harSchema = false // syns bara i detaljvyn nu, listan har inte schemalagda åtgärder
-                const ärOläst = !a.isArchived && !a.firstOpenedAt
+                const ärOläst = oläst(a)
                 return (
                   <tr key={a.id} onClick={() => setÖppetId(a.id)} className={`cursor-pointer transition-colors ${ärOläst ? 'bg-violet-50/60 hover:bg-violet-100/60' : 'hover:bg-slate-50'}`}>
                     <td className="pl-5 pr-3 py-4 font-mono text-xs text-slate-400">

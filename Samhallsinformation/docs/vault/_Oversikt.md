@@ -9,6 +9,10 @@ frontmatter varje gång du öppnar den här sidan. Lägg till en ny funktions-
 eller FAQ-not med rätt fält, och den dyker upp här av sig själv. Inget att
 komma ihåg att uppdatera.
 
+**Väntar något på ditt svar?** Se
+[[1. Öppna_tankar/Öppna frågor|Öppna frågor]] — en samlad lista över allt
+i valvet som genuint väntar på dig, oavsett vilken mapp det ligger i.
+
 ## Aktiva
 Lanserade, live för besökare.
 
@@ -16,7 +20,7 @@ Lanserade, live för besökare.
 TABLE grupp AS "Grupp", uiPlats AS "Var i appen", fallgropar AS "Fallgropar"
 FROM "Funktioner"
 WHERE status = "aktiv"
-SORT file.name ASC
+SORT grupp ASC, file.name ASC
 ```
 
 ## Pausade
@@ -68,6 +72,17 @@ FROM "FAQ"
 SORT file.name ASC
 ```
 
+## Rutiner
+Vad du faktiskt gör när en användare ber om hjälp med något — grunda
+alltid svaret i den faktiska koden/mekanismen, inte minnet.
+
+```dataview
+TABLE kategori AS "Kategori", uppdaterad AS "Senast kollad mot koden"
+FROM "Rutiner"
+WHERE status = "aktiv"
+SORT kategori ASC, file.name ASC
+```
+
 ## Öppna beslut
 
 ```dataview
@@ -82,6 +97,6 @@ Fallback-vy om ovanstående grupperingar missar något (t.ex. felstavad status).
 
 ```dataview
 TABLE status AS "Status", grupp AS "Grupp", typ AS "Typ"
-FROM "Funktioner" OR "FAQ"
+FROM "Funktioner" OR "FAQ" OR "Rutiner"
 SORT status ASC, file.name ASC
 ```

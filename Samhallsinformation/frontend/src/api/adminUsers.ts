@@ -29,6 +29,18 @@ export interface AdminPolisenBevakningDto {
   omraden:    string[] | null
 }
 
+export interface AdminUserSourceDto {
+  sourceId:  number
+  shortName: string
+  name:      string
+  isActive:  boolean
+}
+
+interface BevakningRequestBody {
+  kategorier: string[] | null
+  omraden:    string[] | null
+}
+
 export interface AdminSettingLogDto {
   setting:   string
   oldValue:  string | null
@@ -45,6 +57,21 @@ export interface AdminNotificationLogDto {
   recipient:    string
   status:       string
   errorMessage: string | null
+}
+
+export interface AdminUserPushDeviceDto {
+  id:           string
+  deviceName:   string
+  platform:     string
+  registeredAt: string
+  lastSeenAt:   string
+}
+
+export interface AdminUserPushSettingsDto {
+  pushEnabled:      boolean
+  pushNyaHandelser: boolean
+  pushNyVersion:    boolean
+  enheter:          AdminUserPushDeviceDto[]
 }
 
 export interface AdminSavedEventDto {
@@ -104,10 +131,57 @@ export async function cancelUserDeletion(id: string): Promise<void> {
   }
 }
 
+export async function sendAdminUserPasswordReset(id: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/send-password-reset`, { method: 'POST' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `sendAdminUserPasswordReset: ${res.status}`)
+  }
+}
+
+export async function resendAdminUserVerification(id: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/resend-verification`, { method: 'POST' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `resendAdminUserVerification: ${res.status}`)
+  }
+}
+
 export async function fetchAdminUserPolisenBevakningar(id: string): Promise<AdminPolisenBevakningDto[]> {
   const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar`)
   if (!res.ok) throw new Error(`fetchAdminUserPolisenBevakningar: ${res.status}`)
   return res.json()
+}
+
+// Admin/support-skrivrätt på en användares bevakningar — löser att man
+// annars måste slå på kallor_polisen_filter GLOBALT bara för att kunna
+// hjälpa en enskild användare rätta sina inställningar.
+export async function createAdminUserPolisenBevakning(id: string, req: BevakningRequestBody): Promise<AdminPolisenBevakningDto> {
+  const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar`, { method: 'POST', body: JSON.stringify(req) })
+  if (!res.ok) throw new Error(`createAdminUserPolisenBevakning: ${res.status}`)
+  return res.json()
+}
+
+export async function updateAdminUserPolisenBevakning(id: string, bevakningId: string, req: BevakningRequestBody): Promise<AdminPolisenBevakningDto> {
+  const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar/${bevakningId}`, { method: 'PUT', body: JSON.stringify(req) })
+  if (!res.ok) throw new Error(`updateAdminUserPolisenBevakning: ${res.status}`)
+  return res.json()
+}
+
+export async function deleteAdminUserPolisenBevakning(id: string, bevakningId: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar/${bevakningId}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`deleteAdminUserPolisenBevakning: ${res.status}`)
+}
+
+export async function fetchAdminUserSources(id: string): Promise<AdminUserSourceDto[]> {
+  const res = await adminFetch(`/api/admin/users/${id}/sources`)
+  if (!res.ok) throw new Error(`fetchAdminUserSources: ${res.status}`)
+  return res.json()
+}
+
+export async function setAdminUserSourceActive(id: string, sourceId: number, isActive: boolean): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/sources/${sourceId}`, { method: 'PUT', body: JSON.stringify({ isActive }) })
+  if (!res.ok) throw new Error(`setAdminUserSourceActive: ${res.status}`)
 }
 
 export async function fetchAdminUserSettingLog(id: string): Promise<AdminSettingLogDto[]> {
@@ -120,6 +194,43 @@ export async function fetchAdminUserNotificationLog(id: string): Promise<AdminNo
   const res = await adminFetch(`/api/admin/users/${id}/notification-log`)
   if (!res.ok) throw new Error(`fetchAdminUserNotificationLog: ${res.status}`)
   return res.json()
+}
+
+export async function fetchAdminUserPushSettings(id: string): Promise<AdminUserPushSettingsDto> {
+  const res = await adminFetch(`/api/admin/users/${id}/push-settings`)
+  if (!res.ok) throw new Error(`fetchAdminUserPushSettings: ${res.status}`)
+  return res.json()
+}
+
+export interface AdminExplainEventDto {
+  visasIMittFlode: boolean
+  anledning:       string
+}
+
+// Svarar på "varför ser/ser inte den här användaren händelse X" — ett
+// supportverktyg, inte något som ändrar något. Se
+// AdminUserDetailsController.ExplainEvent.
+export async function explainAdminUserEvent(id: string, eventId: string): Promise<AdminExplainEventDto> {
+  const res = await adminFetch(`/api/admin/users/${id}/explain-event/${eventId}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `explainAdminUserEvent: ${res.status}`)
+  }
+  return res.json()
+}
+
+// Bara PATCH-semantik (skicka bara det fält som ska ändras) — samma
+// motivering som självbetjäningens PushController.SaveSettings, annars
+// nollar en ensam ändring tyst de andra två fälten.
+// Policy: används bara när användaren SJÄLV bett om ändringen (t.ex. via
+// ett supportärende) — se Rutiner/Konto/Push-installningar.md.
+export async function setAdminUserPushSettings(id: string, req: {
+  pushEnabled?: boolean
+  pushNyaHandelser?: boolean
+  pushNyVersion?: boolean
+}): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${id}/push-settings`, { method: 'PUT', body: JSON.stringify(req) })
+  if (!res.ok) throw new Error(`setAdminUserPushSettings: ${res.status}`)
 }
 
 export async function fetchAdminUserSavedEvents(id: string): Promise<AdminSavedEventDto[]> {

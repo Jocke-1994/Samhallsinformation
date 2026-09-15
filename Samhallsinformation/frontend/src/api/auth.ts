@@ -86,6 +86,19 @@ export async function resendVerification(): Promise<void> {
   if (!res.ok) throw new Error(`resendVerification: ${res.status}`)
 }
 
+// Kräver ingen inloggning (kontot är spärrat under raderingsfönstret) —
+// token:et i länken är i sig beviset på identitet.
+export async function cancelDeletion(token: string): Promise<void> {
+  const res = await adminFetch('/api/auth/cancel-deletion', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `cancelDeletion: ${res.status}`)
+  }
+}
+
 // Formen matchar AuthController.ExportMe rakt av — konsumeras bara för att
 // serialiseras tillbaka till en nedladdningsbar JSON-fil, ingen anledning
 // att typa varje nästlat fält i detalj.

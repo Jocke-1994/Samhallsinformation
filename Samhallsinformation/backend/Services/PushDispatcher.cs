@@ -64,6 +64,12 @@ public static class PushDispatcher
         AppDbContext db, IPushNotificationService push, string frontendUrl,
         Source source, List<Guid> recipientIds, List<CanonicalEvent> insertedEvents, CancellationToken ct)
     {
+        // Sammanfattningar pushas aldrig (se PolisenBevakningMatcher.ArSammanfattning)
+        // — syns fortfarande i Mitt flöde om en bevakning matchar, den filtreringen
+        // rör bara frontend och är oberoende av det här.
+        insertedEvents = insertedEvents.Where(ev => !PolisenBevakningMatcher.ArSammanfattning(ev.EventType)).ToList();
+        if (insertedEvents.Count == 0) return;
+
         var bevakningarByUser = (await db.PolisenBevakningar
                 .Where(b => recipientIds.Contains(b.UserId))
                 .ToListAsync(ct))
@@ -132,6 +138,36 @@ public static class PushDispatcher
         await SendToDevicesAsync(db, push, devices, title, body, url, sourceId: null, ct);
     }
 
+    // Notifierar alla Admin/Support-användare när en medborgare svarar på ett
+    // BEFINTLIGT ärende — via inloggat konto (SupportController.Reply) eller
+    // Resend inbound-mejl (WebhooksController.ResendInbound). Saknades helt
+    // innan; bara nya ärenden/konton triggade push. Ett agentsvar (utgående,
+    // AdminSupportController.Reply) triggar INTE detta — admin vet redan att
+    // de själva svarade.
+    public static async Task DispatchTicketReplyAsync(
+        AppDbContext db, IPushNotificationService push, string frontendUrl,
+        SupportTicket ticket, CancellationToken ct = default)
+    {
+        var adminIds = await db.Users
+            .Where(u => (u.Role == "Admin" || u.Role == "Support") && u.PushEnabled)
+            .Select(u => u.Id)
+            .ToListAsync(ct);
+
+        if (adminIds.Count == 0) return;
+
+        var devices = await db.UserDevices
+            .Where(d => adminIds.Contains(d.UserId))
+            .ToListAsync(ct);
+
+        if (devices.Count == 0) return;
+
+        var title = "Nytt svar på ärende";
+        var body  = $"SUP-{ticket.TicketNumber:D4} — {ticket.Subject}";
+        var url   = $"{frontendUrl.TrimEnd('/')}/admin";
+
+        await SendToDevicesAsync(db, push, devices, title, body, url, sourceId: null, ct);
+    }
+
     // Notifierar alla Admin/Support-användare när ett NYTT konto skapas
     // (lösenord eller Google, spelar ingen roll) — samma mottagarmönster som
     // DispatchNewTicketAsync ovan.
@@ -191,37 +227,47 @@ public static class PushDispatcher
         AppDbContext db, IPushNotificationService push, List<UserDevice> devices,
         string title, string body, string url, int? sourceId, CancellationToken ct)
     {
-        foreach (var device in devices)
+        // Ett PushDispatchClaim per MOTTAGARE (inte ett delat för hela
+        // anropet — devices kan spänna över flera användare, t.ex. alla
+        // admins) — så en användares egna enheter kapplöper om att visa
+        // notisen, utan att påverka någon annan användares kapplöpning.
+        foreach (var userGroup in devices.GroupBy(d => d.UserId))
         {
-            var log = new NotificationDeliveryLog
-            {
-                UserId    = device.UserId,
-                SourceId  = sourceId,
-                Channel   = "push",
-                Recipient = device.Endpoint,
-                Subject   = title,
-                Body      = body,
-            };
+            var claim = new PushDispatchClaim { UserId = userGroup.Key };
+            db.PushDispatchClaims.Add(claim);
 
-            try
+            foreach (var device in userGroup)
             {
-                await push.SendAsync(device, title, body, url, ct);
-                log.Status = "sent";
-            }
-            catch (WebPushException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone)
-            {
-                // Subskriptionen är död (webbläsaren har glömt den) — städa bort enheten.
-                log.Status = "expired";
-                log.ErrorMessage = ex.Message;
-                db.UserDevices.Remove(device);
-            }
-            catch (Exception ex)
-            {
-                log.Status = "failed";
-                log.ErrorMessage = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
-            }
+                var log = new NotificationDeliveryLog
+                {
+                    UserId    = device.UserId,
+                    SourceId  = sourceId,
+                    Channel   = "push",
+                    Recipient = device.Endpoint,
+                    Subject   = title,
+                    Body      = body,
+                };
 
-            db.NotificationDeliveryLogs.Add(log);
+                try
+                {
+                    await push.SendAsync(device, title, body, url, claim.Id, ct);
+                    log.Status = "sent";
+                }
+                catch (WebPushException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone)
+                {
+                    // Subskriptionen är död (webbläsaren har glömt den) — städa bort enheten.
+                    log.Status = "expired";
+                    log.ErrorMessage = ex.Message;
+                    db.UserDevices.Remove(device);
+                }
+                catch (Exception ex)
+                {
+                    log.Status = "failed";
+                    log.ErrorMessage = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+                }
+
+                db.NotificationDeliveryLogs.Add(log);
+            }
         }
 
         await db.SaveChangesAsync(ct);

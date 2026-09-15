@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using NSubstitute;
 using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Controllers;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
+using Samhallsinformation.Services;
 using Xunit;
 
 public class AuthControllerTests
@@ -28,8 +30,10 @@ public class AuthControllerTests
         var tokens = Substitute.For<ITokenService>();
         tokens.GenerateAccessToken(Arg.Any<User>()).Returns("dummy-token");
         var hasher = Substitute.For<IPasswordHasher<User>>();
+        var email  = Substitute.For<IEmailService>();
+        var config = Substitute.For<IConfiguration>();
 
-        return new AuthController(auth, tokens, db, hasher)
+        return new AuthController(auth, tokens, db, hasher, email, config)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(
                 new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }, "TestAuth")) } },
@@ -113,5 +117,22 @@ public class AuthControllerTests
         var updated = await db.Users.FindAsync(user.Id);
         Assert.Equal("Nova", updated!.DisplayName);
         Assert.Equal("Joakim R.", updated.Name);
+    }
+
+    [Fact]
+    public async Task ExportMe_IncludesDeladeHandelser()
+    {
+        using var db = NewDb();
+        var user = new User { Name = "Joakim Rehn", Email = "joakim@example.com", PasswordHash = "x" };
+        db.Users.Add(user);
+        db.EventShareLogs.Add(new EventShareLog { EventId = Guid.NewGuid(), UserId = user.Id });
+        await db.SaveChangesAsync();
+
+        var controller = NewController(db, user.Id);
+        var result = Assert.IsType<OkObjectResult>(await controller.ExportMe());
+
+        var delade = result.Value!.GetType().GetProperty("DeladeHandelser")!.GetValue(result.Value);
+        Assert.NotNull(delade);
+        Assert.Single((System.Collections.IEnumerable)delade!);
     }
 }

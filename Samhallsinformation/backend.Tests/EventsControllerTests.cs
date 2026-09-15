@@ -1,0 +1,184 @@
+namespace Samhallsinformation.Tests;
+
+using System.Linq;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using NSubstitute;
+using Samhallsinformation.Controllers;
+using Samhallsinformation.Data;
+using Samhallsinformation.Models;
+using Xunit;
+
+public class EventsControllerTests
+{
+    private static AppDbContext NewDb()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        return new AppDbContext(options);
+    }
+
+    private static EventsController NewController(AppDbContext db, Guid? callerId = null)
+    {
+        var identity = callerId.HasValue
+            ? new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, callerId.Value.ToString()) }, "TestAuth")
+            : new ClaimsIdentity();
+
+        return new EventsController(db, Substitute.For<IHttpClientFactory>())
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) } },
+        };
+    }
+
+    [Fact]
+    public async Task LogShare_Anonymous_WritesLogWithNullUserId()
+    {
+        using var db = NewDb();
+        var eventId = Guid.NewGuid();
+
+        var result = await NewController(db).LogShare(eventId);
+
+        Assert.IsType<OkResult>(result);
+        var log = Assert.Single(db.EventShareLogs);
+        Assert.Equal(eventId, log.EventId);
+        Assert.Null(log.UserId);
+    }
+
+    [Fact]
+    public async Task LogShare_LoggedIn_WritesLogWithUserId()
+    {
+        using var db = NewDb();
+        var eventId = Guid.NewGuid();
+        var userId  = Guid.NewGuid();
+
+        await NewController(db, userId).LogShare(eventId);
+
+        var log = Assert.Single(db.EventShareLogs);
+        Assert.Equal(userId, log.UserId);
+    }
+
+    private static Source NewSource(int id, string shortName, bool published = true) => new()
+    {
+        Id = id, Name = shortName, ShortName = shortName, BaseUrl = "https://example.se",
+        Type = SourceType.RSS, IsActive = true, IsPublished = published,
+    };
+
+    [Fact]
+    public async Task SearchPublic_ExcludesUnpublishedSources()
+    {
+        using var db = NewDb();
+        db.Sources.AddRange(NewSource(1, "Polisen"), NewSource(2, "Hemlig", published: false));
+        db.Events.AddRange(
+            new CanonicalEvent { SourceId = 1, Title = "Trafikolycka, Göteborg", Content = "x", Url = "https://polisen.se/1", Geography = "Göteborg" },
+            new CanonicalEvent { SourceId = 2, Title = "Hemlig händelse, Göteborg", Content = "x", Url = "https://hemlig.se/1", Geography = "Göteborg" });
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<OkObjectResult>(await NewController(db).SearchPublic(geography: "Göteborg"));
+        var events = (IEnumerable<object>)result.Value!.GetType().GetProperty("events")!.GetValue(result.Value)!;
+        var sourcesSearched = (IEnumerable<string>)result.Value!.GetType().GetProperty("sourcesSearched")!.GetValue(result.Value)!;
+
+        Assert.Single(events);
+        Assert.DoesNotContain("Hemlig", sourcesSearched);
+        Assert.Contains("Polisen", sourcesSearched);
+    }
+
+    [Fact]
+    public async Task SearchPublic_GeographyIsFuzzyMatch()
+    {
+        using var db = NewDb();
+        db.Sources.Add(NewSource(1, "Polisen"));
+        db.Events.Add(new CanonicalEvent { SourceId = 1, Title = "Trafikolycka, Göteborgs kommun", Content = "x", Url = "https://polisen.se/1", Geography = "Göteborgs kommun" });
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<OkObjectResult>(await NewController(db).SearchPublic(geography: "Göteborg"));
+        var total = (int)result.Value!.GetType().GetProperty("total")!.GetValue(result.Value)!;
+
+        Assert.Equal(1, total);
+    }
+
+    [Fact]
+    public async Task SearchPublic_Sokord_MatchesTitleOrContent()
+    {
+        using var db = NewDb();
+        db.Sources.Add(NewSource(1, "SMHI"));
+        db.Events.Add(new CanonicalEvent { SourceId = 1, Title = "Varning", Content = "Kraftig storm väntas i Skåne", Url = "https://smhi.se/1" });
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<OkObjectResult>(await NewController(db).SearchPublic(sokord: "storm"));
+        var total = (int)result.Value!.GetType().GetProperty("total")!.GetValue(result.Value)!;
+
+        Assert.Equal(1, total);
+    }
+
+    [Fact]
+    public async Task SearchPublic_ShortNameFilter_ScopesSourcesSearchedToThatSourceOnly()
+    {
+        using var db = NewDb();
+        db.Sources.AddRange(NewSource(1, "Polisen"), NewSource(2, "SMHI"));
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<OkObjectResult>(await NewController(db).SearchPublic(shortName: "SMHI"));
+        var sourcesSearched = (IEnumerable<string>)result.Value!.GetType().GetProperty("sourcesSearched")!.GetValue(result.Value)!;
+
+        Assert.Equal(new[] { "SMHI" }, sourcesSearched);
+    }
+
+    [Fact]
+    public async Task SearchPublic_UnknownShortName_ReturnsEmptySourcesSearchedNotAllSources()
+    {
+        using var db = NewDb();
+        db.Sources.Add(NewSource(1, "Polisen"));
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<OkObjectResult>(await NewController(db).SearchPublic(shortName: "Finns-inte"));
+        var sourcesSearched = (IEnumerable<string>)result.Value!.GetType().GetProperty("sourcesSearched")!.GetValue(result.Value)!;
+        var total = (int)result.Value!.GetType().GetProperty("total")!.GetValue(result.Value)!;
+
+        Assert.Empty(sourcesSearched);
+        Assert.Equal(0, total);
+    }
+
+    [Fact]
+    public async Task SearchPublic_ResponseShape_MapsFieldsToBotContract()
+    {
+        using var db = NewDb();
+        db.Sources.Add(NewSource(1, "Polisen"));
+        var publishedAt = new DateTime(2026, 9, 13, 14, 0, 0, DateTimeKind.Utc);
+        db.Events.Add(new CanonicalEvent
+        {
+            SourceId = 1, Title = "Trafikolycka, Göteborg", Content = "En bil voltade.",
+            Url = "https://polisen.se/nyheter/1", Geography = "Göteborg", PublishedAt = publishedAt,
+        });
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<OkObjectResult>(await NewController(db).SearchPublic());
+        var events = ((IEnumerable<object>)result.Value!.GetType().GetProperty("events")!.GetValue(result.Value)!).ToList();
+        var evt = Assert.Single(events);
+        var type = evt.GetType();
+
+        Assert.Equal("Trafikolycka, Göteborg", type.GetProperty("title")!.GetValue(evt));
+        Assert.Equal("En bil voltade.", type.GetProperty("content")!.GetValue(evt));
+        Assert.Equal("Polisen", type.GetProperty("sourceName")!.GetValue(evt));
+        Assert.Equal("https://polisen.se/nyheter/1", type.GetProperty("sourceUrl")!.GetValue(evt));
+        Assert.Equal("Göteborg", type.GetProperty("location")!.GetValue(evt));
+        Assert.Equal(publishedAt, type.GetProperty("timestamp")!.GetValue(evt));
+    }
+
+    [Fact]
+    public async Task SearchPublic_DefaultPageSizeIsTen()
+    {
+        using var db = NewDb();
+        db.Sources.Add(NewSource(1, "Polisen"));
+        for (var i = 0; i < 15; i++)
+            db.Events.Add(new CanonicalEvent { SourceId = 1, Title = $"Händelse {i}", Content = "x", Url = $"https://polisen.se/{i}" });
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<OkObjectResult>(await NewController(db).SearchPublic());
+        var events = (IEnumerable<object>)result.Value!.GetType().GetProperty("events")!.GetValue(result.Value)!;
+
+        Assert.Equal(10, events.Count());
+    }
+}

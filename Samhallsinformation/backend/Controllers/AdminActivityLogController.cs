@@ -83,10 +83,36 @@ public class AdminActivityLogController : ControllerBase
         // Översikt (visar bara 8 rader totalt) utan att en enda riktig
         // admin/system-händelse syns. RunAt är en delad tidsstämpel per cykel
         // sedan IngestorBackgroundService satte den explicit (se där).
-        var ingestorDtosAlla = ingestorRader
+        var cykler = ingestorRader
             .GroupBy(r => r.RunAt)
-            .Select(g => IngestorCykelTillDto(g.Key, g.ToList(), sourceNames, aktuellaFel))
+            .OrderByDescending(g => g.Key)
+            .Select(g => (RunAt: g.Key, Rader: g.ToList()))
             .ToList();
+
+        // En löpande svit av tomma kontroller (alla källor lyckades, ingen ny
+        // händelse) blir EN rad istället för en per cykel — annars kan flera
+        // 5-minuterskörningar i rad utan innehåll dränka Översikts "Senaste
+        // händelser" i rader som inte hjälper någon (upptäckt live: 6 rader
+        // "inga nya händelser" i sträck). En riktig uppdatering ELLER ett fel
+        // avbryter alltid sviten, så den informationen förblir en egen rad.
+        var ingestorDtosAlla = new List<LoggPostDto>();
+        for (var i = 0; i < cykler.Count;)
+        {
+            if (!ÄrTomKontroll(cykler[i].Rader))
+            {
+                ingestorDtosAlla.Add(IngestorCykelTillDto(cykler[i].RunAt, cykler[i].Rader, sourceNames, aktuellaFel));
+                i++;
+                continue;
+            }
+
+            var start = i;
+            while (i < cykler.Count && ÄrTomKontroll(cykler[i].Rader)) i++;
+            var svit = cykler.GetRange(start, i - start);
+
+            ingestorDtosAlla.Add(svit.Count == 1
+                ? IngestorCykelTillDto(svit[0].RunAt, svit[0].Rader, sourceNames, aktuellaFel)
+                : TomKontrollSvitTillDto(svit));
+        }
 
         var ingestorMedI = string.IsNullOrWhiteSpace(aktörTyp) || aktörTyp == AktörTyper.System
             ? ingestorDtosAlla
@@ -106,7 +132,7 @@ public class AdminActivityLogController : ControllerBase
             Totalt = totalt,
             Sammanfattning = new
             {
-                Ingestor  = ingestorDtosAlla.Count(d => d.Typ == LoggTyper.Ingestor),
+                Ingestor  = cykler.Count, // faktiskt antal körda cykler, oavsett hur många rader de blivit slagna ihop till
                 Fel       = ingestorDtosAlla.Count(d => d.Status == "Fel"),
                 Varningar = ingestorDtosAlla.Count(d => d.Status == "Varning"),
             },
@@ -163,7 +189,7 @@ public class AdminActivityLogController : ControllerBase
             new SparadHandelseMiniDto(p.AngraEventId!, p.AngraTitle!, p.AngraSourceName!, p.AngraPublishedAt!, p.AngraSparadDatum!),
             p.AngraUndoAction!
         ),
-        p.Ip, p.Enhet, p.GammaltVärde, p.NyttVärde, p.Arkiverad, p.Test
+        p.Ip, p.Enhet, p.GammaltVärde, p.NyttVärde, p.Arkiverad, p.Test, p.RelateratÄrendeId
     );
 
     // En hel ingestor-cykel (alla källor som kördes i samma
@@ -220,6 +246,21 @@ public class AdminActivityLogController : ControllerBase
             rader[0].Id, runAt, AktörTyper.System, AktörTyper.System, typ, rubrik, string.Join(" · ", detaljDelar), status, false, null,
             null, null, null, null, false, false);
     }
+
+    // En cykel räknas som "tom" bara om ALLA källor lyckades och INGEN gav
+    // nya händelser — matchar precis vad IngestorCykelTillDto skulle rubricera
+    // "inga nya händelser" utan något felflagga.
+    private static bool ÄrTomKontroll(List<IngestorRunLog> rader) =>
+        rader.All(r => r.Success && r.EventsInserted == 0);
+
+    // Slår ihop en löpande svit av tomma kontroller till EN rad. Tid blir den
+    // SENASTE kontrollen i sviten (senast bekräftat att inget nytt hänt) —
+    // sviten är redan sorterad fallande på RunAt (från cykler ovan).
+    private static LoggPostDto TomKontrollSvitTillDto(List<(DateTime RunAt, List<IngestorRunLog> Rader)> svit) => new(
+        svit[0].Rader[0].Id, svit[0].RunAt, AktörTyper.System, AktörTyper.System, LoggTyper.Ingestor,
+        "Ingestor — kontrollerade alla källor — inga nya händelser",
+        $"{svit.Count} kontroller i rad utan nya händelser.",
+        "OK", false, null, null, null, null, null, false, false);
 }
 
 public record CreateActivityLogRequest(string Typ, string Rubrik, string Detalj, string AktivVy, ÅngraDataRequest? ÅngraData);
@@ -229,6 +270,7 @@ public record SparadHandelseMiniRequest(string EventId, string Title, string Sou
 public record LoggPostDto(
     Guid Id, DateTime Tid, string Vem, string AktörTyp, string Typ, string Rubrik, string Detalj, string Status,
     bool Ångrad, ÅngraDataDto? ÅngraData,
-    string? Ip, string? Enhet, string? GammaltVärde, string? NyttVärde, bool Arkiverad, bool Test);
+    string? Ip, string? Enhet, string? GammaltVärde, string? NyttVärde, bool Arkiverad, bool Test,
+    Guid? RelateratÄrendeId = null);
 public record ÅngraDataDto(string AnvandareId, SparadHandelseMiniDto Handelse, string UndoAction);
 public record SparadHandelseMiniDto(string EventId, string Title, string SourceName, string PublishedAt, string SparadDatum);

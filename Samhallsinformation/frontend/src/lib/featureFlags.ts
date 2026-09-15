@@ -1,6 +1,7 @@
 export type FlagKey =
   | 'flode_olasta_badge'
   | 'flode_sparat'
+  | 'flode_dela'
   | 'kallor_lagg_till'
   | 'kallor_aktiva'
   | 'kallor_rekommenderade'
@@ -65,6 +66,8 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
       { key: 'flode_sparat',       label: 'Sparat',         beskrivning: 'Bokmärk händelser och bläddra bland sparade senare', defaultAktiv: false,
         roadmap: 'Fullt byggd (backend + UI), medvetet vilande för en framtida funktionslansering.',
         roadmapSedan: '2026-08-04', roadmapPrNummer: [380, 384, 385] },
+      { key: 'flode_dela',         label: 'Dela',           beskrivning: 'Dela en händelses källänk via webbläsarens/enhetens egen delningsfunktion', defaultAktiv: false,
+        roadmap: 'Nybyggd, väntar på ett lanseringsbeslut.', roadmapSedan: '2026-09-13' },
     ],
   },
   {
@@ -108,7 +111,7 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
       { key: 'konto_sessioner',      label: 'Sessioner',         beskrivning: 'Visa och avsluta aktiva inloggningar',           defaultAktiv: false },
       { key: 'konto_aktivitetslogg', label: 'Aktivitetslogg',    beskrivning: 'Visa inloggningshistorik och kontoaktivitet',    defaultAktiv: false },
       { key: 'konto_samtycke',       label: 'Spara samtycke',    beskrivning: 'Hantera samtycken för datalagring',              defaultAktiv: false },
-      { key: 'konto_datahantering',  label: 'Datahantering',     beskrivning: 'Exportera eller radera kontodata',               defaultAktiv: false },
+      { key: 'konto_datahantering',  label: 'Datahantering',     beskrivning: 'Exportera eller radera kontodata',               defaultAktiv: true },
       { key: 'konto_tema',           label: 'Tema',              beskrivning: 'Växla mellan ljust och mörkt läge',              defaultAktiv: true },
       { key: 'konto_epost_paminnelse', label: 'E-postpåminnelse', beskrivning: 'Visa en banderoll som påminner om att bekräfta e-postadressen', defaultAktiv: true },
     ],

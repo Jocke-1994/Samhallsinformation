@@ -178,3 +178,18 @@ export function extraheraPolisenOmrade(geography: string | null): string | null 
   if (!geography) return null
   return ALLA_KOMMUNER.includes(geography) ? geography : null
 }
+
+// Polisens "Sammanfattning natt"/"Sammanfattning kväll och natt" taggas med
+// ett HELT LÄN som Geography, aldrig en kommun (samma upptäckt som redan
+// gjorts för push, se PolisenBevakningMatcher.cs på backend, session
+// 2026-09-12) — extraheraPolisenOmrade missar dem alltså alltid (fel nivå),
+// vilket gjorde att bevaknings-matchningen i Mitt flöde behandlade dem som
+// "okänt område" och visade dem oavsett bevakning, från hela Sverige.
+export function länFörGeografi(geography: string | null): string | null {
+  if (!geography) return null
+  return geography in LÄN_KOMMUNER ? geography : null
+}
+
+export function kommunerILän(län: string): string[] {
+  return LÄN_KOMMUNER[län] ?? []
+}

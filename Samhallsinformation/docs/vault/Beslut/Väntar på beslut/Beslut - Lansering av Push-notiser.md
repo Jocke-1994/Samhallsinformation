@@ -28,3 +28,8 @@ notera: [[Beslut - Polisen-bevakningar egna tester]] avslöjade att push för
 just Polisen-bevakningar inte levererades under test — bör klaras upp
 innan Push-notiser lanseras brett, eftersom Polisen är tänkt att bära mycket
 av notisvolymen.
+
+## Timing — besvarat 2026-09-12
+Skickas ut en tid efter att appen fått en del riktiga användare, inte i
+samband med själva lanseringen av login/register. Inget exakt datum eller
+användarantal satt.

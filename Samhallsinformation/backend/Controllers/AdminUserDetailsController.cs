@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
+using Samhallsinformation.Services;
 
 // Läsvyer (och, för Sparat, skrivvyer) på en enskild användares konto, till
 // Anvandare.tsx-detaljpanelen. Egen controller (inte AdminUsersController,
@@ -22,8 +23,7 @@ public class AdminUserDetailsController : ControllerBase
 
     public AdminUserDetailsController(AppDbContext db) => _db = db;
 
-    // Admin-variant av GET /api/user/polisen-bevakningar (UserPolisenBevakningController),
-    // read-only här — admin/support visar bevakningarna, ändrar dem inte åt användaren.
+    // Admin-variant av GET /api/user/polisen-bevakningar (UserPolisenBevakningController).
     [HttpGet("{id}/polisen-bevakningar")]
     public async Task<IActionResult> GetPolisenBevakningar(Guid id)
     {
@@ -32,12 +32,134 @@ public class AdminUserDetailsController : ControllerBase
             .OrderBy(b => b.CreatedAt)
             .ToListAsync();
 
-        return Ok(bevakningar.Select(b => new
+        return Ok(bevakningar.Select(BevakningTillDto));
+    }
+
+    // Admin/support-initierad skrivrätt på en användares bevakningar — löser
+    // att man annars måste slå på kallor_polisen_filter GLOBALT (exponerar
+    // funktionen för alla riktiga användare) bara för att kunna hjälpa en
+    // enskild användare rätta sina inställningar. Speglar
+    // UserPolisenBevakningController exakt, fast skopat mot {id} istället för
+    // CurrentUserId, och ChangedBy="admin" i stället för "user" i loggen.
+    [HttpPost("{id}/polisen-bevakningar")]
+    public async Task<IActionResult> CreatePolisenBevakning(Guid id, [FromBody] BevakningRequest req)
+    {
+        var antal = await _db.PolisenBevakningar.CountAsync(b => b.UserId == id);
+        if (antal >= UserPolisenBevakningController.MaxBevakningar)
+            return BadRequest($"Max {UserPolisenBevakningController.MaxBevakningar} bevakningar per användare.");
+
+        var bevakning = new PolisenBevakning
         {
-            b.Id,
-            Kategorier = b.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.KategorierJson),
-            Omraden    = b.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson),
-        }));
+            UserId         = id,
+            KategorierJson = req.Kategorier == null ? null : JsonSerializer.Serialize(req.Kategorier),
+            OmradenJson    = req.Omraden    == null ? null : JsonSerializer.Serialize(req.Omraden),
+        };
+        _db.PolisenBevakningar.Add(bevakning);
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId = id, Setting = "polisen_bevakning_skapad", OldValue = null,
+            NewValue = $"{req.Kategorier?.Count ?? 0} kategorier, {req.Omraden?.Count ?? 0} områden", ChangedBy = "admin",
+        });
+        await _db.SaveChangesAsync();
+
+        return Ok(BevakningTillDto(bevakning));
+    }
+
+    [HttpPut("{id}/polisen-bevakningar/{bevakningId}")]
+    public async Task<IActionResult> UpdatePolisenBevakning(Guid id, Guid bevakningId, [FromBody] BevakningRequest req)
+    {
+        var bevakning = await _db.PolisenBevakningar.FirstOrDefaultAsync(b => b.Id == bevakningId && b.UserId == id);
+        if (bevakning == null) return NotFound();
+
+        var gammaltVärde = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}";
+        bevakning.KategorierJson = req.Kategorier == null ? null : JsonSerializer.Serialize(req.Kategorier);
+        bevakning.OmradenJson    = req.Omraden    == null ? null : JsonSerializer.Serialize(req.Omraden);
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId = id, Setting = "polisen_bevakning_ändrad",
+            OldValue = gammaltVärde, NewValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}",
+            ChangedBy = "admin",
+        });
+        await _db.SaveChangesAsync();
+
+        return Ok(BevakningTillDto(bevakning));
+    }
+
+    [HttpDelete("{id}/polisen-bevakningar/{bevakningId}")]
+    public async Task<IActionResult> DeletePolisenBevakning(Guid id, Guid bevakningId)
+    {
+        var bevakning = await _db.PolisenBevakningar.FirstOrDefaultAsync(b => b.Id == bevakningId && b.UserId == id);
+        if (bevakning == null) return NotFound();
+
+        _db.PolisenBevakningar.Remove(bevakning);
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+        {
+            UserId = id, Setting = "polisen_bevakning_borttagen",
+            OldValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}", NewValue = null,
+            ChangedBy = "admin",
+        });
+        await _db.SaveChangesAsync();
+
+        return Ok();
+    }
+
+    private static object BevakningTillDto(PolisenBevakning b) => new
+    {
+        b.Id,
+        Kategorier = b.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.KategorierJson),
+        Omraden    = b.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson),
+    };
+
+    // Admin/support-variant av GET/PUT /api/user/sources (UserSourcesController)
+    // — samma "hjälp en användare rätta sina inställningar utan att slå på en
+    // flagga globalt"-motivering som bevakningarna ovan. En enskild
+    // toggle-endpoint (inte en full bulk-PUT) — admin ändrar bara
+    // aktiv/inaktiv, rör aldrig sortOrder (rent kosmetiskt, användarens eget
+    // drag-och-släpp).
+    [HttpGet("{id}/sources")]
+    public async Task<IActionResult> GetUserSources(Guid id)
+    {
+        var prefs = await _db.UserSourcePreferences
+            .Where(p => p.UserId == id)
+            .Include(p => p.Source)
+            .OrderBy(p => p.SortOrder)
+            .Select(p => new
+            {
+                sourceId  = p.SourceId,
+                shortName = p.Source.ShortName,
+                name      = p.Source.Name,
+                isActive  = p.IsActive,
+            })
+            .ToListAsync();
+
+        return Ok(prefs);
+    }
+
+    [HttpPut("{id}/sources/{sourceId:int}")]
+    public async Task<IActionResult> SetUserSourceActive(Guid id, int sourceId, [FromBody] SetSourceActiveRequest req)
+    {
+        var pref = await _db.UserSourcePreferences.FirstOrDefaultAsync(p => p.UserId == id && p.SourceId == sourceId);
+        var gammaltVärde = pref?.IsActive.ToString() ?? "false";
+        if (pref == null)
+        {
+            var nästaOrder = await _db.UserSourcePreferences.Where(p => p.UserId == id).CountAsync();
+            pref = new UserSourcePreference { UserId = id, SourceId = sourceId, IsActive = req.IsActive, SortOrder = nästaOrder };
+            _db.UserSourcePreferences.Add(pref);
+        }
+        else
+        {
+            pref.IsActive = req.IsActive;
+        }
+
+        if (gammaltVärde != req.IsActive.ToString())
+            _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+            {
+                UserId = id, Setting = $"source.{sourceId}.isActive",
+                OldValue = gammaltVärde, NewValue = req.IsActive.ToString(), ChangedBy = "admin",
+            });
+
+        await _db.SaveChangesAsync();
+        return Ok();
     }
 
     // Inställningshistorik för en enskild användare — UserSettingAuditLog har
@@ -83,6 +205,70 @@ public class AdminUserDetailsController : ControllerBase
         ).Take(50).ToListAsync();
 
         return Ok(log);
+    }
+
+    // Läsläge på en användares push-inställningar — fanns tidigare ingenstans
+    // i admin, upptäckt 2026-09-12 när en riktig produktionsanvändare
+    // felsökte varför push uteblev och admin inte kunde se något alls.
+    // Bara läs — att ÄNDRA en användares inställningar åt dem är inte
+    // efterfrågat, det är fortfarande deras eget val i Konto → Push-notiser.
+    // Endpoint/P256dh/Auth (UserDevice) exponeras avsiktligt inte — de är
+    // känsliga push-prenumerationsuppgifter utan diagnostiskt värde här.
+    [HttpGet("{id}/push-settings")]
+    public async Task<IActionResult> GetPushSettings(Guid id)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user == null) return NotFound();
+
+        var enheter = await _db.UserDevices
+            .Where(d => d.UserId == id)
+            .OrderByDescending(d => d.LastSeenAt)
+            .Select(d => new { d.Id, d.DeviceName, d.Platform, d.RegisteredAt, d.LastSeenAt })
+            .ToListAsync();
+
+        return Ok(new
+        {
+            user.PushEnabled,
+            user.PushNyaHandelser,
+            user.PushNyVersion,
+            Enheter = enheter,
+        });
+    }
+
+    // Skrivrätt tillagd 2026-09-13 — bara läge räckte inte i praktiken:
+    // en användare hör ofta av sig till supporten och BER om att en
+    // inställning ändras (t.ex. "jag får inga notiser, kan ni slå på det
+    // igen?"), och supporten hade inget sätt att göra det åt dem. Samma
+    // PATCH-semantik (nullable fält, bara satta värden skrivs) som
+    // självbetjänings-varianten (PushController.SaveSettings), som redan
+    // definierar PushSettingsRequest. Policy, inte teknik: ska bara
+    // användas när ANVÄNDAREN SJÄLV bett om ändringen — se Rutiner.
+    [HttpPut("{id}/push-settings")]
+    public async Task<IActionResult> SetPushSettings(Guid id, [FromBody] PushSettingsRequest req)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user == null) return NotFound();
+
+        void Logga(string setting, bool gammalt, bool? nytt)
+        {
+            if (!nytt.HasValue || nytt.Value == gammalt) return;
+            _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
+            {
+                UserId = id, Setting = setting,
+                OldValue = gammalt.ToString(), NewValue = nytt.Value.ToString(), ChangedBy = "admin",
+            });
+        }
+
+        Logga("push_enabled",        user.PushEnabled,      req.PushEnabled);
+        Logga("push_nya_handelser",  user.PushNyaHandelser, req.PushNyaHandelser);
+        Logga("push_ny_version",     user.PushNyVersion,    req.PushNyVersion);
+
+        if (req.PushEnabled.HasValue)      user.PushEnabled      = req.PushEnabled.Value;
+        if (req.PushNyaHandelser.HasValue) user.PushNyaHandelser = req.PushNyaHandelser.Value;
+        if (req.PushNyVersion.HasValue)    user.PushNyVersion    = req.PushNyVersion.Value;
+
+        await _db.SaveChangesAsync();
+        return Ok();
     }
 
     // Admin/support-variant av GET /api/user/saved-events
@@ -142,6 +328,39 @@ public class AdminUserDetailsController : ControllerBase
         return Ok();
     }
 
+    // Förklarar för admin/support VARFÖR (eller varför inte) en given
+    // händelse syns i en given användares Mitt flöde — samma fråga en
+    // supportagent annars måste lista ut manuellt (öppna Mina källor +
+    // bevakningarna och räkna ut det för hand). Läser bara, ändrar inget.
+    // Tre nivåer, samma prioritetsordning som NewsFeed.tsx (mittEvents):
+    // (1) källan inte aktiv → visas inte alls, (2) icke-Polisen-källa aktiv
+    // → visas alltid, (3) Polisen → PolisenBevakningMatcher.Explain avgör.
+    [HttpGet("{id}/explain-event/{eventId}")]
+    public async Task<IActionResult> ExplainEvent(Guid id, Guid eventId)
+    {
+        var ev = await _db.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+        if (ev == null) return NotFound("Händelsen hittades inte.");
+
+        var pref = await _db.UserSourcePreferences
+            .Include(p => p.Source)
+            .FirstOrDefaultAsync(p => p.UserId == id && p.SourceId == ev.SourceId);
+
+        var sourceName = pref?.Source?.ShortName
+            ?? (await _db.Sources.Where(s => s.Id == ev.SourceId).Select(s => s.ShortName).FirstOrDefaultAsync())
+            ?? "okänd källa";
+
+        if (pref == null || !pref.IsActive)
+            return Ok(new { visasIMittFlode = false, anledning = $"Prenumererar inte på {sourceName}." });
+
+        if (sourceName != "Polisen")
+            return Ok(new { visasIMittFlode = true, anledning = $"Prenumererar på {sourceName} — inget ytterligare filter för den källan." });
+
+        var bevakningar = await _db.PolisenBevakningar.Where(b => b.UserId == id).ToListAsync();
+        var (matchar, anledning, _) = PolisenBevakningMatcher.Explain(ev, bevakningar);
+
+        return Ok(new { visasIMittFlode = matchar, anledning });
+    }
+
     // Omvänd uppslagning: för en lista händelse-ID:n, vilka användare har
     // redan sparat respektive händelse? Används av Händelsesöks
     // "📌 Sparad till ..."-badge under sökresultaten (skopas till händelserna
@@ -167,3 +386,4 @@ public class AdminUserDetailsController : ControllerBase
 }
 
 public record AdminSaveEventRequest(Guid EventId);
+public record SetSourceActiveRequest(bool IsActive);

@@ -15,7 +15,7 @@ namespace Samhallsinformation.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
             modelBuilder.Entity("Samhallsinformation.Models.AdminActivityLog", b =>
                 {
@@ -65,6 +65,9 @@ namespace Samhallsinformation.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("NyttVärde")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("RelateratÄrendeId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Rubrik")
@@ -216,6 +219,26 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("EmailVerificationTokens");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.EventShareLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("SharedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EventShareLogs");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.FaqItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -241,6 +264,9 @@ namespace Samhallsinformation.Migrations
 
                     b.Property<string>("Svar")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -541,6 +567,29 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("PolisenBevakningar");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.PushDispatchClaim", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ClaimedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ClaimedByDeviceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PushDispatchClaims");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -669,8 +718,17 @@ namespace Samhallsinformation.Migrations
                     b.Property<DateTime?>("FirstOpenedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("InboundAddress")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("IsArchived")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastUserMessageAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastViewedAt")
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ReminderAt")
                         .HasColumnType("TEXT");
@@ -804,6 +862,9 @@ namespace Samhallsinformation.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeletionCancelToken")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DeletionScheduledAt")

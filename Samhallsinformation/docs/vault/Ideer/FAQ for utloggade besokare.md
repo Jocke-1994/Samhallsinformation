@@ -1,6 +1,6 @@
 ---
 typ: ide
-status: fragor-olosta
+status: avfardad
 uiGodkand: ej-bedomd
 beroenden: ""
 prioritet: ej-bedomd
@@ -14,10 +14,13 @@ Idag är FAQ (`FaqKort.tsx`) bara nåbar inloggad — den ligger i Support-flike
 
 Det gjorde att en fråga som "Hur registrerar jag ett konto?" inte har någon publik att träffa — den som ser frågan har redan ett konto. Löst för nu genom att stryka den ur den publicerade FAQ-listan (session 42), men den bredare frågan är olöst.
 
-## Öppna frågor
-- Ska FAQ vara helt inloggad (som idag), helt publik, eller delad i två delmängder (en publik för "vad är det här/hur registrerar jag mig", en inloggad för kontospecifika how-to:s)?
-- Om delad: var ska den publika delen visas — i `GästProfil.tsx`, på Om-sidan, eller en egen sektion?
-- Finns det fler frågor i den nuvarande listan som egentligen är "pre-signup"-frågor (t.ex. vad kostar det, hur hanteras min data) som borde vara publika oavsett?
+## Avfärdad — beslut 2026-09-12
+FAQ förblir inloggad-bara. Besökare med frågor hänvisas till
+kundtjänstboten istället för en publik FAQ-yta — den täcker redan
+pre-signup-frågor utan att vi behöver bygga och underhålla en separat
+publik sektion. Samma beslut löser GitHub-issuet om publik FAQ (#66) och
+gäller även SMS-mallsektionen därifrån — bara aktuellt OM SMS någonsin
+byggs som notifieringskanal, inte annars.
 
 ## Kopplat
 - [[Funktioner/FAQ]] (om/när den skapas — vaultet har inte en egen Funktioner-not för FAQ än)

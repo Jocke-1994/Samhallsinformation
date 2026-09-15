@@ -6,6 +6,13 @@ using WebPush;
 
 public class WebPushNotificationService : IPushNotificationService, IDisposable
 {
+    // Utan en explicit TTL defaultar WebPush-biblioteket till 4 VECKOR
+    // (WebPush.WebPushClient.DefaultTtl) — en offline enhet skulle då kunna
+    // visa en flera veckor gammal händelse som om den vore ny så fort den
+    // kommer online igen. 24h täcker "telefonen var avstängd över natten"
+    // utan att riskera gamla, irrelevanta notiser långt senare.
+    private const int PushTtlSeconds = 24 * 60 * 60;
+
     private readonly WebPushClient _client = new();
     private readonly VapidDetails  _vapidDetails;
 
@@ -18,11 +25,16 @@ public class WebPushNotificationService : IPushNotificationService, IDisposable
         _vapidDetails = new VapidDetails(subject, publicKey, privateKey);
     }
 
-    public Task SendAsync(UserDevice device, string title, string body, string? url, CancellationToken ct = default)
+    public Task SendAsync(UserDevice device, string title, string body, string? url, Guid? claimId = null, CancellationToken ct = default)
     {
         var subscription = new PushSubscription(device.Endpoint, device.P256dh, device.Auth);
-        var payload = JsonSerializer.Serialize(new { title, body, url });
-        return _client.SendNotificationAsync(subscription, payload, _vapidDetails, ct);
+        var payload = JsonSerializer.Serialize(new { title, body, url, claimId, deviceId = device.Id });
+        var options = new Dictionary<string, object>
+        {
+            ["vapidDetails"] = _vapidDetails,
+            ["TTL"]          = PushTtlSeconds,
+        };
+        return _client.SendNotificationAsync(subscription, payload, options, ct);
     }
 
     public void Dispose() => _client.Dispose();

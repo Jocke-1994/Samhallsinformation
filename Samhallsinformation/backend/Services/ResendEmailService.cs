@@ -3,18 +3,21 @@ namespace Samhallsinformation.Services;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 public class ResendEmailService : IEmailService
 {
     private readonly HttpClient _http;
+    private readonly ILogger<ResendEmailService> _logger;
     private readonly string _fromNoreply = "noreply@samhallsinformation.se";
     private readonly string _fromSupport = "support@samhallsinformation.se";
 
-    public ResendEmailService(IConfiguration config)
+    public ResendEmailService(IConfiguration config, ILogger<ResendEmailService> logger)
     {
         var apiKey = config["RESEND_API_KEY"] ?? throw new InvalidOperationException("RESEND_API_KEY saknas");
         _http = new HttpClient { BaseAddress = new Uri("https://api.resend.com") };
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        _logger = logger;
     }
 
     public async Task SendPasswordResetAsync(string toEmail, string toName, string resetLink)
@@ -91,6 +94,27 @@ public class ResendEmailService : IEmailService
         await SendAsync(_fromSupport, toOldEmail, "Din e-postadress håller på att bytas", html);
     }
 
+    public async Task SendAccountDeletionScheduledAsync(string toEmail, string toName, string cancelLink, DateTime deletionScheduledAtUtc)
+    {
+        var stockholmTz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm");
+        var lokalTid = TimeZoneInfo.ConvertTimeFromUtc(deletionScheduledAtUtc, stockholmTz);
+        var html = $"""
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
+              <h2 style="color:#7c3aed;margin-bottom:8px">Ditt konto raderas snart</h2>
+              <p style="color:#334155">Hej {toName},</p>
+              <p style="color:#334155">Vi har tagit emot en begäran om att radera ditt Samhällsinformation-konto. Om du inte avbryter kommer kontot att raderas <strong>{lokalTid:d MMMM yyyy 'kl.' HH:mm}</strong>.</p>
+              <a href="{cancelLink}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
+                Avbryt raderingen
+              </a>
+              <p style="color:#64748b;font-size:13px">Var det inte du som begärde det här, eller har du ändrat dig? Klicka på knappen ovan när som helst innan tidpunkten ovan. Efter det går raderingen inte att ångra.</p>
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+              <p style="color:#94a3b8;font-size:12px">Samhällsinformation &mdash; opartisk myndighetsinformation</p>
+            </div>
+            """;
+
+        await SendAsync(_fromSupport, toEmail, "Ditt konto raderas snart — klicka för att avbryta", html);
+    }
+
     public async Task SendWelcomeAsync(string toEmail, string toName)
     {
         var html = $"""
@@ -110,10 +134,66 @@ public class ResendEmailService : IEmailService
         await SendAsync(_fromNoreply, toEmail, "Välkommen till Samhällsinformation", html);
     }
 
-    private async Task SendAsync(string from, string to, string subject, string html)
+    public async Task SendTicketReplyAsync(string toEmail, int ticketNumber, string subject, string replyText, string? fromAddress = null)
     {
-        var payload = JsonSerializer.Serialize(new { from, to, subject, html });
-        var content = new StringContent(payload, Encoding.UTF8, "application/json");
+        var replyTo = $"svar+{ticketNumber}@samhallsinformation.se";
+        var html = $"""
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
+              <h2 style="color:#7c3aed;margin-bottom:8px">Svar på ditt ärende — {subject}</h2>
+              <p style="color:#334155;white-space:pre-wrap">{System.Net.WebUtility.HtmlEncode(replyText)}</p>
+              <p style="color:#64748b;font-size:13px">Du kan svara direkt på det här mejlet om du har följdfrågor.</p>
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+              <p style="color:#94a3b8;font-size:12px">Samhällsinformation &mdash; opartisk myndighetsinformation</p>
+            </div>
+            """;
+
+        await SendAsync(fromAddress ?? _fromSupport, toEmail, $"Svar på ditt ärende: {subject}", html, replyTo);
+    }
+
+    public async Task<string?> GetReceivedEmailTextAsync(string emailId)
+    {
+        var res = await _http.GetAsync($"/emails/receiving/{emailId}");
+        var body = await res.Content.ReadAsStringAsync();
+        if (!res.IsSuccessStatusCode)
+        {
+            _logger.LogWarning(
+                "Resend: GET /emails/receiving/{EmailId} gav {StatusCode} — {Body}",
+                emailId, (int)res.StatusCode, body.Length > 300 ? body[..300] : body);
+            return null;
+        }
+
+        using var doc = JsonDocument.Parse(body);
+        var text = doc.RootElement.TryGetProperty("text", out var textEl) ? textEl.GetString() : null;
+        if (!string.IsNullOrWhiteSpace(text)) return text;
+
+        // Resends "text"-fält är null om mejlet saknar en text/plain-del —
+        // vanligt för svar skickade från Outlook/Hotmails webbklient (bara
+        // HTML). Faller tillbaka på html-fältet istället för att tyst tappa
+        // svaret helt.
+        var html = doc.RootElement.TryGetProperty("html", out var htmlEl) ? htmlEl.GetString() : null;
+        if (!string.IsNullOrWhiteSpace(html)) return HtmlTillText(html);
+
+        _logger.LogWarning(
+            "Resend: GET /emails/receiving/{EmailId} gav 200 men både text och html var tomma — {Body}",
+            emailId, body.Length > 300 ? body[..300] : body);
+        return null;
+    }
+
+    private static string HtmlTillText(string html)
+    {
+        var utanScriptStyle = Regex.Replace(html, @"<(script|style)[^>]*>[\s\S]*?</\1>", "", RegexOptions.IgnoreCase);
+        var medRadbrytningar = Regex.Replace(utanScriptStyle, @"<(br|/p|/div|/li)\s*/?>", "\n", RegexOptions.IgnoreCase);
+        var utanTaggar = Regex.Replace(medRadbrytningar, "<[^>]+>", "");
+        var avkodad = System.Net.WebUtility.HtmlDecode(utanTaggar);
+        return Regex.Replace(avkodad, @"\n{3,}", "\n\n").Trim();
+    }
+
+    private async Task SendAsync(string from, string to, string subject, string html, string? replyTo = null)
+    {
+        object payload = replyTo == null
+            ? new { from, to, subject, html }
+            : new { from, to, subject, html, reply_to = replyTo };
+        var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
         var res = await _http.PostAsync("/emails", content);
         if (!res.IsSuccessStatusCode)
         {

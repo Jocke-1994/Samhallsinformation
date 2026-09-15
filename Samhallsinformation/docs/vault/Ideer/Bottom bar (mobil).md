@@ -27,8 +27,9 @@ permanent skärmyta på små telefoner.
 
 ## Öppna frågor
 - Finns det tillräckligt många TUNGA destinationer för att en bottom bar
-  ska tjäna ett riktigt syfte? Två kandidater som skulle kunna ändra på
-  det om de byggs:
+  ska tjäna ett riktigt syfte? Två kända kandidater som skulle kunna ändra
+  på det om de byggs — **inte en uttömmande lista** (förtydligat
+  2026-09-12, oklart ännu vilka fler som kan dyka upp):
   - Ett citizen-facing **Sök** (Händelsesök finns idag bara på
     admin-sidan)
   - **Bevakningar** som en egen förstaklasssida, istället för begravd

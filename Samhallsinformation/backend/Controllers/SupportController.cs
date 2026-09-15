@@ -61,6 +61,7 @@ public class SupportController : ControllerBase
             CreatedByUserId = userId,
             ContactName     = user?.Name ?? req.ContactName,
             ContactEmail    = user?.Email ?? req.ContactEmail,
+            LastUserMessageAt = DateTime.UtcNow,
         };
         _db.SupportTickets.Add(ticket);
 
@@ -76,7 +77,8 @@ public class SupportController : ControllerBase
 
         await _aktivitetslogg.LogAsync(
             AktörTyper.System, LoggTyper.Ärende,
-            $"Ärende öppnat — {ticket.Subject}", $"{ticket.ContactName ?? "Okänd"} — {ticket.Category}");
+            $"Ärende öppnat — {ticket.Subject}", $"{ticket.ContactName ?? "Okänd"} — {ticket.Category}",
+            relateratÄrendeId: ticket.Id);
 
         try
         {
@@ -170,8 +172,20 @@ public class SupportController : ControllerBase
             Text         = req.Text,
         });
         ticket.UpdatedAt = DateTime.UtcNow;
+        ticket.LastUserMessageAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+
+        try
+        {
+            var frontendUrl = _config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
+            await PushDispatcher.DispatchTicketReplyAsync(_db, _push, frontendUrl, ticket);
+        }
+        catch (Exception)
+        {
+            // Push-fel ska aldrig fela svaret — samma princip som Create() ovan.
+        }
+
         return Ok();
     }
 }

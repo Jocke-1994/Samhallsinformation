@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -93,6 +94,22 @@ builder.Services.AddRateLimiter(options =>
             Window      = TimeSpan.FromMinutes(1),
             QueueLimit  = 0,
         }));
+
+    // /api/events/search-public — byggd för kundtjänstbotens
+    // "fråga om skarpa händelser"-funktion (deras issue #237, spec i
+    // docs/vault/Ideer/Kundtjanstbot-handelse-sok-api.md). Anropas per
+    // chattmeddelande, inte per sidladdning som övriga /api/events —
+    // egen, generösare policy än auth-inloggning men INTE oskyddad som
+    // resten av /api/events (som saknar rate limit helt).
+    options.AddPolicy("eventssearch", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
+            Window      = TimeSpan.FromMinutes(1),
+            QueueLimit  = 0,
+        }));
+
     options.OnRejected = async (context, ct) =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
@@ -152,6 +169,41 @@ builder.Services.AddHostedService<UserDeletionBackgroundService>();
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
+// Railway terminerar HTTPS vid sin egen edge-proxy och vidarebefordrar
+// internt — utan det här ser HttpContext.Connection.RemoteIpAddress en av
+// Railways interna proxy-hopp istället för den riktiga besökarens IP,
+// vilket gör per-IP-baserad rate limiting (nedan) verkningslös (bekräftat
+// trasigt i produktion 2026-09-11: 10 rafflade inloggningsförsök i rad,
+// ingen blockerades). Felsökt grundligt med ett tillfälligt
+// diagnostikendpoint (/api/diag/ip, borttaget igen) — två separata
+// missförstånd, båda hittade genom att verifiera live istället för att
+// gissa:
+//  1. Bara XForwardedFor efterfrågas, inte XForwardedProto — Railway
+//     skickar den senare inkonsekvent (ibland alls inte, de har egna
+//     X-Original-Proto/X-Original-For-headrar också). Onödigt ändå,
+//     appen bryr sig bara om klient-IP:n här.
+//  2. ForwardLimit måste vara null (bearbeta HELA kedjan), INTE 1.
+//     Railway har TVÅ hopp, inte ett: en yttre edge OCH en intern
+//     regional proxy — X-Forwarded-For innehåller kedjan "<riktig
+//     klient-IP>, <Railways interna proxy-IP>". Med ForwardLimit=1
+//     vecklade middleware:t bara upp DET SISTA (närmaste) hoppet i stället
+//     för att fortsätta hela vägen till den riktiga klienten — bekräftat
+//     genom att kapsla in middleware:t med egen loggning precis
+//     före/efter och se RemoteIpAddress byta till fel värde i realtid.
+// KnownIPNetworks/KnownProxies rensas medvetet — Railway exponerar ingen
+// publik, stabil proxy-IP-lista att vitlista mot. Ingen risk att en
+// extern anropare spoofar X-Forwarded-For förbi Railways edge, eftersom
+// containern bara är nåbar via Railways eget nät, aldrig direkt från
+// internet.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor,
+    ForwardLimit     = null,
+};
+forwardedHeadersOptions.KnownIPNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 app.UseCors();
 app.UseAuthentication();
@@ -922,6 +974,100 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        // Länkar en Ärende-typad aktivitetsloggrad till sitt SupportTicket, så
+        // Aktivitetslogg/Översikt kan länka direkt till ärendet istället för
+        // att bara nämna det i text.
+        if (pendingMigrations.Contains("20260901092420_AddAdminActivityLogRelateratArendeId"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""AdminActivityLogs"" ADD COLUMN IF NOT EXISTS ""RelateratÄrendeId"" uuid;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260901092420_AddAdminActivityLogRelateratArendeId', '10.0.11')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
+        // Oläst-markeringen (FirstOpenedAt) återställdes aldrig efter första
+        // öppningen, så ett nytt svar på ett redan öppnat ärende gav ingen
+        // "gul plupp" igen. LastViewedAt uppdateras vid VARJE öppning,
+        // LastUserMessageAt vid varje medborgar-meddelande (skapelse, svar,
+        // Resend inbound) — oläst = LastUserMessageAt > LastViewedAt.
+        // Backfill: LastViewedAt = FirstOpenedAt (redan öppnade ärenden utan
+        // nyare svar förblir lästa), LastUserMessageAt = senaste user-raden.
+        if (pendingMigrations.Contains("20260904230047_AddTicketLastViewedAndLastUserMessage"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""SupportTickets"" ADD COLUMN IF NOT EXISTS ""LastViewedAt""      timestamptz;
+                ALTER TABLE ""SupportTickets"" ADD COLUMN IF NOT EXISTS ""LastUserMessageAt"" timestamptz;
+
+                UPDATE ""SupportTickets"" SET ""LastViewedAt"" = ""FirstOpenedAt"" WHERE ""FirstOpenedAt"" IS NOT NULL;
+
+                UPDATE ""SupportTickets"" st SET ""LastUserMessageAt"" = (
+                    SELECT MAX(m.""CreatedAt"") FROM ""SupportTicketMessages"" m
+                    WHERE m.""TicketId"" = st.""Id"" AND m.""SenderType"" = 'user'
+                );
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260904230047_AddTicketLastViewedAndLastUserMessage', '10.0.11')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
+        if (pendingMigrations.Contains("20260911113746_AddPushDispatchClaims"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""PushDispatchClaims"" (
+                    ""Id""                uuid NOT NULL,
+                    ""UserId""            uuid NOT NULL,
+                    ""ClaimedByDeviceId"" uuid,
+                    ""ClaimedAt""         timestamptz,
+                    ""CreatedAt""         timestamptz NOT NULL,
+                    CONSTRAINT ""PK_PushDispatchClaims"" PRIMARY KEY (""Id"")
+                );
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260911113746_AddPushDispatchClaims', '10.0.12')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
+        // UpdatedAt på FaqItems — låter en extern konsument (kundtjänstboten)
+        // fråga "vad har ändrats sedan sist". Backfill = CreatedAt, samma
+        // mönster som andra nya timestamptz-kolumner.
+        if (pendingMigrations.Contains("20260913040901_AddFaqItemUpdatedAt"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""FaqItems"" ADD COLUMN IF NOT EXISTS ""UpdatedAt"" timestamptz;
+                UPDATE ""FaqItems"" SET ""UpdatedAt"" = ""CreatedAt"" WHERE ""UpdatedAt"" IS NULL;
+                ALTER TABLE ""FaqItems"" ALTER COLUMN ""UpdatedAt"" SET NOT NULL;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260913040901_AddFaqItemUpdatedAt', '10.0.12')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
+        // EventShareLog — en rad per klick på "Dela" i NewsItem.tsx, ren
+        // analytics (vem, vilken händelse, när). UserId är null för
+        // anonyma/utloggade delningar.
+        if (pendingMigrations.Contains("20260913043717_AddEventShareLog"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""EventShareLogs"" (
+                    ""Id""       uuid NOT NULL,
+                    ""EventId""  uuid NOT NULL,
+                    ""UserId""   uuid,
+                    ""SharedAt"" timestamptz NOT NULL,
+                    CONSTRAINT ""PK_EventShareLogs"" PRIMARY KEY (""Id"")
+                );
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260913043717_AddEventShareLog', '10.0.12')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 
@@ -1100,6 +1246,97 @@ using (var scope = app.Services.CreateScope())
             new FaqItem { Kategori = "Uppdateringar", Publicerad = false, Fraga = "Hur ser jag vad som är nytt i senaste versionen?",   Svar = "Gå till Uppdateringar i profilmenyn. Under Senaste version ser du alla ändringar sedan förra uppdateringen." },
             new FaqItem { Kategori = "Uppdateringar", Publicerad = true,  Fraga = "Hur rapporterar jag ett fel?",                       Svar = "Klicka på Feedback-knappen längst ner i sidomenyn och beskriv vad som hänt. Meddelandet skickas till oss, och du kan ange din e-post om du vill ha svar." }
         );
+        await db.SaveChangesAsync();
+    }
+
+    // Kompletterande FAQ-frågor inför öppen registrering (session 43) — tabellen
+    // har redan rader sedan tidigare, så varje fråga läggs till enskilt och
+    // idempotent (kollar på frågetexten) istället för villkoret ovan. Bara
+    // funktioner som faktiskt är påslagna i produktion nämns — push-notiser,
+    // Polisen-bevakningar, radera konto/GDPR-export och tvåfaktor ligger
+    // fortfarande bakom avstängda flaggor och beskrivs medvetet inte.
+    var nyaFaqFragor = new[]
+    {
+        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = "konto_losenord", Fraga = "Hur byter jag lösenord?",
+            Svar = "Gå till Konto → Lösenordsbyte, ange ditt nuvarande lösenord och sedan det nya. Har du skapat kontot med Google finns inget lösenord att byta — logga in via Google-knappen istället." },
+        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = "konto_info", Fraga = "Hur ändrar jag min e-postadress eller mitt namn?",
+            Svar = "Gå till Konto → Kontoinformation. Ändrar du e-postadress skickar vi en bekräftelselänk till den nya adressen — bytet gäller först när du klickat på länken, och du loggas ut ur eventuella andra inloggade enheter av säkerhetsskäl." },
+        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = null, Fraga = "Kan jag logga in med Google?",
+            Svar = "Ja. Välj \"Fortsätt med Google\" på inloggnings- eller registreringssidan — det fungerar både för att skapa ett nytt konto och för att logga in på ett befintligt." },
+        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = "konto_epost_paminnelse", Fraga = "Varför ber ni mig bekräfta min e-postadress?",
+            Svar = "En banderoll påminner dig om att klicka på bekräftelselänken vi skickade när du registrerade dig. Det bevisar att adressen faktiskt är din — du kan fortsätta använda tjänsten som vanligt under tiden, inget låses." },
+        new FaqItem { Kategori = "Mina källor", Publicerad = true, FlagKey = "kallor_alla", Fraga = "Vad är skillnaden på Alla källor och Mina källor?",
+            Svar = "Mina källor visar de myndigheter du redan följer och som syns i ditt flöde. Alla källor är den fullständiga listan att välja bland — där lägger du till fler." },
+        new FaqItem { Kategori = "Uppdateringar", Publicerad = true, FlagKey = null, Fraga = "Var ser jag vad som är nytt i tjänsten?",
+            Svar = "Klicka på Nyheter i sidomenyn om du är utloggad, eller Uppdateringar i profilmenyn om du är inloggad, för en lista över de senaste ändringarna." },
+        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = "konto_datahantering", Fraga = "Kan jag ångra en radering av mitt konto?",
+            Svar = "Ja, under de första 24 timmarna. Så fort du begär radering skickar vi ett mejl med en \"Avbryt raderingen\"-länk — klicka på den så återaktiveras kontot direkt, ingen inloggning krävs. Efter 24 timmar är kontot anonymiserat och går inte att återställa." },
+    };
+    foreach (var fraga in nyaFaqFragor)
+    {
+        if (!db.FaqItems.Any(f => f.Fraga == fraga.Fraga))
+        {
+            db.FaqItems.Add(fraga);
+        }
+    }
+    await db.SaveChangesAsync();
+
+    // Aktiverar och uppdaterar de två GDPR-frågorna (radera konto,
+    // exportera data) nu när konto_datahantering slogs på (2026-09-11,
+    // PR #566) — de låg redan i den ursprungliga seed-datan men
+    // avpublicerade eftersom funktionen då var dold. Kopplas till flaggan
+    // så de följer den automatiskt framöver, och raderingssvaret
+    // uppdateras med den nya ångra-länken (PR för DeletionCancelToken).
+    var raderaKontoFaq = await db.FaqItems.FirstOrDefaultAsync(f => f.Fraga == "Hur tar jag bort mitt konto?");
+    if (raderaKontoFaq != null)
+    {
+        raderaKontoFaq.Publicerad = true;
+        raderaKontoFaq.FlagKey    = "konto_datahantering";
+        raderaKontoFaq.Svar       = "Gå till Konto → Datahantering och välj Radera konto. Kontot spärras direkt, men raderas inte förrän 24 timmar senare — vi skickar ett mejl med en länk du kan klicka för att ångra dig när som helst under de 24 timmarna.";
+    }
+    var exporteraDataFaq = await db.FaqItems.FirstOrDefaultAsync(f => f.Fraga == "Hur laddar jag ner min data?");
+    if (exporteraDataFaq != null)
+    {
+        exporteraDataFaq.Publicerad = true;
+        exporteraDataFaq.FlagKey    = "konto_datahantering";
+    }
+    await db.SaveChangesAsync();
+
+    // Ny FAQ-fråga om skräppost (session 49) — flera redan live mejlflöden
+    // (bekräftelselänk vid registrering/e-postbyte, lösenordsåterställning,
+    // ärendesvar via Resend inbound) saknade en förklaring av att mejl kan
+    // hamna i skräpposten, särskilt för Hotmail/Outlook-adresser (känt
+    // domänrykte-problem, se feedback/minnesanteckningar session 41/43 —
+    // inte fixbart med en DNS-post). FlagKey = null eftersom frågan gäller
+    // flera oberoende, redan aktiva funktioner, inte en enskild flagga.
+    if (!await db.FaqItems.AnyAsync(f => f.Fraga == "Varför hittar jag inte mejlet ni sagt att ni skickat?"))
+    {
+        db.FaqItems.Add(new FaqItem
+        {
+            Kategori   = "Konto",
+            Publicerad = true,
+            FlagKey    = null,
+            Fraga      = "Varför hittar jag inte mejlet ni sagt att ni skickat?",
+            Svar       = "Kolla din skräppost/spam-mapp — bekräftelselänkar, lösenordsåterställning och svar på supportärenden hamnar ibland där, särskilt om du har en Hotmail- eller Outlook-adress. Hittar du mejlet där, markera avsändaren som säker så hamnar framtida mejl rätt. Är det fortfarande borta efter några minuter, hör av dig via Feedback-knappen i sidomenyn.",
+        });
+        await db.SaveChangesAsync();
+    }
+
+    // Ny FAQ-fråga om Polisen-bevakningar (session 49) — kallor_polisen_filter
+    // är faktiskt AKTIVERAD i produktion (bekräftat live, session 48) men
+    // hade ingen enda FAQ-post som förklarade vad en bevakning är. FlagKey
+    // kopplad till samma flagga så frågan döljs automatiskt om den någonsin
+    // stängs av igen.
+    if (!await db.FaqItems.AnyAsync(f => f.Fraga == "Vad är en Polisen-bevakning?"))
+    {
+        db.FaqItems.Add(new FaqItem
+        {
+            Kategori   = "Mina källor",
+            Publicerad = true,
+            FlagKey    = "kallor_polisen_filter",
+            Fraga      = "Vad är en Polisen-bevakning?",
+            Svar       = "En bevakning ger dig träffar på specifika typer av händelser i ett visst område, t.ex. \"trafikolyckor i Göteborg\" eller \"alla händelser i Stenungsund\". Du hittar den under Mina källor, på Polisen-kortet — lägg till upp till 5 oberoende bevakningar samtidigt. Har du ingen bevakning skapad visas och notifieras du om alla Polisens händelser som vanligt.",
+        });
         await db.SaveChangesAsync();
     }
 

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import {
   fetchBevakningar, createBevakning, updateBevakning, deleteBevakning, type BevakningRequest,
 } from '../api/polisenBevakningar'
+import { kommunerILän } from '../components/Profile/MinaKallor/kallorUtils'
 import { useAuth } from './AuthContext'
 
 // Ersätter PolisenFilterContext (en delad, global AND-kombination) med flera
@@ -20,6 +21,7 @@ interface PolisenBevakningarContextValue {
   bevakningar: Bevakning[]
   laddat:      boolean
   matchar:      (typ: string | null, omrade: string | null) => boolean
+  matcharLän:   (typ: string | null, län: string | null) => boolean
   typDackt:     (typ: string) => boolean
   omradeDackt:  (omrade: string) => boolean
   matchandeBevakning: (typ: string | null, omrade: string | null) => Bevakning | null
@@ -61,12 +63,34 @@ export function PolisenBevakningarProvider({ children }: { children: ReactNode }
   }, [isLoggedIn])
 
   // Tom lista = inget anpassat = allt syns (matchar backendens
-  // PolisenBevakningMatcher.Matches exakt).
+  // PolisenBevakningMatcher.Matches exakt) — men bara EFTER att hämtningen
+  // faktiskt svarat. Innan dess är listan också tom (initialt useState),
+  // och utan laddat-kollen visade Mitt flöde tyst ALLT från Polisen
+  // (inte bara ospecificerat, obegränsat, hela landet) under det korta
+  // fönstret precis efter inloggning/sidladdning innan bevakningarna hunnit
+  // hämtas — upptäckt live via en skärmdump med händelser från städer långt
+  // utanför en riktig, sparad bevakning.
   function matchar(typ: string | null, omrade: string | null): boolean {
+    if (!laddat) return false
     if (bevakningar.length === 0) return true
     return bevakningar.some(b => {
       const typOk    = b.kategorier === null || typ    === null || b.kategorier.has(typ)
       const omradeOk = b.omraden    === null || omrade === null || b.omraden.has(omrade)
+      return typOk && omradeOk
+    })
+  }
+
+  // Som matchar(), men för händelser vars geografi bara går att slå upp på
+  // läns-nivå (Polisens sammanfattningar, se länFörGeografi i kallorUtils.ts)
+  // — ett områdesvillkor anses uppfyllt om NÅGON av bevakningens valda
+  // kommuner ligger i det länet, inte via en exakt strängjämförelse (som
+  // aldrig kan träffa, eftersom bevakningens omraden alltid är kommunnamn).
+  function matcharLän(typ: string | null, län: string | null): boolean {
+    if (!laddat) return false
+    if (bevakningar.length === 0) return true
+    return bevakningar.some(b => {
+      const typOk    = b.kategorier === null || typ === null || b.kategorier.has(typ)
+      const omradeOk = b.omraden    === null || län === null || kommunerILän(län).some(k => b.omraden!.has(k))
       return typOk && omradeOk
     })
   }
@@ -113,7 +137,7 @@ export function PolisenBevakningarProvider({ children }: { children: ReactNode }
   }
 
   const value: PolisenBevakningarContextValue = {
-    bevakningar, laddat, matchar, typDackt, omradeDackt, matchandeBevakning, skapa, uppdatera, taBort,
+    bevakningar, laddat, matchar, matcharLän, typDackt, omradeDackt, matchandeBevakning, skapa, uppdatera, taBort,
   }
 
   return (

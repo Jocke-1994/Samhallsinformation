@@ -81,6 +81,8 @@ export interface AdminTicketListItemDto {
   assignedToName?: string | null
   isArchived: boolean
   firstOpenedAt?: string | null
+  lastViewedAt?: string | null
+  lastUserMessageAt?: string | null
   createdAt: string
   updatedAt: string
 }

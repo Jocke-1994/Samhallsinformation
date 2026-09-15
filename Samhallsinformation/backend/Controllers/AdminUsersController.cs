@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
+using Samhallsinformation.Services;
 
 [ApiController]
 [Route("api/admin/users")]
@@ -14,11 +16,17 @@ public class AdminUsersController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IAktivitetsloggService _aktivitetslogg;
+    private readonly IEmailService _email;
+    private readonly IAuthService _auth;
+    private readonly string _frontendUrl;
 
-    public AdminUsersController(AppDbContext db, IAktivitetsloggService aktivitetslogg)
+    public AdminUsersController(AppDbContext db, IAktivitetsloggService aktivitetslogg, IEmailService email, IAuthService auth, IConfiguration config)
     {
         _db = db;
         _aktivitetslogg = aktivitetslogg;
+        _email = email;
+        _auth = auth;
+        _frontendUrl = config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
     }
 
     private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -112,12 +120,17 @@ public class AdminUsersController : ControllerBase
         user.SuspendedAt       ??= DateTime.UtcNow;
         user.SuspendedReason     = "Radering begärd (GDPR) — raderas automatiskt om 24 timmar om ingen avbryter det";
         user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24);
+        user.DeletionCancelToken = Guid.NewGuid().ToString("N");
 
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Konto,
             $"Radering begärd — {user.Name}",
             $"Verkställs {user.DeletionScheduledAt:yyyy-MM-dd HH:mm} UTC om ingen avbryter");
+
+        var cancelLink = $"{_frontendUrl.TrimEnd('/')}/cancel-deletion?token={user.DeletionCancelToken}";
+        _ = _email.SendAccountDeletionScheduledAsync(user.Email, user.Name, cancelLink, user.DeletionScheduledAt.Value);
+
         return Ok(new { deletionScheduledAt = user.DeletionScheduledAt });
     }
 
@@ -132,6 +145,7 @@ public class AdminUsersController : ControllerBase
             return BadRequest(new { error = "Ingen radering är schemalagd för det här kontot." });
 
         user.DeletionScheduledAt = null;
+        user.DeletionCancelToken = null;
         user.IsActive            = true;
         user.SuspendedAt         = null;
         user.SuspendedReason     = null;
@@ -141,6 +155,42 @@ public class AdminUsersController : ControllerBase
             AktörTyper.Admin, LoggTyper.Konto,
             $"Radering ångrad — {user.Name}", "Kontot återaktiverat");
         return Ok();
+    }
+
+    // Återanvänder exakt samma token/mejl-mekanism som självbetjäningens
+    // "Glömt lösenord" (AuthService.RequestPasswordResetAsync) — admin skickar
+    // bara länken å användarens vägnar, ingen separat adminspecifik logik.
+    [HttpPost("{id}/send-password-reset")]
+    public async Task<IActionResult> SendPasswordReset(Guid id)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user == null) return NotFound();
+
+        var result = await _auth.RequestPasswordResetAsync(user.Email);
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konto,
+            $"Lösenordsåterställning skickad — {user.Name}", "");
+
+        return result.Success ? Ok(new { message = result.Message }) : StatusCode(result.StatusCode, new { error = result.Error });
+    }
+
+    // Samma resonemang som ovan — återanvänder självbetjäningens
+    // AuthService.ResendVerificationAsync.
+    [HttpPost("{id}/resend-verification")]
+    public async Task<IActionResult> ResendVerification(Guid id)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user == null) return NotFound();
+
+        var result = await _auth.ResendVerificationAsync(id);
+        if (result.Success)
+        {
+            await _aktivitetslogg.LogAsync(
+                AktörTyper.Admin, LoggTyper.Konto,
+                $"Verifieringsmejl skickat — {user.Name}", "");
+        }
+
+        return result.Success ? Ok(new { message = result.Message }) : StatusCode(result.StatusCode, new { error = result.Error });
     }
 
     // Härledd, inte persisterad — samma mönster som AdminSupportController.GetNotifications

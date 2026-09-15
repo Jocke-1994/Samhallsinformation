@@ -563,6 +563,7 @@ public class AuthServiceTests
 
         Assert.True(result.Success);
         Assert.Equal("access-token", result.Tokens!.AccessToken);
+        Assert.True(result.Tokens.IsNewUser);
 
         var created = await db.Users.SingleAsync();
         Assert.Equal("ny@example.com", created.Email);
@@ -570,6 +571,11 @@ public class AuthServiceTests
         Assert.NotNull(created.TermsAcceptedAt);
     }
 
+    // Reproducerar en riktig, live-rapporterad bugg (2026-09-12): en Google-
+    // inloggning på /register mot en e-post som redan har ett lösenordskonto
+    // drog användaren genom hela Källor-onboardingguiden som om kontot vore
+    // nytt, med risk att skriva över redan sparade källval. IsNewUser=false
+    // här är vad OnboardingPage använder för att hoppa förbi guiden helt.
     [Fact]
     public async Task GoogleLoginAsync_ExistingEmail_LogsInWithoutCreatingDuplicate()
     {
@@ -590,6 +596,7 @@ public class AuthServiceTests
         var result = await service.GoogleLoginAsync("good-token", acceptedTerms: true);
 
         Assert.True(result.Success);
+        Assert.False(result.Tokens!.IsNewUser);
         Assert.Single(db.Users);
     }
 
@@ -720,5 +727,67 @@ public class AuthServiceTests
 
         Assert.False(result.Success);
         Assert.Equal(401, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task CancelDeletionAsync_ValidToken_ReactivatesAccount()
+    {
+        using var db = NewDb();
+        var user = new User
+        {
+            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
+            IsActive = false, SuspendedAt = DateTime.UtcNow, SuspendedReason = "Radering begärd",
+            DeletionScheduledAt = DateTime.UtcNow.AddHours(20), DeletionCancelToken = "valid-token",
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = NewService(db);
+
+        var result = await service.CancelDeletionAsync("valid-token");
+
+        Assert.True(result.Success);
+        var updated = await db.Users.FindAsync(user.Id);
+        Assert.True(updated!.IsActive);
+        Assert.Null(updated.DeletionScheduledAt);
+        Assert.Null(updated.DeletionCancelToken);
+        Assert.Null(updated.SuspendedAt);
+        Assert.Null(updated.SuspendedReason);
+    }
+
+    [Fact]
+    public async Task CancelDeletionAsync_UnknownToken_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var service = NewService(db);
+
+        var result = await service.CancelDeletionAsync("does-not-exist");
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+    }
+
+    // Simulerar att UserDeletionBackgroundService redan hunnit köra —
+    // DeletionScheduledAt kan i praktiken fortfarande stå kvar en kort
+    // stund efter att fristen passerat, men länken ska ändå sluta fungera.
+    [Fact]
+    public async Task CancelDeletionAsync_DeletionAlreadyPassed_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var user = new User
+        {
+            Name = "Ada", Email = "ada@example.com", PasswordHash = "x", IsActive = false,
+            DeletionScheduledAt = DateTime.UtcNow.AddMinutes(-5), DeletionCancelToken = "expired-token",
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var service = NewService(db);
+
+        var result = await service.CancelDeletionAsync("expired-token");
+
+        Assert.False(result.Success);
+        Assert.Equal(400, result.StatusCode);
+        Assert.False((await db.Users.FindAsync(user.Id))!.IsActive);
     }
 }

@@ -12,6 +12,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
 import ConfirmEmailChangePage from './pages/ConfirmEmailChangePage'
+import CancelDeletionPage from './pages/CancelDeletionPage'
 import CookieConsent from './components/CookieConsent/CookieConsent'
 import OmPage from './pages/OmPage'
 import VillkorPage from './pages/VillkorPage'
@@ -127,9 +128,15 @@ function EmailVerificationBanner() {
   const { isLoggedIn, emailVerified, email } = useAuth()
   const flaggor = useFlags()
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle')
-  const [snoozedUntil, setSnoozedUntil] = useState<number>(
-    () => Number(localStorage.getItem(VERIFY_BANNER_SNOOZE_KEY) ?? 0)
-  )
+  // Nyckeln måste vara kontospecifik (inte en enda global nyckel) — annars
+  // slår ett snooze-klick på ETT konto igenom på VILKET konto som helst som
+  // loggar in på samma enhet inom 24h, även ett som aldrig klickat knappen.
+  const [snoozedUntil, setSnoozedUntil] = useState(0)
+
+  useEffect(() => {
+    if (!email) { setSnoozedUntil(0); return }
+    setSnoozedUntil(Number(localStorage.getItem(`${VERIFY_BANNER_SNOOZE_KEY}:${email}`) ?? 0))
+  }, [email])
 
   if (!isLoggedIn || emailVerified || !flaggor.konto_epost_paminnelse || Date.now() < snoozedUntil) return null
 
@@ -144,8 +151,9 @@ function EmailVerificationBanner() {
   }
 
   function handleSnooze() {
+    if (!email) return
     const until = Date.now() + VERIFY_BANNER_SNOOZE_MS
-    localStorage.setItem(VERIFY_BANNER_SNOOZE_KEY, String(until))
+    localStorage.setItem(`${VERIFY_BANNER_SNOOZE_KEY}:${email}`, String(until))
     setSnoozedUntil(until)
   }
 
@@ -256,6 +264,7 @@ export default function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
+          <Route path="/cancel-deletion" element={<CancelDeletionPage />} />
           <Route path="/profil" element={<ProfilePage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/om" element={<OmPage />} />

@@ -1,15 +1,22 @@
 import { useState, useEffect, Fragment } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createActivityLogEntry } from '../../api/activityLog'
 import { useAuth } from '../../context/AuthContext'
 import {
   fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
   fetchAdminUserSavedEvents, unsaveAdminUserEvent,
   fetchAdminUserPolisenBevakningar, fetchAdminUserNotificationLog, fetchAdminUserSettingLog, type AdminUserDto,
+  createAdminUserPolisenBevakning, updateAdminUserPolisenBevakning, deleteAdminUserPolisenBevakning,
+  fetchAdminUserSources, setAdminUserSourceActive, type AdminPolisenBevakningDto,
+  sendAdminUserPasswordReset, resendAdminUserVerification,
+  fetchAdminUserPushSettings, setAdminUserPushSettings,
+  explainAdminUserEvent, type AdminExplainEventDto,
 } from '../../api/adminUsers'
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import { checkEventLinkStatus } from '../../api/events'
+import { searchEvents, type AdminSearchEvent } from '../../api/eventSearch'
 import type { PendingNotis } from '../../types/adminNotis'
+import KategoriFilterModal from '../Profile/MinaKallor/KategoriFilterModal'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd' | 'Raderas snart' | 'Raderat'
@@ -226,6 +233,9 @@ const SETTING_LABEL: Record<string, string> = {
   polisen_bevakning_skapad:     'Polisen-bevakning skapad',
   polisen_bevakning_ändrad:     'Polisen-bevakning ändrad',
   polisen_bevakning_borttagen:  'Polisen-bevakning borttagen',
+  push_enabled:                 'Push (globalt) på/av',
+  push_nya_handelser:           'Push · Ny händelse på/av',
+  push_ny_version:              'Push · Ny version på/av',
 }
 const NOTIF_LOG_CHANNEL_CLS: Record<string, string> = { push: 'bg-sky-100 text-sky-700' }
 const NOTIF_LOG_CHANNEL_FALLBACK_CLS = 'bg-slate-100 text-slate-600'
@@ -473,6 +483,7 @@ interface AnvandareProps {
 
 export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onPendingNotiser }: AnvandareProps) {
   const { aktivVy } = useAuth()
+  const queryClient = useQueryClient()
   const { data: adminUsers, isLoading: laddar, isError: laddningFel, refetch } = useQuery({
     queryKey: ['admin-users'],
     queryFn:  fetchAdminUsers,
@@ -491,6 +502,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   const [raderaFel, setRaderaFel]               = useState<string | null>(null)
   const [enkildRollÄndring, setEnkildRollÄndring] = useState<Användare | null>(null)
   const [impersonationMål, setImpersonationMål]   = useState<Användare | null>(null)
+  const [skickarLösenordsåterställning, setSkickarLösenordsåterställning] = useState(false)
+  const [skickarVerifieringsmail, setSkickarVerifieringsmail]             = useState(false)
+  const [mejlFeedback, setMejlFeedback]                                   = useState<string | null>(null)
 
   const filtrerade = användare.filter(u => {
     if (rollFilter !== 'Alla' && !u.roller.includes(rollFilter)) return false
@@ -552,19 +566,117 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     })))
   }, [kontoNotiser, onPendingNotiser])
 
-  const { data: polisenBevakningar = [] } = useQuery({
+  const { data: polisenBevakningar = [], isLoading: bevakningarLaddar } = useQuery({
     queryKey: ['admin-polisen-bevakningar', vald?.id],
     queryFn:  () => fetchAdminUserPolisenBevakningar(vald!.id),
     enabled:  !!vald,
   })
+  const [redigerarBevakning, setRedigerarBevakning] = useState<AdminPolisenBevakningDto | 'ny' | null>(null)
 
-  const { data: notishistorik = [] } = useQuery({
+  function invalideraBevakningar() {
+    queryClient.invalidateQueries({ queryKey: ['admin-polisen-bevakningar', vald?.id] })
+    queryClient.invalidateQueries({ queryKey: ['admin-setting-log', vald?.id] })
+  }
+
+  const skapaBevakningMutation = useMutation({
+    mutationFn: (req: { kategorier: string[] | null; omraden: string[] | null }) =>
+      createAdminUserPolisenBevakning(vald!.id, req),
+    onSuccess: invalideraBevakningar,
+  })
+  const uppdateraBevakningMutation = useMutation({
+    mutationFn: ({ bevakningId, ...req }: { bevakningId: string; kategorier: string[] | null; omraden: string[] | null }) =>
+      updateAdminUserPolisenBevakning(vald!.id, bevakningId, req),
+    onSuccess: invalideraBevakningar,
+  })
+  const taBortBevakningMutation = useMutation({
+    mutationFn: (bevakningId: string) => deleteAdminUserPolisenBevakning(vald!.id, bevakningId),
+    onSuccess: invalideraBevakningar,
+  })
+
+  async function sparaBevakning(kategorier: string[] | null, omraden: string[] | null) {
+    if (redigerarBevakning === 'ny') {
+      await skapaBevakningMutation.mutateAsync({ kategorier, omraden })
+    } else if (redigerarBevakning) {
+      await uppdateraBevakningMutation.mutateAsync({ bevakningId: redigerarBevakning.id, kategorier, omraden })
+    }
+    setRedigerarBevakning(null)
+  }
+
+  const { data: valdaKällor = [], isLoading: källorLaddar } = useQuery({
+    queryKey: ['admin-user-sources', vald?.id],
+    queryFn:  () => fetchAdminUserSources(vald!.id),
+    enabled:  !!vald,
+  })
+
+  const { data: pushInstallningar, isLoading: pushLaddar } = useQuery({
+    queryKey: ['admin-user-push-settings', vald?.id],
+    queryFn:  () => fetchAdminUserPushSettings(vald!.id),
+    enabled:  !!vald,
+  })
+
+  const andraPushMutation = useMutation({
+    mutationFn: (req: { pushEnabled?: boolean; pushNyaHandelser?: boolean; pushNyVersion?: boolean }) =>
+      setAdminUserPushSettings(vald!.id, req),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-push-settings', vald?.id] })
+      queryClient.invalidateQueries({ queryKey: ['admin-setting-log', vald?.id] })
+    },
+  })
+
+  const växlaKällaMutation = useMutation({
+    mutationFn: ({ sourceId, isActive }: { sourceId: number; isActive: boolean }) =>
+      setAdminUserSourceActive(vald!.id, sourceId, isActive),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-sources', vald?.id] })
+      queryClient.invalidateQueries({ queryKey: ['admin-setting-log', vald?.id] })
+    },
+  })
+
+  // Förklara-händelse — supportverktyg (inte en editerbar inställning): visar
+  // varför en given händelse syns/inte syns i DEN HÄR användarens Mitt flöde,
+  // istället för att en supportagent ska behöva räkna ut det manuellt utifrån
+  // Aktiva källor + Polisen-bevakningar ovan. Skopat på vald.id, nollställs
+  // när en annan användare väljs (samma useEffect nedan som andra vald-scopade
+  // states i den här filen).
+  const [forklaraSokord, setForklaraSokord] = useState('')
+  const [forklaraTraffar, setForklaraTraffar] = useState<AdminSearchEvent[]>([])
+  const [forklaraSoker, setForklaraSoker] = useState(false)
+  const [forklaratEvent, setForklaratEvent] = useState<AdminSearchEvent | null>(null)
+  const [forklaring, setForklaring] = useState<AdminExplainEventDto | null>(null)
+  const [forklaringLaddar, setForklaringLaddar] = useState(false)
+
+  async function sokForklaraHandelse() {
+    if (!forklaraSokord.trim()) return
+    setForklaraSoker(true)
+    setForklaratEvent(null)
+    setForklaring(null)
+    try {
+      const resultat = await searchEvents({ sokord: forklaraSokord.trim(), pageSize: 5 })
+      setForklaraTraffar(resultat.events)
+    } finally {
+      setForklaraSoker(false)
+    }
+  }
+
+  async function valjForklaraHandelse(ev: AdminSearchEvent) {
+    if (!vald) return
+    setForklaratEvent(ev)
+    setForklaring(null)
+    setForklaringLaddar(true)
+    try {
+      setForklaring(await explainAdminUserEvent(vald.id, ev.id))
+    } finally {
+      setForklaringLaddar(false)
+    }
+  }
+
+  const { data: notishistorik = [], isLoading: notishistorikLaddar } = useQuery({
     queryKey: ['admin-notification-log', vald?.id],
     queryFn:  () => fetchAdminUserNotificationLog(vald!.id),
     enabled:  !!vald,
   })
 
-  const { data: installningshistorik = [] } = useQuery({
+  const { data: installningshistorik = [], isLoading: installningshistorikLaddar } = useQuery({
     queryKey: ['admin-setting-log', vald?.id],
     queryFn:  () => fetchAdminUserSettingLog(vald!.id),
     enabled:  !!vald,
@@ -582,6 +694,35 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   function öppnaDetalj(u: Användare) {
     setVald(u)
     setDetaljFlik('oversikt')
+    setMejlFeedback(null)
+    setForklaraSokord('')
+    setForklaraTraffar([])
+    setForklaratEvent(null)
+    setForklaring(null)
+  }
+
+  async function skickaLösenordsåterställning(u: Användare) {
+    setSkickarLösenordsåterställning(true); setMejlFeedback(null)
+    try {
+      await sendAdminUserPasswordReset(u.id)
+      setMejlFeedback('Återställningsmejl skickat.')
+    } catch (err) {
+      setMejlFeedback(err instanceof Error ? err.message : 'Något gick fel')
+    } finally {
+      setSkickarLösenordsåterställning(false)
+    }
+  }
+
+  async function skickaVerifieringsmail(u: Användare) {
+    setSkickarVerifieringsmail(true); setMejlFeedback(null)
+    try {
+      await resendAdminUserVerification(u.id)
+      setMejlFeedback('Verifieringsmejl skickat.')
+    } catch (err) {
+      setMejlFeedback(err instanceof Error ? err.message : 'Något gick fel')
+    } finally {
+      setSkickarVerifieringsmail(false)
+    }
   }
 
   const { data: sparadeHändelser = [], refetch: refetchSparat } = useQuery({
@@ -980,30 +1121,204 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     gamla enskilda "Polisen-filter" (en AND-kombination) */}
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Polisen-bevakningar</p>
-                  {polisenBevakningar.length === 0 ? (
-                    <p className="text-sm text-slate-500">Inga bevakningar — får allt från Polisen.</p>
+                  {bevakningarLaddar ? (
+                    <p className="text-sm text-slate-400">Laddar...</p>
                   ) : (
-                    <div className="flex flex-col gap-3">
-                      {polisenBevakningar.map(b => (
-                        <div key={b.id} className="flex flex-col gap-2 border border-slate-100 rounded-lg p-2">
-                          <div>
-                            <p className="text-xs text-slate-400 mb-1">Typer</p>
-                            <div className="flex flex-wrap gap-1">
-                              {(b.kategorier ?? []).length > 0
-                                ? b.kategorier!.map(k => <span key={k} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k}</span>)
-                                : <span className="text-xs text-slate-400">Alla</span>}
+                    <>
+                      {polisenBevakningar.length === 0 ? (
+                        <p className="text-sm text-slate-500 mb-2">Inga bevakningar — får allt från Polisen.</p>
+                      ) : (
+                        <div className="flex flex-col gap-3 mb-2">
+                          {polisenBevakningar.map(b => (
+                            <div key={b.id} className="flex flex-col gap-2 border border-slate-100 rounded-lg p-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-slate-400 mb-1">Typer</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {(b.kategorier ?? []).length > 0
+                                      ? b.kategorier!.map(k => <span key={k} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k}</span>)
+                                      : <span className="text-xs text-slate-400">Alla</span>}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <button onClick={() => setRedigerarBevakning(b)} className="text-xs text-violet-600 hover:text-violet-800 font-medium">Ändra</button>
+                                  <button onClick={() => taBortBevakningMutation.mutate(b.id)} className="text-xs text-slate-400 hover:text-red-500 font-medium">Ta bort</button>
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-xs text-slate-400 mb-1">Områden</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {(b.omraden ?? []).length > 0
+                                    ? b.omraden!.map(o => <span key={o} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{o}</span>)
+                                    : <span className="text-xs text-slate-400">Alla</span>}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-400 mb-1">Områden</p>
-                            <div className="flex flex-wrap gap-1">
-                              {(b.omraden ?? []).length > 0
-                                ? b.omraden!.map(o => <span key={o} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{o}</span>)
-                                : <span className="text-xs text-slate-400">Alla</span>}
-                            </div>
-                          </div>
+                          ))}
+                        </div>
+                      )}
+                      <button onClick={() => setRedigerarBevakning('ny')} className="text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors">
+                        + Ny bevakning
+                      </button>
+                    </>
+                  )}
+                  {redigerarBevakning && (
+                    <KategoriFilterModal
+                      kallNamn="Polisen"
+                      initialKategorier={redigerarBevakning === 'ny' ? null : redigerarBevakning.kategorier}
+                      initialOmraden={redigerarBevakning === 'ny' ? null : redigerarBevakning.omraden}
+                      onSpara={sparaBevakning}
+                      onClose={() => setRedigerarBevakning(null)}
+                    />
+                  )}
+                </div>
+
+                {/* Aktiva källor — admin/support-skrivrätt via
+                    GET/PUT /api/admin/users/{id}/sources (admin-variant av
+                    UserSourcesController). Rör bara isActive, aldrig
+                    sortOrder (rent kosmetiskt, användarens eget
+                    drag-och-släpp i Mina källor). */}
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Aktiva källor</p>
+                  {källorLaddar ? (
+                    <p className="text-sm text-slate-400">Laddar...</p>
+                  ) : valdaKällor.length === 0 ? (
+                    <p className="text-sm text-slate-500">Inga källor tillagda.</p>
+                  ) : (
+                    <div className="flex flex-col gap-1.5">
+                      {valdaKällor.map(k => (
+                        <div key={k.sourceId} className="flex items-center justify-between gap-2">
+                          <span className="text-sm text-slate-700">{k.name}</span>
+                          <button
+                            onClick={() => växlaKällaMutation.mutate({ sourceId: k.sourceId, isActive: !k.isActive })}
+                            disabled={växlaKällaMutation.isPending}
+                            className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors disabled:opacity-50 ${
+                              k.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                          >
+                            {k.isActive ? 'Aktiv' : 'Inaktiv'}
+                          </button>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Förklara händelse — läsläge, ändrar inget. Söker mot samma
+                    /api/admin/events/search som Händelsesök, kör sen
+                    GET .../explain-event/{eventId} som svarar utifrån Aktiva
+                    källor + Polisen-bevakningar ovan (samma prioritetsordning
+                    som NewsFeed.tsx). Byggd som ett supportverktyg — svarar på
+                    "varför ser/ser inte den här användaren händelse X" utan
+                    att en agent ska behöva räkna ut det för hand. */}
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Förklara en händelse</p>
+                  <div className="flex gap-1.5 mb-2">
+                    <input
+                      type="text"
+                      value={forklaraSokord}
+                      onChange={e => setForklaraSokord(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') sokForklaraHandelse() }}
+                      placeholder="Sök på titel, t.ex. Misshandel Gotland"
+                      className="flex-1 min-w-0 text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                    />
+                    <button
+                      onClick={sokForklaraHandelse}
+                      disabled={forklaraSoker || !forklaraSokord.trim()}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 disabled:opacity-50 transition-colors shrink-0"
+                    >
+                      {forklaraSoker ? 'Söker…' : 'Sök'}
+                    </button>
+                  </div>
+
+                  {forklaraTraffar.length > 0 && !forklaratEvent && (
+                    <div className="flex flex-col gap-1 mb-2">
+                      {forklaraTraffar.map(ev => (
+                        <button
+                          key={ev.id}
+                          onClick={() => valjForklaraHandelse(ev)}
+                          className="text-left text-xs text-slate-600 hover:bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 truncate"
+                        >
+                          {ev.title}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {forklaratEvent && (
+                    <div className="border border-slate-100 rounded-lg p-2.5">
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <p className="text-xs text-slate-700 font-medium">{forklaratEvent.title}</p>
+                        <button
+                          onClick={() => { setForklaratEvent(null); setForklaring(null) }}
+                          className="text-xs text-slate-400 hover:text-slate-600 shrink-0"
+                        >
+                          Ny sökning
+                        </button>
+                      </div>
+                      {forklaringLaddar ? (
+                        <p className="text-xs text-slate-400">Kontrollerar…</p>
+                      ) : forklaring && (
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${forklaring.visasIMittFlode ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                            {forklaring.visasIMittFlode ? 'Visas' : 'Visas inte'}
+                          </span>
+                          <p className="text-xs text-slate-600">{forklaring.anledning}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Push-inställningar — skrivrätt tillagd 2026-09-13. Policy,
+                    inte teknik: bara ändra åt en användare när DE SJÄLVA bett
+                    om det (t.ex. via ett supportärende) — se
+                    Rutiner/Konto/Push-installningar.md. Endpoint/P256dh/Auth
+                    exponeras fortfarande aldrig, se controllern. */}
+                <div>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">
+                    Push-notiser <span className="normal-case text-slate-300 font-normal">— ändra bara om användaren själv bett om det</span>
+                  </p>
+                  {pushLaddar ? (
+                    <p className="text-sm text-slate-400">Laddar...</p>
+                  ) : !pushInstallningar ? (
+                    <p className="text-sm text-slate-500">Kunde inte hämtas.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          onClick={() => andraPushMutation.mutate({ pushEnabled: !pushInstallningar.pushEnabled })}
+                          disabled={andraPushMutation.isPending}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${pushInstallningar.pushEnabled ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                        >
+                          Push {pushInstallningar.pushEnabled ? 'på' : 'av'}
+                        </button>
+                        <button
+                          onClick={() => andraPushMutation.mutate({ pushNyaHandelser: !pushInstallningar.pushNyaHandelser })}
+                          disabled={andraPushMutation.isPending}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${pushInstallningar.pushNyaHandelser ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                        >
+                          Ny händelse {pushInstallningar.pushNyaHandelser ? 'på' : 'av'}
+                        </button>
+                        <button
+                          onClick={() => andraPushMutation.mutate({ pushNyVersion: !pushInstallningar.pushNyVersion })}
+                          disabled={andraPushMutation.isPending}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${pushInstallningar.pushNyVersion ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                        >
+                          Ny version {pushInstallningar.pushNyVersion ? 'på' : 'av'}
+                        </button>
+                      </div>
+                      {pushInstallningar.enheter.length === 0 ? (
+                        <p className="text-xs text-slate-400">Inga registrerade enheter.</p>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          {pushInstallningar.enheter.map(e => (
+                            <p key={e.id} className="text-xs text-slate-500">
+                              {e.deviceName || e.platform || 'Okänd enhet'} · senast sedd {new Date(e.lastSeenAt).toLocaleDateString('sv-SE')}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1081,14 +1396,21 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-300 cursor-not-allowed">
                   Ändra roller
                 </button>
-                <button className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
-                  Skicka lösenordsåterställning
+                <button
+                  onClick={() => skickaLösenordsåterställning(vald)}
+                  disabled={skickarLösenordsåterställning}
+                  className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition-colors">
+                  {skickarLösenordsåterställning ? 'Skickar…' : 'Skicka lösenordsåterställning'}
                 </button>
                 {vald.kontaktuppgifter.some(k => !k.verifierad) && (
-                  <button className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors">
-                    Skicka verifieringsmail
+                  <button
+                    onClick={() => skickaVerifieringsmail(vald)}
+                    disabled={skickarVerifieringsmail}
+                    className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition-colors">
+                    {skickarVerifieringsmail ? 'Skickar…' : 'Skicka verifieringsmail'}
                   </button>
                 )}
+                {mejlFeedback && <p className="text-xs text-slate-500">{mejlFeedback}</p>}
                 {vald.status === 'Avstängd' && (
                   <button onClick={() => aktiveraEnkild(vald)}
                     className="text-left px-4 py-2.5 rounded-xl border border-green-200 text-sm text-green-700 hover:bg-green-50 transition-colors">
@@ -1183,7 +1505,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           {/* ── Notishistorik ── */}
           {detaljFlik === 'notishistorik' && (
             <div>
-              {notishistorik.length === 0 ? (
+              {notishistorikLaddar ? (
+                <p className="px-6 py-10 text-center text-sm text-slate-400">Laddar...</p>
+              ) : notishistorik.length === 0 ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Inga notiser skickade till den här användaren.</p>
               ) : (
                 <table className="w-full text-sm">
@@ -1238,7 +1562,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               session 18, bara aldrig haft en vy förrän nu. */}
           {detaljFlik === 'installningshistorik' && (
             <div>
-              {installningshistorik.length === 0 ? (
+              {installningshistorikLaddar ? (
+                <p className="px-6 py-10 text-center text-sm text-slate-400">Laddar...</p>
+              ) : installningshistorik.length === 0 ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Ingen inställningshistorik för den här användaren.</p>
               ) : (
                 <table className="w-full text-sm">

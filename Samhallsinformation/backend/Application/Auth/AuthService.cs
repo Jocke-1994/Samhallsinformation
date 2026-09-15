@@ -64,7 +64,7 @@ public class AuthService : IAuthService
         var verifyLink = $"{_frontendUrl}/verify-email?token={verificationToken.Token}";
         _ = _email.SendEmailVerificationAsync(user.Email, user.Name, verifyLink);
 
-        return await IssueTokensAsync(user);
+        return await IssueTokensAsync(user, isNewUser: true);
     }
 
     public async Task<AuthResult> LoginAsync(string email, string password)
@@ -95,6 +95,14 @@ public class AuthService : IAuthService
             return AuthResult.Fail(401, "Ogiltig Google-inloggning");
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+        // Sparas INNAN user eventuellt tilldelas nedan — annars vore den alltid
+        // false. Frontend behöver veta det här för att skilja på "ett nytt konto
+        // skapades just nu" (kör onboarding-guiden) och "loggade in på ett
+        // redan befintligt konto" (hoppa rakt in i appen, som /login redan gör)
+        // — en Google-inloggning på /register mot en e-post som redan har ett
+        // konto (lösenords- eller Google-baserat) ska aldrig dras genom
+        // Källor-guiden och riskera att skriva över redan sparade källval.
+        var isNewUser = user == null;
 
         if (user == null)
         {
@@ -123,7 +131,7 @@ public class AuthService : IAuthService
         if (!user.IsActive)
             return AuthResult.Fail(403, "Kontot är avstängt. Kontakta support om du tror det här är ett misstag.");
 
-        return await IssueTokensAsync(user);
+        return await IssueTokensAsync(user, isNewUser);
     }
 
     public async Task<AuthResult> RefreshAsync(string refreshToken)
@@ -345,7 +353,29 @@ public class AuthService : IAuthService
         return AuthResult.Ok("Bytet är avbrutet");
     }
 
-    private async Task<AuthResult> IssueTokensAsync(User user)
+    public async Task<AuthResult> CancelDeletionAsync(string token)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.DeletionCancelToken == token);
+        if (user == null)
+            return AuthResult.Fail(400, "Länken är ogiltig eller har redan använts.");
+        if (user.DeletionScheduledAt == null || user.DeletionScheduledAt < DateTime.UtcNow)
+            return AuthResult.Fail(400, "Länken har gått ut — kontot är antingen redan raderat eller raderingen redan avbruten. Kontakta support om du behöver hjälp.");
+
+        user.DeletionScheduledAt = null;
+        user.DeletionCancelToken = null;
+        user.IsActive            = true;
+        user.SuspendedAt         = null;
+        user.SuspendedReason     = null;
+
+        await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.System, LoggTyper.Konto,
+            $"Radering avbruten via mejllänk — {user.Name}", "Kontot återaktiverat");
+
+        return AuthResult.Ok("Raderingen är avbruten — ditt konto är tillbaka.");
+    }
+
+    private async Task<AuthResult> IssueTokensAsync(User user, bool isNewUser = false)
     {
         var accessToken         = _tokens.GenerateAccessToken(user);
         var (rawRefresh, hash)  = _tokens.GenerateRefreshToken();
@@ -359,6 +389,6 @@ public class AuthService : IAuthService
 
         await _db.SaveChangesAsync();
 
-        return AuthResult.Ok(new AuthTokens(accessToken, rawRefresh, user.Name, user.Role));
+        return AuthResult.Ok(new AuthTokens(accessToken, rawRefresh, user.Name, user.Role, isNewUser));
     }
 }

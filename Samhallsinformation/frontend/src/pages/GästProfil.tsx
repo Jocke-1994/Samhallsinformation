@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import BetaBadge from '../components/common/BetaBadge'
+import { useFlags } from '../context/FeatureFlagsContext'
+import { isSektionSynlig } from '../lib/featureFlags'
 
+// Samma sektioner som ProfileLanding.tsx (inloggad vy) filtrerar bort med
+// isSektionSynlig — annars lovar den här listan funktioner som faktiskt är
+// avstängda, t.ex. den gamla mail/SMS-notismodellen som aldrig byggdes
+// (notif_*-flaggorna är alla av, ersatta av push bakom en egen, ännu
+// avstängd flagga).
 const FEATURES = [
-  { icon: '🗂️', label: 'Mina källor',    desc: 'Välj vilka myndigheter som visas i ditt flöde' },
-  { icon: '🔔', label: 'Notifieringar',  desc: 'Få aviseringar via e-post eller SMS' },
-  { icon: '👤', label: 'Konto',          desc: 'Hantera dina uppgifter och din data' },
-  { icon: '💬', label: 'Support',        desc: 'Skicka ärenden och följ deras status' },
+  { sektion: 'mina-kallor',   icon: '🗂️', label: 'Mina källor',    desc: 'Välj vilka myndigheter som visas i ditt flöde' },
+  { sektion: 'notifieringar', icon: '🔔', label: 'Notifieringar',  desc: 'Få aviseringar via e-post eller SMS' },
+  { sektion: 'konto',         icon: '👤', label: 'Konto',          desc: 'Hantera dina uppgifter och din data' },
+  { sektion: 'support',       icon: '💬', label: 'Support',        desc: 'Skicka ärenden och följ deras status' },
 ]
 
 function InloggningsModal({ onClose, onLogin, mode }: { onClose: () => void; onLogin: (email: string, password: string) => Promise<void>; mode: 'logga-in' | 'skapa-konto' }) {
@@ -112,6 +119,8 @@ function InloggningsModal({ onClose, onLogin, mode }: { onClose: () => void; onL
 
 export default function GästProfil() {
   const { login } = useAuth()
+  const flaggor = useFlags()
+  const synligaFeatures = FEATURES.filter(f => isSektionSynlig(f.sektion, flaggor))
   const [modalMode, setModalMode] = useState<'logga-in' | 'skapa-konto' | null>(null)
 
   async function hanteraLogin(email: string, password: string) {
@@ -157,10 +166,10 @@ export default function GästProfil() {
           <p className="text-xs font-bold uppercase tracking-widest text-slate-400 px-5 pt-4 pb-2">
             Med ett konto kan du
           </p>
-          {FEATURES.map((f, i) => (
+          {synligaFeatures.map((f, i) => (
             <div
               key={f.label}
-              className={`flex items-center gap-4 px-5 py-3.5 ${i < FEATURES.length - 1 ? 'border-b border-slate-100' : ''}`}
+              className={`flex items-center gap-4 px-5 py-3.5 ${i < synligaFeatures.length - 1 ? 'border-b border-slate-100' : ''}`}
             >
               <span className="text-xl shrink-0">{f.icon}</span>
               <div>

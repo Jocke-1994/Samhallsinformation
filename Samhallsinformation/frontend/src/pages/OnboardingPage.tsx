@@ -20,17 +20,18 @@ export default function OnboardingPage() {
   const redirect = params.get('redirect') ?? '/'
 
   const [steg, setSteg] = useState<Steg>('konto')
-  // Google-inloggning loggar in direkt vid klick i steg 1 (till skillnad från
-  // lösenordsflödet där inloggning sker sist) — då ska redirect-bevakningen
-  // nedan inte kicka ut användaren mitt i steg 2/3.
-  const [kontoSkapatViaGoogle, setKontoSkapatViaGoogle] = useState(false)
+  // Google-inloggning loggar in direkt vid klick i steg 1, och lösenordsvägen
+  // loggar in så fort register() lyckas i steg 3 — i båda fallen finns ett
+  // konto innan sidan är klar med sin egen guide, så redirect-bevakningen
+  // nedan ska inte kicka ut användaren mitt i flödet.
+  const [kontoSkapat, setKontoSkapat] = useState(false)
 
   // Sidan är till för utloggade besökare som ska skapa konto — inget
   // konto finns förrän sista steget, så en redan inloggad användare har
   // inget att göra här.
   useEffect(() => {
-    if (isLoggedIn && !kontoSkapatViaGoogle) navigate(redirect, { replace: true })
-  }, [isLoggedIn, kontoSkapatViaGoogle, navigate, redirect])
+    if (isLoggedIn && !kontoSkapat) navigate(redirect, { replace: true })
+  }, [isLoggedIn, kontoSkapat, navigate, redirect])
 
   // Steg 1
   const [name, setName]         = useState('')
@@ -49,7 +50,7 @@ export default function OnboardingPage() {
   const [skapar, setSkapar]   = useState(false)
   const [slutFel, setSlutFel] = useState<string | null>(null)
 
-  if (isLoggedIn && !kontoSkapatViaGoogle) return null
+  if (isLoggedIn && !kontoSkapat) return null
 
   const activeSources = sources.filter(s => valdaKällor.has(s.id))
 
@@ -71,12 +72,21 @@ export default function OnboardingPage() {
     setValdaKällor(prev => new Set([...prev, ...ids]))
   }
 
+  function handleRemove(id: number) {
+    setValdaKällor(prev => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }
+
   async function slutfor() {
     setSlutFel(null)
     setSkapar(true)
-    if (!kontoSkapatViaGoogle) {
+    if (!kontoSkapat) {
       try {
         await register(name, email, password, acceptedTerms)
+        setKontoSkapat(true)
       } catch (err) {
         setSkapar(false)
         setSlutFel(err instanceof Error ? err.message : 'Något gick fel')
@@ -88,9 +98,13 @@ export default function OnboardingPage() {
       const uppdateringar: SourcePrefUpdate[] = [...valdaKällor].map((sourceId, i) => ({
         sourceId, isActive: true, sortOrder: i,
       }))
-      // Icke-blockerande — kontot är redan riktigt och fungerande även om
-      // det här skulle misslyckas, källor kan alltid läggas till senare.
-      await saveUserSources(uppdateringar).catch(() => {})
+      try {
+        await saveUserSources(uppdateringar)
+      } catch {
+        setSkapar(false)
+        setSlutFel('Kontot skapades, men dina valda källor kunde inte sparas. Försök igen, eller fortsätt och lägg till dem senare under Mina källor.')
+        return
+      }
     }
 
     navigate(redirect, { replace: true })
@@ -196,10 +210,19 @@ export default function OnboardingPage() {
                 <GoogleSignInButton
                   onStart={() => { setKontoFel(null); setGoogleLoading(true) }}
                   onError={message => { setKontoFel(message); setGoogleLoading(false) }}
-                  onSuccess={profile => {
+                  onSuccess={(profile, isNewUser) => {
+                    if (!isNewUser) {
+                      // Redan ett befintligt konto (lösenords- eller Google-
+                      // baserat) — det här var i praktiken en inloggning, inte
+                      // en registrering. Hoppa förbi hela guiden precis som
+                      // /login redan gör, annars riskerar Källor-steget att
+                      // skriva över redan sparade källval på ett riktigt konto.
+                      navigate(redirect, { replace: true })
+                      return
+                    }
                     setName(profile.name)
                     setEmail(profile.email)
-                    setKontoSkapatViaGoogle(true)
+                    setKontoSkapat(true)
                     setGoogleLoading(false)
                     setSteg('kallor')
                   }}
@@ -222,7 +245,7 @@ export default function OnboardingPage() {
                 <h1 className="text-lg font-bold text-slate-900">Vilka källor vill du följa?</h1>
                 <p className="text-sm text-slate-500 mt-1">Du kan alltid ändra det här senare under Mina källor.</p>
               </div>
-              <AllaKallorKort sources={sources} activeIds={valdaKällor} onAdd={handleAdd} />
+              <AllaKallorKort sources={sources} activeIds={valdaKällor} onAdd={handleAdd} onRemove={handleRemove} />
               <div className="flex items-center justify-between mt-2">
                 <button
                   onClick={() => setSteg('konto')}

@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
+using Samhallsinformation.Services;
 
 [ApiController]
 [Route("api/admin/support")]
@@ -15,11 +16,15 @@ public class AdminSupportController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IAktivitetsloggService _aktivitetslogg;
+    private readonly IEmailService _email;
+    private readonly ILogger<AdminSupportController> _logger;
 
-    public AdminSupportController(AppDbContext db, IAktivitetsloggService aktivitetslogg)
+    public AdminSupportController(AppDbContext db, IAktivitetsloggService aktivitetslogg, IEmailService email, ILogger<AdminSupportController> logger)
     {
         _db = db;
         _aktivitetslogg = aktivitetslogg;
+        _email = email;
+        _logger = logger;
     }
 
     private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -58,6 +63,8 @@ public class AdminSupportController : ControllerBase
                 AssignedToName = t.AssignedToUser != null ? t.AssignedToUser.Name : null,
                 t.IsArchived,
                 t.FirstOpenedAt,
+                t.LastViewedAt,
+                t.LastUserMessageAt,
                 t.CreatedAt,
                 t.UpdatedAt,
             })
@@ -69,15 +76,14 @@ public class AdminSupportController : ControllerBase
     [HttpGet("tickets/{id}")]
     public async Task<IActionResult> GetTicket(Guid id)
     {
-        // Markera som läst (första öppningen) innan projektionen byggs, så
-        // svaret nedan redan speglar det nya värdet.
+        // Markera som läst — LastViewedAt uppdateras vid VARJE öppning (till
+        // skillnad från FirstOpenedAt, som bara sätts en gång) så ett nytt
+        // svar efter att ärendet redan lästs blir oläst igen.
         var entity = await _db.SupportTickets.FindAsync(id);
         if (entity == null) return NotFound();
-        if (entity.FirstOpenedAt == null)
-        {
-            entity.FirstOpenedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
-        }
+        entity.FirstOpenedAt ??= DateTime.UtcNow;
+        entity.LastViewedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
 
         var ticket = await _db.SupportTickets
             .Where(t => t.Id == id)
@@ -98,6 +104,8 @@ public class AdminSupportController : ControllerBase
                 t.ReminderNote,
                 t.IsArchived,
                 t.FirstOpenedAt,
+                t.LastViewedAt,
+                t.LastUserMessageAt,
                 t.CreatedAt,
                 t.UpdatedAt,
             })
@@ -142,7 +150,7 @@ public class AdminSupportController : ControllerBase
     [HttpPost("tickets/{id}/reply")]
     public async Task<IActionResult> Reply(Guid id, [FromBody] AgentReplyRequest req)
     {
-        var ticket = await _db.SupportTickets.FindAsync(id);
+        var ticket = await _db.SupportTickets.Include(t => t.CreatedByUser).FirstOrDefaultAsync(t => t.Id == id);
         if (ticket == null) return NotFound();
 
         _db.SupportTicketMessages.Add(new SupportTicketMessage
@@ -156,9 +164,33 @@ public class AdminSupportController : ControllerBase
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+        var ärendeNummer = $"SUP-{ticket.TicketNumber:D4}";
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Ärende,
-            $"Ärende svarat — {ticket.Subject}", req.IsInternal ? "Intern anteckning" : "Svar till medborgaren");
+            $"Ärende svarat — {ticket.Subject}",
+            req.IsInternal ? $"Intern anteckning — {ärendeNummer}" : $"Svar skickat till medborgaren — {ärendeNummer}",
+            relateratÄrendeId: ticket.Id);
+
+        // Skickas som riktigt mejl bara för svar avsedda för medborgaren — en
+        // adress att skicka till måste finnas (anonym feedback utan ContactEmail
+        // har ingen). Ett Resend-fel ska aldrig få det redan sparade svaret att
+        // se ut som att det misslyckades, därför fångas felet och loggas istället.
+        if (!req.IsInternal)
+        {
+            var toEmail = ticket.ContactEmail ?? ticket.CreatedByUser?.Email;
+            if (!string.IsNullOrWhiteSpace(toEmail))
+            {
+                try
+                {
+                    await _email.SendTicketReplyAsync(toEmail, ticket.TicketNumber, ticket.Subject, req.Text, ticket.InboundAddress);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Kunde inte skicka ärendesvar som mejl för ärende {TicketNumber}", ticket.TicketNumber);
+                }
+            }
+        }
+
         return Ok();
     }
 
@@ -175,7 +207,7 @@ public class AdminSupportController : ControllerBase
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Ärende,
             $"Ärendestatus ändrad — {ticket.Subject}", $"{gammalStatus} → {req.Status}",
-            gammaltVärde: gammalStatus, nyttVärde: req.Status);
+            gammaltVärde: gammalStatus, nyttVärde: req.Status, relateratÄrendeId: ticket.Id);
         return Ok();
     }
 
@@ -190,7 +222,8 @@ public class AdminSupportController : ControllerBase
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Ärende,
-            req.Archived ? $"Ärende arkiverat — {ticket.Subject}" : $"Ärende återställt från arkiv — {ticket.Subject}", "");
+            req.Archived ? $"Ärende arkiverat — {ticket.Subject}" : $"Ärende återställt från arkiv — {ticket.Subject}", "",
+            relateratÄrendeId: ticket.Id);
         return Ok();
     }
 
@@ -209,7 +242,7 @@ public class AdminSupportController : ControllerBase
             : (await _db.Users.FindAsync(req.UserId.Value))?.Name ?? "Okänd";
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Ärende,
-            $"Ärende tilldelat — {ticket.Subject}", tilldeladNamn);
+            $"Ärende tilldelat — {ticket.Subject}", tilldeladNamn, relateratÄrendeId: ticket.Id);
         return Ok();
     }
 

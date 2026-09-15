@@ -1,4 +1,5 @@
 import type { CanonicalEvent, EventsResponse } from '../types'
+import { adminFetch } from './adminFetch'
 
 interface FetchEventsParams {
   shortName?: string
@@ -231,6 +232,20 @@ export async function fetchEvents(params: FetchEventsParams = {}): Promise<Event
   const res = await fetch(`${API_BASE}/api/events?${query}`)
   if (!res.ok) throw new Error(`fetchEvents: ${res.status}`)
   return res.json()
+}
+
+// Ren analytics, ingen UI beror på svaret — skickas via adminFetch (trots
+// namnet den delade, valfria-auth-wrappern) så en inloggad användares JWT
+// följer med om den finns, men anropet fungerar likagärna helt utloggat.
+// Anropas oavsett om webbläsarens delningsmeny/kopiera-länk faktiskt
+// fullföljs eller avbryts av användaren.
+export async function logEventShare(eventId: string): Promise<void> {
+  if (USE_MOCK) return
+  try {
+    await adminFetch(`/api/events/${eventId}/share`, { method: 'POST' })
+  } catch {
+    // tyst — misslyckad loggning ska aldrig störa själva delningen
+  }
 }
 
 export async function checkEventLinkStatus(eventId: string): Promise<boolean> {

@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
+using Samhallsinformation.Services;
 
 [ApiController]
 [Route("api/auth")]
@@ -20,13 +21,17 @@ public class AuthController : ControllerBase
     private readonly ITokenService         _tokens;
     private readonly AppDbContext          _db;
     private readonly IPasswordHasher<User> _hasher;
+    private readonly IEmailService         _email;
+    private readonly string                _frontendUrl;
 
-    public AuthController(IAuthService auth, ITokenService tokens, AppDbContext db, IPasswordHasher<User> hasher)
+    public AuthController(IAuthService auth, ITokenService tokens, AppDbContext db, IPasswordHasher<User> hasher, IEmailService email, IConfiguration config)
     {
-        _auth   = auth;
-        _tokens = tokens;
-        _db     = db;
-        _hasher = hasher;
+        _auth        = auth;
+        _tokens      = tokens;
+        _db          = db;
+        _hasher      = hasher;
+        _email       = email;
+        _frontendUrl = config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
     }
 
     [HttpPost("login")]
@@ -231,6 +236,20 @@ public class AuthController : ControllerBase
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();
 
+        // Delade händelser (EventShareLog) — upptäckt 2026-09-13 att den här
+        // saknades i exporten trots att den kopplas mot UserId när man delar
+        // inloggad. Samma mönster som sparadeHandelser ovan.
+        var deladeHandelser = await (
+            from d in _db.EventShareLogs
+            where d.UserId == userId
+            join e in _db.Events on d.EventId equals e.Id into eJ
+            from e in eJ.DefaultIfEmpty()
+            join src in _db.Sources on e.SourceId equals src.Id into srcJ
+            from src in srcJ.DefaultIfEmpty()
+            orderby d.SharedAt descending
+            select new { Titel = e != null ? e.Title : "Okänd/borttagen händelse", Kalla = src != null ? src.ShortName : "Okänd källa", d.SharedAt }
+        ).ToListAsync();
+
         var ärendeIds = ärenden.Select(a => a.Id).ToList();
         var meddelanden = await _db.SupportTicketMessages
             .Where(m => ärendeIds.Contains(m.TicketId) && !m.IsInternal)
@@ -252,6 +271,7 @@ public class AuthController : ControllerBase
             Konto = new { user.Name, user.Email, user.CreatedAt, user.AuthProvider, user.EmailVerified },
             Kallor = kallor,
             SparadeHandelser = sparadeHandelser,
+            DeladeHandelser = deladeHandelser,
             PolisenBevakningar = polisenBevakningar,
             Notisinstallningar = new
             {
@@ -273,10 +293,10 @@ public class AuthController : ControllerBase
     // Self-service GDPR-radering (artikel 17) — samma 24h-fördröjda
     // anonymiseringsmekanism som AdminUsersController.Delete (kontot spärras
     // direkt, UserDeletionBackgroundService anonymiserar efter fristen).
-    // Ingen self-service-ångra: IsActive=false blockerar inloggning direkt
-    // (se AuthService.LoginAsync), så användaren kan inte logga in igen för
-    // att ångra sig själv inom fristen — måste kontakta supporten, medvetet,
-    // samma säkerhetsmarginal som redan finns för admin-initierad radering.
+    // IsActive=false blockerar inloggning direkt (se AuthService.LoginAsync),
+    // så användaren kan inte logga in igen för att ångra sig — men får en
+    // ångra-länk via mejl (DeletionCancelToken, se CancelDeletion nedan) som
+    // inte kräver inloggning, länken ÄR beviset på identitet.
     [HttpDelete("me")]
     [Authorize]
     public async Task<IActionResult> DeleteMe()
@@ -291,6 +311,7 @@ public class AuthController : ControllerBase
         user.SuspendedAt       ??= DateTime.UtcNow;
         user.SuspendedReason     = "Radering begärd av användaren (GDPR) — raderas automatiskt om 24 timmar";
         user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24);
+        user.DeletionCancelToken = Guid.NewGuid().ToString("N");
 
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
@@ -299,8 +320,21 @@ public class AuthController : ControllerBase
         });
 
         await _db.SaveChangesAsync();
+
+        var cancelLink = $"{_frontendUrl.TrimEnd('/')}/cancel-deletion?token={user.DeletionCancelToken}";
+        _ = _email.SendAccountDeletionScheduledAsync(user.Email, user.Name, cancelLink, user.DeletionScheduledAt.Value);
+
         return Ok(new { deletionScheduledAt = user.DeletionScheduledAt });
     }
+
+    // Konsumerar DeletionCancelToken — kräver ingen inloggning (kontot är
+    // spärrat, användaren kan inte logga in), länken i mejlet ÄR beviset på
+    // identitet. Fungerar för både self-service- och admin-initierad radering,
+    // eftersom båda sätter samma token.
+    [HttpPost("cancel-deletion")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CancelDeletion([FromBody] CancelDeletionRequest req) =>
+        ToActionResult(await _auth.CancelDeletionAsync(req.Token));
 
     private IActionResult ToActionResult(AuthResult result)
     {
@@ -314,6 +348,7 @@ public class AuthController : ControllerBase
                 refreshToken = result.Tokens.RefreshToken,
                 name         = result.Tokens.Name,
                 role         = result.Tokens.Role,
+                isNewUser    = result.Tokens.IsNewUser,
             });
 
         return Ok(new { message = result.Message });
@@ -331,3 +366,4 @@ public record ResetPasswordRequest(string Token, string NewPassword);
 public record VerifyEmailRequest(string Token);
 public record RequestEmailChangeRequest(string NewEmail, string? CurrentPassword = null);
 public record ConfirmEmailChangeRequest(string Token);
+public record CancelDeletionRequest(string Token);
