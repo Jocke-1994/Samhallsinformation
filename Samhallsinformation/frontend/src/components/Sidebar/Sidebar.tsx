@@ -13,6 +13,7 @@ import { isSektionSynlig } from '../../lib/featureFlags'
 import { useSourceOrder } from '../../hooks/useSourceOrder'
 import { useSiteSettings } from '../../hooks/useSiteSettings'
 import BetaBadge from '../common/BetaBadge'
+import { ALLA_HANDELSER_LABEL, MITT_FLODE_LABEL } from '../../lib/navLabels'
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 
@@ -286,7 +287,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
         </div>
         <div className="flex flex-col gap-0.5">
           <SourceButton
-            label="Alla händelser"
+            label={ALLA_HANDELSER_LABEL}
             active={selectedShortName === null && !isProfilePage && viewMode === 'Allt'}
             hasUnread={false}
             onClick={() => {
@@ -298,7 +299,7 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
           />
           {isLoggedIn && (
             <SourceButton
-              label="Mitt flöde"
+              label={MITT_FLODE_LABEL}
               active={selectedShortName === null && !isProfilePage && viewMode === 'Mitt'}
               hasUnread={false}
               onClick={() => {

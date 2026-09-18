@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useSwipeable } from 'react-swipeable'
 import { useQuery } from '@tanstack/react-query'
 import Sidebar from '../components/Sidebar/Sidebar'
+import MobilTopBar from '../components/common/MobilTopBar'
 import { fetchUppdateringar, type PunktTyp } from '../api/uppdateringar'
 
 const TYP_CONFIG: Record<PunktTyp, { label: string; pill: string }> = {
@@ -51,18 +52,7 @@ export default function UppdateringarPage() {
         onClose={() => setSidebarOpen(false)}
       />
       <main {...swipeHandlers} className="flex-1 overflow-y-auto select-none md:select-auto">
-        {/* Hamburger — mobil */}
-        <div className="md:hidden bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-            aria-label="Öppna meny"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
+        <MobilTopBar onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div className="max-w-2xl mx-auto px-6 py-12">
 
