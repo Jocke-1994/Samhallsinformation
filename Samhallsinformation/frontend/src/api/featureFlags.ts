@@ -20,3 +20,25 @@ export async function resetFeatureFlagOverrides(): Promise<void> {
   const res = await adminFetch('/api/admin/feature-flags', { method: 'DELETE' })
   if (!res.ok) throw new Error(`resetFeatureFlagOverrides: ${res.status}`)
 }
+
+export interface AdminFeatureFlagOverride {
+  key:             string
+  value:           boolean
+  redoAttLanseras: boolean
+}
+
+// Adminens fulla vy (inkl. redoAttLanseras) — till skillnad från den
+// publika fetchFeatureFlagOverrides ovan, som bara ger Key→Value.
+export async function fetchAdminFeatureFlags(): Promise<AdminFeatureFlagOverride[]> {
+  const res = await adminFetch('/api/admin/feature-flags')
+  if (!res.ok) throw new Error(`fetchAdminFeatureFlags: ${res.status}`)
+  return res.json()
+}
+
+export async function setFeatureFlagRedo(key: string, redoAttLanseras: boolean): Promise<void> {
+  const res = await adminFetch(`/api/admin/feature-flags/${key}/redo`, {
+    method: 'PUT',
+    body:   JSON.stringify({ redoAttLanseras }),
+  })
+  if (!res.ok) throw new Error(`setFeatureFlagRedo: ${res.status}`)
+}

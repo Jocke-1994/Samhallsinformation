@@ -1,6 +1,6 @@
 ---
 typ: index
-uppdaterad: 2026-09-13
+uppdaterad: 2026-09-21
 ---
 
 # Öppna frågor — allt som väntar på ditt svar, på ett ställe
@@ -32,6 +32,13 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   flagga `flode_dela`, PR #574). Enda kvarvarande frågan: är det här en
   enklare v1 av session 38:s idé (dela till sparade kontakter/grupper),
   eller en helt egen, avsiktligt minimal funktion?
+- **[[../Verktyg/Schemalagd-lansering|Schemalagd lansering]]** — byggd
+  2026-09-21. Ska push ("Ny version"-notisen) kopplas ihop automatiskt
+  med en schemalagd lansering senare, eller förbli en manuell knapp?
+- **[[../Ideer/Uppdateringar-schemalagd-publicering|Uppdateringar
+  schemalagd publicering]]** — grundflödet byggt, tre delar av den
+  ursprungliga visionen kvar (push-koppling, djuplänk, förhands-
+  prenumeration). Värda att bygga nu, eller vänta på ett konkret behov?
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,

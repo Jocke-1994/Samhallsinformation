@@ -50,6 +50,44 @@ public class FeatureFlagsController : ControllerBase
         return Ok();
     }
 
+    // Admins fulla vy av overrides, inkl. RedoAttLanseras — till skillnad
+    // från den publika GET ovan (bara Key→Value) behöver Uppdateringars
+    // schemaläggningsflöde (välj bland "redo"-flaggade, ej aktiva flaggor)
+    // se hela raden.
+    [HttpGet("/api/admin/feature-flags")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetAdminOverrides()
+    {
+        var overrides = await _db.FeatureFlagOverrides
+            .Select(f => new { f.Key, f.Value, f.RedoAttLanseras })
+            .ToListAsync();
+        return Ok(overrides);
+    }
+
+    // Skiljs medvetet från SetOverride (Value) — en admin ska kunna
+    // markera/avmarkera "redo att lanseras" utan att av misstag slå på
+    // flaggan för alla besökare. Upsertar raden om den saknas, rör aldrig
+    // Value. Samma automatik triggas av AdminFeatureIdeaController.SetStage
+    // när en kopplad idés Stage blir "lanseringsklar".
+    [HttpPut("/api/admin/feature-flags/{key}/redo")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> SetRedoAttLanseras(string key, [FromBody] SetRedoRequest req)
+    {
+        var existing = await _db.FeatureFlagOverrides.FindAsync(key);
+        if (existing == null)
+        {
+            existing = new FeatureFlagOverride { Key = key, Value = false };
+            _db.FeatureFlagOverrides.Add(existing);
+        }
+        existing.RedoAttLanseras = req.RedoAttLanseras;
+
+        await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konfiguration,
+            $"Flagga markerad {(req.RedoAttLanseras ? "redo att lanseras" : "ej redo")} — {key}", "");
+        return Ok();
+    }
+
     [HttpDelete("/api/admin/feature-flags")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> ResetOverrides()
@@ -65,3 +103,4 @@ public class FeatureFlagsController : ControllerBase
 }
 
 public record SetFlagRequest(bool Value);
+public record SetRedoRequest(bool RedoAttLanseras);

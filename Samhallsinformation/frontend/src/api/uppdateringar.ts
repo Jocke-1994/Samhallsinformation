@@ -12,11 +12,13 @@ export interface UppdateringsPunkt {
 }
 
 export interface Uppdatering {
-  id:         string
-  titel:      string
-  datum:      string
-  publicerad: boolean
-  punkter:    UppdateringsPunkt[]
+  id:                        string
+  titel:                     string
+  datum:                     string
+  publicerad:                boolean
+  punkter:                   UppdateringsPunkt[]
+  schemalagdPubliceringUtc:  string | null
+  schemalagdaFlaggor:        string[]
 }
 
 export interface PunktRequest {
@@ -27,10 +29,12 @@ export interface PunktRequest {
 }
 
 export interface UppdateringRequest {
-  titel:      string
-  datum:      string
-  publicerad: boolean
-  punkter:    PunktRequest[]
+  titel:                     string
+  datum:                     string
+  publicerad:                boolean
+  punkter:                   PunktRequest[]
+  schemalagdPubliceringUtc?: string | null
+  schemalagdaFlaggor?:       string[]
 }
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''

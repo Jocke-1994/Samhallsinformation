@@ -164,6 +164,7 @@ builder.Services.AddScoped<IAktivitetsloggService, AktivitetsloggService>();
 builder.Services.AddHostedService<IngestorBackgroundService>();
 builder.Services.AddHostedService<SupportScheduledActionService>();
 builder.Services.AddHostedService<UserDeletionBackgroundService>();
+builder.Services.AddHostedService<ScheduledReleaseBackgroundService>();
 
 // Controllers
 builder.Services.AddControllers();
@@ -1102,6 +1103,24 @@ using (var scope = app.Services.CreateScope())
 
                 INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
                 VALUES ('20260915132930_AddUppdateringar', '10.0.12')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
+        // Schemalagd lansering (se Obsidian-valvet, Verktyg/Schemalagd-
+        // lansering.md) — låter admin schemalägga att en Uppdateringar-post
+        // publiceras OCH kopplade feature-flaggor aktiveras vid en given
+        // tidpunkt, allt från ett ställe. Nullable kolumner, ingen backfill
+        // behövs.
+        if (pendingMigrations.Contains("20260921024638_AddSchemalagdLansering"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""Uppdateringar""        ADD COLUMN IF NOT EXISTS ""SchemalagdPubliceringUtc"" timestamptz;
+                ALTER TABLE ""Uppdateringar""        ADD COLUMN IF NOT EXISTS ""SchemalagdaFlaggorJson""   text;
+                ALTER TABLE ""FeatureFlagOverrides"" ADD COLUMN IF NOT EXISTS ""RedoAttLanseras""           boolean NOT NULL DEFAULT false;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260921024638_AddSchemalagdLansering', '10.0.12')
                 ON CONFLICT DO NOTHING;
             ");
         }

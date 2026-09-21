@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FLAG_GRUPPER, type FlagKey, type FlagState } from '../../lib/featureFlags'
+import { fetchAdminFeatureFlags, setFeatureFlagRedo } from '../../api/featureFlags'
 
 interface Props {
   flaggor: FlagState
@@ -9,6 +11,22 @@ interface Props {
 
 export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ }: Props) {
   const [öppna, setÖppna] = useState<Set<string>>(new Set())
+  const queryClient = useQueryClient()
+
+  // Redo-markeringen (schemaläggs i Uppdateringar) hör inte till den
+  // publika flagg-kontexten — hämtas separat bara för den här panelen.
+  const { data: adminFlaggor = [] } = useQuery({
+    queryKey: ['admin-feature-flags'],
+    queryFn:  fetchAdminFeatureFlags,
+  })
+  const redoMap: Record<string, boolean> = Object.fromEntries(
+    adminFlaggor.map(f => [f.key, f.redoAttLanseras])
+  )
+
+  const { mutate: växlaRedo } = useMutation({
+    mutationFn: ({ key, redo }: { key: string; redo: boolean }) => setFeatureFlagRedo(key, redo),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-feature-flags'] }),
+  })
 
   function växlaGrupp(key: string) {
     setÖppna(prev => {
@@ -82,17 +100,32 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ }: 
                           <span className="text-sm font-medium text-slate-700">{flagga.label}</span>
                           <span className="text-xs text-slate-400">{flagga.beskrivning}</span>
                         </div>
-                        <button
-                          onClick={() => onVäxla(flagga.key)}
-                          className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ml-6 ${
-                            aktiv ? 'bg-violet-600' : 'bg-slate-300'
-                          }`}
-                          aria-label={`${aktiv ? 'Inaktivera' : 'Aktivera'} ${flagga.label}`}
-                        >
-                          <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
-                            aktiv ? 'translate-x-5' : 'translate-x-0'
-                          }`} />
-                        </button>
+                        <div className="flex items-center gap-3 shrink-0 ml-6">
+                          {!aktiv && (
+                            <button
+                              onClick={() => växlaRedo({ key: flagga.key, redo: !redoMap[flagga.key] })}
+                              className={`text-[11px] font-medium px-2 py-1 rounded-full border transition-colors ${
+                                redoMap[flagga.key]
+                                  ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                  : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-slate-300'
+                              }`}
+                              title="Styr om flaggan dyker upp i Uppdateringars schemaläggningslista"
+                            >
+                              {redoMap[flagga.key] ? '✓ Redo att lanseras' : 'Redo att lanseras?'}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onVäxla(flagga.key)}
+                            className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+                              aktiv ? 'bg-violet-600' : 'bg-slate-300'
+                            }`}
+                            aria-label={`${aktiv ? 'Inaktivera' : 'Aktivera'} ${flagga.label}`}
+                          >
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                              aktiv ? 'translate-x-5' : 'translate-x-0'
+                            }`} />
+                          </button>
+                        </div>
                       </div>
                     )
                   })}
