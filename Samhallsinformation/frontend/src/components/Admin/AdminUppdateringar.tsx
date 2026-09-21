@@ -8,14 +8,7 @@ import {
 } from '../../api/uppdateringar'
 import { fetchAdminFeatureFlags } from '../../api/featureFlags'
 import { fetchAdminFaq } from '../../api/faq'
-
-// datetime-local ger/tar lokal (webbläsarens) väggklocketid, inte UTC — samma
-// omvandlingsmönster som MaintenanceBannerAdmin.tsx redan etablerat.
-function isoTillDatetimeLocal(iso: string): string {
-  const d = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
+import { isoTillDatetimeLocal } from '../../lib/tid'
 
 // ---------------------------------------------------------------------------
 // Konfiguration
@@ -169,8 +162,14 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
   const [titel,      setTitel]      = useState(redigerar?.titel ?? '')
   const [datum,      setDatum]      = useState(redigerar?.datum.split('T')[0] ?? new Date().toISOString().split('T')[0])
   const [publicerad, setPublicerad] = useState(redigerar?.publicerad ?? false)
-  const [punkter,    setPunkter]    = useState<PunktFormRad[]>(
-    redigerar && redigerar.punkter.length > 0
+  // Bara en HELT NY post får en tom startrad injicerad — redigeras en
+  // befintlig post visas exakt vad som är sparat, även 0 rader (en giltig
+  // ren flagg-schemaläggning). Att injicera en rad även vid 0 sparade
+  // punkter gjorde tidigare formuläret osparbart vid omöppning (code
+  // review-fynd, PR #590): kanSpara blev false direkt eftersom den
+  // injicerade raden hade tom text, utan någon förklaring i UI:t.
+  const [punkter, setPunkter] = useState<PunktFormRad[]>(
+    redigerar
       ? redigerar.punkter.map(p => ({ radId: nästaRadId++, typ: p.typ, plats: p.plats, text: p.text, synlighet: p.synlighet }))
       : [nyPunkt(nästaRadId++)]
   )
@@ -202,11 +201,15 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
     setPunkter(prev => prev.map(p => p.radId === radId ? { ...p, [key]: val } : p))
   }
 
-  // En schemalagd lansering får sakna innehåll helt (en ren flagg-
-  // aktivering utan publik nyhet) — men en vanlig, ej schemalagd post
-  // kräver fortfarande minst en rad text som förut.
-  const harInnehåll     = punkter.length > 0 && punkter.every(p => p.text.trim() !== '')
-  const rentFlaggSchema = schemalagd && valdaFlaggor.length > 0 && punkter.length === 0
+  // En schemalagd lansering med minst en flagga vald får sakna innehåll
+  // helt (en ren flagg-aktivering utan publik nyhet) — men en vanlig, ej
+  // schemalagd post kräver fortfarande minst en rad text som förut. Samma
+  // regel användes tidigare på två ställen (här och i "ta bort rad"-
+  // spärren nedan), en gång rakt av och en gång som en dubbel negation —
+  // en enda delad boolean istället (code review-fynd, PR #590).
+  const kanHaNollPunkter = schemalagd && valdaFlaggor.length > 0
+  const harInnehåll      = punkter.length > 0 && punkter.every(p => p.text.trim() !== '')
+  const rentFlaggSchema  = kanHaNollPunkter && punkter.length === 0
   const kanSpara = titel.trim() !== '' && (harInnehåll || rentFlaggSchema) && (!schemalagd || schemaDatum !== '')
 
   function spara(publicera: boolean) {
@@ -375,7 +378,7 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
                   {/* Ta bort */}
                   <button
                     onClick={() => removePunkt(p.radId)}
-                    disabled={punkter.length === 1 && !(schemalagd && valdaFlaggor.length > 0)}
+                    disabled={punkter.length === 1 && !kanHaNollPunkter}
                     className="text-slate-300 hover:text-red-400 disabled:opacity-30 transition-colors text-sm shrink-0"
                     title="Ta bort rad"
                   >

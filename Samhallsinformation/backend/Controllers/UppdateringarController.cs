@@ -1,10 +1,10 @@
 namespace Samhallsinformation.Controllers;
 
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.FeatureFlags;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -51,21 +51,17 @@ public class UppdateringarController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateUppdatering([FromBody] UppdateringRequest req)
     {
-        var uppdatering = new Uppdatering
-        {
-            Titel      = req.Titel,
-            Datum      = req.Datum,
-            Publicerad = req.Publicerad,
-            SchemalagdPubliceringUtc = req.SchemalagdPubliceringUtc,
-            SchemalagdaFlaggorJson   = SerialiseraFlaggor(req.SchemalagdaFlaggor),
-        };
+        var uppdatering = new Uppdatering { Titel = req.Titel, Datum = req.Datum };
         _db.Uppdateringar.Add(uppdatering);
         LäggTillPunkter(uppdatering.Id, req.Punkter);
+
+        // Ny post har inget tidigare väntande schema att ta hänsyn till.
+        var förfallet = await ApplySchemaOchPubliceringAsync(uppdatering, req, tidigareVäntandeFlaggor: []);
         await _db.SaveChangesAsync();
 
-        var status = req.SchemalagdPubliceringUtc != null
-            ? $"schemalagd till {req.SchemalagdPubliceringUtc:yyyy-MM-dd HH:mm} UTC"
-            : (req.Publicerad ? "publicerad" : "utkast");
+        var status = uppdatering.SchemalagdPubliceringUtc != null
+            ? $"schemalagd till {uppdatering.SchemalagdPubliceringUtc:yyyy-MM-dd HH:mm} UTC"
+            : (uppdatering.Publicerad ? (förfallet ? "publicerad (schema redan passerat)" : "publicerad") : "utkast");
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Konfiguration,
             $"Uppdatering skapad — {uppdatering.Titel}", status);
@@ -80,13 +76,19 @@ public class UppdateringarController : ControllerBase
         if (uppdatering == null) return NotFound();
 
         var publiceradFörut = uppdatering.Publicerad;
+        // Flaggor som redan låg och väntade på DEN HÄR posten innan vi
+        // skriver över den — så att en manuell publicering (tabellens
+        // snabbknapp, eller att kryssa ur "Schemalägg" och spara) aktiverar
+        // dem nu istället för att tyst tappa bort dem (code review-fynd,
+        // PR #590: manuell publicering nollställde schemat utan att någon
+        // faktiskt aktiverade de flaggor det skulle ha satt).
+        var väntandeFlaggorFörut = uppdatering.SchemalagdPubliceringUtc != null
+            ? FeatureFlagActivation.DeserialiseraFlaggor(uppdatering.SchemalagdaFlaggorJson)
+            : new List<string>();
 
-        uppdatering.Titel      = req.Titel;
-        uppdatering.Datum      = req.Datum;
-        uppdatering.Publicerad = req.Publicerad;
-        uppdatering.UpdatedAt  = DateTime.UtcNow;
-        uppdatering.SchemalagdPubliceringUtc = req.SchemalagdPubliceringUtc;
-        uppdatering.SchemalagdaFlaggorJson   = SerialiseraFlaggor(req.SchemalagdaFlaggor);
+        uppdatering.Titel     = req.Titel;
+        uppdatering.Datum     = req.Datum;
+        uppdatering.UpdatedAt = DateTime.UtcNow;
 
         // Ersätter hela punkter-listan — samma helobjekt-PUT-UX som FAQ,
         // slipper spåra per-punkt-ID:n genom formuläret.
@@ -94,14 +96,54 @@ public class UppdateringarController : ControllerBase
         _db.UppdateringsPunkter.RemoveRange(gamla);
         LäggTillPunkter(id, req.Punkter);
 
+        await ApplySchemaOchPubliceringAsync(uppdatering, req, väntandeFlaggorFörut);
         await _db.SaveChangesAsync();
-        var detalj = publiceradFörut != req.Publicerad
-            ? (req.Publicerad ? "Publicerad" : "Avpublicerad")
+
+        var detalj = publiceradFörut != uppdatering.Publicerad
+            ? (uppdatering.Publicerad ? "Publicerad" : "Avpublicerad")
             : "Innehåll redigerat";
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Konfiguration,
             $"Uppdatering redigerad — {uppdatering.Titel}", detalj);
         return Ok((await ByggDtoAsync(new List<Uppdatering> { uppdatering })).Single());
+    }
+
+    // Central invariant: en manuell publicering (req.Publicerad=true) vinner
+    // ALLTID över ett väntande schema — aktiverar dess flaggor direkt istället
+    // för att tyst tappa bort dem. Ett schema vars tidpunkt redan passerat
+    // (t.ex. ett gammalt öppet formulär som sparas efter att bakgrund-
+    // stjänsten redan bearbetat det på riktigt) körs direkt här också,
+    // istället för att lagras som "väntande" och riskera att bearbetas två
+    // gånger. Returnerar om det senare inträffade (för loggtexten).
+    private async Task<bool> ApplySchemaOchPubliceringAsync(Uppdatering uppdatering, UppdateringRequest req, List<string> tidigareVäntandeFlaggor)
+    {
+        var förfallet = req.SchemalagdPubliceringUtc.HasValue && req.SchemalagdPubliceringUtc.Value <= DateTime.UtcNow;
+        var flaggorAttAktiveraNu = req.Publicerad
+            ? tidigareVäntandeFlaggor
+            : (förfallet ? (req.SchemalagdaFlaggor ?? []) : []);
+
+        if (flaggorAttAktiveraNu.Count > 0)
+        {
+            var kontext = req.Publicerad && tidigareVäntandeFlaggor.Count > 0
+                ? $"Manuellt publicerad före schemat: {req.Titel}"
+                : $"Del av schemalagd lansering: {req.Titel}";
+            await FeatureFlagActivation.ActivateFlagsAsync(_db, _aktivitetslogg, flaggorAttAktiveraNu, kontext, AktörTyper.Admin);
+        }
+
+        if (req.Publicerad || förfallet)
+        {
+            uppdatering.Publicerad = req.Publicerad || req.Punkter.Count > 0;
+            uppdatering.SchemalagdPubliceringUtc = null;
+            uppdatering.SchemalagdaFlaggorJson   = null;
+        }
+        else
+        {
+            uppdatering.Publicerad = false;
+            uppdatering.SchemalagdPubliceringUtc = req.SchemalagdPubliceringUtc;
+            uppdatering.SchemalagdaFlaggorJson   = FeatureFlagActivation.SerialiseraFlaggor(req.SchemalagdaFlaggor);
+        }
+
+        return förfallet;
     }
 
     [HttpDelete("/api/admin/uppdateringar/{id:guid}")]
@@ -151,15 +193,9 @@ public class UppdateringarController : ControllerBase
                    .Select(p => new PunktDto(p.Id, p.Typ, p.Plats, p.Text, p.Synlighet))
                    .ToList(),
             u.SchemalagdPubliceringUtc,
-            DeserialiseraFlaggor(u.SchemalagdaFlaggorJson)
+            FeatureFlagActivation.DeserialiseraFlaggor(u.SchemalagdaFlaggorJson)
         )).ToList();
     }
-
-    private static string? SerialiseraFlaggor(List<string>? flaggor) =>
-        flaggor == null || flaggor.Count == 0 ? null : JsonSerializer.Serialize(flaggor);
-
-    private static List<string> DeserialiseraFlaggor(string? json) =>
-        string.IsNullOrEmpty(json) ? [] : JsonSerializer.Deserialize<List<string>>(json) ?? [];
 }
 
 public record PunktDto(Guid Id, string Typ, string Plats, string Text, string Synlighet);

@@ -1,10 +1,9 @@
 namespace Samhallsinformation.Services;
 
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.FeatureFlags;
 using Samhallsinformation.Data;
-using Samhallsinformation.Models;
 
 // Kör schemalagda "lanseringar" (Uppdateringar-poster med SchemalagdPublicering
 // Utc satt) — aktiverar kopplade feature-flaggor och publicerar posten (om den
@@ -56,26 +55,10 @@ public class ScheduledReleaseBackgroundService : BackgroundService
 
         foreach (var uppdatering in due)
         {
-            var flaggor = string.IsNullOrEmpty(uppdatering.SchemalagdaFlaggorJson)
-                ? []
-                : JsonSerializer.Deserialize<List<string>>(uppdatering.SchemalagdaFlaggorJson) ?? [];
-
-            foreach (var key in flaggor)
-            {
-                var flagg = await db.FeatureFlagOverrides.FindAsync([key], ct);
-                if (flagg == null)
-                {
-                    flagg = new FeatureFlagOverride { Key = key };
-                    db.FeatureFlagOverrides.Add(flagg);
-                }
-                flagg.Value = true;
-                flagg.RedoAttLanseras = false;
-
-                await aktivitetslogg.LogAsync(
-                    AktörTyper.System, LoggTyper.Konfiguration,
-                    $"Feature flag aktiverad automatiskt — {key}",
-                    $"Del av schemalagd lansering: {uppdatering.Titel}");
-            }
+            var flaggor = FeatureFlagActivation.DeserialiseraFlaggor(uppdatering.SchemalagdaFlaggorJson);
+            await FeatureFlagActivation.ActivateFlagsAsync(
+                db, aktivitetslogg, flaggor,
+                $"Del av schemalagd lansering: {uppdatering.Titel}", AktörTyper.System, ct);
 
             // Publiceras bara om posten faktiskt har innehåll — en ren
             // flagg-aktivering utan changelog-text ska inte dyka upp som en
@@ -89,7 +72,13 @@ public class ScheduledReleaseBackgroundService : BackgroundService
                     $"Uppdatering publicerad automatiskt — {uppdatering.Titel}", "Schemalagd publicering nådd");
             }
 
-            uppdatering.SchemalagdPubliceringUtc = null; // idempotens-vakt — bearbetad, oavsett Publicerad-utfall
+            // Nollställer BÅDE tidsstämpeln och flagg-listan — en post som
+            // redan bearbetats ska inte visa kvarvarande flaggor som om de
+            // fortfarande väntade (upptäckt i code review: tidigare
+            // nollställdes bara tidsstämpeln, vilket lämnade en missvisande
+            // flagg-lista kvar i GET-svaret).
+            uppdatering.SchemalagdPubliceringUtc = null;
+            uppdatering.SchemalagdaFlaggorJson   = null;
             uppdatering.UpdatedAt = now;
         }
 

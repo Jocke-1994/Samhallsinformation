@@ -97,7 +97,9 @@ public class ScheduledReleaseBackgroundServiceTests
 
         await ScheduledReleaseBackgroundService.ExecuteDueAsync(db, Substitute.For<IAktivitetsloggService>());
 
-        Assert.Null(db.Uppdateringar.Single().SchemalagdPubliceringUtc);
+        var uppdatering = db.Uppdateringar.Single();
+        Assert.Null(uppdatering.SchemalagdPubliceringUtc);
+        Assert.Null(uppdatering.SchemalagdaFlaggorJson); // inte bara tidsstämpeln — se code review-fynd, PR #590
     }
 
     [Fact]

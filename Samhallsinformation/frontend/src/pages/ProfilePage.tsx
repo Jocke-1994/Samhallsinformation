@@ -68,7 +68,10 @@ export default function ProfilePage() {
       <div className="flex flex-1 overflow-hidden" {...swipeHandlers}>
 
         {section === null ? (
-          <ProfileLanding onSelect={setSection} />
+          <div className="flex-1 overflow-y-auto">
+            <MobilTopBar onOpenSidebar={() => setSidebarOpen(true)} />
+            <ProfileLanding onSelect={setSection} />
+          </div>
         ) : (
           <div className="flex-1 overflow-y-auto">
             <MobilTopBar onOpenSidebar={() => setSidebarOpen(true)} />

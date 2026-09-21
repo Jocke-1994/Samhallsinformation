@@ -270,7 +270,7 @@ export default function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSect
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div>
       <div className="flex flex-col items-center pt-16 px-10">
 
         {/* Rubrik + sökfält i samma bredd */}

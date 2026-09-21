@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.FeatureFlags;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -141,10 +142,18 @@ public class AdminFeatureIdeaController : ControllerBase
         var idea = await _db.FeatureIdeas.FindAsync(id);
         if (idea == null) return NotFound();
 
+        // Bara sidoeffekterna nedan (checklista, redo-markering) ska
+        // triggas vid en FAKTISK stadieändring — inte vid ett omklick på
+        // redan valt stadium (code review-fynd, PR #590: ett omklick på en
+        // redan aktiv "lanseringsklar"-pill återställde tyst en flagga som
+        // admin medvetet avmarkerat som "inte redo" i Feature flags-panelen).
+        var stageÄndrades   = idea.Stage != req.Stage;
+        var föregåendeStage = idea.Stage;
+
         idea.Stage     = req.Stage;
         idea.UpdatedAt = DateTime.UtcNow;
 
-        if (req.Stage == "lanseringsklar")
+        if (stageÄndrades && req.Stage == "lanseringsklar")
         {
             var harChecklista = await _db.FeatureIdeaChecklistItems.AnyAsync(c => c.FeatureIdeaId == id);
             if (!harChecklista)
@@ -158,14 +167,18 @@ public class AdminFeatureIdeaController : ControllerBase
             // Value (bara synligheten i Uppdateringars urvalslista).
             if (!string.IsNullOrWhiteSpace(idea.FlagKey))
             {
-                var flagg = await _db.FeatureFlagOverrides.FindAsync(idea.FlagKey);
-                if (flagg == null)
-                {
-                    flagg = new FeatureFlagOverride { Key = idea.FlagKey, Value = false };
-                    _db.FeatureFlagOverrides.Add(flagg);
-                }
+                var flagg = await FeatureFlagActivation.GetOrCreateOverrideAsync(_db, idea.FlagKey);
                 flagg.RedoAttLanseras = true;
             }
+        }
+        else if (stageÄndrades && föregåendeStage == "lanseringsklar" && !string.IsNullOrWhiteSpace(idea.FlagKey))
+        {
+            // Idén flyttas BORT från "lanseringsklar" (nedgraderad) — flaggan
+            // ska inte längre visas som redo, annars kan den dyka upp i
+            // Uppdateringars schemaläggningslista trots att idén inte längre
+            // anses klar.
+            var flagg = await _db.FeatureFlagOverrides.FindAsync(idea.FlagKey);
+            if (flagg != null) flagg.RedoAttLanseras = false;
         }
 
         await _db.SaveChangesAsync();
