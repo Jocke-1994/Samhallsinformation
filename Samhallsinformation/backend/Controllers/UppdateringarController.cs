@@ -1,5 +1,6 @@
 namespace Samhallsinformation.Controllers;
 
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -55,14 +56,19 @@ public class UppdateringarController : ControllerBase
             Titel      = req.Titel,
             Datum      = req.Datum,
             Publicerad = req.Publicerad,
+            SchemalagdPubliceringUtc = req.SchemalagdPubliceringUtc,
+            SchemalagdaFlaggorJson   = SerialiseraFlaggor(req.SchemalagdaFlaggor),
         };
         _db.Uppdateringar.Add(uppdatering);
         LäggTillPunkter(uppdatering.Id, req.Punkter);
         await _db.SaveChangesAsync();
 
+        var status = req.SchemalagdPubliceringUtc != null
+            ? $"schemalagd till {req.SchemalagdPubliceringUtc:yyyy-MM-dd HH:mm} UTC"
+            : (req.Publicerad ? "publicerad" : "utkast");
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Konfiguration,
-            $"Uppdatering skapad — {uppdatering.Titel}", $"{(req.Publicerad ? "publicerad" : "utkast")}");
+            $"Uppdatering skapad — {uppdatering.Titel}", status);
         return Ok((await ByggDtoAsync(new List<Uppdatering> { uppdatering })).Single());
     }
 
@@ -79,6 +85,8 @@ public class UppdateringarController : ControllerBase
         uppdatering.Datum      = req.Datum;
         uppdatering.Publicerad = req.Publicerad;
         uppdatering.UpdatedAt  = DateTime.UtcNow;
+        uppdatering.SchemalagdPubliceringUtc = req.SchemalagdPubliceringUtc;
+        uppdatering.SchemalagdaFlaggorJson   = SerialiseraFlaggor(req.SchemalagdaFlaggor);
 
         // Ersätter hela punkter-listan — samma helobjekt-PUT-UX som FAQ,
         // slipper spåra per-punkt-ID:n genom formuläret.
@@ -141,13 +149,25 @@ public class UppdateringarController : ControllerBase
             u.Id, u.Titel, u.Datum, u.Publicerad,
             punkter.Where(p => p.UppdateringId == u.Id)
                    .Select(p => new PunktDto(p.Id, p.Typ, p.Plats, p.Text, p.Synlighet))
-                   .ToList()
+                   .ToList(),
+            u.SchemalagdPubliceringUtc,
+            DeserialiseraFlaggor(u.SchemalagdaFlaggorJson)
         )).ToList();
     }
+
+    private static string? SerialiseraFlaggor(List<string>? flaggor) =>
+        flaggor == null || flaggor.Count == 0 ? null : JsonSerializer.Serialize(flaggor);
+
+    private static List<string> DeserialiseraFlaggor(string? json) =>
+        string.IsNullOrEmpty(json) ? [] : JsonSerializer.Deserialize<List<string>>(json) ?? [];
 }
 
 public record PunktDto(Guid Id, string Typ, string Plats, string Text, string Synlighet);
-public record UppdateringDto(Guid Id, string Titel, DateTime Datum, bool Publicerad, List<PunktDto> Punkter);
+public record UppdateringDto(
+    Guid Id, string Titel, DateTime Datum, bool Publicerad, List<PunktDto> Punkter,
+    DateTime? SchemalagdPubliceringUtc, List<string> SchemalagdaFlaggor);
 
 public record PunktRequest(string Typ, string Plats, string Text, string Synlighet);
-public record UppdateringRequest(string Titel, DateTime Datum, bool Publicerad, List<PunktRequest> Punkter);
+public record UppdateringRequest(
+    string Titel, DateTime Datum, bool Publicerad, List<PunktRequest> Punkter,
+    DateTime? SchemalagdPubliceringUtc = null, List<string>? SchemalagdaFlaggor = null);

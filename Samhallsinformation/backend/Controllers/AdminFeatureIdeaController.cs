@@ -152,6 +152,20 @@ public class AdminFeatureIdeaController : ControllerBase
                 foreach (var label in StandardChecklista)
                     _db.FeatureIdeaChecklistItems.Add(new FeatureIdeaChecklistItem { FeatureIdeaId = id, Label = label });
             }
+
+            // Markera den kopplade flaggan "redo att lanseras" automatiskt —
+            // spar admin ett extra steg i Feature flags-panelen. Rör aldrig
+            // Value (bara synligheten i Uppdateringars urvalslista).
+            if (!string.IsNullOrWhiteSpace(idea.FlagKey))
+            {
+                var flagg = await _db.FeatureFlagOverrides.FindAsync(idea.FlagKey);
+                if (flagg == null)
+                {
+                    flagg = new FeatureFlagOverride { Key = idea.FlagKey, Value = false };
+                    _db.FeatureFlagOverrides.Add(flagg);
+                }
+                flagg.RedoAttLanseras = true;
+            }
         }
 
         await _db.SaveChangesAsync();
