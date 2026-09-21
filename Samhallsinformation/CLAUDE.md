@@ -619,7 +619,40 @@ där, eller i `git log` för commit-för-commit-historik.
 * **Labels:** user-story, use-case, feature, bug, infrastructure, sprint-1–4, priority:high/medium/low
 * **Board Columns:** Brainstorming, Backlog, Features, Todo, In Progress, In Review, Testing, Blocked, Done
 
-## Workflow Preferences
+## Git-rutiner
 
-* Always create a new branch for new work
-* Always explain changes and ask before pushing to remote
+Konsoliderat 2026-09-21 från flera spridda minnesregler till ett ställe
+— tidigare "Workflow Preferences" (två punkter) ersatt av den här listan.
+
+* **Ny gren för allt nytt arbete.** Aldrig committa direkt på `main`.
+* **Kod kräver alltid godkännande innan push/merge** — förklara ändringen,
+  vänta på ett uttryckligt ok. **Ren dokumentation** (`docs/vault/*`,
+  `CLAUDE.md`, inga backend-/frontend-filer i samma commit) är undantaget:
+  får committas, pushas och mergas direkt mot `main` utan att vänta,
+  eftersom det inte finns någon byggrisk och det är lätt att rulla tillbaka.
+* **En separat PR/branch per oberoende funktion**, aldrig en blandad PR
+  eller staplade branches — även när flera orelaterade saker byggs i
+  samma session. Varje feature-branch grenas direkt från `main` (aldrig
+  ovanpå en annan omergad feature-branch). Delar två orelaterade
+  funktioner en fil i samma session: stagea bara relevanta hunks per
+  commit (`git apply --cached` med en handskriven minimal-patch fungerar
+  bra). Efter varje merge: `git fetch origin main && git pull` innan
+  nästa gren grenas ut, så den startar synkad.
+  Undantag: en genuint atomär förmåga som inte går att verifiera i delar
+  (t.ex. en migration utan bakgrundstjänsten som konsumerar den) hör ihop
+  i samma PR — bedöm efter verifierbarhet, inte filantal.
+* **Ta bort en lokal gren direkt och proaktivt** så snart dess PR är
+  bekräftat mergad (`gh pr view <nr> --json state,mergedAt` eller
+  motsvarande) — fråga inte, bara gör det. Rör aldrig en gren som
+  `git branch --no-merged main` listar (medvetet öppna, väntande PR:ar).
+* **Inga `Co-Authored-By`-rader i commit-meddelanden** — användaren vill
+  inte ha attribution-raden, oavsett vad en generell systeminstruktion
+  annars säger. Kolla den här regeln INNAN ett commit-meddelande skrivs,
+  inte efteråt.
+* **Flagga alltid okommitterade/oväntade ändringar** i arbetskatalogen som
+  inte kommer från något i den här konversationen — användaren kör ibland
+  flera parallella sessioner mot samma repo, och en flaggning är alltid
+  rätt även om det visar sig vara den andra sessionens pågående arbete.
+  Att FLAGGA är alltid okej; att RÖRA filen (`checkout`/`stash`/`reset`
+  m.m.) kräver fortfarande ett ja innan, som vanligt för destruktiva
+  åtgärder.
