@@ -105,6 +105,14 @@ den är löst eller inte längre relevant. Inget krav på att åtgärda varje
 punkt — poängen är att inget glöms bort bara för att det kändes för litet
 att nämna i stunden.
 
+**Aktiv flaggning, inte bara passiv loggning:** så fort något faktiskt
+märkbart saktar ner arbetet under en session (ett upprepat verktygsfel,
+en klumpig workaround som körs flera gånger, en process som tar
+orimligt lång tid) — säg till direkt i chatten, inte bara en tyst rad
+här: "Jag har identifierat att [X] saktar ner arbetet, hur vill du att
+vi hanterar det?" Lägg till i listan nedan oavsett om användaren vill
+lösa det direkt eller skjuta upp det.
+
 - (tom — fylls på allteftersom)
 
 ---
