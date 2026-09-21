@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { useSwipeable } from 'react-swipeable'
 import Sidebar from '../components/Sidebar/Sidebar'
+import MobilTopBar from '../components/common/MobilTopBar'
 import { type ProfileSection } from '../types'
 import { useAuth } from '../context/AuthContext'
 import GästProfil from './GästProfil'
@@ -70,16 +71,8 @@ export default function ProfilePage() {
           <ProfileLanding onSelect={setSection} />
         ) : (
           <div className="flex-1 overflow-y-auto">
-            <div className="bg-white border-b border-slate-200 px-4 md:px-10 py-5 md:py-10 relative">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="md:hidden absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
-                aria-label="Öppna meny"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
+            <MobilTopBar onOpenSidebar={() => setSidebarOpen(true)} />
+            <div className="bg-white border-b border-slate-200 px-4 md:px-10 py-5 md:py-10">
               <h1 className="text-2xl md:text-3xl font-bold text-slate-900 text-center">
                 {SECTION_LABELS[section]}
               </h1>

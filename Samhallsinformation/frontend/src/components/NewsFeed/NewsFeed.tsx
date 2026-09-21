@@ -9,6 +9,8 @@ import type { CanonicalEvent, Source } from '../../types'
 import { useAuth } from '../../context/AuthContext'
 import { usePolisenBevakningar } from '../../context/PolisenBevakningarContext'
 import { useSavedEvents } from '../../context/SavedEventsContext'
+import MobilTopBar from '../common/MobilTopBar'
+import { ALLA_HANDELSER_LABEL, MITT_FLODE_LABEL } from '../../lib/navLabels'
 import { extraheraPolisenTyp, extraheraPolisenOmrade, länFörGeografi } from '../Profile/MinaKallor/kallorUtils'
 import { useFlags } from '../../context/FeatureFlagsContext'
 
@@ -145,13 +147,9 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
     'Bra att veta': sortedEvents.filter(e => e.severity === 'Bra att veta').length,
   }), [sortedEvents])
 
-  const availableSeverities = useMemo(
-    () => (['Kritisk', 'Viktigt', 'Bra att veta'] as const).filter(f => severityCounts[f] > 0),
-    [severityCounts]
-  )
-  const showFilters = availableSeverities.length > 1
+  const showFilters = sortedEvents.length > 0
 
-  const title = shortName ?? 'Samhällsinformation'
+  const title = shortName ?? (viewMode === 'Mitt' ? MITT_FLODE_LABEL : ALLA_HANDELSER_LABEL)
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-full text-neutral-500 text-sm">Hämtar nyheter...</div>
@@ -163,18 +161,10 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900">
 
+      <MobilTopBar onOpenSidebar={onOpenSidebar} />
+
       {/* Header */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 py-5 md:py-10 shrink-0 relative">
-        {/* Hamburger — mobil */}
-        <button
-          onClick={onOpenSidebar}
-          className="md:hidden absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          aria-label="Öppna meny"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
         <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white text-center">{title}</h1>
         {flaggor.flode_olasta_badge && isLoggedIn && hasUnread && (
           <div className="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 flex items-center gap-3">
@@ -212,12 +202,11 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
         </div>
       )}
 
-      {/* Filter — visas bara om det finns minst 2 olika allvarlighetsgrader */}
+      {/* Filter — visas alltid när det finns händelser, även allvarlighetsgrader med 0 träffar */}
       {showFilters && viewMode === 'Allt' && (
         <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 shrink-0">
           <div className="max-w-3xl mx-auto flex gap-1.5">
             {(['Alla', 'Kritisk', 'Viktigt', 'Bra att veta'] as SeverityFilter[])
-              .filter(f => f === 'Alla' || severityCounts[f] > 0)
               .map(f => {
                 const count = f === 'Alla' ? sortedEvents.length : severityCounts[f]
                 const isActive = severityFilter === f
