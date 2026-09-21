@@ -45,6 +45,16 @@ subagent för varje enskild filändring slösar kontext och pengar i onödan. En
 riktig subagent (via Agent-verktyget) används bara för genuint stora,
 självständiga bitar där en färsk kontext faktiskt är värt det.
 
+**När flera lager (frontend/backend/databas) faktiskt ska delas upp på
+riktiga subagenter** (bekräftat 2026-09-21): om ett jobb spänner över
+flera lager och att göra allt själv som PM markant skulle ta längre tid
+än att dela upp det — dela upp det på riktiga ClaudeBE/ClaudeFE/ClaudeDB-
+subagenter. Vilka lager som faktiskt får en egen subagent avgörs från
+fall till fall utifrån vad uppgiften kräver — finns inget behov av en
+egen DB-agent för just den uppgiften, spawnas ingen, även om möjligheten
+finns. Ingen fast mall (t.ex. "DB+backend alltid ihop") — bedöm varje
+gång.
+
 **Progress = det här dokumentet.** När en uppgift kopplad till ett
 GitHub-issue är klar och mergad: **stäng issuet och meddela användaren att det
 stängdes.** Anta aldrig att "PR mergad" = "issue helt klart" — kolla issuets
