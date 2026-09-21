@@ -96,6 +96,17 @@ de är klara (se regeln ovan), men inga nya skapas. Se
   för allvarlighetsfilter)". Användaren går inte gärna in på GitHub för att
   slå upp vad ett nummer betyder.
 
+## Papercuts (sedan 2026-09-21)
+
+Ingen officiell Claude Code-funktion — bara en löpande logg över småsaker
+som saktar ner arbetet i den här sessionen, värda att åtgärda eller bara ha
+i bakhuvudet. Lägg till en rad så fort en irriterar, ta bort/kryssa av när
+den är löst eller inte längre relevant. Inget krav på att åtgärda varje
+punkt — poängen är att inget glöms bort bara för att det kändes för litet
+att nämna i stunden.
+
+- (tom — fylls på allteftersom)
+
 ---
 
 ## Teknisk Arkitektur
