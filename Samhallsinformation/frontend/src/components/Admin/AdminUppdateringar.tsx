@@ -6,6 +6,16 @@ import {
   type Uppdatering, type UppdateringRequest, type UppdateringsPunkt, type PunktRequest,
   type PunktTyp, type Synlighet,
 } from '../../api/uppdateringar'
+import { fetchAdminFeatureFlags } from '../../api/featureFlags'
+import { fetchAdminFaq } from '../../api/faq'
+
+// datetime-local ger/tar lokal (webbläsarens) väggklocketid, inte UTC — samma
+// omvandlingsmönster som MaintenanceBannerAdmin.tsx redan etablerat.
+function isoTillDatetimeLocal(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
 // ---------------------------------------------------------------------------
 // Konfiguration
@@ -165,6 +175,23 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
       : [nyPunkt(nästaRadId++)]
   )
 
+  // Schemalagd lansering — ett delat datum/tid för både changelog-
+  // publicering OCH aktivering av valda feature-flaggor (se
+  // ScheduledReleaseBackgroundService på backend).
+  const [schemalagd,   setSchemalagd]   = useState(redigerar?.schemalagdPubliceringUtc != null)
+  const [schemaDatum,  setSchemaDatum]  = useState(redigerar?.schemalagdPubliceringUtc ? isoTillDatetimeLocal(redigerar.schemalagdPubliceringUtc) : '')
+  const [valdaFlaggor, setValdaFlaggor] = useState<string[]>(redigerar?.schemalagdaFlaggor ?? [])
+
+  const { data: adminFlaggor = [] } = useQuery({ queryKey: ['admin-feature-flags'], queryFn: fetchAdminFeatureFlags })
+  const redoFlaggor = adminFlaggor.filter(f => f.redoAttLanseras && !f.value)
+
+  const { data: faqItems = [] } = useQuery({ queryKey: ['admin-faq'], queryFn: fetchAdminFaq })
+  const kopplatFaq = faqItems.filter(f => f.flagKey && valdaFlaggor.includes(f.flagKey))
+
+  function toggleFlagga(key: string) {
+    setValdaFlaggor(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
+  }
+
   function addPunkt() { setPunkter(prev => [...prev, nyPunkt(nästaRadId++)]) }
 
   function removePunkt(radId: number) {
@@ -175,14 +202,21 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
     setPunkter(prev => prev.map(p => p.radId === radId ? { ...p, [key]: val } : p))
   }
 
-  const kanSpara = titel.trim() !== '' && punkter.length > 0 && punkter.every(p => p.text.trim() !== '')
+  // En schemalagd lansering får sakna innehåll helt (en ren flagg-
+  // aktivering utan publik nyhet) — men en vanlig, ej schemalagd post
+  // kräver fortfarande minst en rad text som förut.
+  const harInnehåll     = punkter.length > 0 && punkter.every(p => p.text.trim() !== '')
+  const rentFlaggSchema = schemalagd && valdaFlaggor.length > 0 && punkter.length === 0
+  const kanSpara = titel.trim() !== '' && (harInnehåll || rentFlaggSchema) && (!schemalagd || schemaDatum !== '')
 
   function spara(publicera: boolean) {
     onSpara({
       titel: titel.trim(),
       datum: new Date(datum).toISOString(),
-      publicerad: publicera,
+      publicerad: schemalagd ? false : publicera,
       punkter: punkter.map(({ typ, plats, text, synlighet }) => ({ typ, plats, text, synlighet })),
+      schemalagdPubliceringUtc: schemalagd && schemaDatum ? new Date(schemaDatum).toISOString() : null,
+      schemalagdaFlaggor: schemalagd ? valdaFlaggor : [],
     })
   }
 
@@ -242,6 +276,65 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
             </div>
           </div>
 
+          {/* Schemalägg lansering */}
+          <div className="flex flex-col gap-3 border border-slate-200 rounded-xl p-4">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={schemalagd}
+                onChange={e => setSchemalagd(e.target.checked)}
+                className="rounded border-slate-300 text-violet-600 focus:ring-violet-400"
+              />
+              Schemalägg lansering
+            </label>
+
+            {schemalagd && (
+              <div className="flex flex-col gap-3 pl-6">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Datum/tid (din lokala tid)</label>
+                  <input
+                    type="datetime-local"
+                    value={schemaDatum}
+                    onChange={e => setSchemaDatum(e.target.value)}
+                    className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Flaggor att aktivera</label>
+                  {redoFlaggor.length === 0 ? (
+                    <p className="text-xs text-slate-400">
+                      Inga flaggor är markerade "redo att lanseras" än — gör det i Feature flags-panelen, eller flytta en idé till "lanseringsklar" i Funktionsidéer.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {redoFlaggor.map(f => (
+                        <button
+                          key={f.key}
+                          type="button"
+                          onClick={() => toggleFlagga(f.key)}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors ${
+                            valdaFlaggor.includes(f.key)
+                              ? 'bg-violet-100 text-violet-700 border-violet-200'
+                              : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                          }`}
+                        >
+                          {f.key}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {kopplatFaq.length > 0 && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    {kopplatFaq.length} FAQ-{kopplatFaq.length === 1 ? 'fråga' : 'frågor'} kopplad{kopplatFaq.length === 1 ? '' : 'e'} till valda flaggor — värt att granska i FAQ-fliken innan lansering.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Separator */}
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-slate-100" />
@@ -282,7 +375,7 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
                   {/* Ta bort */}
                   <button
                     onClick={() => removePunkt(p.radId)}
-                    disabled={punkter.length === 1}
+                    disabled={punkter.length === 1 && !(schemalagd && valdaFlaggor.length > 0)}
                     className="text-slate-300 hover:text-red-400 disabled:opacity-30 transition-colors text-sm shrink-0"
                     title="Ta bort rad"
                   >
@@ -333,20 +426,32 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
           <button onClick={onStäng} className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
             Avbryt
           </button>
-          <button
-            onClick={() => kanSpara && spara(false)}
-            disabled={!kanSpara}
-            className="flex-1 py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 disabled:opacity-40 transition-colors"
-          >
-            Spara som utkast
-          </button>
-          <button
-            onClick={() => kanSpara && spara(true)}
-            disabled={!kanSpara}
-            className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
-          >
-            {redigerar?.publicerad ? 'Uppdatera' : 'Publicera'}
-          </button>
+          {schemalagd ? (
+            <button
+              onClick={() => kanSpara && spara(false)}
+              disabled={!kanSpara}
+              className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              {schemaDatum ? `Sparas, publiceras automatiskt ${schemaDatum.replace('T', ' ')}` : 'Schemalägg'}
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => kanSpara && spara(false)}
+                disabled={!kanSpara}
+                className="flex-1 py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 disabled:opacity-40 transition-colors"
+              >
+                Spara som utkast
+              </button>
+              <button
+                onClick={() => kanSpara && spara(true)}
+                disabled={!kanSpara}
+                className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+              >
+                {redigerar?.publicerad ? 'Uppdatera' : 'Publicera'}
+              </button>
+            </>
+          )}
         </div>
 
       </div>
@@ -403,11 +508,16 @@ export default function AdminUppdateringar() {
   }
 
   function togglePublicerad(u: Uppdatering) {
+    // Manuell publicera/avpublicera vinner över ett ev. väntande schema —
+    // annars skulle en ihågkommen schemaläggning kunna publicera om posten
+    // igen senare, mot admins uttryckliga handling här.
     const req: UppdateringRequest = {
       titel:      u.titel,
       datum:      u.datum,
       publicerad: !u.publicerad,
       punkter:    u.punkter.map(({ typ, plats, text, synlighet }: UppdateringsPunkt) => ({ typ, plats, text, synlighet })),
+      schemalagdPubliceringUtc: null,
+      schemalagdaFlaggor: [],
     }
     updateMutation.mutate({ id: u.id, req })
   }
@@ -515,11 +625,21 @@ export default function AdminUppdateringar() {
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-500 font-mono whitespace-nowrap">{u.datum.split('T')[0]}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border whitespace-nowrap ${
-                      u.publicerad ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'
-                    }`}>
-                      {u.publicerad ? 'Publicerad' : 'Utkast'}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full border whitespace-nowrap ${
+                        u.publicerad ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'
+                      }`}>
+                        {u.publicerad ? 'Publicerad' : 'Utkast'}
+                      </span>
+                      {u.schemalagdPubliceringUtc && (
+                        <span
+                          className="text-xs font-medium px-2 py-1 rounded-full border border-violet-200 bg-violet-50 text-violet-700 whitespace-nowrap"
+                          title={`Schemalagd till ${isoTillDatetimeLocal(u.schemalagdPubliceringUtc).replace('T', ' ')}`}
+                        >
+                          ⏰ Schemalagd
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">

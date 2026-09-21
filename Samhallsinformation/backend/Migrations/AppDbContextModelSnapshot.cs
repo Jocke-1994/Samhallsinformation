@@ -281,6 +281,9 @@ namespace Samhallsinformation.Migrations
                     b.Property<string>("Key")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("RedoAttLanseras")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("Value")
                         .HasColumnType("INTEGER");
 
@@ -860,6 +863,12 @@ namespace Samhallsinformation.Migrations
 
                     b.Property<bool>("Publicerad")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("SchemalagdPubliceringUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SchemalagdaFlaggorJson")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Titel")
                         .IsRequired()

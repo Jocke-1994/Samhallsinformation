@@ -8,4 +8,10 @@ public class FeatureFlagOverride
 {
     public string Key   { get; set; } = "";
     public bool   Value { get; set; }
+
+    // Satt av AdminFeatureIdeaController när en kopplad idés Stage blir
+    // "lanseringsklar", eller manuellt i Feature flags-panelen — driver
+    // urvalslistan i Uppdateringars schemaläggningsflöde (se
+    // ScheduledReleaseBackgroundService). Rör aldrig Value.
+    public bool RedoAttLanseras { get; set; } = false;
 }
