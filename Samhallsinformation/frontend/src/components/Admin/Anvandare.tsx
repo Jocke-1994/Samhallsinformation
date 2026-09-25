@@ -478,10 +478,12 @@ interface AnvandareProps {
   onÖppnaÄrende?:     (arendeId: string) => void
   defaultÖppnaEpost?: string
   defaultFlik?:       DetaljFlik
+  /** Anropas när djuplänken öppnat sin användare, så föräldern nollställer den (V2-16). */
+  onDjuplänkKonsumerad?: () => void
   onPendingNotiser?:  (items: PendingNotis[]) => void
 }
 
-export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onPendingNotiser }: AnvandareProps) {
+export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onDjuplänkKonsumerad, onPendingNotiser }: AnvandareProps) {
   const { aktivVy } = useAuth()
   const queryClient = useQueryClient()
   const { data: adminUsers, isLoading: laddar, isError: laddningFel, refetch } = useQuery({
@@ -682,14 +684,18 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     enabled:  !!vald,
   })
 
+  // Djuplänken konsumeras EN gång: så fort användaren hittats öppnas panelen
+  // och föräldern nollställer defaultÖppnaEpost. Därefter gör en refetch av
+  // `användare` ingenting här, så panelen hoppar inte tillbaka (V2-16, E6#3).
   useEffect(() => {
     if (!defaultÖppnaEpost) return
     const u = användare.find(x => x.epost === defaultÖppnaEpost)
     if (u) {
       setVald(u)
       setDetaljFlik(defaultFlik ?? 'notifinstallningar')
+      onDjuplänkKonsumerad?.()
     }
-  }, [defaultÖppnaEpost, defaultFlik, användare])
+  }, [defaultÖppnaEpost, defaultFlik, användare, onDjuplänkKonsumerad])
 
   function öppnaDetalj(u: Användare) {
     setVald(u)

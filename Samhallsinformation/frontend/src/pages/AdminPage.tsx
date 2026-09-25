@@ -5,7 +5,7 @@ import AdminSidebar, { type AdminSection, type AdminRoll } from '../components/A
 import Oversikt from '../components/Admin/Oversikt'
 import Kallhantering from '../components/Admin/Kallhantering'
 import Felsökning from '../components/Admin/Felsökning'
-import Anvandare, { type DetaljFlik } from '../components/Admin/Anvandare'
+import Anvandare from '../components/Admin/Anvandare'
 import SupportInbox, { type PendingNotis } from '../components/Admin/SupportInbox'
 import Rapporter from '../components/Admin/Rapporter'
 import Aktivitetslogg from '../components/Admin/Aktivitetslogg'
@@ -20,6 +20,7 @@ import Sandlada from '../components/Admin/Sandlada'
 import Handelsesok from '../components/Admin/Handelsesok'
 import { useAuth, type SystemRoll } from '../context/AuthContext'
 import { useFeatureFlagsAdmin } from '../context/FeatureFlagsContext'
+import { useAdminDjuplank } from '../hooks/useAdminDjuplank'
 import { usePwaIdentity, ADMIN_PWA_IDENTITET } from '../hooks/usePwaIdentity'
 import { usePushSubscription, isPushSupported } from '../hooks/usePushSubscription'
 import { fetchPushSettings, savePushSettings } from '../api/push'
@@ -112,9 +113,10 @@ export default function AdminPage() {
   const [notiser, setNotiser]             = useState<PendingNotis[]>([])
   const [notisDropdown, setNotisDropdown] = useState(false)
   const [avatarDropdown, setAvatarDropdown] = useState(false)
-  const [inboxOpenId, setInboxOpenId]     = useState<string | undefined>(undefined)
-  const [öppnaAnvEpost, setÖppnaAnvEpost] = useState<string | undefined>(undefined)
-  const [öppnaAnvFlik, setÖppnaAnvFlik]   = useState<DetaljFlik | undefined>(undefined)
+  const {
+    användarMål, inboxÄrendeId,
+    öppnaAnvändare, öppnaInboxÄrende, konsumeraAnvändare, konsumeraInboxÄrende,
+  } = useAdminDjuplank(section)
   const [lästaNyckar, setLästaNyckar]     = useState<Set<string>>(new Set())
   const [borttagnaNyckar, setBorttagnaNyckar] = useState<Set<string>>(new Set())
 
@@ -161,7 +163,7 @@ export default function AdminPage() {
   }
 
   function öppnaÄrende(arendeId: string) {
-    setInboxOpenId(arendeId)
+    öppnaInboxÄrende(arendeId)
     setSection('support-inbox')
     setNotisDropdown(false)
   }
@@ -169,8 +171,7 @@ export default function AdminPage() {
   function öppnaNotis(n: PendingNotis) {
     markeraLäst(n)
     if (n.typ === 'kontospärrning' && n.epost) {
-      setÖppnaAnvEpost(n.epost)
-      setÖppnaAnvFlik('oversikt')
+      öppnaAnvändare(n.epost, 'oversikt')
       setSection('anvandare')
       setNotisDropdown(false)
     } else {
@@ -367,33 +368,31 @@ export default function AdminPage() {
             {section === 'anvandare' && (
               <Anvandare
                 onÖppnaÄrende={id => {
-                  setInboxOpenId(id)
+                  öppnaInboxÄrende(id)
                   setSection('support-inbox')
                 }}
                 onPendingNotiser={handlePendingNotiser}
-                defaultÖppnaEpost={öppnaAnvEpost}
-                defaultFlik={öppnaAnvFlik ?? 'notifinstallningar'}
-                key={öppnaAnvEpost}
+                defaultÖppnaEpost={användarMål?.epost}
+                defaultFlik={användarMål?.flik ?? 'notifinstallningar'}
+                onDjuplänkKonsumerad={konsumeraAnvändare}
               />
             )}
             {section === 'support-inbox' && (
               <SupportInbox
                 onPendingNotiser={handlePendingNotiser}
-                defaultOpenId={inboxOpenId}
+                defaultOpenId={inboxÄrendeId}
+                onDjuplänkKonsumerad={konsumeraInboxÄrende}
                 onÖppnaAnvändare={epost => {
-                  setÖppnaAnvEpost(epost)
-                  setÖppnaAnvFlik('notifinstallningar')
+                  öppnaAnvändare(epost, 'notifinstallningar')
                   setSection('anvandare')
                 }}
-                key={inboxOpenId}
               />
             )}
 
             {section === 'handelsesok' && (
               <Handelsesok
                 onÖppnaAnvändare={epost => {
-                  setÖppnaAnvEpost(epost)
-                  setÖppnaAnvFlik('oversikt')
+                  öppnaAnvändare(epost, 'oversikt')
                   setSection('anvandare')
                 }}
               />
