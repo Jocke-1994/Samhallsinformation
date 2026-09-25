@@ -32,12 +32,32 @@ export interface MyTicketDetailDto extends MyTicketDto {
   messages: TicketMessageDto[]
 }
 
+export const TICKET_RATE_LIMIT_MESSAGE = 'För många ärenden just nu, försök igen senare.'
+const TICKET_GENERIC_ERROR = 'Något gick fel. Försök igen eller kontakta oss direkt.'
+
+// Fel med ett färdigt, användarvänligt svenskt meddelande i .message:
+// 429 (rate limit) och 400 (servern avvisade indatan, t.ex. för lång text
+// eller ogiltig e-post — bodyn är då ett svenskt felmeddelande i klartext).
+export class TicketError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'TicketError'
+    this.status = status
+  }
+}
+
 export async function createTicket(req: CreateTicketRequest): Promise<{ id: string; ticketNumber: number }> {
   const res = await adminFetch('/api/support/tickets', {
     method: 'POST',
     body: JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`createTicket: ${res.status}`)
+  if (res.status === 429) throw new TicketError(429, TICKET_RATE_LIMIT_MESSAGE)
+  if (res.status === 400) {
+    const text = (await res.text().catch(() => '')).trim()
+    throw new TicketError(400, text.length > 0 && text.length < 200 ? text : TICKET_GENERIC_ERROR)
+  }
+  if (!res.ok) throw new TicketError(res.status, TICKET_GENERIC_ERROR)
   return res.json()
 }
 
