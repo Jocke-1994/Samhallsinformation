@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createTicket, fetchMyTicket, fetchMyTickets, replyToTicket, type MyTicketDto } from '../../../api/support'
+import { createTicket, TicketError, fetchMyTicket, fetchMyTickets, replyToTicket, type MyTicketDto } from '../../../api/support'
 import { BETA } from '../../../betaConfig'
 
 type SortField = 'status' | 'skapat' | 'uppdaterat' | null
@@ -299,6 +299,7 @@ export default function ArendehanteringKort() {
             <label className="text-sm font-medium text-slate-700">Ämne</label>
             <input
               type="text"
+              maxLength={200}
               value={amne}
               onChange={e => { setAmne(e.target.value); setError('') }}
               placeholder="Beskriv kortfattat vad det gäller..."
@@ -308,6 +309,7 @@ export default function ArendehanteringKort() {
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700">Beskriv ditt ärende</label>
             <textarea
+              maxLength={5000}
               value={meddelande}
               onChange={e => { setMeddelande(e.target.value); setError('') }}
               rows={5}
@@ -315,7 +317,7 @@ export default function ArendehanteringKort() {
               className="bg-white text-slate-900 text-sm px-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-violet-500 placeholder-slate-400 resize-none"
             />
           </div>
-          {error && <p className="text-xs text-red-500">{error}</p>}
+          {(error || createMutation.error) && <p className="text-xs text-red-500">{error || (createMutation.error instanceof TicketError ? createMutation.error.message : "Något gick fel. Försök igen senare.")}</p>}
         </div>
         <div className="flex justify-center py-5">
           <button

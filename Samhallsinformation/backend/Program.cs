@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
+using Samhallsinformation.Application.Support;
 using Samhallsinformation.Data;
 using Samhallsinformation.Infrastructure.Auth;
 using Samhallsinformation.Ingestors;
@@ -110,9 +111,15 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit  = 0,
         }));
 
+    // POST /api/support/tickets — anonym skrivning som pushar till admins (E1 #8).
+    // Se SupportTicketRateLimit för tak och motivering.
+    options.AddPolicy(SupportTicketRateLimit.PolicyName, SupportTicketRateLimit.GetPartition);
+
     options.OnRejected = async (context, ct) =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            context.HttpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString();
         context.HttpContext.Response.ContentType = "application/json";
         await context.HttpContext.Response.WriteAsJsonAsync(
             new { error = "För många försök. Försök igen om en liten stund." }, ct);

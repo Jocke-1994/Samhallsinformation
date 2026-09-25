@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { createTicket } from '../../api/support'
+import { createTicket, TicketError } from '../../api/support'
 
 type Status = 'idle' | 'sending' | 'success' | 'error'
+
+const DEFAULT_ERROR = 'Något gick fel. Försök igen eller kontakta oss direkt.'
 
 interface Props {
   open: boolean
@@ -15,6 +17,7 @@ export function FeedbackModal({ open, onClose }: Props) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
+  const [errorMessage, setErrorMessage] = useState(DEFAULT_ERROR)
 
   if (!open) return null
 
@@ -29,7 +32,8 @@ export function FeedbackModal({ open, onClose }: Props) {
         contactEmail: villHaÅterkoppling ? email : undefined,
       })
       setStatus('success')
-    } catch {
+    } catch (err) {
+      setErrorMessage(err instanceof TicketError ? err.message : DEFAULT_ERROR)
       setStatus('error')
     }
   }
@@ -90,6 +94,7 @@ export function FeedbackModal({ open, onClose }: Props) {
               <textarea
                 required
                 rows={4}
+                maxLength={5000}
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 placeholder="Vad tänker du på? Bugg, förbättringsförslag, eller bara en tanke..."
@@ -118,6 +123,7 @@ export function FeedbackModal({ open, onClose }: Props) {
                   <input
                     type="text"
                     required
+                    maxLength={100}
                     value={name}
                     onChange={e => setName(e.target.value)}
                     placeholder="Ditt namn"
@@ -132,6 +138,7 @@ export function FeedbackModal({ open, onClose }: Props) {
                   <input
                     type="email"
                     required
+                    maxLength={254}
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="din@email.se"
@@ -142,7 +149,7 @@ export function FeedbackModal({ open, onClose }: Props) {
             )}
 
             {status === 'error' && (
-              <p className="text-xs text-red-500">Något gick fel. Försök igen eller kontakta oss direkt.</p>
+              <p className="text-xs text-red-500">{errorMessage}</p>
             )}
 
             <button
