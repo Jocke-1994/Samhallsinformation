@@ -59,12 +59,6 @@ public class AnonymousEndpointsGuardTests
         // --- MISSTÄNKT: ser oavsiktligt öppna ut. Ändras INTE i den här PR:en ---
         new("EventsController", "GetEvent",         "GET",  "MISSTÄNKT — se enhet-1 obs. (Publika endpoints): saknar IsPublished-filter (till skillnad från GetEvents/SearchPublic), läcker händelser från opublicerade sandlådekällor om man har id:t."),
         new("EventsController", "GetLinkStatus",    "GET",  "MISSTÄNKT — se enhet-1 obs. (Publika endpoints): anonym utan rate limit, gör utgående GET per anrop och saknar IsPublished-filter. Anonymt är avsiktligt för utloggade läsare, skyddet saknas."),
-
-        // --- KÄNT HÅL — tas bort i V1-3 (E1 #4). Ta bort raderna då. ---
-        new("PreferencesController", "GetPreferences",   "GET",    "KÄNT HÅL — tas bort i V1-3, ta bort raderna då (E1 #4): saknar auth och ägarkontroll, oanvänd av frontend."),
-        new("PreferencesController", "CreatePreference", "POST",   "KÄNT HÅL — tas bort i V1-3, ta bort raderna då (E1 #4)."),
-        new("PreferencesController", "UpdatePreference", "PUT",    "KÄNT HÅL — tas bort i V1-3, ta bort raderna då (E1 #4)."),
-        new("PreferencesController", "DeletePreference", "DELETE", "KÄNT HÅL — tas bort i V1-3, ta bort raderna då (E1 #4)."),
     ];
 
     private static string Key(string controller, string action, string http) => $"{controller}.{action} [{http}]";
