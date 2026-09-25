@@ -168,6 +168,10 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAktivitetsloggService, AktivitetsloggService>();
 
+// Gemensam leverans av agentsvar (spara + mejla + logga) — delas av AdminSupportController.Reply
+// och schemalagda svar (SupportScheduledActionService)
+builder.Services.AddScoped<ISupportReplyDelivery, SupportReplyDelivery>();
+
 // Background service
 builder.Services.AddHostedService<IngestorBackgroundService>();
 builder.Services.AddHostedService<SupportScheduledActionService>();
