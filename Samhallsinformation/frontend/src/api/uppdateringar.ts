@@ -1,4 +1,4 @@
-import { adminFetch } from './adminFetch'
+import { adminFetch, getToken } from './adminFetch'
 
 export type PunktTyp = 'ny-funktion' | 'förbättring' | 'buggfix' | 'känt-problem' | 'kommer-snart'
 export type Synlighet = 'alla' | 'inloggade'
@@ -39,10 +39,23 @@ export interface UppdateringRequest {
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
+// Publika endpointen filtrerar på Synlighet i backend: anonym får bara punkter
+// märkta "alla", en giltig token ger även "inloggade". Token skickas därför
+// när den finns. Ingen Content-Type-header på GET (undviker onödig preflight
+// för anonyma besökare).
 export async function fetchUppdateringar(): Promise<Uppdatering[]> {
-  const res = await fetch(`${API_BASE}/api/uppdateringar`)
+  const token = getToken()
+  const res = await fetch(`${API_BASE}/api/uppdateringar`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  })
   if (!res.ok) throw new Error(`fetchUppdateringar: ${res.status}`)
   return res.json()
+}
+
+// Svaret skiljer sig mellan inloggad och anonym — de får aldrig dela cache-post.
+// Prefixet ['uppdateringar'] behålls så admins invalidateQueries träffar båda.
+export function uppdateringarQueryKey(isLoggedIn: boolean) {
+  return ['uppdateringar', isLoggedIn ? 'inloggad' : 'anonym'] as const
 }
 
 export async function fetchAdminUppdateringar(): Promise<Uppdatering[]> {

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.FeatureFlags;
+using Samhallsinformation.Application.Uppdateringar;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -21,19 +22,33 @@ public class UppdateringarController : ControllerBase
         _aktivitetslogg = aktivitetslogg;
     }
 
-    // Publik — inga backend-filter på Synlighet ännu (samma resonemang som
-    // FAQ innan kundtjänstboten blev en verklig konsument): frontend
-    // (UppdateringarPage.tsx) filtrerar klientsidan till synlighet="alla",
-    // Profile/Uppdateringar.tsx visar allt till redan inloggade.
+    // Publik, men synlighetsstyrd: anonyma får bara punkter med Synlighet="alla",
+    // inloggade (giltig JWT skickad) får även "inloggade". Ingen [Authorize] —
+    // UseAuthentication fyller User om en giltig token följer med (en
+    // ogiltig/utgången token ger bara en anonym User, inte 401). En release
+    // som blir utan synliga punkter släpps helt. Admin ser allt via
+    // /api/admin/uppdateringar. Punkter med okänd Synlighet (gamla rader)
+    // räknas som ej "alla" och döljs därmed för anonyma.
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetUppdateringar()
     {
+        var inloggad = User.Identity?.IsAuthenticated == true;
+
         var releaser = await _db.Uppdateringar
             .Where(u => u.Publicerad)
             .OrderByDescending(u => u.Datum)
             .ToListAsync();
 
-        return Ok(await ByggDtoAsync(releaser));
+        var dtos = await ByggDtoAsync(releaser);
+        if (inloggad) return Ok(dtos);
+
+        var synliga = dtos
+            .Select(u => u with { Punkter = u.Punkter
+                .Where(p => p.Synlighet == UppdateringsVärden.SynlighetAlla).ToList() })
+            .Where(u => u.Punkter.Count > 0)
+            .ToList();
+        return Ok(synliga);
     }
 
     [HttpGet("/api/admin/uppdateringar")]
@@ -51,6 +66,9 @@ public class UppdateringarController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateUppdatering([FromBody] UppdateringRequest req)
     {
+        var fel = ValideraPunkter(req);
+        if (fel != null) return BadRequest(new { error = fel });
+
         var uppdatering = new Uppdatering { Titel = req.Titel, Datum = req.Datum };
         _db.Uppdateringar.Add(uppdatering);
         LäggTillPunkter(uppdatering.Id, req.Punkter);
@@ -72,6 +90,9 @@ public class UppdateringarController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateUppdatering(Guid id, [FromBody] UppdateringRequest req)
     {
+        var fel = ValideraPunkter(req);
+        if (fel != null) return BadRequest(new { error = fel });
+
         var uppdatering = await _db.Uppdateringar.FindAsync(id);
         if (uppdatering == null) return NotFound();
 
@@ -161,6 +182,10 @@ public class UppdateringarController : ControllerBase
             $"Uppdatering borttagen — {titel}", "");
         return NoContent();
     }
+
+    private static string? ValideraPunkter(UppdateringRequest req) =>
+        UppdateringsVärden.ValideraPunkter(
+            (req.Punkter ?? []).Select(p => ((string?)p.Typ, (string?)p.Synlighet)));
 
     private void LäggTillPunkter(Guid uppdateringId, List<PunktRequest> punkter)
     {

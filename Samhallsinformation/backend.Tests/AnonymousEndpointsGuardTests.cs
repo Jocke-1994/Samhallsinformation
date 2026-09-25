@@ -47,7 +47,7 @@ public class AnonymousEndpointsGuardTests
         new("MaintenanceBannersController", "GetAll", "GET", "Driftbanderoll som visas för alla besökare."),
         new("SiteSettingsController", "GetSiteSettings", "GET", "Globala sajtinställningar (visa Logga in/Skapa konto-knappar) som utloggade besökare behöver."),
         new("SourcesController", "GetSources",      "GET",  "Publik källista i sidomenyn; bara publicerade källor."),
-        new("UppdateringarController", "GetUppdateringar", "GET", "Publik changelog/Nyheter; bara publicerade poster."),
+        new("UppdateringarController", "GetUppdateringar", "GET", "Publik changelog/Nyheter; bara publicerade poster. Anonyma får bara punkter med Synlighet=\"alla\"; giltig JWT (läses via User, ingen [Authorize]) ger även \"inloggade\"-punkter."),
         new("PushController", "GetPublicKey",       "GET",  "Publik VAPID-nyckel som webbläsaren behöver för pushManager.subscribe() (publik per design)."),
 
         // --- Publik skrivning / tjänst-till-tjänst ---
