@@ -30,13 +30,56 @@ public static class SupportTicketValidator
             "Konto", "Tekniskt fel", "Önskemål", "Testare", "Annat",
         };
 
+    // Kundtjänstboten skickar HELA konversationshistoriken som message (se
+    // docs/K_BOT/KUNDTJANSTBOT_INTEGRATION_SPEC.md) och kan inte visa ett 400 för
+    // en människa — en överlämning får aldrig försvinna tyst på grund av längd.
+    // Därför avkortas botens fält i stället för att avvisas (se SanitizeBotInput).
+    // Obs: boten anropar från EN server-IP och delar därför rate limit-taket
+    // (SupportTicketRateLimit.AnonymousPermitLimit) mellan alla besökare.
+    public const string BotChannel = "kundtjanstbot";
+    public const int BotMaxMessageLength = 20_000;
+    public const int BotTruncatedHeadLength = 10_000;
+    public const int BotTruncatedTailLength = 9_000;
+    public const string BotTruncationMarker = "\n\n[… konversationen avkortad …]\n\n";
+
+    /// <summary>
+    /// Gör botens indata giltig i stället för att avvisa den: avkortar meddelande
+    /// (behåller början och slutet), ämne och namn, ignorerar ogiltig e-post och
+    /// okänd kategori. Tomt meddelande lämnas orört och avvisas av <see cref="Validate"/>.
+    /// </summary>
+    public static (string? Subject, string? Category, string? Message, string? ContactName, string? ContactEmail) SanitizeBotInput(
+        string? subject, string? category, string? message, string? contactName, string? contactEmail)
+    {
+        message = message?.Trim();
+        if (message != null && message.Length > BotMaxMessageLength)
+            message = message[..BotTruncatedHeadLength] + BotTruncationMarker + message[^BotTruncatedTailLength..];
+
+        subject = subject?.Trim();
+        if (subject != null && subject.Length > MaxSubjectLength)
+            subject = subject[..MaxSubjectLength];
+
+        contactName = contactName?.Trim();
+        if (contactName != null && contactName.Length > MaxNameLength)
+            contactName = contactName[..MaxNameLength];
+
+        contactEmail = contactEmail?.Trim();
+        if (contactEmail != null && (contactEmail.Length > MaxEmailLength || !IsValidEmail(contactEmail)))
+            contactEmail = null;
+
+        if (!string.IsNullOrWhiteSpace(category) && !AllowedCategories.Contains(category.Trim()))
+            category = null;
+
+        return (subject, category, message, contactName, contactEmail);
+    }
+
     /// <summary>Returnerar ett svenskt felmeddelande, eller null om indatan är giltig.</summary>
     public static string? Validate(string? subject, string? category, string? message, string? channel, string? contactName, string? contactEmail)
     {
         if (string.IsNullOrWhiteSpace(message))
             return "Message krävs.";
-        if (message.Trim().Length > MaxMessageLength)
-            return $"Meddelandet får vara högst {MaxMessageLength} tecken.";
+        var maxMessage = channel == BotChannel ? BotMaxMessageLength : MaxMessageLength;
+        if (message.Trim().Length > maxMessage)
+            return $"Meddelandet får vara högst {maxMessage} tecken.";
 
         if (!string.IsNullOrWhiteSpace(subject) && subject.Trim().Length > MaxSubjectLength)
             return $"Ämnet får vara högst {MaxSubjectLength} tecken.";

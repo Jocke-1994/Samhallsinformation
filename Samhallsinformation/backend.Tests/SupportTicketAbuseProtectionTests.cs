@@ -156,6 +156,90 @@ public class SupportTicketAbuseProtectionTests
         Assert.Null(ticket.ContactEmail);
     }
 
+    // --- Kundtjänstboten: avkortas/rensas i stället för 400 ---
+
+    [Fact]
+    public async Task Create_BotMessage15000Chars_IsStoredInFull()
+    {
+        using var db = NewDb();
+        var text = new string('x', 15_000);
+
+        var result = await NewController(db).Create(Req(message: text, channel: "kundtjanstbot"));
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(text, Assert.Single(db.SupportTicketMessages).Text);
+    }
+
+    [Fact]
+    public async Task Create_BotMessage50000Chars_IsTruncatedKeepingStartAndEnd()
+    {
+        using var db = NewDb();
+        var text = new string('a', 20_000) + new string('m', 20_000) + "BOTENS SISTA TEXT";
+
+        var result = await NewController(db).Create(Req(message: text, channel: "kundtjanstbot"));
+
+        Assert.IsType<OkObjectResult>(result);
+        var stored = Assert.Single(db.SupportTicketMessages).Text;
+        Assert.Contains(SupportTicketValidator.BotTruncationMarker, stored);
+        Assert.StartsWith(new string('a', SupportTicketValidator.BotTruncatedHeadLength), stored);
+        Assert.EndsWith("BOTENS SISTA TEXT", stored);
+        Assert.Equal(
+            SupportTicketValidator.BotTruncatedHeadLength + SupportTicketValidator.BotTruncationMarker.Length + SupportTicketValidator.BotTruncatedTailLength,
+            stored.Length);
+        Assert.True(stored.Length <= SupportTicketValidator.BotMaxMessageLength);
+    }
+
+    [Fact]
+    public async Task Create_BotWithInvalidEmail_CreatesTicketWithoutContactEmail()
+    {
+        using var db = NewDb();
+
+        var result = await NewController(db).Create(Req(channel: "kundtjanstbot", email: "inte-en-epost", name: "Besökare"));
+
+        Assert.IsType<OkObjectResult>(result);
+        var ticket = Assert.Single(db.SupportTickets);
+        Assert.Null(ticket.ContactEmail);
+        Assert.Equal("Besökare", ticket.ContactName);
+    }
+
+    [Fact]
+    public async Task Create_BotWithValidEmail_KeepsContactEmail()
+    {
+        using var db = NewDb();
+
+        await NewController(db).Create(Req(channel: "kundtjanstbot", email: "besokare@example.com"));
+
+        Assert.Equal("besokare@example.com", Assert.Single(db.SupportTickets).ContactEmail);
+    }
+
+    [Fact]
+    public async Task Create_BotWithTooLongSubjectAndName_TruncatesInsteadOfRejecting()
+    {
+        using var db = NewDb();
+
+        var result = await NewController(db).Create(Req(
+            subject: new string('s', 500), name: new string('n', 500), category: "Hittepå", channel: "kundtjanstbot"));
+
+        Assert.IsType<OkObjectResult>(result);
+        var ticket = Assert.Single(db.SupportTickets);
+        Assert.Equal(SupportTicketValidator.MaxSubjectLength, ticket.Subject.Length);
+        Assert.Equal(SupportTicketValidator.MaxNameLength, ticket.ContactName!.Length);
+        Assert.Equal("Feedback", ticket.Category);
+    }
+
+    [Fact]
+    public async Task Create_BotWithEmptyMessage_StillReturnsBadRequest()
+    {
+        // Inget att förmedla — det är det enda som avvisas för boten.
+        await AssertBadRequestAsync(Req(message: "  ", channel: "kundtjanstbot"), "Message krävs");
+    }
+
+    [Theory]
+    [InlineData("feedback")]
+    [InlineData("arendehantering")]
+    public Task Create_SameLongMessageViaAppChannels_StillReturnsBadRequest(string channel) =>
+        AssertBadRequestAsync(Req(message: new string('x', 15_000), channel: channel), "Meddelandet");
+
     // --- Rate limit ---
 
     [Fact]

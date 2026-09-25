@@ -46,7 +46,17 @@ public class SupportController : ControllerBase
         // ContactEmail är frivilligt — bara nödvändigt om avsändaren vill ha
         // svar, inte för att skicka in något. Ett anonymt inskick utan e-post
         // är ett giltigt, avsiktligt "kasta över muren"-meddelande.
-        var fel = SupportTicketValidator.Validate(req.Subject, req.Category, req.Message, req.Channel, req.ContactName, req.ContactEmail);
+        var (subject, category, message, contactName, contactEmail) =
+            (req.Subject, req.Category, req.Message, req.ContactName, req.ContactEmail);
+
+        // Kundtjänstboten kan inte visa ett 400 för en människa: dess inskick
+        // avkortas/rensas i stället för att avvisas på längd/e-post/kategori.
+        // Övriga kanaler (app-formulären) får strikta gränser med 400.
+        if (req.Channel == SupportTicketValidator.BotChannel)
+            (subject, category, message, contactName, contactEmail) =
+                SupportTicketValidator.SanitizeBotInput(subject, category, message, contactName, contactEmail);
+
+        var fel = SupportTicketValidator.Validate(subject, category, message, req.Channel, contactName, contactEmail);
         if (fel != null)
             return BadRequest(fel);
 
@@ -59,12 +69,12 @@ public class SupportController : ControllerBase
         var ticket = new SupportTicket
         {
             TicketNumber    = nextNumber,
-            Subject         = string.IsNullOrWhiteSpace(req.Subject) ? "Feedback" : req.Subject.Trim(),
-            Category        = string.IsNullOrWhiteSpace(req.Category) ? "Feedback" : req.Category.Trim(),
+            Subject         = string.IsNullOrWhiteSpace(subject) ? "Feedback" : subject.Trim(),
+            Category        = string.IsNullOrWhiteSpace(category) ? "Feedback" : category.Trim(),
             Channel         = req.Channel,
             CreatedByUserId = userId,
-            ContactName     = user?.Name ?? NullIfBlank(req.ContactName),
-            ContactEmail    = user?.Email ?? NullIfBlank(req.ContactEmail),
+            ContactName     = user?.Name ?? NullIfBlank(contactName),
+            ContactEmail    = user?.Email ?? NullIfBlank(contactEmail),
             LastUserMessageAt = DateTime.UtcNow,
         };
         _db.SupportTickets.Add(ticket);
@@ -74,7 +84,7 @@ public class SupportController : ControllerBase
             Ticket       = ticket,
             SenderType   = "user",
             AuthorUserId = userId,
-            Text         = req.Message.Trim(),
+            Text         = message!.Trim(),
         });
 
         await _db.SaveChangesAsync();
