@@ -154,18 +154,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var user   = await _db.Users.FindAsync(userId);
-        if (user == null) return NotFound();
-
-        if (_hasher.VerifyHashedPassword(user, user.PasswordHash, req.CurrentPassword) == PasswordVerificationResult.Failed)
-            return Unauthorized(new { error = "Nuvarande lösenord stämmer inte" });
-
-        user.PasswordHash = _hasher.HashPassword(user, req.NewPassword);
-
-        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "password", OldValue = null, NewValue = null, ChangedBy = "user" });
-
-        await _db.SaveChangesAsync();
-        return Ok(new { message = "Lösenordet är uppdaterat" });
+        return ToActionResult(await _auth.ChangePasswordAsync(userId, req.CurrentPassword, req.NewPassword, req.RefreshToken));
     }
 
     // Self-service GDPR-export (artikel 20) — riktig data, ersätter den
@@ -360,7 +349,8 @@ public record RegisterRequest(string Name, string Email, string Password, bool A
 public record GoogleLoginRequest(string IdToken, bool AcceptedTerms);
 public record RefreshRequest(string RefreshToken);
 public record UpdateMeRequest(string? Name, string? DisplayName = null);
-public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+// RefreshToken = enhetens egen refresh-token; den enda som behålls när övriga sessioner återkallas.
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword, string? RefreshToken = null);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);
 public record VerifyEmailRequest(string Token);
