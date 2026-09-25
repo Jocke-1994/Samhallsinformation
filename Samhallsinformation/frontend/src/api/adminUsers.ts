@@ -112,7 +112,11 @@ export async function setAdminUserStatus(
     method: 'PUT',
     body: JSON.stringify({ isActive, reason, reminderAt, reminderNote }),
   })
-  if (!res.ok) throw new Error(`setAdminUserStatus: ${res.status}`)
+  if (!res.ok) {
+    // Servern svarar 400 med { error } vid t.ex. självspärr / sista administratören.
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `setAdminUserStatus: ${res.status}`)
+  }
 }
 
 export async function deleteAdminUser(id: string): Promise<void> {

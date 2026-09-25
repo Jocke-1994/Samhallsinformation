@@ -252,6 +252,46 @@ function initialer(namn: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Resultat av en massåtgärd (V2-3): per-rad-utfall i stället för "allt eller inget"
+// ---------------------------------------------------------------------------
+
+interface MassResultat {
+  totalt: number
+  fel:    { id: string; namn: string; orsak: string }[]
+}
+
+function felOrsak(orsak: unknown): string {
+  return orsak instanceof Error && orsak.message ? orsak.message : 'Något gick fel'
+}
+
+function MassResultatVy({ resultat, onStäng }: { resultat: MassResultat; onStäng: () => void }) {
+  const lyckade = resultat.totalt - resultat.fel.length
+  return (
+    <div className="px-6 py-5 flex flex-col gap-4" data-testid="mass-resultat">
+      <p className="text-sm font-medium text-slate-700">{lyckade} av {resultat.totalt} lyckades.</p>
+      {resultat.fel.length > 0 && (
+        <div className="text-sm text-red-700 bg-red-50 rounded-lg px-3.5 py-2.5 flex flex-col gap-1.5">
+          <p className="font-medium">Misslyckades:</p>
+          <ul className="flex flex-col gap-1">
+            {resultat.fel.map(f => <li key={f.id}>{f.namn} — {f.orsak}</li>)}
+          </ul>
+        </div>
+      )}
+      {resultat.fel.length > 0 && (
+        <p className="text-xs text-slate-500">De som misslyckades är fortfarande markerade i listan.</p>
+      )}
+      <button onClick={onStäng} className="w-full py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Stäng</button>
+    </div>
+  )
+}
+
+/** Första ~5 namnen, sedan "och N till". */
+function namnSammanfattning(namn: string[], max = 5): string {
+  if (namn.length <= max) return namn.join(', ')
+  return `${namn.slice(0, max).join(', ')} och ${namn.length - max} till`
+}
+
+// ---------------------------------------------------------------------------
 // Modaler
 // ---------------------------------------------------------------------------
 
@@ -318,8 +358,10 @@ const PÅMINNELSE_VAL: { label: string; dagar: number | null }[] = [
   { label: 'Ingen påminnelse', dagar: null },
 ]
 
-function StängAvModal({ antal, onSpara, onStäng }: {
+function StängAvModal({ antal, arbetar, resultat, onSpara, onStäng }: {
   antal: number
+  arbetar?: boolean
+  resultat?: MassResultat | null
   onSpara: (anledning: string, paminnelseOm: number | null) => void
   onStäng: () => void
 }) {
@@ -336,6 +378,7 @@ function StängAvModal({ antal, onSpara, onStäng }: {
           </div>
           <button onClick={onStäng} className="text-amber-200 hover:text-white transition-colors">✕</button>
         </div>
+        {resultat ? <MassResultatVy resultat={resultat} onStäng={onStäng} /> : (
         <div className="px-6 py-5 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
@@ -369,21 +412,25 @@ function StängAvModal({ antal, onSpara, onStäng }: {
               ? 'Kontot förblir avstängt tills en admin aktiverar det manuellt — men klockan i adminpanelen påminner om att titta på fallet igen.'
               : 'Kontot förblir avstängt tills en admin aktiverar det manuellt. Ingen påminnelse sätts.'}
           </p>
-          <button onClick={() => onSpara(anledning, paminnelseDagar)}
-            className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold rounded-xl transition-colors">
-            Stäng av
+          <button onClick={() => onSpara(anledning, paminnelseDagar)} disabled={arbetar}
+            className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors">
+            {arbetar ? 'Stänger av…' : 'Stäng av'}
           </button>
         </div>
+        )}
       </div>
     </div>
   )
 }
 
-function RaderaModal({ antal, namn, fel, raderar, onBekräfta, onStäng }: {
+function RaderaModal({ antal, namn, namnLista, fel, raderar, resultat, onBekräfta, onStäng }: {
   antal: number
   namn?: string
+  /** Massradering: namnen som berörs, så bekräftelsen visar exakt vilka konton. */
+  namnLista?: string[]
   fel?: string | null
   raderar?: boolean
+  resultat?: MassResultat | null
   onBekräfta: () => void
   onStäng: () => void
 }) {
@@ -397,7 +444,13 @@ function RaderaModal({ antal, namn, fel, raderar, onBekräfta, onStäng }: {
           </div>
           <button onClick={onStäng} className="text-red-300 hover:text-white transition-colors">✕</button>
         </div>
+        {resultat ? <MassResultatVy resultat={resultat} onStäng={onStäng} /> : (
         <div className="px-6 py-5 flex flex-col gap-4">
+          {namnLista && namnLista.length > 0 && (
+            <p className="text-sm font-medium text-slate-800" data-testid="radera-namnlista">
+              Du håller på att radera {namnLista.length} {namnLista.length === 1 ? 'konto' : 'konton'}: {namnSammanfattning(namnLista)}.
+            </p>
+          )}
           <p className="text-sm text-slate-600">
             Kontot spärras omedelbart. Namn, e-post och lösenord anonymiseras permanent i enlighet med GDPR
             artikel 17 — men inte förrän om <span className="font-medium">24 timmar</span>, så det går att ångra
@@ -411,6 +464,7 @@ function RaderaModal({ antal, namn, fel, raderar, onBekräfta, onStäng }: {
             </button>
           </div>
         </div>
+        )}
       </div>
     </div>
   )
@@ -484,7 +538,8 @@ interface AnvandareProps {
 }
 
 export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onDjuplänkKonsumerad, onPendingNotiser }: AnvandareProps) {
-  const { aktivVy } = useAuth()
+  const { aktivVy, email: egenEpostRå } = useAuth()
+  const egenEpost = egenEpostRå?.toLowerCase() ?? null
   const queryClient = useQueryClient()
   const { data: adminUsers, isLoading: laddar, isError: laddningFel, refetch } = useQuery({
     queryKey: ['admin-users'],
@@ -502,6 +557,8 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   const [enkildRadera, setEnkildRadera]         = useState<Användare | null>(null)
   const [raderar, setRaderar]                   = useState(false)
   const [raderaFel, setRaderaFel]               = useState<string | null>(null)
+  const [massArbetar, setMassArbetar]           = useState(false)
+  const [massResultat, setMassResultat]         = useState<MassResultat | null>(null)
   const [enkildRollÄndring, setEnkildRollÄndring] = useState<Användare | null>(null)
   const [impersonationMål, setImpersonationMål]   = useState<Användare | null>(null)
   const [skickarLösenordsåterställning, setSkickarLösenordsåterställning] = useState(false)
@@ -517,13 +574,36 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     return true
   })
 
-  function toggleMarkerad(e: React.MouseEvent, id: string) {
+  // Egen rad kan aldrig massmarkeras (backend avvisar självspärr/självradering).
+  const ärEgenRad = (u: Användare) => egenEpost !== null && u.epost.toLowerCase() === egenEpost
+  // "Markera alla" väljer bara det som är rimligt att massåtgärda: inte egen rad,
+  // inte Admin-konton och inte redan raderade konton. Admin-konton kan fortfarande
+  // markeras ett i taget — backend avvisar då sista aktiva admin med tydligt fel per rad.
+  const ärMassmarkerbar = (u: Användare) =>
+    !ärEgenRad(u) && !u.roller.includes('Admin') && u.status !== 'Raderat'
+  const massmarkerbara = filtrerade.filter(ärMassmarkerbar)
+  const antalMarkeradeBland = massmarkerbara.filter(u => markerade.has(u.id)).length
+  const allaMarkerade = massmarkerbara.length > 0 && antalMarkeradeBland === massmarkerbara.length
+  const delvisMarkerade = antalMarkeradeBland > 0 && !allaMarkerade
+
+  function toggleMarkerad(e: React.MouseEvent, u: Användare) {
     e.stopPropagation()
-    setMarkerade(prev => { const ny = new Set(prev); ny.has(id) ? ny.delete(id) : ny.add(id); return ny })
+    if (ärEgenRad(u)) return
+    setMarkerade(prev => {
+      const ny = new Set(prev)
+      if (ny.has(u.id)) ny.delete(u.id)
+      else ny.add(u.id)
+      return ny
+    })
   }
 
   function toggleAllaMarkerade() {
-    setMarkerade(prev => prev.size === filtrerade.length ? new Set() : new Set(filtrerade.map(u => u.id)))
+    setMarkerade(prev => {
+      const ny = new Set(prev)
+      if (allaMarkerade) massmarkerbara.forEach(u => ny.delete(u.id))
+      else massmarkerbara.forEach(u => ny.add(u.id))
+      return ny
+    })
   }
 
   useEffect(() => {
@@ -790,25 +870,49 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     return d.toISOString()
   }
 
-  async function stängAv(anledning: string, påminnelseOm: number | null) {
-    const reminderAt = beräknaPåminnelse(påminnelseOm)
-    await Promise.all([...markerade].map(id => setAdminUserStatus(id, false, anledning || undefined, reminderAt)))
-    await refetch()
-    setMarkerade(new Set()); setModal(null)
+  // Kör en åtgärd mot alla markerade konton och samlar utfallet PER RAD
+  // (Promise.allSettled). Listan hämtas alltid om efteråt, även vid delvis fel,
+  // och bara de lyckade raderna avmarkeras. Modalen stängs bara om allt lyckades —
+  // annars visas en sammanfattning med serverns orsak per misslyckad rad.
+  async function körMassåtgärd(åtgärd: (id: string) => Promise<void>, rensaVald = false) {
+    if (massArbetar) return
+    const ids = [...markerade]
+    const namnFörId = new Map(användare.map(u => [u.id, u.namn]))
+    setMassArbetar(true); setMassResultat(null)
+    try {
+      const utfall = await Promise.allSettled(ids.map(id => åtgärd(id)))
+      const lyckade = new Set<string>()
+      const fel: MassResultat['fel'] = []
+      utfall.forEach((r, i) => {
+        if (r.status === 'fulfilled') lyckade.add(ids[i])
+        else fel.push({ id: ids[i], namn: namnFörId.get(ids[i]) ?? ids[i], orsak: felOrsak(r.reason) })
+      })
+      await refetch()
+      if (rensaVald && vald && lyckade.has(vald.id)) setVald(null)
+      setMarkerade(prev => { const ny = new Set(prev); lyckade.forEach(id => ny.delete(id)); return ny })
+      if (fel.length === 0) setModal(null)
+      else setMassResultat({ totalt: ids.length, fel })
+    } finally {
+      setMassArbetar(false)
+    }
   }
 
-  async function raderaMarkerade() {
-    setRaderaFel(null); setRaderar(true)
-    try {
-      await Promise.all([...markerade].map(id => deleteAdminUser(id)))
-      await refetch()
-      if (vald && markerade.has(vald.id)) setVald(null)
-      setMarkerade(new Set()); setModal(null)
-    } catch (err) {
-      setRaderaFel(err instanceof Error ? err.message : 'Något gick fel')
-    } finally {
-      setRaderar(false)
-    }
+  function stängAv(anledning: string, påminnelseOm: number | null) {
+    const reminderAt = beräknaPåminnelse(påminnelseOm)
+    return körMassåtgärd(id => setAdminUserStatus(id, false, anledning || undefined, reminderAt))
+  }
+
+  function raderaMarkerade() {
+    setRaderaFel(null)
+    return körMassåtgärd(id => deleteAdminUser(id), true)
+  }
+
+  function stängMassModal() {
+    setModal(null); setMassResultat(null); setRaderaFel(null)
+  }
+
+  function öppnaMassModal(typ: 'stäng-av' | 'radera') {
+    setMassResultat(null); setRaderaFel(null); setModal(typ)
   }
 
   async function raderaEnkild(u: Användare) {
@@ -856,9 +960,10 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     avstängda:   användare.filter(u => u.status === 'Avstängd').length,
   }
 
-  const allaMarkerade = filtrerade.length > 0 && markerade.size === filtrerade.length
+  const markeradeNamn = användare.filter(u => markerade.has(u.id)).map(u => u.namn)
 
-
+  // Rubrikcheckboxens indeterminate-läge kan bara sättas via DOM-egenskapen.
+  const rubrikCheckboxRef = (el: HTMLInputElement | null) => { if (el) el.indeterminate = delvisMarkerade }
   const harOverifierad = (u: Användare) => u.kontaktuppgifter.some(k => !k.verifierad)
 
   return (
@@ -866,10 +971,13 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
 
       {/* Modaler — bulk */}
       {modal === 'roller'   && <RollModal antal={markerade.size} onSpara={applicerapRoller} onStäng={() => setModal(null)} />}
-      {modal === 'stäng-av' && <StängAvModal antal={markerade.size} onSpara={stängAv} onStäng={() => setModal(null)} />}
+      {modal === 'stäng-av' && (
+        <StängAvModal antal={markerade.size} arbetar={massArbetar} resultat={massResultat}
+          onSpara={stängAv} onStäng={stängMassModal} />
+      )}
       {modal === 'radera'   && (
-        <RaderaModal antal={markerade.size} fel={raderaFel} raderar={raderar}
-          onBekräfta={raderaMarkerade} onStäng={() => { setModal(null); setRaderaFel(null) }} />
+        <RaderaModal antal={markerade.size} namnLista={markeradeNamn} fel={raderaFel} raderar={massArbetar}
+          resultat={massResultat} onBekräfta={raderaMarkerade} onStäng={stängMassModal} />
       )}
 
       {/* Modaler — enskild */}
@@ -921,8 +1029,8 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               <div className="flex gap-2 ml-auto">
                 <button disabled title="Inte kopplat mot backend än — ingen endpoint för att ändra roll"
                   className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 cursor-not-allowed">Ändra roller</button>
-                <button onClick={() => setModal('stäng-av')} className="text-xs font-medium px-3 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors">Stäng av</button>
-                <button onClick={() => setModal('radera')} className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Radera</button>
+                <button onClick={() => öppnaMassModal('stäng-av')} className="text-xs font-medium px-3 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors">Stäng av</button>
+                <button onClick={() => öppnaMassModal('radera')}className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Radera</button>
                 <button onClick={() => setMarkerade(new Set())} className="text-xs font-medium px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">✕ Avmarkera</button>
               </div>
             </>
@@ -952,7 +1060,10 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           <thead>
             <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase tracking-wide">
               <th className="px-6 py-3 w-10">
-                <input type="checkbox" checked={allaMarkerade} onChange={toggleAllaMarkerade}
+                <input type="checkbox" ref={rubrikCheckboxRef} checked={allaMarkerade} onChange={toggleAllaMarkerade}
+                  disabled={massmarkerbara.length === 0}
+                  aria-label="Markera alla"
+                  title="Markerar alla utom administratörer och ditt eget konto"
                   className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer" />
               </th>
               <th className="text-left px-2 py-3 font-medium w-10">ID</th>
@@ -969,9 +1080,12 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               <tr key={u.id}
                 className={`hover:bg-slate-50 transition-colors cursor-pointer ${markerade.has(u.id) ? 'bg-violet-50' : ''}`}
                 onClick={() => öppnaDetalj(u)}>
-                <td className="px-6 py-3" onClick={e => toggleMarkerad(e, u.id)}>
+                <td className="px-6 py-3" onClick={e => toggleMarkerad(e, u)}>
                   <input type="checkbox" checked={markerade.has(u.id)} readOnly
-                    className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer" />
+                    disabled={ärEgenRad(u)}
+                    aria-label={`Markera ${u.namn}`}
+                    title={ärEgenRad(u) ? 'Du kan inte massmarkera ditt eget konto' : undefined}
+                    className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                 </td>
                 <td className="px-2 py-3 text-xs text-slate-400 font-mono cursor-help" title={`GUID: ${u.id}`}>#{u.joinNr}</td>
                 <td className="px-4 py-3">
