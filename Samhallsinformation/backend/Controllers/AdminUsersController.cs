@@ -29,7 +29,9 @@ public class AdminUsersController : ControllerBase
         _frontendUrl = config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
     }
 
-    private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    // Guid.Empty om claimet saknas (matchar då aldrig ett riktigt konto-id).
+    private Guid CurrentUserId =>
+        Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : Guid.Empty;
 
     [HttpGet("lookup")]
     public async Task<IActionResult> Lookup([FromQuery] string email)
@@ -79,16 +81,42 @@ public class AdminUsersController : ControllerBase
         var user = await _db.Users.FindAsync(id);
         if (user == null) return NotFound();
 
+        if (!req.IsActive)
+        {
+            // Spärr mot utlåsning: ingen självspärr, och aldrig den sista aktiva admin
+            // (återställning kräver annars DB-ändring/ny ADMIN_EMAIL-deploy).
+            if (id == CurrentUserId)
+                return BadRequest(new { error = "Du kan inte spärra ditt eget konto." });
+            if (await AccountSuspension.IsLastActiveAdminAsync(_db, user))
+                return BadRequest(new { error = "Det här är den sista aktiva administratören — spärra inte kontot, då blir ingen kvar som kan logga in som admin." });
+        }
+        else if (user.DeletedAt != null)
+        {
+            return BadRequest(new { error = "Kontot är raderat (anonymiserat) och kan inte återaktiveras." });
+        }
+
+        // Återaktivering av ett konto med schemalagd radering avbryter också raderingen —
+        // annars ser kontot aktivt ut men anonymiseras oåterkalleligt av
+        // UserDeletionBackgroundService inom 24 h.
+        var cancelsDeletion = req.IsActive && user.DeletionScheduledAt != null;
+
         user.IsActive = req.IsActive;
         user.SuspendedAt     = req.IsActive ? null : DateTime.UtcNow;
         user.SuspendedReason = req.IsActive ? null : req.Reason;
         user.SuspensionReminderAt   = req.IsActive ? null : req.ReminderAt;
         user.SuspensionReminderNote = req.IsActive ? null : req.ReminderNote;
+        if (cancelsDeletion)
+        {
+            user.DeletionScheduledAt = null;
+            user.DeletionCancelToken = null;
+        }
 
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Konto,
-            req.IsActive ? $"Konto återaktiverat — {user.Name}" : $"Konto spärrat — {user.Name}",
+            req.IsActive
+                ? (cancelsDeletion ? $"Konto återaktiverat och schemalagd radering avbruten — {user.Name}" : $"Konto återaktiverat — {user.Name}")
+                : $"Konto spärrat — {user.Name}",
             req.IsActive ? "" : (req.Reason ?? "Ingen anledning angiven"));
         return Ok();
     }
@@ -116,9 +144,19 @@ public class AdminUsersController : ControllerBase
         if (user.DeletionScheduledAt != null)
             return BadRequest(new { error = "Radering är redan schemalagd för det här kontot." });
 
+        if (await AccountSuspension.IsLastActiveAdminAsync(_db, user))
+            return BadRequest(new { error = "Det här är den sista aktiva administratören och kan inte raderas." });
+
+        // Redan admin-spärrat konto: behåll admins spärr (orsak/tid) i stället för att skriva över den
+        // med raderingsmarkören — annars kunde användarens ångra-länk häva admins spärr.
+        var keepAdminSuspension = AccountSuspension.IsAdminSuspended(user);
+
         user.IsActive            = false;
-        user.SuspendedAt       ??= DateTime.UtcNow;
-        user.SuspendedReason     = "Radering begärd (GDPR) — raderas automatiskt om 24 timmar om ingen avbryter det";
+        if (!keepAdminSuspension)
+        {
+            user.SuspendedAt       ??= DateTime.UtcNow;
+            user.SuspendedReason     = AccountSuspension.AdminDeletionReason;
+        }
         user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24);
         user.DeletionCancelToken = Guid.NewGuid().ToString("N");
 
@@ -144,16 +182,25 @@ public class AdminUsersController : ControllerBase
         if (user.DeletionScheduledAt == null)
             return BadRequest(new { error = "Ingen radering är schemalagd för det här kontot." });
 
+        // Bara en spärr som uteslutande beror på raderingen hävs. Har en admin spärrat kontot
+        // (före eller efter begäran) avbryts raderingen men spärren står kvar — admin återaktiverar
+        // i så fall uttryckligen via SetStatus.
+        var restoreAccess = AccountSuspension.IsDeletionOnlySuspension(user) || user.IsActive;
+
         user.DeletionScheduledAt = null;
         user.DeletionCancelToken = null;
-        user.IsActive            = true;
-        user.SuspendedAt         = null;
-        user.SuspendedReason     = null;
+        if (restoreAccess)
+        {
+            user.IsActive        = true;
+            user.SuspendedAt     = null;
+            user.SuspendedReason = null;
+        }
 
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Konto,
-            $"Radering ångrad — {user.Name}", "Kontot återaktiverat");
+            $"Radering ångrad — {user.Name}",
+            restoreAccess ? "Kontot återaktiverat" : "Kontot är fortfarande spärrat av admin");
         return Ok();
     }
 

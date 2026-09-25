@@ -404,6 +404,12 @@ public class AuthService : IAuthService
         if (user.DeletionScheduledAt == null || user.DeletionScheduledAt < DateTime.UtcNow)
             return AuthResult.Fail(400, "Länken har gått ut — kontot är antingen redan raderat eller raderingen redan avbruten. Kontakta support om du behöver hjälp.");
 
+        // Länken får bara häva en spärr som uteslutande beror på användarens egen raderingsbegäran.
+        // Har en admin spärrat kontot lämnas ALLT orört (raderingen löper vidare) och svaret är
+        // neutralt — det avslöjar inte att det finns en admin-spärr.
+        if (!user.IsActive && !AccountSuspension.IsDeletionOnlySuspension(user))
+            return AuthResult.Fail(400, "Länken kunde inte användas. Kontakta support om du behöver hjälp.");
+
         user.DeletionScheduledAt = null;
         user.DeletionCancelToken = null;
         user.IsActive            = true;
