@@ -136,10 +136,11 @@ builder.Services.AddScoped<IIngestor, SmhiApiIngestor>();
 
 // Namngiven klient för att kolla om en källänk fortfarande lever (t.ex. en
 // sparad händelses "Läs mer"-länk) — ärlig, identifierande User-Agent,
-// kort timeout så ett klick aldrig hänger länge.
+// kort timeout så ett klick aldrig hänger länge (timeout = "okänt", inte "död",
+// se EventsController.GetLinkStatus).
 builder.Services.AddHttpClient("linkcheck", c =>
 {
-    c.Timeout = TimeSpan.FromSeconds(8);
+    c.Timeout = TimeSpan.FromSeconds(5);
     c.DefaultRequestHeaders.TryAddWithoutValidation(
         "User-Agent", "Samhallsinformation/1.0 (+https://samhallsinformation.se; kontakt: support@samhallsinformation.se)");
 });

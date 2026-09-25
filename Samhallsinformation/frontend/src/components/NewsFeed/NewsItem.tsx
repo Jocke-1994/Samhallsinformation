@@ -64,7 +64,7 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
   const flaggor = useFlags()
   const { sparade, toggleSparad } = useSavedEvents()
   const [expanded, setExpanded] = useState(false)
-  const [länkStatus, setLänkStatus] = useState<'unknown' | 'checking' | 'dead'>('unknown')
+  const [länkDöd, setLänkDöd] = useState(false)
   const [delaFeedback, setDelaFeedback] = useState<string | null>(null)
   const ärSparad = sparade.has(event.id)
   const cfg = SEVERITY_CONFIG[event.severity]
@@ -85,18 +85,17 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
     setExpanded(prev => !prev)
   }
 
-  // Reaktiv koll — bara vid faktiskt klick, ingen bakgrundsbevakning av
-  // länkar. En misslyckad koll mot vår egen backend antar "levande" (fail
-  // open), så ett nätverksglapp aldrig blockerar en i övrigt fungerande länk.
-  async function handleLäsMer() {
-    setLänkStatus('checking')
-    const alive = await checkEventLinkStatus(event.id)
-    if (alive) {
-      window.open(event.url, '_blank', 'noopener,noreferrer')
-      setLänkStatus('unknown')
-    } else {
-      setLänkStatus('dead')
-    }
+  // Själva länken är en vanlig <a target="_blank"> och öppnas av webbläsaren
+  // synkront i klickhändelsen — ingen await före, så iOS/PWA aldrig blockerar
+  // den som popup och en misslyckad förkoll aldrig kan hindra någon från att
+  // nå källan. Länkkollen körs i bakgrunden EFTER klicket (ingen
+  // bakgrundsbevakning av länkar, bara vid faktiskt klick) och får bara
+  // påverka UI:t vid ett entydigt 'dead' (404/410 hos källan). Allt annat —
+  // 'alive', 'unknown', nätverksfel — lämnar knappen som den är.
+  function handleLäsMer() {
+    checkEventLinkStatus(event.id)
+      .then(status => { if (status === 'dead') setLänkDöd(true) })
+      .catch(() => { /* kollen är bara en bonus — ett fel ska aldrig synas eller störa */ })
   }
 
   // Delar alltid källänken (inte vår egen sida) — grundprincipen om
@@ -216,24 +215,20 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
       {expanded && (
         <div className="px-4 pb-4 pt-3 border-t border-slate-100 dark:border-slate-700">
           <EventContent content={event.content} />
-          {länkStatus === 'dead' ? (
-            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400 dark:text-slate-500">
-              <span>⚠️ Originalsidan finns inte längre hos {sourceName ?? 'källan'} — sammandraget ovan är vad vi sparade.</span>
-              <a href={event.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-500 dark:hover:text-slate-300 shrink-0">
-                Försök öppna ändå
-              </a>
-            </div>
-          ) : (
-            <button
-              onClick={handleLäsMer}
-              disabled={länkStatus === 'checking'}
-              className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-500 transition-colors disabled:opacity-50"
-            >
-              {länkStatus === 'checking'
-                ? 'Kollar länken…'
-                : `${event.url.includes('trafikinformation') ? 'Se trafikläget hos Trafikverket' : 'Läs mer hos källan'} →`}
-            </button>
+          {länkDöd && (
+            <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+              ⚠️ Originalsidan finns inte längre hos {sourceName ?? 'källan'} — sammandraget ovan är vad vi sparade.
+            </p>
           )}
+          <a
+            href={event.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleLäsMer}
+            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-500 transition-colors"
+          >
+            {event.url.includes('trafikinformation') ? 'Se trafikläget hos Trafikverket' : 'Läs mer hos källan'} →
+          </a>
         </div>
       )}
     </div>
