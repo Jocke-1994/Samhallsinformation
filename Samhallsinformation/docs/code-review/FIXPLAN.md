@@ -15,13 +15,13 @@ Fynd refereras som **E{enhet}#{nummer}** (t.ex. E1#5 = enhet 1, fynd 5). Alla **
 **Storlek:** S ≈ under 1 h arbete, M ≈ 1–3 h, L ≈ över 3 h. **Lager:** BE / FE / DB.
 **Status:** ☐ ej påbörjad · ◐ pågår · ☑ mergad.
 
-## Beslut (besvarade 2026-09-25 utom D4)
+## Beslut (alla besvarade 2026-09-25)
 | # | Beslut | Svar | Påverkar |
 |---|---|---|---|
 | D1 | Support-rollen får åtkomst till Support-inboxen (Användarlistan skrivskyddad). | **Ja** | V3-10 |
 | D2 | Mitt flöde filtreras på servern i stället för klienten över 50 händelser. | **Ja** | V3-11 |
 | D3 | Mock-UI: märk tydligt MOCK i admin, ta bort/dölj medborgarmock. | **Enligt rekommendation** | V3-20 |
-| D4 | Token-lagring i localStorage + `chat.js` (från kundtjänstbotens egen server) utan CSP. Alternativ: (A) inget nu, (B) CSP först i "rapportera-läge", (C) refresh-token i httpOnly-cookie. **Rekommendation: A nu, B senare.** | **Öppen — ej brådskande** | V3-22 |
+| D4 | Token-lagring i localStorage + `chat.js` (från kundtjänstbotens egen server) utan CSP. Alternativ: (A) inget nu, (B) CSP först i "rapportera-läge", (C) refresh-token i httpOnly-cookie. **Beslut: A nu, B senare (V3-22), C parkerad — se "Parkerade alternativ" nedan.** | **Beslutad** | V3-22 |
 | D5 | Löst utan användarens hjälp: V1-5 *sätter* `VITE_USE_MOCK=false` i `.env.production` i stället för att ta bort filen. Fungerar oavsett vad Vercel har (Vercels miljövariabel vinner om den finns, annars gäller filen). Sessionsloggen (PR #218) bekräftar att variabeln sattes till `false` i Vercel. | **Löst** | V1-5 |
 | D6 | E-postnormalisering, **rekommendation:** normalisera till gemener + skiftlägesokänsligt uppslag framåt. Migreringen kontrollerar först om normaliseringen skulle ge dubbletter; ger den det avbryts den och loggar vilka konton det gäller (ingen tyst sammanslagning). | **Enligt rekommendation** | V2-11 |
 
@@ -122,7 +122,20 @@ Mål: städa sådant som inte gör skada idag. Batchas per lager; körs sist ell
 ## Beroenden och kritisk väg
 - V1-0a/b före alla PR:ar som skriver test i respektive lager.
 - V1-4 före V1-8 (samma auth-kod). V2-4 före V3-4 (push). V3-1 före V3-2 (dubbletter innan unikt index). V2-7 släpps som en enhet (BE+FE).
-- Beslut D1–D3, D5 och D6 är fattade. Enda öppna beslutet är D4 (V3-22), som inte blockerar något före våg 3.
+- Alla beslut D1–D6 är fattade. V3-22 gäller bara alternativ B (CSP i rapportera-läge); alternativ C är parkerat (se nedan).
+
+## Parkerade alternativ (ska inte glömmas)
+**P1 — Alt C: refresh-token i httpOnly-cookie (ur D4/E5#11).** Parkerad av användaren 2026-09-25: "vi får inte glömma bort alt C, vet dock inte när den skulle bli aktuell."
+- **Vad det är:** 30-dagars refresh-token flyttas från localStorage till en cookie som JavaScript inte kan läsa. Stark skyddsnivå, men en större ombyggnad av login/refresh/logout i både backend och frontend.
+- **Trolig komplikation (overifierad):** frontend (Vercel) och API (`…up.railway.app`) ligger på olika sajter, så en cookie skulle bli tredjepartscookie och blockeras av allt fler webbläsare. Alt C kräver därför troligen att API:t flyttas till en subdomän under samma sajt som frontend (t.ex. `api.samhallsinformation.se`). Undersök det innan något beslut.
+- **Ta upp C igen när något av detta inträffar:**
+  1. Fler externa skript än `chat.js` ska läggas in på sidorna (analys, reklam, widgetar).
+  2. CSP-rapporterna från V3-22 visar oväntade skriptkällor.
+  3. Tjänsten ska hantera känsligare data eller betalningar/anslag (jfr monetiseringsidén).
+  4. Ett säkerhetsincident-tillbud, extern penetrationstest eller granskning kräver det.
+  5. API:t ändå flyttas till egen domän/subdomän (då är den svåraste delen redan gjord).
+  6. Användarbasen växer markant efter kommande press/marknadsföring.
+- **Påminnelse:** när V3-22 (B) slutförs, öppna ett GitHub-issue för C med villkoren ovan så det syns i backloggen.
 - Två befintliga tester låser fast buggar och ändras avsiktligt i V3-4 och V3-10.
 
 ## Uppskattning
