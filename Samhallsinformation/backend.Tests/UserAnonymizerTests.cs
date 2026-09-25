@@ -253,8 +253,11 @@ public class UserAnonymizerTests
         var ticketText = AllTextValues(db).Where(v =>
             v.Column.StartsWith("SupportTicket.") || v.Column.StartsWith("SupportTicketMessage.")
             || v.Column.StartsWith("SupportTicketScheduledAction.") || v.Column.StartsWith("FeatureIdea."));
+        // Hela ordet "Ada", inte delsträngen: de anonymiserade adresserna (deleted-{guid}@anonymized.local)
+        // innehåller slumpmässiga hex-GUID:er som av en ren tillfällighet kan innehålla "ada" (~1–2 % av körningarna).
         foreach (var (column, value) in ticketText)
-            Assert.DoesNotContain("Ada", value, StringComparison.OrdinalIgnoreCase);
+            Assert.False(System.Text.RegularExpressions.Regex.IsMatch(value, @"\bAda\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase),
+                $"{column} innehåller fortfarande förnamnet 'Ada': {value}");
     }
 
     [Fact]
