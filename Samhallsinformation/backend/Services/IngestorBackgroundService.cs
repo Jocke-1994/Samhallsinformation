@@ -109,7 +109,7 @@ public class IngestorBackgroundService : BackgroundService
 
             try
             {
-                var (inserted, _, insertedEvents) = await EventSync.SyncAsync(db, ingestor, overwriteExisting: false, ct);
+                var (inserted, _, insertedEvents) = await EventSync.SyncAsync(db, ingestor, overwriteExisting: false, ct, _logger);
                 _logger.LogInformation("Saved {Count} new events for {Source}",
                     inserted, ingestor.Source.Name);
 

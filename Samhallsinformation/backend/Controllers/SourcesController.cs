@@ -17,13 +17,15 @@ public class SourcesController : ControllerBase
     private readonly IEnumerable<IIngestor> _dedicatedIngestors;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAktivitetsloggService _aktivitetslogg;
+    private readonly ILogger<SourcesController>? _logger;
 
-    public SourcesController(AppDbContext db, IEnumerable<IIngestor> dedicatedIngestors, IHttpClientFactory httpClientFactory, IAktivitetsloggService aktivitetslogg)
+    public SourcesController(AppDbContext db, IEnumerable<IIngestor> dedicatedIngestors, IHttpClientFactory httpClientFactory, IAktivitetsloggService aktivitetslogg, ILogger<SourcesController>? logger = null)
     {
         _db = db;
         _dedicatedIngestors = dedicatedIngestors;
         _httpClientFactory = httpClientFactory;
         _aktivitetslogg = aktivitetslogg;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -143,7 +145,7 @@ public class SourcesController : ControllerBase
 
         try
         {
-            var (inserted, updated, _) = await EventSync.SyncAsync(_db, ingestor, overwriteExisting: true);
+            var (inserted, updated, _) = await EventSync.SyncAsync(_db, ingestor, overwriteExisting: true, logger: _logger);
             source.LastFetchedAt  = DateTime.UtcNow;
             source.LastFetchError = null;
             await _db.SaveChangesAsync();
