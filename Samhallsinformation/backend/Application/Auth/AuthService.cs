@@ -61,7 +61,7 @@ public class AuthService : IAuthService
         _db.EmailVerificationTokens.Add(verificationToken);
         await _db.SaveChangesAsync();
 
-        var verifyLink = $"{_frontendUrl}/verify-email?token={verificationToken.Token}";
+        var verifyLink = $"{_frontendUrl}/verify-email?token={Uri.EscapeDataString(verificationToken.Token)}";
         _ = _email.SendEmailVerificationAsync(user.Email, user.Name, verifyLink);
 
         return await IssueTokensAsync(user, isNewUser: true);
@@ -191,7 +191,7 @@ public class AuthService : IAuthService
         _db.PasswordResetTokens.Add(resetToken);
         await _db.SaveChangesAsync();
 
-        var resetLink = $"{_frontendUrl}/reset-password?token={resetToken.Token}";
+        var resetLink = $"{_frontendUrl}/reset-password?token={Uri.EscapeDataString(resetToken.Token)}";
         _ = _email.SendPasswordResetAsync(user.Email, user.Name, resetLink);
 
         return AuthResult.Ok(genericMessage);
@@ -295,7 +295,7 @@ public class AuthService : IAuthService
         _db.EmailVerificationTokens.Add(verificationToken);
         await _db.SaveChangesAsync();
 
-        var verifyLink = $"{_frontendUrl}/verify-email?token={verificationToken.Token}";
+        var verifyLink = $"{_frontendUrl}/verify-email?token={Uri.EscapeDataString(verificationToken.Token)}";
         _ = _email.SendEmailVerificationAsync(user.Email, user.Name, verifyLink);
 
         return AuthResult.Ok("Ett nytt bekräftelsemejl har skickats");
@@ -340,7 +340,7 @@ public class AuthService : IAuthService
         _db.EmailChangeTokens.Add(changeToken);
         await _db.SaveChangesAsync();
 
-        var confirmLink = $"{_frontendUrl}/confirm-email-change?token={changeToken.Token}";
+        var confirmLink = $"{_frontendUrl}/confirm-email-change?token={Uri.EscapeDataString(changeToken.Token)}";
         _ = _email.SendEmailChangeConfirmationAsync(newEmail, user.Name, confirmLink);
         _ = _email.SendEmailChangeNoticeAsync(user.Email, user.Name, newEmail);
 

@@ -166,7 +166,7 @@ public class AdminUsersController : ControllerBase
             $"Radering begärd — {user.Name}",
             $"Verkställs {user.DeletionScheduledAt:yyyy-MM-dd HH:mm} UTC om ingen avbryter");
 
-        var cancelLink = $"{_frontendUrl.TrimEnd('/')}/cancel-deletion?token={user.DeletionCancelToken}";
+        var cancelLink = $"{_frontendUrl.TrimEnd('/')}/cancel-deletion?token={Uri.EscapeDataString(user.DeletionCancelToken)}";
         _ = _email.SendAccountDeletionScheduledAsync(user.Email, user.Name, cancelLink, user.DeletionScheduledAt.Value);
 
         return Ok(new { deletionScheduledAt = user.DeletionScheduledAt });

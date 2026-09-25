@@ -13,11 +13,25 @@ public class ResendEmailService : IEmailService
     private readonly string _fromSupport = "support@samhallsinformation.se";
 
     public ResendEmailService(IConfiguration config, ILogger<ResendEmailService> logger)
+        : this(CreateClient(config), logger)
+    {
+    }
+
+    // Test-seam: låter tester injicera en HttpClient med en fejkad handler
+    // för att fånga den utgående mejlkroppen. Internal så DI:n bara ser den
+    // publika konstruktorn.
+    internal ResendEmailService(HttpClient http, ILogger<ResendEmailService> logger)
+    {
+        _http = http;
+        _logger = logger;
+    }
+
+    private static HttpClient CreateClient(IConfiguration config)
     {
         var apiKey = config["RESEND_API_KEY"] ?? throw new InvalidOperationException("RESEND_API_KEY saknas");
-        _http = new HttpClient { BaseAddress = new Uri("https://api.resend.com") };
-        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-        _logger = logger;
+        var http = new HttpClient { BaseAddress = new Uri("https://api.resend.com") };
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        return http;
     }
 
     public async Task SendPasswordResetAsync(string toEmail, string toName, string resetLink)
@@ -25,9 +39,9 @@ public class ResendEmailService : IEmailService
         var html = $"""
             <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
               <h2 style="color:#7c3aed;margin-bottom:8px">Återställ ditt lösenord</h2>
-              <p style="color:#334155">Hej {toName},</p>
+              <p style="color:#334155">Hej {EmailHtml.Encode(toName)},</p>
               <p style="color:#334155">Vi fick en förfrågan om att återställa lösenordet för ditt konto. Klicka på knappen nedan för att välja ett nytt lösenord.</p>
-              <a href="{resetLink}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
+              <a href="{EmailHtml.Encode(resetLink)}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
                 Återställ lösenord
               </a>
               <p style="color:#64748b;font-size:13px">Länken är giltig i 1 timme. Om du inte begärde detta kan du ignorera mejlet.</p>
@@ -45,9 +59,9 @@ public class ResendEmailService : IEmailService
         var html = $"""
             <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
               <h2 style="color:#7c3aed;margin-bottom:8px">Bekräfta din e-postadress</h2>
-              <p style="color:#334155">Hej {toName},</p>
+              <p style="color:#334155">Hej {EmailHtml.Encode(toName)},</p>
               <p style="color:#334155">Klicka på knappen nedan för att bekräfta att det här är din e-postadress.</p>
-              <a href="{verifyLink}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
+              <a href="{EmailHtml.Encode(verifyLink)}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
                 Bekräfta e-post
               </a>
               <p style="color:#64748b;font-size:13px">Länken är giltig i 48 timmar. Du kan fortsätta använda ditt konto som vanligt även utan att klicka, men vissa funktioner kan komma att kräva en bekräftad adress längre fram.</p>
@@ -64,9 +78,9 @@ public class ResendEmailService : IEmailService
         var html = $"""
             <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
               <h2 style="color:#7c3aed;margin-bottom:8px">Bekräfta din nya e-postadress</h2>
-              <p style="color:#334155">Hej {toName},</p>
+              <p style="color:#334155">Hej {EmailHtml.Encode(toName)},</p>
               <p style="color:#334155">Vi fick en förfrågan om att byta e-postadressen på ditt Samhällsinformation-konto till den här adressen. Klicka på knappen nedan för att bekräfta bytet.</p>
-              <a href="{confirmLink}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
+              <a href="{EmailHtml.Encode(confirmLink)}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
                 Bekräfta ny e-postadress
               </a>
               <p style="color:#64748b;font-size:13px">Länken är giltig i 24 timmar. Din nuvarande adress fortsätter fungera som vanligt tills du klickar. Om du inte begärde det här kan du ignorera mejlet.</p>
@@ -83,8 +97,8 @@ public class ResendEmailService : IEmailService
         var html = $"""
             <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
               <h2 style="color:#7c3aed;margin-bottom:8px">Din e-postadress håller på att bytas</h2>
-              <p style="color:#334155">Hej {toName},</p>
-              <p style="color:#334155">Någon har begärt att byta e-postadressen på ditt Samhällsinformation-konto till <strong>{newEmail}</strong>. Bytet slår inte igenom förrän den nya adressen bekräftas.</p>
+              <p style="color:#334155">Hej {EmailHtml.Encode(toName)},</p>
+              <p style="color:#334155">Någon har begärt att byta e-postadressen på ditt Samhällsinformation-konto till <strong>{EmailHtml.Encode(newEmail)}</strong>. Bytet slår inte igenom förrän den nya adressen bekräftas.</p>
               <p style="color:#334155">Var det inte du som gjorde det här? Logga in och kontrollera ditt konto, eller använd Hjälp &amp; Feedback-knappen i appen för att höra av dig till oss.</p>
               <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
               <p style="color:#94a3b8;font-size:12px">Samhällsinformation &mdash; opartisk myndighetsinformation</p>
@@ -101,9 +115,9 @@ public class ResendEmailService : IEmailService
         var html = $"""
             <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
               <h2 style="color:#7c3aed;margin-bottom:8px">Ditt konto raderas snart</h2>
-              <p style="color:#334155">Hej {toName},</p>
+              <p style="color:#334155">Hej {EmailHtml.Encode(toName)},</p>
               <p style="color:#334155">Vi har tagit emot en begäran om att radera ditt Samhällsinformation-konto. Om du inte avbryter kommer kontot att raderas <strong>{lokalTid:d MMMM yyyy 'kl.' HH:mm}</strong>.</p>
-              <a href="{cancelLink}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
+              <a href="{EmailHtml.Encode(cancelLink)}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
                 Avbryt raderingen
               </a>
               <p style="color:#64748b;font-size:13px">Var det inte du som begärde det här, eller har du ändrat dig? Klicka på knappen ovan när som helst innan tidpunkten ovan. Efter det går raderingen inte att ångra.</p>
@@ -120,7 +134,7 @@ public class ResendEmailService : IEmailService
         var html = $"""
             <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
               <h2 style="color:#7c3aed;margin-bottom:8px">Välkommen till Samhällsinformation!</h2>
-              <p style="color:#334155">Hej {toName},</p>
+              <p style="color:#334155">Hej {EmailHtml.Encode(toName)},</p>
               <p style="color:#334155">Ditt konto är nu skapat. Du kan nu följa svenska myndigheter och hålla dig uppdaterad om viktig samhällsinformation.</p>
               <p style="color:#334155">Har du frågor eller funderingar är du alltid välkommen att höra av dig till oss.</p>
               <a href="https://samhallsinformation.se" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
@@ -139,15 +153,15 @@ public class ResendEmailService : IEmailService
         var replyTo = $"svar+{ticketNumber}@samhallsinformation.se";
         var html = $"""
             <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
-              <h2 style="color:#7c3aed;margin-bottom:8px">Svar på ditt ärende — {subject}</h2>
-              <p style="color:#334155;white-space:pre-wrap">{System.Net.WebUtility.HtmlEncode(replyText)}</p>
+              <h2 style="color:#7c3aed;margin-bottom:8px">Svar på ditt ärende — {EmailHtml.EncodeSingleLine(subject)}</h2>
+              <p style="color:#334155;white-space:pre-wrap">{EmailHtml.Encode(replyText)}</p>
               <p style="color:#64748b;font-size:13px">Du kan svara direkt på det här mejlet om du har följdfrågor.</p>
               <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
               <p style="color:#94a3b8;font-size:12px">Samhällsinformation &mdash; opartisk myndighetsinformation</p>
             </div>
             """;
 
-        await SendAsync(fromAddress ?? _fromSupport, toEmail, $"Svar på ditt ärende: {subject}", html, replyTo);
+        await SendAsync(fromAddress ?? _fromSupport, toEmail, $"Svar på ditt ärende: {EmailHtml.SingleLine(subject)}", html, replyTo);
     }
 
     public async Task<string?> GetReceivedEmailTextAsync(string emailId)
