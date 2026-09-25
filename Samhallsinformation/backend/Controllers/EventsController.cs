@@ -65,13 +65,13 @@ public class EventsController : ControllerBase
 
         if (from.HasValue)
         {
-            var fromUtc = DateTimeQueryHelpers.EnsureUtcKind(from.Value);
+            var fromUtc = UtcDateTime.Ensure(from.Value);
             query = query.Where(e => e.PublishedAt >= fromUtc);
         }
 
         if (to.HasValue)
         {
-            var toUtc = DateTimeQueryHelpers.EnsureUtcKind(to.Value);
+            var toUtc = UtcDateTime.Ensure(to.Value);
             query = query.Where(e => e.PublishedAt <= toUtc);
         }
 
@@ -149,13 +149,13 @@ public class EventsController : ControllerBase
 
         if (from.HasValue)
         {
-            var fromUtc = DateTimeQueryHelpers.EnsureUtcKind(from.Value);
+            var fromUtc = UtcDateTime.Ensure(from.Value);
             query = query.Where(e => e.PublishedAt >= fromUtc);
         }
 
         if (to.HasValue)
         {
-            var toUtc = DateTimeQueryHelpers.EnsureUtcKind(to.Value);
+            var toUtc = UtcDateTime.Ensure(to.Value);
             query = query.Where(e => e.PublishedAt <= toUtc);
         }
 

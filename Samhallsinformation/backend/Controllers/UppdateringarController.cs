@@ -3,6 +3,7 @@ namespace Samhallsinformation.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.FeatureFlags;
 using Samhallsinformation.Application.Uppdateringar;
@@ -66,6 +67,7 @@ public class UppdateringarController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateUppdatering([FromBody] UppdateringRequest req)
     {
+        req = NormaliseraTider(req);
         var fel = ValideraPunkter(req);
         if (fel != null) return BadRequest(new { error = fel });
 
@@ -90,6 +92,7 @@ public class UppdateringarController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateUppdatering(Guid id, [FromBody] UppdateringRequest req)
     {
+        req = NormaliseraTider(req);
         var fel = ValideraPunkter(req);
         if (fel != null) return BadRequest(new { error = fel });
 
@@ -182,6 +185,13 @@ public class UppdateringarController : ControllerBase
             $"Uppdatering borttagen — {titel}", "");
         return NoContent();
     }
+
+    // V3-6: en JSON-sträng utan "Z" ger Kind=Unspecified, som Npgsql vägrar mot timestamptz.
+    private static UppdateringRequest NormaliseraTider(UppdateringRequest req) => req with
+    {
+        Datum = UtcDateTime.Ensure(req.Datum),
+        SchemalagdPubliceringUtc = UtcDateTime.Ensure(req.SchemalagdPubliceringUtc),
+    };
 
     private static string? ValideraPunkter(UppdateringRequest req) =>
         UppdateringsVärden.ValideraPunkter(

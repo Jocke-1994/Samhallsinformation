@@ -3,6 +3,7 @@ namespace Samhallsinformation.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -63,6 +64,7 @@ public class MaintenanceBannersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] MaintenanceBannerRequest req)
     {
+        req = NormaliseraTider(req);
         var fel = Validera(req);
         if (fel != null) return BadRequest(fel);
 
@@ -87,6 +89,7 @@ public class MaintenanceBannersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(Guid id, [FromBody] MaintenanceBannerRequest req)
     {
+        req = NormaliseraTider(req);
         var fel = Validera(req);
         if (fel != null) return BadRequest(fel);
 
@@ -118,6 +121,13 @@ public class MaintenanceBannersController : ControllerBase
             "Driftmeddelande borttaget", meddelande);
         return NoContent();
     }
+
+    // V3-6: en JSON-sträng utan "Z" ger Kind=Unspecified, som Npgsql vägrar mot timestamptz.
+    private static MaintenanceBannerRequest NormaliseraTider(MaintenanceBannerRequest req) => req with
+    {
+        StartUtc = UtcDateTime.Ensure(req.StartUtc),
+        EndUtc   = UtcDateTime.Ensure(req.EndUtc),
+    };
 
     private static string? Validera(MaintenanceBannerRequest req)
     {

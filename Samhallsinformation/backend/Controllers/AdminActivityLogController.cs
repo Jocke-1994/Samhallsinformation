@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -45,6 +46,11 @@ public class AdminActivityLogController : ControllerBase
     {
         if (gräns > 500) gräns = 500;
         if (gräns < 1)   gräns = 1;
+
+        // V3-6: "2026-09-01" binds som Kind=Unspecified, som Npgsql vägrar mot timestamptz
+        // (500 i produktion, grönt i SQLite). Bara Kind läggs på — dagsgränserna är oförändrade.
+        från = UtcDateTime.Ensure(från);
+        till = UtcDateTime.Ensure(till);
 
         var adminQuery = _db.AdminActivityLogs.AsQueryable();
         if (!visaArkiverade) adminQuery = adminQuery.Where(l => !l.Arkiverad);

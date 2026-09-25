@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Support;
 using Samhallsinformation.Data;
@@ -217,7 +218,7 @@ public class AdminSupportController : ControllerBase
         var ticket = await _db.SupportTickets.FindAsync(id);
         if (ticket == null) return NotFound();
 
-        ticket.ReminderAt   = req.ReminderAt;
+        ticket.ReminderAt   = UtcDateTime.Ensure(req.ReminderAt);
         ticket.ReminderNote = req.ReminderNote;
         ticket.UpdatedAt    = DateTime.UtcNow;
         await _db.SaveChangesAsync();
