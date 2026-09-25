@@ -15,8 +15,8 @@ Startad 2026-09-25 på `main` @ `1da5cf1`. Syfte: granska hela kodbasen i riskor
 |---|---|---|---|---|---|
 | 1 | Auth, säkerhet, publik yta | `AuthController`, `WebhooksController`, `PushController`, `Admin*`-behörighet, impersonation, publika endpoints (`EventsController` search-public, `FaqController`), auth/CORS/rate limiting i `Program.cs` | high | klar — 10 rangordnade fynd + övriga observationer, se [enhet-1.md](enhet-1.md) | `2c278d3` |
 | 2 | Program.cs, Data, Models | seed, raw-SQL-block, migrationslogik, modell↔block | medium | klar — 8 rangordnade fynd, modell↔block-kontrollen ren, se [enhet-2.md](enhet-2.md) | `7e8f05b` |
-| 3 | Ingestors + Services | ~1 900 rader | medium | ej påbörjad | |
-| 4 | Övriga Controllers | ~3 000 rader | medium | ej påbörjad | |
+| 3 | Ingestors + Services | ~1 900 rader | medium | klar — 13 rangordnade fynd (8 bekräftade, 5 plausibla) + ~20 mindre, se [enhet-3.md](enhet-3.md) | `4e33c06` |
+| 4 | Övriga Controllers | ~3 000 rader | medium | klar — 12 rangordnade fynd (alla bekräftade), se [enhet-4.md](enhet-4.md) | `4e33c06` |
 | 5 | Frontend-kärnan | `api/`, `context/`, `hooks/`, `lib/` | medium | ej påbörjad | |
 | 6 | Frontend Admin | `components/Admin/` (~6 000 rader) | medium | ej påbörjad | |
 | 7 | Frontend övrigt | `components/` (ej Admin) + `pages/` | low–medium | ej påbörjad | |
