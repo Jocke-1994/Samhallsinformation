@@ -52,13 +52,13 @@ Mål: sluta ljuga för användare och laga det som är trasigt i live-funktioner
 |---|---|---|---|---|---|---|
 | V1-0a | **Testfundament backend:** delad SQLite-`TestDb`-hjälpare + baslinje-guard över anonyma endpoints (G4) | E8 fas 0 | BE | S | guard | ☑ mergad (PR #598 backend-testfundament) |
 | V1-0b | **Testfundament frontend:** Vitest + React Testing Library + jsdom-uppsättning, ett röktest | E8 fas 2 | FE | S | rök | ☑ mergad (PR #599 frontend-testfundament) |
-| V1-1 | **Lösenordsbyte på riktigt:** klient mot `PUT /api/auth/me/password`, felvisning, dölj kortet för Google-konton, serverside lösenordsregel (min 8) i `ChangePassword`, återkalla refresh-tokens vid byte. Kortet är **synligt i produktion idag** (ingen override på `konto_losenord`). | E7#1 (+ del av E1#9) | FE+BE | M | enhet+FE | ☐ |
-| V1-2 | **Webhook tål trasig indata:** `int.TryParse` + längdgräns på ticketnummer, try/catch runt JSON, idempotens på svix-id så Resend-retries inte ger dubbla ärenden | E1#5 | BE | M | enhet (webhook-svit) | ☐ |
+| V1-1 | **Lösenordsbyte på riktigt:** klient mot `PUT /api/auth/me/password`, felvisning, dölj kortet för Google-konton, serverside lösenordsregel (min 8) i `ChangePassword`, återkalla refresh-tokens vid byte. Kortet är **synligt i produktion idag** (ingen override på `konto_losenord`). | E7#1 (+ del av E1#9) | FE+BE | M | enhet+FE | ☑ mergad (PR #608) |
+| V1-2 | **Webhook tål trasig indata:** `int.TryParse` + längdgräns på ticketnummer, try/catch runt JSON, idempotens på svix-id så Resend-retries inte ger dubbla ärenden | E1#5 | BE | M | enhet (webhook-svit) | ☑ mergad (PR #602) |
 | V1-3 | **Ta bort `PreferencesController`** (öppen utan auth, oanvänd av frontend). Tabellen `UserPreferences` rörs inte. | E1#4 | BE | S | guard G4 | ☑ mergad (PR #601) |
-| V1-4 | **Refresh loggar bara ut vid 401/403:** 429/5xx/nätverksfel ger retry med backoff; skydd mot tät refresh-loop vid klockskillnad | E5#2, E5#8 | FE | M | Vitest (AuthContext) | ☐ |
+| V1-4 | **Refresh loggar bara ut vid 401/403:** 429/5xx/nätverksfel ger retry med backoff; skydd mot tät refresh-loop vid klockskillnad | E5#2, E5#8 | FE | M | Vitest (AuthContext) | ◐ PR #604 öppen, fix av golv för utgången token pågår |
 | V1-5 | **`.env.production`:** sätt `VITE_USE_MOCK=false` (säkert oavsett Vercels miljövariabel, se D5) | E5#12 | FE | S | build | ☑ mergad (PR #600) |
-| V1-6 | **"Läs mer hos källan":** länkkollen får aldrig ersätta knappen med "finns inte längre" vid timeout/403/5xx (tre lägen: levande/död/okänd) och `window.open` körs synkront i klickhändelsen | E7#2 | FE(+BE) | M | FE | ☐ |
-| V1-7 | **Bevakningsklockan:** Ångra-toasten renderas, serverfel visas, varning när sista bevakningen tas bort (vidgar Mitt flöde till hela Polisen) | E7#3 | FE | M | FE | ☐ |
+| V1-6 | **"Läs mer hos källan":** länkkollen får aldrig ersätta knappen med "finns inte längre" vid timeout/403/5xx (tre lägen: levande/död/okänd) och `window.open` körs synkront i klickhändelsen | E7#2 | FE(+BE) | M | FE | ☑ mergad (PR #609) |
+| V1-7 | **Bevakningsklockan:** Ångra-toasten renderas, serverfel visas, varning när sista bevakningen tas bort (vidgar Mitt flöde till hela Polisen) | E7#3 | FE | M | FE | ☑ mergad (PR #603) |
 | V1-8 | **`adminFetch` med 401 → refresh + retry; bevakningar/sparade hämtas om vid fel:** Polisen-filtret får aldrig falla tillbaka på "visa allt" p.g.a. ett misslyckat anrop | E5#4, E5#5 | FE | M | Vitest | ☐ |
 | V1-9 | **Övervakning och larm (design först, sedan minimal första version):** en bakgrundstjänst utvärderar regler periodvis och larmar admins via befintlig admin-push + ett "Larm"-kort i Systemhälsa. Se [Övervakning](#övervakning-v1-9--design-och-återanvändning) nedan. | (återanvänds av E3#3, E6#8, E1#5; bevakar alt C-noten) | BE+FE+DB | L | enhet + guard | ☐ |
 
@@ -92,18 +92,18 @@ Mål: stäng dataförlusts-, läckage- och missbruksytor.
 
 | PR | Innehåll | Fynd | Lager | Storlek | Test | Status |
 |---|---|---|---|---|---|---|
-| V2-1 | **Migreringsstart tappar aldrig data:** `catch { alreadyMigrated=false }` får inte trigga `DROP TABLE`; droppa aldrig när `Users` finns; fånga bara "tabell saknas" | E2#2 | DB | M | enhet (start-logik utbruten) | ☐ |
-| V2-2 | **Kontospärr-integritet (backend):** `DeleteMe` avvisas för admin-spärrat konto, `CancelDeletion` rör inte admin-spärr, `SetStatus(true)` hanterar schemalagd radering, spärr mot att stänga av sig själv / sista admin | E1#3, E1#7, E6#1 (BE-delen) | BE | M | enhet (spärr-svit) | ☐ |
+| V2-1 | **Migreringsstart tappar aldrig data:** `catch { alreadyMigrated=false }` får inte trigga `DROP TABLE`; droppa aldrig när `Users` finns; fånga bara "tabell saknas" | E2#2 | DB | M | enhet (start-logik utbruten) | ◐ PR #605 öppen men HÅLLS: PM-ändring (probe-fel icke-fatala) blockerades av behörighetsspärr — väntar på användaren |
+| V2-2 | **Kontospärr-integritet (backend):** `DeleteMe` avvisas för admin-spärrat konto, `CancelDeletion` rör inte admin-spärr, `SetStatus(true)` hanterar schemalagd radering, spärr mot att stänga av sig själv / sista admin | E1#3, E1#7, E6#1 (BE-delen) | BE | M | enhet (spärr-svit) | ◐ pågår |
 | V2-3 | **Massåtgärder i Användare:** "markera alla" undantar egen rad och admins, `Promise.allSettled` med per-rad-resultat i stället för "inget hände" | E6#1 (FE-delen), E6#2 | FE | M | Vitest | ☐ |
-| V2-4 | **Push-mottagarfilter:** alla fyra dispatch-vägar filtrerar bort `IsActive=false`, `DeletedAt!=null` och mottagare av opublicerade källor; avstängd personal får inte ny-användare-push | E3#5, E4#3 (push-halvan), E4#4 (push-halvan) | BE | M | enhet (~8) | ☐ |
-| V2-5 | **Dedikerade ingestorer respekterar `Source.IsActive`** (pausa i admin stoppar hämtning) | E3#6, E4#4 (ingest-halvan) | BE | S | enhet | ☐ |
-| V2-6 | **`PUT /api/user/sources` validerar källan:** endast publicerade, kända, deduplicerade id:n; okänt id ger 400, inte 500 | E4#3 | BE | S | enhet | ☐ |
+| V2-4 | **Push-mottagarfilter:** alla fyra dispatch-vägar filtrerar bort `IsActive=false`, `DeletedAt!=null` och mottagare av opublicerade källor; avstängd personal får inte ny-användare-push | E3#5, E4#3 (push-halvan), E4#4 (push-halvan) | BE | M | enhet (~8) | ☑ mergad (PR #607) |
+| V2-5 | **Dedikerade ingestorer respekterar `Source.IsActive`** (pausa i admin stoppar hämtning) | E3#6, E4#4 (ingest-halvan) | BE | S | enhet | ◐ pågår |
+| V2-6 | **`PUT /api/user/sources` validerar källan:** endast publicerade, kända, deduplicerade id:n; okänt id ger 400, inte 500 | E4#3 | BE | S | enhet | ☑ mergad (PR #606) |
 | V2-7 | **Uppdateringar: backend filtrerar synlighet + validerar `Typ`/`Synlighet`; frontend skickar token och får en `Typ`-fallback (ingen vit skärm).** Breaking → backend och minimal frontend i samma release. | E4#1, E4#9, E6#9 | BE+FE | M | enhet+FE | ☐ |
-| V2-8 | **Publika DTO:er:** `GET /api/sources` utan `LastFetchError`/interna fält; `GET /api/maintenance-banners` bara aktiva och rätt målgrupp | E4#5, E4#10 | BE | S–M | enhet | ☐ |
-| V2-9 | **Support-ticket missbruksskydd:** rate limit, längdgränser, e-postvalidering, kanal-allowlist; push till admin batchas | E1#8 | BE | M | enhet | ☐ |
+| V2-8 | **Publika DTO:er:** `GET /api/sources` utan `LastFetchError`/interna fält; `GET /api/maintenance-banners` bara aktiva och rätt målgrupp | E4#5, E4#10 | BE | S–M | enhet | ◐ pågår |
+| V2-9 | **Support-ticket missbruksskydd:** rate limit, längdgränser, e-postvalidering, kanal-allowlist; push till admin batchas | E1#8 | BE | M | enhet | ◐ pågår |
 | V2-10 | **Rate limit: kontobaserad räknare + IPv6 /64.** Spoofad `X-Forwarded-For` kringgår INTE gränsen (verifierat mot produktion 2026-09-25, se P-D), så `ForwardLimit`-delen utgår. Kvar: räknare per normaliserad e-post på login (brute force mot ett konto från många IP:n) och IPv6-partition per /64 | E1#1 | BE | M | enhet | ☐ |
 | V2-11 | **Auth-härdning:** e-postnormalisering, lösenordspolicy vid registrering, Google-inloggning kräver `email_verified` och tar inte över obekräftat lokalt konto (D6 avgör migrering av befintliga) | E1#9 | BE(+DB) | M | enhet (auth-svit) | ☐ |
-| V2-12 | **Push-endpoint valideras** (https + känd push-tjänst-allowlist) mot blind SSRF | E1#6 | BE | S | enhet | ☐ |
+| V2-12 | **Push-endpoint valideras** (https + känd push-tjänst-allowlist) mot blind SSRF | E1#6 | BE | S | enhet | ◐ pågår |
 | V2-13 | **HTML-escape i alla mejl** (`toName`, `newEmail`, `subject`) | E3#8 | BE | S | enhet | ☐ |
 | V2-14 | **GDPR-anonymisering fullständig:** enheter, audit, ärenden och push-loggar (`NotificationDeliveryLog.Body`) rensas/anonymiseras | E3#9 | BE+DB | M–L | enhet | ☐ |
 | V2-15 | **Bekräftelse på destruktiva/globala admin-åtgärder:** ta bort källa, återställ flaggor, skicka "Ny version"-push, växla sajtinställning | E6#4, E6#5, E6#17, E6#21 | FE | M | FE | ☐ |
