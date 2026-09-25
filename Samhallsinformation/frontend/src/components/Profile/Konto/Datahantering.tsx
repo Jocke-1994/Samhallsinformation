@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { exportMyData, deleteMyAccount } from '../../../api/auth'
 import { useAuth } from '../../../context/AuthContext'
+import { visaFel } from '../../../lib/felmeddelande'
 
 export default function Datahantering({ highlightId }: {
   highlightId: string | null
@@ -26,7 +27,7 @@ export default function Datahantering({ highlightId }: {
       a.href = url; a.download = 'min-data.json'; a.click()
       URL.revokeObjectURL(url)
     } catch (err) {
-      setExportFel(err instanceof Error ? err.message : 'Kunde inte exportera din data.')
+      setExportFel(visaFel(err, 'Kunde inte exportera din data. Försök igen.'))
     } finally {
       setExporterar(false)
     }
@@ -40,7 +41,7 @@ export default function Datahantering({ highlightId }: {
       setSchemalagd(deletionScheduledAt)
       setTimeout(() => { logout(); navigate('/') }, 4000)
     } catch (err) {
-      setRaderaFel(err instanceof Error ? err.message : 'Kunde inte schemalägga radering.')
+      setRaderaFel(visaFel(err, 'Kontot kunde inte schemaläggas för radering. Försök igen.'))
       setRaderar(false)
     }
   }
@@ -75,7 +76,7 @@ export default function Datahantering({ highlightId }: {
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                   Ladda ner all data vi har om dig som JSON-fil (GDPR art. 20).
                 </p>
-                {exportFel && <p className="text-xs text-red-500 mt-1.5">{exportFel}</p>}
+                {exportFel && <p role="alert" className="text-xs text-red-500 mt-1.5">{exportFel}</p>}
               </div>
               <button
                 onClick={handleExport}
@@ -110,7 +111,7 @@ export default function Datahantering({ highlightId }: {
                   <p className="text-sm font-semibold text-slate-800">
                     Är du helt säker? Kontot spärras omedelbart och raderas permanent om 24 timmar.
                   </p>
-                  {raderaFel && <p className="text-xs text-red-600">{raderaFel}</p>}
+                  {raderaFel && <p role="alert" className="text-xs text-red-600">{raderaFel}</p>}
                   <div className="flex gap-2">
                     <button
                       onClick={handleRadera}
