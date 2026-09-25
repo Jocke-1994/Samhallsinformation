@@ -94,21 +94,21 @@ Mål: stäng dataförlusts-, läckage- och missbruksytor.
 |---|---|---|---|---|---|---|
 | V2-1 | **Migreringsstart tappar aldrig data:** `catch { alreadyMigrated=false }` får inte trigga `DROP TABLE`; droppa aldrig när `Users` finns; fånga bara "tabell saknas" | E2#2 | DB | M | enhet (start-logik utbruten) | ◐ PR #605 öppen men HÅLLS: PM-ändring (probe-fel icke-fatala) blockerades av behörighetsspärr — väntar på användaren |
 | V2-2 | **Kontospärr-integritet (backend):** `DeleteMe` avvisas för admin-spärrat konto, `CancelDeletion` rör inte admin-spärr, `SetStatus(true)` hanterar schemalagd radering, spärr mot att stänga av sig själv / sista admin | E1#3, E1#7, E6#1 (BE-delen) | BE | M | enhet (spärr-svit) | ☑ mergad (PR #612) |
-| V2-3 | **Massåtgärder i Användare:** "markera alla" undantar egen rad och admins, `Promise.allSettled` med per-rad-resultat i stället för "inget hände" | E6#1 (FE-delen), E6#2 | FE | M | Vitest | ☐ |
+| V2-3 | **Massåtgärder i Användare:** "markera alla" undantar egen rad och admins, `Promise.allSettled` med per-rad-resultat i stället för "inget hände" | E6#1 (FE-delen), E6#2 | FE | M | Vitest | ◐ pågår |
 | V2-4 | **Push-mottagarfilter:** alla fyra dispatch-vägar filtrerar bort `IsActive=false`, `DeletedAt!=null` och mottagare av opublicerade källor; avstängd personal får inte ny-användare-push | E3#5, E4#3 (push-halvan), E4#4 (push-halvan) | BE | M | enhet (~8) | ☑ mergad (PR #607) |
 | V2-5 | **Dedikerade ingestorer respekterar `Source.IsActive`** (pausa i admin stoppar hämtning) | E3#6, E4#4 (ingest-halvan) | BE | S | enhet | ☑ mergad (PR #611) |
 | V2-6 | **`PUT /api/user/sources` validerar källan:** endast publicerade, kända, deduplicerade id:n; okänt id ger 400, inte 500 | E4#3 | BE | S | enhet | ☑ mergad (PR #606) |
-| V2-7 | **Uppdateringar: backend filtrerar synlighet + validerar `Typ`/`Synlighet`; frontend skickar token och får en `Typ`-fallback (ingen vit skärm).** Breaking → backend och minimal frontend i samma release. | E4#1, E4#9, E6#9 | BE+FE | M | enhet+FE | ◐ pågår (PR kommer) |
+| V2-7 | **Uppdateringar: backend filtrerar synlighet + validerar `Typ`/`Synlighet`; frontend skickar token och får en `Typ`-fallback (ingen vit skärm).** Breaking → backend och minimal frontend i samma release. | E4#1, E4#9, E6#9 | BE+FE | M | enhet+FE | ☑ mergad (PR #617) |
 | V2-8 | **Publika DTO:er:** `GET /api/sources` utan `LastFetchError`/interna fält; `GET /api/maintenance-banners` bara aktiva och rätt målgrupp | E4#5, E4#10 | BE | S–M | enhet | ☑ mergad (PR #613) |
-| V2-9 | **Support-ticket missbruksskydd:** rate limit, längdgränser, e-postvalidering, kanal-allowlist; push till admin batchas | E1#8 | BE | M | enhet | ◐ pågår (PR kommer) |
+| V2-9 | **Support-ticket missbruksskydd:** rate limit, längdgränser, e-postvalidering, kanal-allowlist; push till admin batchas | E1#8 | BE | M | enhet | ☑ mergad (PR #614) |
 | V2-10 | **Rate limit: kontobaserad räknare + IPv6 /64.** Spoofad `X-Forwarded-For` kringgår INTE gränsen (verifierat mot produktion 2026-09-25, se P-D), så `ForwardLimit`-delen utgår. Kvar: räknare per normaliserad e-post på login (brute force mot ett konto från många IP:n) och IPv6-partition per /64 | E1#1 | BE | M | enhet | ☐ |
-| V2-11 | **Auth-härdning:** e-postnormalisering, lösenordspolicy vid registrering, Google-inloggning kräver `email_verified` och tar inte över obekräftat lokalt konto (D6 avgör migrering av befintliga) | E1#9 | BE(+DB) | M | enhet (auth-svit) | ☐ |
+| V2-11 | **Auth-härdning:** e-postnormalisering, lösenordspolicy vid registrering, Google-inloggning kräver `email_verified` och tar inte över obekräftat lokalt konto (D6 avgör migrering av befintliga) | E1#9 | BE(+DB) | M | enhet (auth-svit) | ◐ pågår |
 | V2-12 | **Push-endpoint valideras** (https + känd push-tjänst-allowlist) mot blind SSRF | E1#6 | BE | S | enhet | ☑ mergad (PR #610) |
-| V2-13 | **HTML-escape i alla mejl** (`toName`, `newEmail`, `subject`) | E3#8 | BE | S | enhet | ◐ pågår (PR kommer) |
+| V2-13 | **HTML-escape i alla mejl** (`toName`, `newEmail`, `subject`) | E3#8 | BE | S | enhet | ☑ mergad (PR #616) |
 | V2-14 | **GDPR-anonymisering fullständig:** enheter, audit, ärenden och push-loggar (`NotificationDeliveryLog.Body`) rensas/anonymiseras | E3#9 | BE+DB | M–L | enhet | ☐ |
 | V2-15 | **Bekräftelse på destruktiva/globala admin-åtgärder:** ta bort källa, återställ flaggor, skicka "Ny version"-push, växla sajtinställning | E6#4, E6#5, E6#17, E6#21 | FE | M | FE | ◐ pågår (PR kommer) |
-| V2-16 | **Djuplänk-state rensas** så en åtgärd aldrig träffar fel användare/ärende | E6#3 | FE | S | FE | ◐ pågår (PR kommer) |
-| V2-17 | **Schemalagda supportsvar mejlas** (samma väg som `Reply`) + validering i `AddScheduledAction` | E3#2, E4#8 | BE | M | enhet | ☐ |
+| V2-16 | **Djuplänk-state rensas** så en åtgärd aldrig träffar fel användare/ärende | E6#3 | FE | S | FE | ☑ mergad (PR #615) |
+| V2-17 | **Schemalagda supportsvar mejlas** (samma väg som `Reply`) + validering i `AddScheduledAction` | E3#2, E4#8 | BE | M | enhet | ◐ pågår |
 
 Ordning: V2-1 och V2-2 först (dataförlust). V2-10 startar med en verifieringsfas — blir den *inte* bekräftad sjunker den till våg 4. V2-4 före V3-4 (push-dedup).
 
