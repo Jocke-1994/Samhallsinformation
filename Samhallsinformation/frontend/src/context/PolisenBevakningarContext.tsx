@@ -1,9 +1,9 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import {
-  fetchBevakningar, createBevakning, updateBevakning, deleteBevakning, type BevakningRequest,
+  fetchBevakningar, createBevakning, updateBevakning, deleteBevakning, type BevakningDto, type BevakningRequest,
 } from '../api/polisenBevakningar'
 import { kommunerILän } from '../components/Profile/MinaKallor/kallorUtils'
-import { useAuth } from './AuthContext'
+import { useInloggadHamtning, type HamtLage } from '../hooks/useInloggadHamtning'
 
 // Ersätter PolisenFilterContext (en delad, global AND-kombination) med flera
 // oberoende bevakningar per användare, ELLER-kombinerade — se
@@ -19,7 +19,11 @@ export const MAX_BEVAKNINGAR = 5
 
 interface PolisenBevakningarContextValue {
   bevakningar: Bevakning[]
-  laddat:      boolean
+  // laddar = ingen lista känd än, klar = listan hämtad, fel = hämtningen
+  // misslyckades (efter omförsök). laddar/fel betyder "okänt" — aldrig
+  // "inga bevakningar".
+  lage:        HamtLage
+  forsokIgen:  () => void
   matchar:      (typ: string | null, omrade: string | null) => boolean
   matcharLän:   (typ: string | null, län: string | null) => boolean
   typDackt:     (typ: string) => boolean
@@ -40,38 +44,25 @@ function toArray(v: Set<string> | null): string[] | null {
   return v === null ? null : [...v]
 }
 
-export function PolisenBevakningarProvider({ children }: { children: ReactNode }) {
-  const { isLoggedIn } = useAuth()
-  const [bevakningar, setBevakningar] = useState<Bevakning[]>([])
-  const [laddat, setLaddat] = useState(false)
+function frånDto(r: BevakningDto): Bevakning {
+  return { id: r.id, kategorier: toSet(r.kategorier), omraden: toSet(r.omraden) }
+}
 
-  useEffect(() => {
-    if (!isLoggedIn) {
-      setBevakningar([])
-      setLaddat(false)
-      return
-    }
-    let avbruten = false
-    fetchBevakningar()
-      .then(rader => {
-        if (avbruten) return
-        setBevakningar(rader.map(r => ({ id: r.id, kategorier: toSet(r.kategorier), omraden: toSet(r.omraden) })))
-        setLaddat(true)
-      })
-      .catch(() => { setLaddat(true) })
-    return () => { avbruten = true }
-  }, [isLoggedIn])
+export function PolisenBevakningarProvider({ children }: { children: ReactNode }) {
+  const { data: rader, lage, forsokIgen, uppdatera: uppdateraLista } =
+    useInloggadHamtning<BevakningDto[]>('polisen-bevakningar', fetchBevakningar)
+  const bevakningar = useMemo(() => (rader ?? []).map(frånDto), [rader])
 
   // Tom lista = inget anpassat = allt syns (matchar backendens
-  // PolisenBevakningMatcher.Matches exakt) — men bara EFTER att hämtningen
-  // faktiskt svarat. Innan dess är listan också tom (initialt useState),
-  // och utan laddat-kollen visade Mitt flöde tyst ALLT från Polisen
-  // (inte bara ospecificerat, obegränsat, hela landet) under det korta
-  // fönstret precis efter inloggning/sidladdning innan bevakningarna hunnit
-  // hämtas — upptäckt live via en skärmdump med händelser från städer långt
-  // utanför en riktig, sparad bevakning.
+  // PolisenBevakningMatcher.Matches exakt) — men bara när listan faktiskt
+  // hämtats (lage === 'klar'). Innan dess, och om hämtningen misslyckats
+  // (utgången token, nätverksfel), är listan OKÄND, inte tom: matchar()
+  // returnerar då false (Polisen-händelser döljs) i stället för true
+  // (Polisen från hela landet). Det var buggen som upptäcktes live via en
+  // skärmdump med händelser från städer långt utanför en riktig, sparad
+  // bevakning. En misslyckad omhämtning behåller senast kända lista.
   function matchar(typ: string | null, omrade: string | null): boolean {
-    if (!laddat) return false
+    if (lage !== 'klar') return false
     if (bevakningar.length === 0) return true
     return bevakningar.some(b => {
       const typOk    = b.kategorier === null || typ    === null || b.kategorier.has(typ)
@@ -86,7 +77,7 @@ export function PolisenBevakningarProvider({ children }: { children: ReactNode }
   // kommuner ligger i det länet, inte via en exakt strängjämförelse (som
   // aldrig kan träffa, eftersom bevakningens omraden alltid är kommunnamn).
   function matcharLän(typ: string | null, län: string | null): boolean {
-    if (!laddat) return false
+    if (lage !== 'klar') return false
     if (bevakningar.length === 0) return true
     return bevakningar.some(b => {
       const typOk    = b.kategorier === null || typ === null || b.kategorier.has(typ)
@@ -116,28 +107,29 @@ export function PolisenBevakningarProvider({ children }: { children: ReactNode }
   }
 
   async function skapa(kategorier: string[] | null, omraden: string[] | null): Promise<boolean> {
+    // Okänd lista: skapa inte (max-kollen går inte att göra, och en delmängd
+    // får inte se ut som hela listan). Anroparen visar sitt vanliga felmeddelande.
+    if (lage !== 'klar') throw new Error('Bevakningarna har inte hämtats')
     if (bevakningar.length >= MAX_BEVAKNINGAR) return false
     const req: BevakningRequest = { kategorier, omraden }
     const ny = await createBevakning(req)
-    setBevakningar(prev => [...prev, { id: ny.id, kategorier: toSet(ny.kategorier), omraden: toSet(ny.omraden) }])
+    uppdateraLista(prev => [...prev, ny])
     return true
   }
 
   async function uppdatera(id: string, kategorier: string[] | null, omraden: string[] | null): Promise<void> {
     const req: BevakningRequest = { kategorier, omraden }
     const uppdaterad = await updateBevakning(id, req)
-    setBevakningar(prev => prev.map(b => b.id === id
-      ? { id: uppdaterad.id, kategorier: toSet(uppdaterad.kategorier), omraden: toSet(uppdaterad.omraden) }
-      : b))
+    uppdateraLista(prev => prev.map(b => b.id === id ? uppdaterad : b))
   }
 
   async function taBort(id: string): Promise<void> {
     await deleteBevakning(id)
-    setBevakningar(prev => prev.filter(b => b.id !== id))
+    uppdateraLista(prev => prev.filter(b => b.id !== id))
   }
 
   const value: PolisenBevakningarContextValue = {
-    bevakningar, laddat, matchar, matcharLän, typDackt, omradeDackt, matchandeBevakning, skapa, uppdatera, taBort,
+    bevakningar, lage, forsokIgen, matchar, matcharLän, typDackt, omradeDackt, matchandeBevakning, skapa, uppdatera, taBort,
   }
 
   return (

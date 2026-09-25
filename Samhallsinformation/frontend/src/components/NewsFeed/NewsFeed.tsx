@@ -47,6 +47,20 @@ function formatDateLabel(iso: string): string {
   return dateStr
 }
 
+function OkantListaMeddelande({ text, onForsokIgen }: { text: string; onForsokIgen: () => void }) {
+  return (
+    <div role="alert" className="flex flex-col items-center gap-3 py-6 px-4 text-center">
+      <p className="text-slate-600 dark:text-slate-300 text-sm">{text}</p>
+      <button
+        onClick={onForsokIgen}
+        className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-colors"
+      >
+        Försök igen
+      </button>
+    </div>
+  )
+}
+
 interface Props {
   shortName: string | null
   sources: Source[]
@@ -61,8 +75,8 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()
   const flaggor = useFlags()
-  const { matchar, matcharLän } = usePolisenBevakningar()
-  const { sparade } = useSavedEvents()
+  const { matchar, matcharLän, lage: bevakLage, forsokIgen: hamtaBevakningarIgen } = usePolisenBevakningar()
+  const { sparade, lage: sparatLage, forsokIgen: hamtaSparatIgen } = useSavedEvents()
   const [mittUnderflik, setMittUnderflik] = useState<MittUnderflik>('Flöde')
 
   const { data, isLoading, isError } = useQuery({
@@ -248,7 +262,20 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
             </div>
           )}
 
-          {viewMode === 'Mitt' && mittUnderflik === 'Flöde' && mittEvents.length === 0 && (
+          {/* Bevakningarna är okända (hämtas / misslyckades): Polisen-händelser döljs
+              tills de hämtats — vi visar aldrig "allt" och säger inte heller
+              "inget matchar" när vi inte vet. */}
+          {viewMode === 'Mitt' && mittUnderflik === 'Flöde' && isLoggedIn && bevakLage === 'fel' && (
+            <OkantListaMeddelande
+              text="Vi kunde inte hämta dina Polisen-bevakningar just nu, så Polisen-händelser visas inte i Mitt flöde."
+              onForsokIgen={hamtaBevakningarIgen}
+            />
+          )}
+          {viewMode === 'Mitt' && mittUnderflik === 'Flöde' && isLoggedIn && bevakLage === 'laddar' && mittEvents.length === 0 && (
+            <p className="text-slate-400 text-sm py-6 text-center">Hämtar dina bevakningar...</p>
+          )}
+
+          {viewMode === 'Mitt' && mittUnderflik === 'Flöde' && mittEvents.length === 0 && !(isLoggedIn && bevakLage !== 'klar') && (
             <div className="flex flex-col items-center py-20 gap-4 text-center">
               <span className="text-4xl">🗂️</span>
               <p className="text-slate-700 dark:text-slate-200 font-semibold text-base">Inget matchar dina prenumerationer just nu</p>
@@ -272,7 +299,17 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
             </div>
           )}
 
-          {viewMode === 'Mitt' && mittUnderflik === 'Sparat' && sparadeEvents.length === 0 && (
+          {viewMode === 'Mitt' && mittUnderflik === 'Sparat' && sparatLage === 'fel' && (
+            <OkantListaMeddelande
+              text="Vi kunde inte hämta dina sparade händelser just nu."
+              onForsokIgen={hamtaSparatIgen}
+            />
+          )}
+          {viewMode === 'Mitt' && mittUnderflik === 'Sparat' && sparatLage === 'laddar' && (
+            <p className="text-slate-400 text-sm py-6 text-center">Hämtar dina sparade händelser...</p>
+          )}
+
+          {viewMode === 'Mitt' && mittUnderflik === 'Sparat' && sparatLage === 'klar' && sparadeEvents.length === 0 && (
             <div className="flex flex-col items-center py-20 gap-4 text-center">
               <span className="text-4xl">📑</span>
               <p className="text-slate-700 dark:text-slate-200 font-semibold text-base">Inget sparat än</p>
