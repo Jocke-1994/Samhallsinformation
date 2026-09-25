@@ -732,17 +732,14 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   })
 
   const [dödaLänkar, setDödaLänkar] = useState<Set<string>>(new Set())
-  const [kollarLänk, setKollarLänk] = useState<string | null>(null)
 
-  async function öppnaSparad(h: { eventId: string; url: string }) {
-    setKollarLänk(h.eventId)
-    const alive = await checkEventLinkStatus(h.eventId)
-    setKollarLänk(null)
-    if (alive) {
-      window.open(h.url, '_blank', 'noopener,noreferrer')
-    } else {
-      setDödaLänkar(prev => new Set(prev).add(h.eventId))
-    }
+  // Öppnar länken direkt (synkront i klicket, aldrig efter en await) och kollar
+  // i bakgrunden — markeras som död bara vid ett entydigt 'dead' (404/410).
+  function öppnaSparad(h: { eventId: string; url: string }) {
+    window.open(h.url, '_blank', 'noopener,noreferrer')
+    checkEventLinkStatus(h.eventId)
+      .then(status => { if (status === 'dead') setDödaLänkar(prev => new Set(prev).add(h.eventId)) })
+      .catch(() => { /* kollen är bara en bonus — ett fel ska aldrig störa */ })
   }
 
   async function taBortSparad(eventId: string) {
@@ -1345,10 +1342,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                             ) : (
                               <button
                                 onClick={() => öppnaSparad(h)}
-                                disabled={kollarLänk === h.eventId}
-                                className="text-slate-700 hover:text-violet-600 hover:underline truncate block text-left disabled:opacity-50"
+                                className="text-slate-700 hover:text-violet-600 hover:underline truncate block text-left"
                               >
-                                {kollarLänk === h.eventId ? 'Kollar länken…' : h.title}
+                                {h.title}
                               </button>
                             )}
                             <p className="text-xs text-slate-400">{h.sourceName} · sparad {new Date(h.savedAt).toLocaleDateString('sv-SE')}</p>
