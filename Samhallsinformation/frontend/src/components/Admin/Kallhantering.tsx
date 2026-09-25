@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchAdminSources, createAdminSource, updateAdminSource, deleteAdminSource, resyncAdminSource } from '../../api/sources'
 import type { AdminSource } from '../../types'
+import ConfirmDialog from '../common/ConfirmDialog'
 
 export type KällStatus = 'OK' | 'Begränsad drift' | 'Nere' | 'Okänd'
 type Kategori        = 'Nationell' | 'Regional' | 'Kommunal' | 'Transport' | 'Väder'
@@ -277,6 +278,7 @@ export default function Kallhantering() {
   const [sök,         setSök]         = useState('')
   const [filterKat,   setFilterKat]   = useState<Kategori | ''>('')
   const [redigerar,   setRedigerar]   = useState<Källa | null>(null)
+  const [attTaBort,   setAttTaBort]   = useState<{ id: number; namn: string } | null>(null)
   const [visaForm,    setVisaForm]    = useState(false)
   const [aktiverar,   setAktiverar]   = useState<Set<string>>(new Set())
   const [sparad,      setSparad]      = useState<number | null>(null)
@@ -335,7 +337,14 @@ export default function Kallhantering() {
     })
   }
 
+  // Borttagning är permanent och tar via cascade bort ALLA användares
+  // prenumerationer på källan — därför alltid via bekräftelsedialogen.
+  function begärTaBort(k: Källa) {
+    setAttTaBort({ id: k.id, namn: k.namn })
+  }
+
   function taBort(id: number) {
+    setAttTaBort(null)
     deleteMutation.mutate(id)
     if (redigerar?.id === id) setRedigerar(null)
   }
@@ -382,6 +391,20 @@ export default function Kallhantering() {
 
   return (
     <div className="flex flex-col gap-5">
+
+      {attTaBort && (
+        <ConfirmDialog
+          rubrik={`Ta bort källan "${attTaBort.namn}"?`}
+          bekräftaText="Ta bort källan"
+          onBekräfta={() => taBort(attTaBort.id)}
+          onAvbryt={() => setAttTaBort(null)}
+        >
+          <p>
+            Det här tar bort källan <strong>{attTaBort.namn}</strong> och alla användares
+            prenumerationer på den — kan inte ångras.
+          </p>
+        </ConfirmDialog>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -564,19 +587,19 @@ export default function Kallhantering() {
                         onClick={() => resyncMutation.mutate(k.id)}
                         disabled={resyncMutation.isPending && resyncMutation.variables === k.id}
                         title="Hämta om och skriv över redan sparade händelser med senaste ingestor-logiken"
-                        className="text-xs text-sky-600 hover:text-sky-800 font-medium opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+                        className="text-xs text-sky-600 hover:text-sky-800 font-medium [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all disabled:opacity-50"
                       >
                         {resyncMutation.isPending && resyncMutation.variables === k.id ? 'Synkar...' : 'Synka om'}
                       </button>
                       <button
                         onClick={() => setRedigerar(redigerar?.id === k.id ? null : { ...k })}
-                        className="text-xs text-violet-600 hover:text-violet-800 font-medium opacity-0 group-hover:opacity-100 transition-all"
+                        className="text-xs text-violet-600 hover:text-violet-800 font-medium [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
                       >
                         Redigera
                       </button>
                       <button
-                        onClick={() => taBort(k.id)}
-                        className="text-xs text-red-400 hover:text-red-600 font-medium opacity-0 group-hover:opacity-100 transition-all"
+                        onClick={() => begärTaBort(k)}
+                        className="text-xs text-red-400 hover:text-red-600 font-medium [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
                       >
                         Ta bort
                       </button>

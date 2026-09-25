@@ -9,6 +9,7 @@ import {
 import { fetchAdminFeatureFlags } from '../../api/featureFlags'
 import { fetchAdminFaq } from '../../api/faq'
 import { isoTillDatetimeLocal } from '../../lib/tid'
+import ConfirmDialog from '../common/ConfirmDialog'
 
 // ---------------------------------------------------------------------------
 // Konfiguration
@@ -52,10 +53,12 @@ function SkickaNyVersionKort() {
   const [skickar, setSkickar] = useState(false)
   const [resultat, setResultat] = useState<string | null>(null)
   const [fel, setFel] = useState('')
+  const [bekräfta, setBekräfta] = useState(false)
 
   const kanSkicka = version.trim() !== '' && meddelande.trim() !== '' && !skickar
 
   async function skicka() {
+    setBekräfta(false)
     setSkickar(true)
     setFel('')
     setResultat(null)
@@ -98,7 +101,7 @@ function SkickaNyVersionKort() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={skicka}
+            onClick={() => setBekräfta(true)}
             disabled={!kanSkicka}
             className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors shrink-0"
           >
@@ -108,6 +111,25 @@ function SkickaNyVersionKort() {
           {fel && <p className="text-sm text-red-500">{fel}</p>}
         </div>
       </div>
+      {bekräfta && (
+        <ConfirmDialog
+          rubrik={'Skicka "Ny version"-notis till alla?'}
+          bekräftaText="Skicka till alla"
+          onBekräfta={skicka}
+          onAvbryt={() => setBekräfta(false)}
+        >
+          <p>
+            Det här är en <strong>riktig push-notis</strong> som skickas direkt till alla
+            prenumeranter som slagit på kategorin Ny version. Den kan inte återkallas.
+          </p>
+          <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+            <p className="text-xs text-slate-500">Version</p>
+            <p className="text-sm text-slate-800 break-words">{version.trim()}</p>
+            <p className="text-xs text-slate-500 mt-2">Meddelande</p>
+            <p className="text-sm text-slate-800 break-words">{meddelande.trim()}</p>
+          </div>
+        </ConfirmDialog>
+      )}
     </div>
   )
 }
