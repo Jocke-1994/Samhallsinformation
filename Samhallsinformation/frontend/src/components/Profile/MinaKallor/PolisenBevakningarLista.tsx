@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { usePolisenBevakningar, MAX_BEVAKNINGAR, type Bevakning } from '../../../context/PolisenBevakningarContext'
+import { BevakningError } from '../../../api/polisenBevakningar'
+import { visaFel } from '../../../lib/felmeddelande'
 import KategoriFilterModal from './KategoriFilterModal'
 
 function sammanfatta(lista: string[] | null, allaLabel: string): string {
@@ -38,9 +40,11 @@ export default function PolisenBevakningarLista({ kallNamn }: { kallNamn: string
         await uppdatera(redigerar.id, kategorier, omraden)
       }
       setRedigerar(null)
-    } catch {
+    } catch (e) {
+      // Serverns text (BevakningError, t.ex. "Max 5 bevakningar per användare.")
+      // visas som den är; tekniska fel/nätverksfel blir en svensk reservtext.
       // Modalen står kvar med användarens val intakta så att hen kan försöka igen.
-      setSparFel('Bevakningen kunde inte sparas. Försök igen.')
+      setSparFel(e instanceof BevakningError ? e.message : visaFel(e, 'Bevakningen kunde inte sparas. Försök igen.'))
     } finally {
       setSparar(false)
     }

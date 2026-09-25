@@ -15,7 +15,11 @@ import * as bevakApi from '../api/polisenBevakningar'
 // ändra listan om anropet misslyckats.
 vi.mock('../api/sources')
 vi.mock('../api/userSources')
-vi.mock('../api/polisenBevakningar')
+// Riktiga BevakningError (V3-17) behålls; bara anropen mockas.
+vi.mock('../api/polisenBevakningar', async importOriginal => {
+  const faktisk = await importOriginal<typeof import('../api/polisenBevakningar')>()
+  return { ...faktisk, fetchBevakningar: vi.fn(), createBevakning: vi.fn(), updateBevakning: vi.fn(), deleteBevakning: vi.fn() }
+})
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }) }))
 vi.mock('../context/FeatureFlagsContext', () => ({
   useFlags: () => ({ kallor_lagg_till: false, kallor_aktiva: true, kallor_rekommenderade: false, kallor_alla: true, kallor_polisen_filter: false }),
@@ -134,6 +138,20 @@ describe('Polisen-bevakningar (Mina källor)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Bevakningen kunde inte sparas')
     // Modalen är kvar (användarens val bevaras) och knappen går att trycka på igen
+    expect(screen.getByRole('button', { name: 'Spara' })).toBeEnabled()
+    expect(screen.getByText(/Vad ska den här bevakningen visa/)).toBeInTheDocument()
+  })
+
+  it('visar serverns egen text (BevakningError, V3-17) i modalen som står kvar', async () => {
+    const user = userEvent.setup()
+    bevakningsApi.fetchBevakningar.mockResolvedValue([])
+    bevakningsApi.createBevakning.mockRejectedValue(new bevakApi.BevakningError('Max 5 bevakningar per användare.'))
+    renderaBevakningar()
+
+    await user.click(await screen.findByRole('button', { name: '+ Ny bevakning' }))
+    await user.click(screen.getByRole('button', { name: 'Spara' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Max 5 bevakningar per användare.')
     expect(screen.getByRole('button', { name: 'Spara' })).toBeEnabled()
     expect(screen.getByText(/Vad ska den här bevakningen visa/)).toBeInTheDocument()
   })
