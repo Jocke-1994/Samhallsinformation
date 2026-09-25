@@ -42,9 +42,39 @@ public class UserSourcesController : ControllerBase
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
+        // Samma SourceId två gånger i body ger annars dubbel Add -> unikt index (UserId, SourceId) -> 500.
+        // Sista posten vinner (samma semantik som om klienten skickat dem som två efterföljande PUT).
+        items = items
+            .GroupBy(i => i.SourceId)
+            .Select(g => g.Last())
+            .ToList();
+
         var existing = await _db.UserSourcePreferences
             .Where(p => p.UserId == userId)
             .ToListAsync();
+
+        // Validera mot Sources innan något skrivs (atomärt: ett ogiltigt id avvisar hela anropet).
+        // Publiceringsregeln är densamma som i SourcesController/EventsController: Source.IsPublished.
+        var requestedIds = items.Select(i => i.SourceId).ToList();
+        var publishedById = await _db.Sources
+            .Where(s => requestedIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => s.IsPublished);
+
+        foreach (var item in items)
+        {
+            if (!publishedById.TryGetValue(item.SourceId, out var isPublished))
+                return BadRequest($"Okänd källa: {item.SourceId}.");
+
+            if (isPublished) continue;
+
+            // Opublicerad (sandlådekälla, eller avpublicerad efter att användaren prenumererade).
+            // Ny prenumeration och återaktivering avvisas; en redan sparad rad får ligga kvar,
+            // avaktiveras och sorteras om så att användaren aldrig fastnar i att inte kunna spara sin lista.
+            var pref = existing.FirstOrDefault(p => p.SourceId == item.SourceId);
+            var blirAktiv = item.IsActive && (pref == null || !pref.IsActive);
+            if (pref == null || blirAktiv)
+                return BadRequest($"Källa {item.SourceId} är inte publicerad och kan inte prenumereras på.");
+        }
 
         var oldSnapshot = existing.ToDictionary(p => p.SourceId, p => new { p.IsActive, p.SortOrder });
 
