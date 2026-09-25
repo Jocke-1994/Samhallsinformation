@@ -8,13 +8,8 @@ using Xunit;
 
 public class UserDeletionBackgroundServiceTests
 {
-    private static AppDbContext NewDb()
-    {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        return new AppDbContext(options);
-    }
+    // SQLite via TestDb i stället för InMemory: anonymiseringen körs i en riktig transaktion (V2-14), som InMemory inte stödjer.
+    private static AppDbContext NewDb() => TestDb.Create();
 
     [Fact]
     public async Task ExecuteDueDeletionsAsync_WindowExpired_AnonymizesUser()
