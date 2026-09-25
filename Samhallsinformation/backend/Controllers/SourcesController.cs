@@ -120,6 +120,12 @@ public class SourcesController : ControllerBase
         var source = await _db.Sources.FindAsync(id);
         if (source == null) return NotFound();
 
+        // En pausad (IsActive=false) källa ska inte hämtas — varken av bakgrundscykeln eller
+        // manuellt. Vi rör varken LastFetchError eller aktivitetsloggen: det är inget fel.
+        // IsPublished påverkas inte (sandlådekällor ska gå att köra om).
+        if (!IngestorBackgroundService.ShouldIngest(source))
+            return BadRequest(new { error = "Källan är inaktiv (IsActive=false) och hämtas inte. Aktivera källan först." });
+
         var ingestor = _dedicatedIngestors.FirstOrDefault(i => i.Source.Id == id);
         if (ingestor == null)
         {
