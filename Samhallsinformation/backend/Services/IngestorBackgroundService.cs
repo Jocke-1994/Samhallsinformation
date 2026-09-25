@@ -48,7 +48,17 @@ public class IngestorBackgroundService : BackgroundService
         }
     }
 
-    private async Task IngestAsync(CancellationToken ct)
+    /// <summary>
+    /// Regeln för om en källa ska hämtas: en <see cref="Source"/>-rad med IsActive=false pausar
+    /// hämtningen (avaktivering i admin). Saknas raden i databasen hämtas källan som förut —
+    /// dedikerade ingestorer har en egen in-code-Source och seedas normalt, så en saknad rad är
+    /// ett undantagsläge där vi hellre hämtar än tystnar. IsPublished spelar ingen roll här:
+    /// opublicerade sandlådekällor ska fortsatt hämtas så de kan testas.
+    /// </summary>
+    public static bool ShouldIngest(Source? dbSource) => dbSource == null || dbSource.IsActive;
+
+    // Public så en cykel kan köras direkt i test (loopen i ExecuteAsync är bara ett timer-skal).
+    public async Task IngestAsync(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var db        = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -72,11 +82,31 @@ public class IngestorBackgroundService : BackgroundService
             .Select(s => new GenericRssIngestor(_httpClientFactory.CreateClient(), s))
             .ToList<IIngestor>();
 
+        // De dedikerade ingestorernas in-code-Source har hårdkodat IsActive=true, så
+        // adminens IsActive på DB-raden måste slås upp per cykel. (Generiska källor är
+        // redan filtrerade på IsActive ovan.) Rad saknas -> ingen post i dictionaryn ->
+        // ShouldIngest(null) = true, dvs. beteende som förut.
+        var dedicatedRows = await db.Sources
+            .AsNoTracking()
+            .Where(s => dedicatedIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, ct);
+
         var allIngestors = dedicated.Concat(genericIngestors);
 
         foreach (var ingestor in allIngestors)
         {
             var sourceId = ingestor.Source.Id;
+
+            dedicatedRows.TryGetValue(sourceId, out var dbRow);
+            if (!ShouldIngest(dbRow))
+            {
+                // Medvetet varken IngestorRunLog eller LastFetchError: en pausad källa är
+                // ett adminbeslut, inte ett fel.
+                _logger.LogInformation("Skipping {Source} (id {SourceId}): Source.IsActive=false",
+                    ingestor.Source.Name, sourceId);
+                continue;
+            }
+
             try
             {
                 var (inserted, _, insertedEvents) = await EventSync.SyncAsync(db, ingestor, overwriteExisting: false, ct);
