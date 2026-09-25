@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
@@ -104,7 +105,7 @@ public class AdminUsersController : ControllerBase
         user.IsActive = req.IsActive;
         user.SuspendedAt     = req.IsActive ? null : DateTime.UtcNow;
         user.SuspendedReason = req.IsActive ? null : req.Reason;
-        user.SuspensionReminderAt   = req.IsActive ? null : req.ReminderAt;
+        user.SuspensionReminderAt   = req.IsActive ? null : UtcDateTime.Ensure(req.ReminderAt);
         user.SuspensionReminderNote = req.IsActive ? null : req.ReminderNote;
         if (cancelsDeletion)
         {

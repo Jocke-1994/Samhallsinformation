@@ -24,11 +24,14 @@ public static class TestDb
     /// migrationerna — migrationerna är SQLite/Postgres-blandade och testas inte här).
     /// Främmande nycklar är påslagna (EF Core kör <c>PRAGMA foreign_keys=ON</c> vid öppning).
     /// </summary>
-    public static AppDbContext Create()
+    /// <param name="kindGuard">Valfri <see cref="DateTimeKindGuard"/> som fångar DateTime-parametrar med
+    /// Kind != Utc (härmar Npgsqls timestamptz-regel).</param>
+    public static AppDbContext Create(DateTimeKindGuard? kindGuard = null)
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite("Data Source=:memory:")
-            .Options;
+        var builder = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite("Data Source=:memory:");
+        if (kindGuard != null) builder.AddInterceptors(kindGuard);
+        var options = builder.Options;
 
         var db = new AppDbContext(options);
         try

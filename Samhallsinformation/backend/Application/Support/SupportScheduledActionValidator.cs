@@ -22,12 +22,7 @@ public static class SupportScheduledActionValidator
     /// Normaliserar till UTC: Utc behålls, Local konverteras, Unspecified tolkas som UTC
     /// (annars vägrar Npgsql skriva en timestamptz med fel <c>Kind</c>).
     /// </summary>
-    public static DateTime NormalizeToUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc   => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _                  => DateTime.SpecifyKind(value, DateTimeKind.Utc),
-    };
+    public static DateTime NormalizeToUtc(DateTime value) => UtcDateTime.Ensure(value);
 
     /// <summary>Returnerar ett svenskt felmeddelande, eller null om indatan är giltig.</summary>
     public static string? Validate(string? type, DateTime scheduledAtUtc, string? text, string? instruction, DateTime nowUtc)
