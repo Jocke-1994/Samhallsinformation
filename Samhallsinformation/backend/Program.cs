@@ -1498,14 +1498,27 @@ using (var scope = app.Services.CreateScope())
         UPDATE ""UppdateringsPunkter"" SET ""Typ"" = 'buggfix'     WHERE ""Typ"" = 'fixat';
     ");
 
+    // E-postnormalisering (V2-11, D6): gemenifierar befintliga användaradresser. Idempotent, kör i
+    // en transaktion och AVBRYTS utan ändringar (med Warning-logg över krockande konton) om två
+    // konton skulle bli samma adress — se EmailNormalizationDataFix. Får aldrig stoppa uppstarten.
+    try
+    {
+        var fixLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("EmailNormalizationDataFix");
+        await EmailNormalizationDataFix.RunAsync(db, fixLogger);
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "E-postnormaliseringen misslyckades — inget ändrat, uppstarten fortsätter.");
+    }
+
     // Seed admin-användare från env-variabler
-    var adminEmail    = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
+    var adminEmail    = EmailNormalizer.Normalize(Environment.GetEnvironmentVariable("ADMIN_EMAIL"));
     var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
     var adminName     = Environment.GetEnvironmentVariable("ADMIN_NAME") ?? "Joakim Rehn";
 
     if (!string.IsNullOrEmpty(adminEmail) && !string.IsNullOrEmpty(adminPassword))
     {
-        if (!db.Users.Any(u => u.Email == adminEmail))
+        if (!db.Users.Any(u => u.Email.ToLower() == adminEmail))
         {
             var hasher = new PasswordHasher<User>();
             var admin  = new User

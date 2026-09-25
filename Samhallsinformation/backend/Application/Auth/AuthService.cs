@@ -10,6 +10,7 @@ using Samhallsinformation.Services;
 public class AuthService : IAuthService
 {
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
+    private const int MaxEmailLength = 254; // RFC 5321-gränsen för en adress
 
     private readonly AppDbContext             _db;
     private readonly ITokenService            _tokens;
@@ -32,15 +33,35 @@ public class AuthService : IAuthService
         _frontendUrl = config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
     }
 
+    // Skiftlägesokänsligt uppslag mot normaliserad adress (V2-11, D6). Jämför ToLower() så att även
+    // äldre rader med versaler hittas. Skulle databasen (före datafixen, eller om den avbröts pga
+    // krock) innehålla flera rader som normaliseras lika, väljs exakt träff först och sedan äldsta
+    // kontot — samma resultat som det gamla exakta uppslaget gav.
+    private Task<User?> FindByEmailAsync(string normalizedEmail) =>
+        _db.Users
+            .Where(u => u.Email.ToLower() == normalizedEmail)
+            .OrderByDescending(u => u.Email == normalizedEmail)
+            .ThenBy(u => u.CreatedAt)
+            .FirstOrDefaultAsync();
+
     public async Task<AuthResult> RegisterAsync(string name, string email, string password, bool acceptedTerms)
     {
+        email = EmailNormalizer.Normalize(email);
+
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             return AuthResult.Fail(400, "Namn, e-post och lösenord krävs");
 
         if (!acceptedTerms)
             return AuthResult.Fail(400, "Du måste godkänna användarvillkoren");
 
-        if (await _db.Users.AnyAsync(u => u.Email == email))
+        if (!email.Contains('@') || email.Length > MaxEmailLength)
+            return AuthResult.Fail(400, "Ange en giltig e-postadress");
+
+        var policyFel = PasswordPolicy.Validate(password);
+        if (policyFel != null)
+            return AuthResult.Fail(400, policyFel);
+
+        if (await _db.Users.AnyAsync(u => u.Email.ToLower() == email))
             return AuthResult.Fail(409, "E-postadressen används redan");
 
         var user = new User { Name = name, Email = email, TermsAcceptedAt = DateTime.UtcNow };
@@ -69,7 +90,7 @@ public class AuthService : IAuthService
 
     public async Task<AuthResult> LoginAsync(string email, string password)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
+        var user = await FindByEmailAsync(EmailNormalizer.Normalize(email));
         if (user == null)
             return AuthResult.Fail(401, "Felaktigt e-post eller lösenord");
 
@@ -94,7 +115,14 @@ public class AuthService : IAuthService
         if (payload == null)
             return AuthResult.Fail(401, "Ogiltig Google-inloggning");
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+        // Utan email_verified bevisar Google-tokenet inte att adressen tillhör inloggaren — då vore
+        // "Google har verifierat adressen" (som vi bygger både EmailVerified=true och pre-hijack-
+        // skyddet nedan på) osant. Avvisa hellre än att lita på en obekräftad adress.
+        var googleEmail = EmailNormalizer.Normalize(payload.Email);
+        if (!payload.EmailVerified || string.IsNullOrEmpty(googleEmail))
+            return AuthResult.Fail(401, "Google har inte bekräftat e-postadressen för det här kontot. Bekräfta adressen hos Google och försök igen.");
+
+        var user = await FindByEmailAsync(googleEmail);
         // Sparas INNAN user eventuellt tilldelas nedan — annars vore den alltid
         // false. Frontend behöver veta det här för att skilja på "ett nytt konto
         // skapades just nu" (kör onboarding-guiden) och "loggade in på ett
@@ -112,7 +140,7 @@ public class AuthService : IAuthService
             user = new User
             {
                 Name            = payload.Name,
-                Email           = payload.Email,
+                Email           = googleEmail,
                 AuthProvider    = "google",
                 TermsAcceptedAt = DateTime.UtcNow,
                 // Google har redan verifierat ägarskapet av adressen som en del av
@@ -127,11 +155,53 @@ public class AuthService : IAuthService
             await PushDispatcher.DispatchNewUserAsync(_db, _push, _frontendUrl, user);
             await _aktivitetslogg.LogAsync(AktörTyper.System, LoggTyper.Registrering, "Ny registrering", $"{user.Name} — via Google");
         }
+        else if (user.AuthProvider == "local" && !user.EmailVerified)
+        {
+            // Pre-hijack-skydd: ett OBEKRÄFTAT lösenordskonto med den här adressen kan vara skapat av
+            // en angripare som registrerade offrets adress med eget lösenord (registrering kräver ingen
+            // verifiering för att få tokens). Google har nu bevisat att den som loggar in äger adressen,
+            // så kontot får användas — men angriparens åtkomst neutraliseras: lösenordet ogiltigförklaras,
+            // alla sessioner (refresh-tokens) återkallas och kontot blir ett Google-konto. Obekräftade
+            // engångslänkar (verifiering/återställning/e-postbyte) stängs också, så angriparen inte kan
+            // ta över kontot via ett redan påbörjat e-postbyte.
+            await NeutralizeUnverifiedLocalAccountAsync(user);
+            await _db.SaveChangesAsync();
+            await _aktivitetslogg.LogAsync(
+                AktörTyper.System, LoggTyper.Konto,
+                $"Obekräftat lösenordskonto togs över av Google-inloggning — {user.Name}",
+                "Lösenordet ogiltigförklarat och alla sessioner återkallade");
+        }
 
         if (!user.IsActive)
             return AuthResult.Fail(403, "Kontot är avstängt. Kontakta support om du tror det här är ett misstag.");
 
         return await IssueTokensAsync(user, isNewUser);
+    }
+
+    private async Task NeutralizeUnverifiedLocalAccountAsync(User user)
+    {
+        var now = DateTime.UtcNow;
+
+        user.PasswordHash  = string.Empty; // samma tomma värde som övriga Google-konton; LoginAsync avvisar non-local före hash-kontroll
+        user.AuthProvider  = "google";
+        user.EmailVerified = true;
+
+        var aktivaRefreshTokens = await _db.RefreshTokens
+            .Where(t => t.UserId == user.Id && t.RevokedAt == null)
+            .ToListAsync();
+        foreach (var rt in aktivaRefreshTokens) rt.RevokedAt = now;
+
+        var resetTokens = await _db.PasswordResetTokens
+            .Where(t => t.UserId == user.Id && t.UsedAt == null).ToListAsync();
+        foreach (var t in resetTokens) t.UsedAt = now;
+
+        var verificationTokens = await _db.EmailVerificationTokens
+            .Where(t => t.UserId == user.Id && t.UsedAt == null).ToListAsync();
+        foreach (var t in verificationTokens) t.UsedAt = now;
+
+        var changeTokens = await _db.EmailChangeTokens
+            .Where(t => t.UserId == user.Id && t.UsedAt == null).ToListAsync();
+        foreach (var t in changeTokens) t.UsedAt = now;
     }
 
     public async Task<AuthResult> RefreshAsync(string refreshToken)
@@ -183,7 +253,7 @@ public class AuthService : IAuthService
     {
         const string genericMessage = "Om e-postadressen finns skickas ett återställningsmejl";
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
+        var user = await FindByEmailAsync(EmailNormalizer.Normalize(email));
         if (user == null)
             return AuthResult.Ok(genericMessage);
 
@@ -219,6 +289,15 @@ public class AuthService : IAuthService
             Setting   = "password",
             ChangedBy = "reset",
         });
+
+        // En återställning används just när kontot kan vara kapat — då måste en stulen session
+        // (refresh-token) sluta gälla direkt, annars överlever den återställningen i upp till 30 dagar.
+        // Till skillnad från ChangePasswordAsync finns ingen "egen enhet" att behålla (användaren
+        // är utloggad när hen återställer), så ALLA aktiva refresh-tokens återkallas.
+        var aktivaRefreshTokens = await _db.RefreshTokens
+            .Where(t => t.UserId == resetToken.UserId && t.RevokedAt == null)
+            .ToListAsync();
+        foreach (var rt in aktivaRefreshTokens) rt.RevokedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
         return AuthResult.Ok("Lösenordet är uppdaterat");
@@ -319,14 +398,14 @@ public class AuthService : IAuthService
                 return AuthResult.Fail(401, "Fel lösenord");
         }
 
-        newEmail = newEmail.Trim();
-        if (string.IsNullOrWhiteSpace(newEmail) || !newEmail.Contains('@'))
+        newEmail = EmailNormalizer.Normalize(newEmail);
+        if (string.IsNullOrWhiteSpace(newEmail) || !newEmail.Contains('@') || newEmail.Length > MaxEmailLength)
             return AuthResult.Fail(400, "Ange en giltig e-postadress");
 
-        if (newEmail == user.Email)
+        if (newEmail == EmailNormalizer.Normalize(user.Email))
             return AuthResult.Fail(400, "Det är redan din adress");
 
-        if (await _db.Users.AnyAsync(u => u.Email == newEmail && u.Id != userId))
+        if (await _db.Users.AnyAsync(u => u.Email.ToLower() == newEmail && u.Id != userId))
             return AuthResult.Fail(409, "E-postadressen används redan");
 
         // En ny förfrågan ersätter en eventuell tidigare väntande — annars kan
@@ -357,11 +436,13 @@ public class AuthService : IAuthService
             return AuthResult.Fail(400, "Länken är ogiltig eller har gått ut");
 
         // Adressen kan ha hunnit tas av någon annan sedan bekräftelsemejlet skickades.
-        if (await _db.Users.AnyAsync(u => u.Email == changeToken.NewEmail && u.Id != changeToken.UserId))
+        // Normaliseras igen här: en token utfärdad före V2-11 kan ha en adress med versaler.
+        var newEmail = EmailNormalizer.Normalize(changeToken.NewEmail);
+        if (await _db.Users.AnyAsync(u => u.Email.ToLower() == newEmail && u.Id != changeToken.UserId))
             return AuthResult.Fail(409, "E-postadressen används redan");
 
         var oldEmail = changeToken.User.Email;
-        changeToken.User.Email         = changeToken.NewEmail;
+        changeToken.User.Email         = newEmail;
         // Länken skickades till och klickades från den nya adressen — det
         // beviset på ägarskap är detsamma som e-postverifiering vid registrering.
         changeToken.User.EmailVerified = true;
@@ -369,7 +450,7 @@ public class AuthService : IAuthService
 
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
-            UserId = changeToken.UserId, Setting = "email", OldValue = oldEmail, NewValue = changeToken.NewEmail,
+            UserId = changeToken.UserId, Setting = "email", OldValue = oldEmail, NewValue = newEmail,
         });
 
         // Ett lyckat e-postbyte loggar ut alla enheter, även den som bekräftade
