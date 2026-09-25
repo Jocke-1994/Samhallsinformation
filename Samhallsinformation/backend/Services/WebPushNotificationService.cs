@@ -15,6 +15,7 @@ public class WebPushNotificationService : IPushNotificationService, IDisposable
 
     private readonly WebPushClient _client = new();
     private readonly VapidDetails  _vapidDetails;
+    private readonly string?       _extraAllowedHosts;
 
     public WebPushNotificationService(IConfiguration configuration)
     {
@@ -23,10 +24,20 @@ public class WebPushNotificationService : IPushNotificationService, IDisposable
         var privateKey = configuration["VAPID_PRIVATE_KEY"] ?? throw new InvalidOperationException("VAPID_PRIVATE_KEY saknas");
 
         _vapidDetails = new VapidDetails(subject, publicKey, privateKey);
+        _extraAllowedHosts = configuration[PushEndpointValidator.ExtraHostsConfigKey];
     }
 
     public Task SendAsync(UserDevice device, string title, string body, string? url, Guid? claimId = null, CancellationToken ct = default)
     {
+        // Defensivt SSRF-skydd även vid utskick: prenumerationer sparade innan
+        // valideringen infördes (eller manipulerade i databasen) får aldrig
+        // leda till ett utgående anrop mot en okänd värd. Dispatchern loggar
+        // detta som "failed" för enheten och fortsätter med nästa.
+        if (!PushEndpointValidator.TryValidate(
+                device.Endpoint, out var endpointError,
+                PushEndpointValidator.ParseExtraHosts(_extraAllowedHosts)))
+            return Task.FromException(new InvalidOperationException($"Push-utskick blockerat: {endpointError}"));
+
         var subscription = new PushSubscription(device.Endpoint, device.P256dh, device.Auth);
         var payload = JsonSerializer.Serialize(new { title, body, url, claimId, deviceId = device.Id });
         var options = new Dictionary<string, object>
