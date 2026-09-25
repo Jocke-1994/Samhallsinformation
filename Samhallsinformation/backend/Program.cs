@@ -1512,26 +1512,11 @@ using (var scope = app.Services.CreateScope())
     }
 
     // Seed admin-användare från env-variabler
-    var adminEmail    = EmailNormalizer.Normalize(Environment.GetEnvironmentVariable("ADMIN_EMAIL"));
-    var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
-    var adminName     = Environment.GetEnvironmentVariable("ADMIN_NAME") ?? "Joakim Rehn";
-
-    if (!string.IsNullOrEmpty(adminEmail) && !string.IsNullOrEmpty(adminPassword))
-    {
-        if (!db.Users.Any(u => u.Email.ToLower() == adminEmail))
-        {
-            var hasher = new PasswordHasher<User>();
-            var admin  = new User
-            {
-                Email        = adminEmail,
-                Name         = adminName,
-                Role         = "Admin",
-                PasswordHash = hasher.HashPassword(null!, adminPassword),
-            };
-            db.Users.Add(admin);
-            await db.SaveChangesAsync();
-        }
-    }
+    await AdminSeeder.EnsureAdminAsync(
+        db,
+        Environment.GetEnvironmentVariable("ADMIN_EMAIL"),
+        Environment.GetEnvironmentVariable("ADMIN_PASSWORD"),
+        Environment.GetEnvironmentVariable("ADMIN_NAME") ?? "Joakim Rehn");
 }
 
 app.MapControllers();

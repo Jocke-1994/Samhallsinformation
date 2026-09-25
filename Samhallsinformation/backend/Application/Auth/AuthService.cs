@@ -155,6 +155,22 @@ public class AuthService : IAuthService
             await PushDispatcher.DispatchNewUserAsync(_db, _push, _frontendUrl, user);
             await _aktivitetslogg.LogAsync(AktörTyper.System, LoggTyper.Registrering, "Ny registrering", $"{user.Name} — via Google");
         }
+        else if (user.AuthProvider == "local" && !user.EmailVerified && (user.Role == "Admin" || user.Role == "Support"))
+        {
+            // Admin/Support utses av oss och kan inte pre-registreras av en angripare, och att låsa ut
+            // (enda) adminens lösenordsinloggning vore en risk. Google har bevisat ägarskapet, så adressen
+            // markeras verifierad och alla sessioner återkallas — men lösenord och AuthProvider lämnas orörda.
+            user.EmailVerified = true;
+            var aktiva = await _db.RefreshTokens
+                .Where(t => t.UserId == user.Id && t.RevokedAt == null)
+                .ToListAsync();
+            foreach (var rt in aktiva) rt.RevokedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            await _aktivitetslogg.LogAsync(
+                AktörTyper.System, LoggTyper.Konto,
+                $"Obekräftat {user.Role}-konto bekräftades via Google-inloggning — {user.Name}",
+                "E-post markerad verifierad och sessioner återkallade; lösenord och inloggningssätt oförändrade");
+        }
         else if (user.AuthProvider == "local" && !user.EmailVerified)
         {
             // Pre-hijack-skydd: ett OBEKRÄFTAT lösenordskonto med den här adressen kan vara skapat av

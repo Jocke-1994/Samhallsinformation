@@ -467,6 +467,81 @@ public class AuthHardeningTests
         Assert.Equal(string.Empty, kvar.PasswordHash);
     }
 
+    [Theory]
+    [InlineData("Admin")]
+    [InlineData("Support")]
+    public async Task Google_AgainstUnverifiedAdminOrSupport_KeepsPasswordAndProvider_ButVerifiesAndRevokesTokens(string roll)
+    {
+        // PM-beslut: Admin/Support kan inte pre-registreras av en angripare, och adminens
+        // lösenordsinloggning får inte låsas ut. Google-inloggningen verifierar adressen och
+        // återkallar sessioner, men lösenord och AuthProvider lämnas orörda.
+        using var db = TestDb.Create();
+        var user = LocalUser("admin@x.se", "adminens-losen", verified: false);
+        user.Role = roll;
+        db.Users.Add(user);
+        db.RefreshTokens.Add(new RefreshToken { UserId = user.Id, TokenHash = "hash:gammal", ExpiresAt = DateTime.UtcNow.AddDays(30) });
+        await db.SaveChangesAsync();
+        var hashFore = user.PasswordHash;
+        var service = NewService(db, GoogleReturning("admin@x.se", emailVerified: true));
+
+        var result = await service.GoogleLoginAsync("google-token", acceptedTerms: true);
+
+        Assert.True(result.Success);
+        Assert.False(result.Tokens!.IsNewUser);
+        var kvar = await db.Users.SingleAsync();
+        Assert.Equal("local", kvar.AuthProvider);
+        Assert.Equal(hashFore, kvar.PasswordHash);
+        Assert.True(kvar.EmailVerified);
+        Assert.NotNull((await db.RefreshTokens.SingleAsync(t => t.TokenHash == "hash:gammal")).RevokedAt);
+        Assert.Single(await db.RefreshTokens.Where(t => t.RevokedAt == null).ToListAsync()); // bara den nya Google-sessionen
+        Assert.True((await service.LoginAsync("admin@x.se", "adminens-losen")).Success);
+    }
+
+    [Fact]
+    public async Task Google_AgainstUnverifiedOrdinaryUser_IsStillNeutralized()
+    {
+        using var db = TestDb.Create();
+        var user = LocalUser("kalle@x.se", "angriparens-losen", verified: false); // Role = "Användare"
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        await NewService(db, GoogleReturning("kalle@x.se", emailVerified: true)).GoogleLoginAsync("google-token", acceptedTerms: true);
+
+        var kvar = await db.Users.SingleAsync();
+        Assert.Equal("google", kvar.AuthProvider);
+        Assert.Equal(string.Empty, kvar.PasswordHash);
+    }
+
+    // ---------- Admin-seed ----------
+
+    [Fact]
+    public async Task AdminSeeder_CreatesVerifiedAdmin_WithNormalizedEmail()
+    {
+        using var db = TestDb.Create();
+
+        var skapad = await AdminSeeder.EnsureAdminAsync(db, " Admin@X.se ", "seed-losenord", "Adminen");
+
+        Assert.True(skapad);
+        var admin = await db.Users.SingleAsync();
+        Assert.Equal("admin@x.se", admin.Email);
+        Assert.Equal("Admin", admin.Role);
+        Assert.True(admin.EmailVerified);
+        Assert.True((await NewService(db).LoginAsync("ADMIN@x.se", "seed-losenord")).Success);
+    }
+
+    [Fact]
+    public async Task AdminSeeder_DoesNothing_WhenAdminAlreadyExistsWithOtherCasing_OrConfigMissing()
+    {
+        using var db = TestDb.Create();
+        db.Users.Add(LocalUser("Admin@X.se", "gammalt", verified: false));
+        await db.SaveChangesAsync();
+
+        Assert.False(await AdminSeeder.EnsureAdminAsync(db, "admin@x.se", "seed-losenord", "Adminen"));
+        Assert.False(await AdminSeeder.EnsureAdminAsync(db, null, "seed-losenord", "Adminen"));
+        Assert.False(await AdminSeeder.EnsureAdminAsync(db, "ny@x.se", "", "Adminen"));
+        Assert.Single(db.Users);
+    }
+
     // ---------- Lösenordsåterställning ----------
 
     [Fact]
