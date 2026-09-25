@@ -8,6 +8,27 @@ using WebPush;
 
 public static class PushDispatcher
 {
+    // EN gemensam grundfilter för ALLA mottagarvägar (nya händelser, ny version,
+    // nytt ärende, ärendesvar, ny användare) — en framtida dispatch-väg ska börja
+    // härifrån istället för db.Users, annars glöms filtret. Ett konto får bara
+    // push om det är aktivt och varken spärrat, GDPR-raderat eller schemalagt för
+    // radering. (SuspendedAt/DeletionScheduledAt sätts alltid tillsammans med
+    // IsActive=false idag — kontrolleras ändå så en framtida väg som bara sätter
+    // tidsstämpeln inte råkar pusha ett konto som är på väg bort.)
+    private static IQueryable<User> PushEligibleUsers(AppDbContext db) =>
+        db.Users.Where(u => u.IsActive
+                         && u.DeletedAt == null
+                         && u.SuspendedAt == null
+                         && u.DeletionScheduledAt == null);
+
+    // Admin-/supportnotiser (nytt ärende, ärendesvar, ny användare) går bara till
+    // aktiva Admin/Support-konton som inte tystat sin globala push (PushEnabled).
+    private static Task<List<Guid>> GetStaffRecipientIdsAsync(AppDbContext db, CancellationToken ct) =>
+        PushEligibleUsers(db)
+            .Where(u => (u.Role == "Admin" || u.Role == "Support") && u.PushEnabled)
+            .Select(u => u.Id)
+            .ToListAsync(ct);
+
     // En batchad push per källa per ingestor-körning, aldrig en per enskild
     // händelse — beslutad princip från push-scopingen (session 25/26).
     // Mottagare = UserSourcePreference.IsActive för källan (= Mitt flöde) OCH
@@ -21,6 +42,10 @@ public static class PushDispatcher
         var source = await db.Sources.FindAsync([sourceId], ct);
         if (source == null) return;
 
+        // Samma regel som EventsController (IsPublished) — sandlåde-/avpublicerade
+        // källor ska inte ge push även om användare har dem i sina preferenser.
+        if (!source.IsPublished) return;
+
         var subscribedUserIds = await db.UserSourcePreferences
             .Where(p => p.SourceId == sourceId && p.IsActive)
             .Select(p => p.UserId)
@@ -28,7 +53,7 @@ public static class PushDispatcher
 
         if (subscribedUserIds.Count == 0) return;
 
-        var recipientIds = await db.Users
+        var recipientIds = await PushEligibleUsers(db)
             .Where(u => subscribedUserIds.Contains(u.Id) && u.PushNyaHandelser)
             .Select(u => u.Id)
             .ToListAsync(ct);
@@ -117,10 +142,7 @@ public static class PushDispatcher
         AppDbContext db, IPushNotificationService push, string frontendUrl,
         SupportTicket ticket, CancellationToken ct = default)
     {
-        var adminIds = await db.Users
-            .Where(u => (u.Role == "Admin" || u.Role == "Support") && u.PushEnabled)
-            .Select(u => u.Id)
-            .ToListAsync(ct);
+        var adminIds = await GetStaffRecipientIdsAsync(db, ct);
 
         if (adminIds.Count == 0) return;
 
@@ -148,10 +170,7 @@ public static class PushDispatcher
         AppDbContext db, IPushNotificationService push, string frontendUrl,
         SupportTicket ticket, CancellationToken ct = default)
     {
-        var adminIds = await db.Users
-            .Where(u => (u.Role == "Admin" || u.Role == "Support") && u.PushEnabled)
-            .Select(u => u.Id)
-            .ToListAsync(ct);
+        var adminIds = await GetStaffRecipientIdsAsync(db, ct);
 
         if (adminIds.Count == 0) return;
 
@@ -175,10 +194,7 @@ public static class PushDispatcher
         AppDbContext db, IPushNotificationService push, string frontendUrl,
         User newUser, CancellationToken ct = default)
     {
-        var adminIds = await db.Users
-            .Where(u => (u.Role == "Admin" || u.Role == "Support") && u.PushEnabled)
-            .Select(u => u.Id)
-            .ToListAsync(ct);
+        var adminIds = await GetStaffRecipientIdsAsync(db, ct);
 
         if (adminIds.Count == 0) return;
 
@@ -203,7 +219,7 @@ public static class PushDispatcher
         AppDbContext db, IPushNotificationService push, string frontendUrl,
         string version, string message, CancellationToken ct = default)
     {
-        var recipientIds = await db.Users
+        var recipientIds = await PushEligibleUsers(db)
             .Where(u => u.PushNyVersion)
             .Select(u => u.Id)
             .ToListAsync(ct);
