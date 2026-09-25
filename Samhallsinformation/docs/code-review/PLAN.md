@@ -19,8 +19,8 @@ Startad 2026-09-25 på `main` @ `1da5cf1`. Syfte: granska hela kodbasen i riskor
 | 4 | Övriga Controllers | ~3 000 rader | medium | klar — 12 rangordnade fynd (alla bekräftade), se [enhet-4.md](enhet-4.md) | `4e33c06` |
 | 5 | Frontend-kärnan | `api/`, `context/`, `hooks/`, `lib/` | medium | klar — 14 rangordnade fynd (11 bekräftade, 3 plausibla) + ~30 mindre, se [enhet-5.md](enhet-5.md) | `a48685a` |
 | 6 | Frontend Admin | `components/Admin/` (~8 250 rader, 18 filer) | medium | klar — 22 rangordnade fynd (alla bekräftade) + ~20 mindre, se [enhet-6.md](enhet-6.md) | `a48685a` |
-| 7 | Frontend övrigt | `components/` (ej Admin) + `pages/` | low–medium | ej påbörjad | |
-| 8 | Testlucka | vad saknar tester (jämförelse, ingen review) | – | ej påbörjad | |
+| 7 | Frontend övrigt | `components/` (ej Admin) + `pages/` | low–medium | klar — 11 rangordnade fynd (9 bekräftade, 2 plausibla) + ~15 mindre, se [enhet-7.md](enhet-7.md) | `3bd097c` |
+| 8 | Testlucka | vad saknar tester (jämförelse, ingen review) | – | klar — 157/157 gröna, 32 % täckning av handskriven logik, alla tester blinda för PostgreSQL-felklassen, se [enhet-8.md](enhet-8.md) | `3bd097c` |
 
 ## Körsätt
 - Enhet 1–2: huvudsessionen. Enhet 3–4: ClaudeBE (subagent). Enhet 5–7: ClaudeFE (subagent). Subagenter skriver fynd till fil, inte tillbaka i chatten.
