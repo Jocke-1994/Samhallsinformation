@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
+using Samhallsinformation.Application.Monitoring;
 using Samhallsinformation.Application.RateLimiting;
 using Samhallsinformation.Application.Support;
 using Samhallsinformation.Data;
@@ -176,11 +177,21 @@ builder.Services.AddScoped<IAktivitetsloggService, AktivitetsloggService>();
 // och schemalagda svar (SupportScheduledActionService)
 builder.Services.AddScoped<ISupportReplyDelivery, SupportReplyDelivery>();
 
+// Övervakning och larm (V1-9): varje regel är en liten klass bakom IMonitoringRule; lägg till en ny
+// regel genom att registrera den här. Trösklar från config/env, se MonitoringOptions.
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton(sp => MonitoringOptions.FromConfiguration(sp.GetRequiredService<IConfiguration>()));
+builder.Services.AddScoped<IMonitoringRule, UsersThresholdRule>();
+builder.Services.AddScoped<IMonitoringRule, SourceFailingRule>();
+builder.Services.AddScoped<IMonitoringRule, PushFailuresRule>();
+builder.Services.AddScoped<AdminAlertCycle>();
+
 // Background service
 builder.Services.AddHostedService<IngestorBackgroundService>();
 builder.Services.AddHostedService<SupportScheduledActionService>();
 builder.Services.AddHostedService<UserDeletionBackgroundService>();
 builder.Services.AddHostedService<ScheduledReleaseBackgroundService>();
+builder.Services.AddHostedService<MonitoringService>();
 
 // Controllers
 builder.Services.AddControllers();
@@ -1137,6 +1148,39 @@ using (var scope = app.Services.CreateScope())
 
                 INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
                 VALUES ('20260921024638_AddSchemalagdLansering', '10.0.12')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
+
+        // AdminAlerts — larm från övervakningen (V1-9, MonitoringService). Ny tabell med
+        // korrekta PostgreSQL-typer (uuid/timestamptz), samma mönster som AddIngestorRunLog:
+        // den scaffolded SQLite-migrationen skriver TEXT, som Npgsql annars tolkar bokstavligt
+        // och EF-läsning kraschar med 42804.
+        if (pendingMigrations.Contains("20260925161107_AddAdminAlerts"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""AdminAlerts"" (
+                    ""Id""              uuid NOT NULL,
+                    ""RuleId""          text NOT NULL,
+                    ""Key""             text NOT NULL,
+                    ""Severity""        text NOT NULL,
+                    ""Title""           text NOT NULL,
+                    ""Detail""          text NOT NULL,
+                    ""FirstRaisedAt""   timestamptz NOT NULL,
+                    ""LastSeenAt""      timestamptz NOT NULL,
+                    ""OccurrenceCount"" integer NOT NULL,
+                    ""AcknowledgedAt""  timestamptz,
+                    ""AcknowledgedBy""  text,
+                    ""ResolvedAt""      timestamptz,
+                    ""NotifiedAt""      timestamptz,
+                    CONSTRAINT ""PK_AdminAlerts"" PRIMARY KEY (""Id"")
+                );
+
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_AdminAlerts_Key""        ON ""AdminAlerts"" (""Key"");
+                CREATE        INDEX IF NOT EXISTS ""IX_AdminAlerts_ResolvedAt"" ON ""AdminAlerts"" (""ResolvedAt"");
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260925161107_AddAdminAlerts', '10.0.12')
                 ON CONFLICT DO NOTHING;
             ");
         }

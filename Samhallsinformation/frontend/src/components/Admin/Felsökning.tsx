@@ -4,6 +4,7 @@ import { fetchAdminSources, updateAdminSource } from '../../api/sources'
 import { dryRunSource } from '../../api/testing'
 import { fetchAdminHealth, type AdminHealthDto, type HälsaStatus } from '../../api/health'
 import type { AdminSource } from '../../types'
+import LarmKort from './LarmKort'
 
 type Hälsa = 'OK' | 'Varning' | 'Nere' | 'Kontrollerar...'
 
@@ -343,6 +344,9 @@ export default function Felsökning() {
 
   return (
     <div className="flex flex-col gap-6">
+
+      {/* Larm från övervakningen (V1-9) */}
+      <LarmKort />
 
       {/* Systemhälsa */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
