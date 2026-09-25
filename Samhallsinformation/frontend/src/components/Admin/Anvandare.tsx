@@ -2,6 +2,8 @@ import { useState, useEffect, Fragment } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createActivityLogEntry } from '../../api/activityLog'
 import { useAuth } from '../../context/AuthContext'
+import { useAnvandare } from '../../hooks/useAnvandare'
+import { kontoNotiserNyckel } from '../../lib/queryNycklar'
 import {
   fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
   fetchAdminUserSavedEvents, unsaveAdminUserEvent,
@@ -539,6 +541,7 @@ interface AnvandareProps {
 
 export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onDjuplänkKonsumerad, onPendingNotiser }: AnvandareProps) {
   const { aktivVy, email: egenEpostRå } = useAuth()
+  const anvandare = useAnvandare()
   const egenEpost = egenEpostRå?.toLowerCase() ?? null
   const queryClient = useQueryClient()
   const { data: adminUsers, isLoading: laddar, isError: laddningFel, refetch } = useQuery({
@@ -630,7 +633,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   }, [användare])
 
   const { data: kontoNotiser = [] } = useQuery({
-    queryKey: ['user-notifications'],
+    queryKey: kontoNotiserNyckel(anvandare),
     queryFn:  fetchUserNotifications,
     refetchInterval: 30_000,
   })

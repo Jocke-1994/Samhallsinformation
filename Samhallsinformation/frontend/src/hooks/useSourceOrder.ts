@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchUserSources, saveUserSources, type SourcePrefUpdate } from '../api/userSources'
 import { useAuth } from '../context/AuthContext'
+import { useAnvandare } from './useAnvandare'
+import { anvandarKallorNyckel } from '../lib/queryNycklar'
 import type { Source } from '../types'
 
 // Utloggade kan inte sortera (Sidebar visar ingen drag-and-drop-UI för dem
@@ -12,10 +14,11 @@ export function useSourceOrder(
 ): [string[], (order: string[]) => void] {
   const { isLoggedIn } = useAuth()
   const queryClient = useQueryClient()
+  const anvandare = useAnvandare()
 
   // Delar query-cache med Mina källor (samma nyckel) — ingen extra fetch.
   const { data: prefs = [] } = useQuery({
-    queryKey: ['user-sources'],
+    queryKey: anvandarKallorNyckel(anvandare),
     queryFn:  fetchUserSources,
     enabled:  isLoggedIn,
   })

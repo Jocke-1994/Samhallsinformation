@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAnvandare } from '../../hooks/useAnvandare'
+import { supportNotiserNyckel } from '../../lib/queryNycklar'
 import {
   fetchAdminTickets, fetchAdminTicket, fetchAgents, fetchSupportNotifications,
   replyAsAgent, setTicketStatus, assignTicket, setTicketReminder, setTicketArchived,
@@ -608,9 +610,10 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onDjuplÃ
     queryFn: () => fetchAdminTickets(),
     refetchInterval: 30_000,
   })
+  const anvandare = useAnvandare()
   const { data: agents = [] } = useQuery({ queryKey: ['support-agents'], queryFn: fetchAgents })
   const { data: notiser = [] } = useQuery({
-    queryKey: ['support-notifications'],
+    queryKey: supportNotiserNyckel(anvandare),
     queryFn: fetchSupportNotifications,
     refetchInterval: 30_000,
   })
