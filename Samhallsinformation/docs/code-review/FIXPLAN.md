@@ -21,7 +21,7 @@ Fynd refereras som **E{enhet}#{nummer}** (t.ex. E1#5 = enhet 1, fynd 5). Alla **
 | D1 | Support-rollen får åtkomst till Support-inboxen (Användarlistan skrivskyddad). | **Ja** | V3-10 |
 | D2 | Mitt flöde filtreras på servern i stället för klienten över 50 händelser. | **Ja** | V3-11 |
 | D3 | Mock-UI: märk tydligt MOCK i admin, ta bort/dölj medborgarmock. | **Enligt rekommendation** | V3-20 |
-| D4 | Token-lagring i localStorage + `chat.js` (från kundtjänstbotens egen server) utan CSP. Alternativ: (A) inget nu, (B) CSP först i "rapportera-läge", (C) refresh-token i httpOnly-cookie. **Beslut: A nu, B senare (V3-22), C parkerad — se "Parkerade alternativ" nedan.** | **Beslutad** | V3-22 |
+| D4 | Token-lagring i localStorage + två externa skript (`chat.js` från kundtjänstbotens egen server, och Google Analytics `gtag` — den senare upptäcktes först i V1-0b, missades i granskningen) utan CSP. Alternativ: (A) inget nu, (B) CSP först i "rapportera-läge", (C) refresh-token i httpOnly-cookie. **Beslut: A nu, B senare (V3-22), C parkerad — se "Parkerade alternativ" nedan.** | **Beslutad** | V3-22 |
 | D5 | Löst utan användarens hjälp: V1-5 *sätter* `VITE_USE_MOCK=false` i `.env.production` i stället för att ta bort filen. Fungerar oavsett vad Vercel har (Vercels miljövariabel vinner om den finns, annars gäller filen). Sessionsloggen (PR #218) bekräftar att variabeln sattes till `false` i Vercel. | **Löst** | V1-5 |
 | D6 | E-postnormalisering, **rekommendation:** normalisera till gemener + skiftlägesokänsligt uppslag framåt. Migreringen kontrollerar först om normaliseringen skulle ge dubbletter; ger den det avbryts den och loggar vilka konton det gäller (ingen tyst sammanslagning). | **Enligt rekommendation** | V2-11 |
 
@@ -39,7 +39,7 @@ Fynd refereras som **E{enhet}#{nummer}** (t.ex. E1#5 = enhet 1, fynd 5). Alla **
 - [ ] **P-F · V2-9, V3-17** — föreslå konkreta gränsvärden (ärendetextens längd, rate limit för anonyma ärenden, max antal Polisen-bevakningar per konto).
 - [ ] **P-G · V3-20** — inventera exakt vilka komponenter som märks MOCK, döljs eller tas bort (lista som användaren godkänner i förbifarten).
 - [ ] **P-H · Acceptanskriterier** — skriv en kort "klar när…"-lista per PR i våg 1–2 så en agent kan starta utan att fråga tillbaka.
-- [ ] **P-I · V3-22** — kartlägg vilka externa källor sidan faktiskt använder (underlag för CSP-tillåtelselistan och skript-vakten).
+- [ ] **P-I · V3-22** — kartlägg vilka externa källor sidan faktiskt använder (underlag för CSP-tillåtelselistan och skript-vakten). *Delvis gjort av V1-0b: `index.html` laddar `chat.js` och Google Tag Manager (`gtag`); Google-inloggningen laddar `accounts.google.com/gsi/client` dynamiskt. Kvar: connect-src, bilder, fonter, iframes för själva CSP-listan.*
 
 **Ordning:** P-D…P-I är Claudes och kan göras nu. P-A behövs när V1-9 ska starta, P-B före V2-14, P-C före V3-11 — inget av dem blockerar V1-1…V1-8.
 
@@ -50,8 +50,8 @@ Mål: sluta ljuga för användare och laga det som är trasigt i live-funktioner
 
 | PR | Innehåll | Fynd | Lager | Storlek | Test | Status |
 |---|---|---|---|---|---|---|
-| V1-0a | **Testfundament backend:** delad SQLite-`TestDb`-hjälpare + baslinje-guard över anonyma endpoints (G4) | E8 fas 0 | BE | S | guard | ☐ |
-| V1-0b | **Testfundament frontend:** Vitest + React Testing Library + jsdom-uppsättning, ett röktest | E8 fas 2 | FE | S | rök | ☐ |
+| V1-0a | **Testfundament backend:** delad SQLite-`TestDb`-hjälpare + baslinje-guard över anonyma endpoints (G4) | E8 fas 0 | BE | S | guard | ◐ PR "Testfundament backend: SQLite-TestDb och guard över anonyma endpoints" öppen (#598), CI grön, ej mergad |
+| V1-0b | **Testfundament frontend:** Vitest + React Testing Library + jsdom-uppsättning, ett röktest | E8 fas 2 | FE | S | rök | ◐ PR "Testfundament frontend" öppen (#599), CI körs, ej mergad |
 | V1-1 | **Lösenordsbyte på riktigt:** klient mot `PUT /api/auth/me/password`, felvisning, dölj kortet för Google-konton, serverside lösenordsregel (min 8) i `ChangePassword`, återkalla refresh-tokens vid byte. Kortet är **synligt i produktion idag** (ingen override på `konto_losenord`). | E7#1 (+ del av E1#9) | FE+BE | M | enhet+FE | ☐ |
 | V1-2 | **Webhook tål trasig indata:** `int.TryParse` + längdgräns på ticketnummer, try/catch runt JSON, idempotens på svix-id så Resend-retries inte ger dubbla ärenden | E1#5 | BE | M | enhet (webhook-svit) | ☐ |
 | V1-3 | **Ta bort `PreferencesController`** (öppen utan auth, oanvänd av frontend). Tabellen `UserPreferences` rörs inte. | E1#4 | BE | S | guard G4 | ☐ |
@@ -169,7 +169,7 @@ Mål: städa sådant som inte gör skada idag. Batchas per lager; körs sist ell
 - **Vad det är:** 30-dagars refresh-token flyttas från localStorage till en cookie som JavaScript inte kan läsa. Stark skyddsnivå, men en större ombyggnad av login/refresh/logout i både backend och frontend.
 - **Trolig komplikation (overifierad):** frontend (Vercel) och API (`…up.railway.app`) ligger på olika sajter, så en cookie skulle bli tredjepartscookie och blockeras av allt fler webbläsare. Alt C kräver därför troligen att API:t flyttas till en subdomän under samma sajt som frontend (t.ex. `api.samhallsinformation.se`). Undersök det innan något beslut.
 - **Ta upp C igen när något av detta inträffar:**
-  1. Fler externa skript än `chat.js` ska läggas in på sidorna (analys, reklam, widgetar).
+  1. Fler externa skript än `chat.js` och Google Analytics (`gtag`) ska läggas in på sidorna (analys, reklam, widgetar).
   2. CSP-rapporterna från V3-22 visar oväntade skriptkällor.
   3. Tjänsten ska hantera känsligare data eller betalningar/anslag (jfr monetiseringsidén).
   4. Ett säkerhetsincident-tillbud, extern penetrationstest eller granskning kräver det.

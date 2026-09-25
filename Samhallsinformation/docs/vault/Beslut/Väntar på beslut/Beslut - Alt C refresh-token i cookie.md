@@ -12,8 +12,9 @@ ska köras av övervakningen (se [[Code-review 2026-09-25]], V1-9) där det går
 
 ## Bakgrund
 Vid code review 2026-09-25 (fynd E5#11) noterades att både access-token och
-30-dagars refresh-token ligger i `localStorage`, samtidigt som ett skript
-(`chat.js`, från kundtjänstbotens egen server) körs på alla sidor och alltså
+30-dagars refresh-token ligger i `localStorage`, samtidigt som externa skript
+(`chat.js` från kundtjänstbotens egen server, och Google Analytics/Tag Manager
+`gtag` med Consent Mode v2) körs på alla sidor och alltså
 kan läsa dem. Ingen bekräftad exploit — en arkitekturrisk, inte ett hål idag.
 
 ## Beslut 2026-09-25
@@ -34,7 +35,7 @@ att API:t flyttas till en subdomän under samma sajt som frontend, t.ex.
 Räcker med **ett** kryss för att alt C ska tas upp till beslut.
 
 - [ ] **1. Ny extern skriptkälla** läggs in på sidorna (analys, reklam,
-  widget) utöver `chat.js`. *Upptäcks:* skript-vakt i CI (test som läser
+  widget) utöver `chat.js` och Google Analytics (`gtag`). *Upptäcks:* skript-vakt i CI (test som läser
   `index.html` mot en tillåtelselista, byggs i V1-0b).
 - [ ] **2. CSP-rapporter visar oväntade skriptkällor.** *Upptäcks:* CSP i
   rapportera-läge (V3-22) loggar till backend → larm i övervakningen.
