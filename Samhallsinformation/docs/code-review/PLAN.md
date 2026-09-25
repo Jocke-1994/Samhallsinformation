@@ -2,6 +2,8 @@
 
 Startad 2026-09-25 på `main` @ `1da5cf1`. Syfte: granska hela kodbasen i riskordning, dokumentera varje enhet så att samma del inte behöver granskas om senare (om inte koden ändrats sedan den angivna commit-SHA:n).
 
+> **Granskningen är klar (enhet 1–8, 2026-09-25).** Åtgärdsplanen med alla 90 rangordnade fynd fördelade på 56 PR:ar i fyra vågor: [FIXPLAN.md](FIXPLAN.md).
+
 ## Principer
 - Varje enhet körs som `/code-review <sökväg> <nivå>`. Ingen `--fix` under granskningen — fynd samlas först.
 - Fynd sparas per enhet i `docs/code-review/enhet-N.md` med **granskad commit-SHA**. Ren dokumentation pushas direkt mot main.
