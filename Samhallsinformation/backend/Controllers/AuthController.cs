@@ -296,9 +296,18 @@ public class AuthController : ControllerBase
         if (user.DeletionScheduledAt != null)
             return BadRequest(new { error = "Radering är redan schemalagd för ditt konto." });
 
+        // Ett konto som en admin redan spärrat får inte använda radering för att komma runt spärren
+        // (access-token gäller ≤15 min efter avstängning, och ångra-länken skulle annars häva den).
+        if (!user.IsActive)
+            return StatusCode(403, new { error = "Ditt konto är spärrat och kan inte raderas härifrån. Kontakta support om du vill ha hjälp med ditt konto." });
+
+        // En admin som raderar sig själv skulle spärra kontot — låt aldrig den sista aktiva admin göra det.
+        if (await AccountSuspension.IsLastActiveAdminAsync(_db, user))
+            return BadRequest(new { error = "Du är den sista aktiva administratören och kan inte radera ditt konto." });
+
         user.IsActive            = false;
         user.SuspendedAt       ??= DateTime.UtcNow;
-        user.SuspendedReason     = "Radering begärd av användaren (GDPR) — raderas automatiskt om 24 timmar";
+        user.SuspendedReason     = AccountSuspension.UserDeletionReason;
         user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24);
         user.DeletionCancelToken = Guid.NewGuid().ToString("N");
 
