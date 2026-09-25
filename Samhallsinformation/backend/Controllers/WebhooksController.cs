@@ -35,6 +35,20 @@ public class WebhooksController : ControllerBase
     private static readonly Regex TicketAdressMönster = new(@"^svar\+(\d+)@", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private const string InfoAdress = "info@samhallsinformation.se";
 
+    // Högst 9 siffror i ärendenumret — alltid inom int-intervallet (int.MaxValue har 10).
+    private const int MaxTicketSiffror = 9;
+
+    // Idempotens utan schemaändring: webhooken sparar varken svix-id eller email_id, så samma
+    // mejl som levereras igen (Resend-retry efter förlorat svar, replay inom signaturens
+    // 5-minutersfönster) känns igen på samma avsändare + samma text inom detta fönster.
+    // Avvägning: ett medvetet identiskt svar ("Tack!") inom timmen från samma ärende sväljs.
+    // Den robusta lösningen är en unik kolumn för email_id (kräver migrering) — se PR-texten.
+    private static readonly TimeSpan DubblettFönster = TimeSpan.FromHours(1);
+
+    // Serialiserar dubblettkoll + insert (och MaxAsync+1) så två samtidiga leveranser av samma
+    // mejl inte bägge passerar kollen. Gäller bara inom en processinstans.
+    private static readonly SemaphoreSlim _bearbetningsLås = new(1, 1);
+
     private readonly AppDbContext _db;
     private readonly IEmailService _email;
     private readonly IConfiguration _config;
@@ -69,24 +83,27 @@ public class WebhooksController : ControllerBase
             return Unauthorized();
         }
 
-        using var doc = JsonDocument.Parse(rawBody);
-        var root = doc.RootElement;
-        if (!root.TryGetProperty("type", out var typeEl) || typeEl.GetString() != "email.received")
-            return Ok(); // andra event-typer (delivered, bounced m.fl.) ignoreras tyst
+        // Payloaden är signerad av Svix men innehållet (t.ex. "to") styrs av mejlets
+        // avsändare — parsningen måste tåla vilken form som helst. Resend/Svix
+        // retriar på icke-2xx (och kan till slut stänga av endpointen), så en payload vi
+        // inte kan tolka besvaras med 200 efter loggning: en retry skulle ge samma resultat.
+        var payload = ParseraInkorgsPayload(rawBody);
+        if (payload == null) return Ok();
 
-        var data = root.GetProperty("data");
-        var emailId = data.TryGetProperty("email_id", out var idEl) ? idEl.GetString() : null;
-        var fromRaw = data.TryGetProperty("from", out var fromEl) ? fromEl.GetString() ?? "" : "";
-        var subjectRaw = data.TryGetProperty("subject", out var subjectEl) ? subjectEl.GetString() : null;
-        var toAdresser = data.TryGetProperty("to", out var toEl)
-            ? toEl.EnumerateArray().Select(e => e.GetString() ?? "").ToList()
-            : [];
-        if (emailId == null) return Ok();
+        var (emailId, fromRaw, subjectRaw, toAdresser) = payload.Value;
 
         var ticketAdress = toAdresser.FirstOrDefault(a => TicketAdressMönster.IsMatch(a));
         if (ticketAdress != null)
         {
-            await HanteraSvarPåBefintligtÄrendeAsync(emailId, fromRaw, ticketAdress);
+            var siffror = TicketAdressMönster.Match(ticketAdress).Groups[1].Value;
+            if (siffror.Length > MaxTicketSiffror || !int.TryParse(siffror, out var ticketNumber))
+            {
+                _logger.LogWarning(
+                    "Resend-webhook: ogiltigt ärendenummer i mottagaradressen (för många siffror eller utanför intervall) för email_id {EmailId} — ignorerad.",
+                    emailId);
+                return Ok();
+            }
+            await HanteraSvarPåBefintligtÄrendeAsync(emailId, fromRaw, ticketNumber);
             return Ok();
         }
 
@@ -99,9 +116,58 @@ public class WebhooksController : ControllerBase
         return Ok(); // annan mottagaradress vi inte hanterar
     }
 
-    private async Task HanteraSvarPåBefintligtÄrendeAsync(string emailId, string fromRaw, string ticketAdress)
+    // Defensiv tolkning av Resends payload. Returnerar null (och loggar) om det inte är ett
+    // "email.received"-event vi kan agera på: ogiltig JSON, fel form på root/data, saknat eller
+    // felaktigt typat email_id eller from, annan event-typ. Fel typer på subject/to behandlas som
+    // "saknas" i stället för att kasta.
+    private (string EmailId, string From, string? Subject, List<string> To)? ParseraInkorgsPayload(string rawBody)
     {
-        var ticketNumber = int.Parse(TicketAdressMönster.Match(ticketAdress).Groups[1].Value);
+        try
+        {
+            using var doc = JsonDocument.Parse(rawBody);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) return LoggaOgiltig("root är inte ett objekt");
+
+            if (!root.TryGetProperty("type", out var typeEl) || typeEl.ValueKind != JsonValueKind.String
+                || typeEl.GetString() != "email.received")
+                return null; // andra event-typer (delivered, bounced m.fl.) ignoreras tyst
+
+            if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object)
+                return LoggaOgiltig("data saknas eller är inte ett objekt");
+
+            var emailId = HämtaSträng(data, "email_id");
+            if (string.IsNullOrWhiteSpace(emailId)) return LoggaOgiltig("email_id saknas eller är inte en sträng");
+
+            var toAdresser = new List<string>();
+            if (data.TryGetProperty("to", out var toEl) && toEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var e in toEl.EnumerateArray())
+                    if (e.ValueKind == JsonValueKind.String) toAdresser.Add(e.GetString() ?? "");
+            }
+
+            // Utan avsändare går varken spoofingkontrollen eller ett svar att göra något av.
+            var from = HämtaSträng(data, "from");
+            if (string.IsNullOrWhiteSpace(from)) return LoggaOgiltig("from saknas eller är inte en sträng");
+
+            return (emailId, from, HämtaSträng(data, "subject"), toAdresser);
+        }
+        catch (JsonException ex)
+        {
+            return LoggaOgiltig($"ogiltig JSON ({ex.Message})");
+        }
+
+        (string, string, string?, List<string>)? LoggaOgiltig(string orsak)
+        {
+            _logger.LogWarning("Resend-webhook: payload kunde inte tolkas ({Orsak}) — ignorerad.", orsak);
+            return null;
+        }
+    }
+
+    private static string? HämtaSträng(JsonElement obj, string namn) =>
+        obj.TryGetProperty(namn, out var el) && el.ValueKind == JsonValueKind.String ? el.GetString() : null;
+
+    private async Task HanteraSvarPåBefintligtÄrendeAsync(string emailId, string fromRaw, int ticketNumber)
+    {
         var fromEpost = ParseraEpostadress(fromRaw);
 
         var ticket = await _db.SupportTickets
@@ -138,20 +204,50 @@ public class WebhooksController : ControllerBase
             return;
         }
 
-        _db.SupportTicketMessages.Add(new SupportTicketMessage
+        await _bearbetningsLås.WaitAsync();
+        try
         {
-            TicketId   = ticket.Id,
-            SenderType = "user",
-            Text       = sparadText,
-        });
-        ticket.UpdatedAt = DateTime.UtcNow;
-        ticket.LastUserMessageAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
+            // Idempotens (Resend-retry / replay): samma text från samma ärende inom
+            // dubblettfönstret är samma mejl levererat igen. Se DubblettFönster.
+            var gräns = DateTime.UtcNow - DubblettFönster;
+            var redanSparat = await _db.SupportTicketMessages.AnyAsync(m =>
+                m.TicketId == ticket.Id && m.SenderType == "user" && m.Text == sparadText && m.CreatedAt >= gräns);
+            if (redanSparat)
+            {
+                _logger.LogInformation(
+                    "Resend-webhook: email_id {EmailId} redan mottaget för ärende {TicketNumber} (dubblettleverans) — hoppar över.",
+                    emailId, ticketNumber);
+                return;
+            }
 
-        await _aktivitetslogg.LogAsync(
-            AktörTyper.System, LoggTyper.Ärende,
-            $"Svar mottaget via e-post — {ticket.Subject}", $"Mottaget via Resend inbound — SUP-{ticket.TicketNumber:D4}",
-            relateratÄrendeId: ticket.Id);
+            _db.SupportTicketMessages.Add(new SupportTicketMessage
+            {
+                TicketId   = ticket.Id,
+                SenderType = "user",
+                Text       = sparadText,
+            });
+            ticket.UpdatedAt = DateTime.UtcNow;
+            ticket.LastUserMessageAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+        finally
+        {
+            _bearbetningsLås.Release();
+        }
+
+        // Loggning och push är "best effort" efter lyckad SaveChanges: ett fel här får inte ge
+        // 500, då retriar Resend och meddelandet sparas en gång till.
+        try
+        {
+            await _aktivitetslogg.LogAsync(
+                AktörTyper.System, LoggTyper.Ärende,
+                $"Svar mottaget via e-post — {ticket.Subject}", $"Mottaget via Resend inbound — SUP-{ticket.TicketNumber:D4}",
+                relateratÄrendeId: ticket.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Kunde inte aktivitetsloggen för inbound-svar på ärende {TicketNumber}", ticket.TicketNumber);
+        }
 
         try
         {
@@ -190,33 +286,65 @@ public class WebhooksController : ControllerBase
             return;
         }
 
-        var nextNumber = (await _db.SupportTickets.MaxAsync(t => (int?)t.TicketNumber) ?? 0) + 1;
-        var ticket = new SupportTicket
+        SupportTicket ticket;
+        await _bearbetningsLås.WaitAsync();
+        try
         {
-            TicketNumber      = nextNumber,
-            Subject           = string.IsNullOrWhiteSpace(subjectRaw) ? "Mejl till info@" : subjectRaw,
-            Category          = "Allmän förfrågan",
-            Channel           = "info-mejl",
-            ContactName       = fromNamn,
-            ContactEmail      = fromAdress,
-            InboundAddress    = InfoAdress,
-            LastUserMessageAt = DateTime.UtcNow,
-        };
-        _db.SupportTickets.Add(ticket);
+            // Idempotens (Resend-retry / replay): ett info-ärende från samma avsändare med
+            // samma text inom dubblettfönstret är samma mejl levererat igen. Se DubblettFönster.
+            var gräns = DateTime.UtcNow - DubblettFönster;
+            var redanSkapat = await _db.SupportTicketMessages.AnyAsync(m =>
+                m.Ticket.Channel == "info-mejl" && m.Ticket.ContactEmail == fromAdress
+                && m.SenderType == "user" && m.Text == sparadText && m.CreatedAt >= gräns);
+            if (redanSkapat)
+            {
+                _logger.LogInformation(
+                    "Resend-webhook: email_id {EmailId} till {InfoAdress} har redan ett ärende (dubblettleverans) — hoppar över.",
+                    emailId, InfoAdress);
+                return;
+            }
 
-        _db.SupportTicketMessages.Add(new SupportTicketMessage
+            // Obs: MaxAsync + 1 är racy mot samtidiga skapanden från andra instanser/SupportController
+            // (unikt index ger då DbUpdateException). Låset här skyddar bara inbound-vägen i en instans.
+            var nextNumber = (await _db.SupportTickets.MaxAsync(t => (int?)t.TicketNumber) ?? 0) + 1;
+            ticket = new SupportTicket
+            {
+                TicketNumber      = nextNumber,
+                Subject           = string.IsNullOrWhiteSpace(subjectRaw) ? "Mejl till info@" : subjectRaw,
+                Category          = "Allmän förfrågan",
+                Channel           = "info-mejl",
+                ContactName       = fromNamn,
+                ContactEmail      = fromAdress,
+                InboundAddress    = InfoAdress,
+                LastUserMessageAt = DateTime.UtcNow,
+            };
+            _db.SupportTickets.Add(ticket);
+
+            _db.SupportTicketMessages.Add(new SupportTicketMessage
+            {
+                Ticket     = ticket,
+                SenderType = "user",
+                Text       = sparadText,
+            });
+
+            await _db.SaveChangesAsync();
+        }
+        finally
         {
-            Ticket     = ticket,
-            SenderType = "user",
-            Text       = sparadText,
-        });
+            _bearbetningsLås.Release();
+        }
 
-        await _db.SaveChangesAsync();
-
-        await _aktivitetslogg.LogAsync(
-            AktörTyper.System, LoggTyper.Ärende,
-            $"Ärende öppnat via {InfoAdress} — {ticket.Subject}", $"{ticket.ContactName ?? "Okänd"} — {ticket.Category}",
-            relateratÄrendeId: ticket.Id);
+        try
+        {
+            await _aktivitetslogg.LogAsync(
+                AktörTyper.System, LoggTyper.Ärende,
+                $"Ärende öppnat via {InfoAdress} — {ticket.Subject}", $"{ticket.ContactName ?? "Okänd"} — {ticket.Category}",
+                relateratÄrendeId: ticket.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Kunde inte aktivitetsloggen för nytt info@-ärende {TicketNumber}", ticket.TicketNumber);
+        }
 
         try
         {
