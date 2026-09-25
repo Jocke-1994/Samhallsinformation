@@ -48,9 +48,16 @@ describe('beraknaRefreshFordrojning', () => {
     expect(beraknaRefreshFordrojning(NU + 15 * MIN, NU)).toBe(13 * MIN)
   })
 
-  it('aldrig under golvet, även när token redan ser utgången ut (klockskillnad)', () => {
-    expect(beraknaRefreshFordrojning(NU + MIN, NU)).toBe(MIN_REFRESH_FORDROJNING_MS)
-    expect(beraknaRefreshFordrojning(NU - 5 * MIN, NU)).toBe(MIN_REFRESH_FORDROJNING_MS)
+  it('golv för en nyss erhållen token som ser utgången ut (klockskillnad)', () => {
+    expect(beraknaRefreshFordrojning(NU + MIN, NU, null, 0)).toBe(MIN_REFRESH_FORDROJNING_MS)
+    expect(beraknaRefreshFordrojning(NU - 5 * MIN, NU, null, 5_000)).toBe(MIN_REFRESH_FORDROJNING_MS)
+  })
+
+  it('inget golv när token lästs in vid start (null) eller erhölls för länge sedan', () => {
+    expect(beraknaRefreshFordrojning(NU - 5 * MIN, NU, null, null)).toBe(0)
+    expect(beraknaRefreshFordrojning(NU + MIN, NU, null, null)).toBe(0)
+    expect(beraknaRefreshFordrojning(NU - 5 * MIN, NU, null, MIN_REFRESH_FORDROJNING_MS)).toBe(0)
+    expect(beraknaRefreshFordrojning(NU + 15 * MIN, NU, null, 10 * MIN)).toBe(13 * MIN)
   })
 
   it('kapas av token-livslängden när iat finns (klockan går efter)', () => {

@@ -106,6 +106,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // (så att timer och manuellt refreshSession() inte roterar token parallellt).
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const refreshPagaendeRef = useRef<Promise<void> | null>(null)
+  // När access-token senast erhölls från servern (null = inläst ur localStorage vid start)
+  const tokenErhallenRef = useRef<number | null>(null)
   const forsokRefreshRef = useRef<((forsok: number) => Promise<void>) | null>(null)
 
   const avbrytRetry = useCallback(() => {
@@ -133,6 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('si_refresh_token', data.refreshToken)
     localStorage.setItem('si_logged_in', 'true')
     refreshTokenRef.current = data.refreshToken
+    tokenErhallenRef.current = Date.now()
     const newRoll = parseRole(data.accessToken)
     localStorage.setItem('si_aktiv_vy', newRoll)
     setAktivVy(newRoll)
@@ -185,12 +188,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Schemalägg nästa refresh ~2 min innan access-token går ut. Körs om varje
   // gång token ändras (login/register/refresh) så nästa refresh läggs på nytt.
-  // Golvet i beraknaRefreshFordrojning hindrar en tät loop vid klockskillnad.
+  // Golvet i beraknaRefreshFordrojning (bara för en nyss erhållen token) hindrar
+  // en tät loop vid klockskillnad; en utgången token vid start refreshas direkt.
   useEffect(() => {
     if (!token) return
     const exp = decodeExp(token)
     if (exp === null) return
-    const delay = beraknaRefreshFordrojning(exp, Date.now(), decodeIat(token))
+    const nu = Date.now()
+    const msSedan = tokenErhallenRef.current === null ? null : nu - tokenErhallenRef.current
+    const delay = beraknaRefreshFordrojning(exp, nu, decodeIat(token), msSedan)
     const timer = setTimeout(doRefresh, delay)
     return () => clearTimeout(timer)
   }, [token, doRefresh])
@@ -235,6 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // helt orelaterad sparning.
   function setAccessToken(newToken: string) {
     localStorage.setItem('si_token', newToken)
+    tokenErhallenRef.current = Date.now()
     setToken(newToken)
   }
 
