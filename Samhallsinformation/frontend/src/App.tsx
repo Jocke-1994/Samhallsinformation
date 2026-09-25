@@ -18,6 +18,8 @@ import BevakningsToastHost from './components/NewsFeed/BevakningsToastHost'
 import OmPage from './pages/OmPage'
 import VillkorPage from './pages/VillkorPage'
 import UppdateringarPage from './pages/UppdateringarPage'
+import NotFoundPage from './pages/NotFoundPage'
+import ErrorBoundary from './components/common/ErrorBoundary'
 import { fetchSources } from './api/sources'
 import { fetchUserSources } from './api/userSources'
 import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
@@ -249,6 +251,8 @@ function EnMaintenanceBanner({ banner }: { banner: { id: string; message: string
 // sidomenyn. De enskilda sidorna (HomePage m.fl.) är h-full, inte h-screen,
 // så de fyller exakt det som blir kvar under banderollerna.
 export default function App() {
+  const location = useLocation()
+
   return (
     <div className="h-dvh flex flex-col">
       <div className="flex flex-col shrink-0">
@@ -257,21 +261,27 @@ export default function App() {
         <EmailVerificationBanner />
       </div>
       <div className="flex-1 min-h-0">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<OnboardingPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
-          <Route path="/cancel-deletion" element={<CancelDeletionPage />} />
-          <Route path="/profil" element={<ProfilePage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/om" element={<OmPage />} />
-          <Route path="/villkor" element={<VillkorPage />} />
-          <Route path="/uppdateringar" element={<UppdateringarPage />} />
-        </Routes>
+        {/* Ett kastande sidfel ska bara ersätta route-ytan — banderoller och
+            cookie-banner ligger utanför. location.key nollställer felet vid
+            varje navigering så att användaren inte fastnar i felvyn. */}
+        <ErrorBoundary resetKeys={[location.key]}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<OnboardingPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
+            <Route path="/cancel-deletion" element={<CancelDeletionPage />} />
+            <Route path="/profil" element={<ProfilePage />} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/om" element={<OmPage />} />
+            <Route path="/villkor" element={<VillkorPage />} />
+            <Route path="/uppdateringar" element={<UppdateringarPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </ErrorBoundary>
       </div>
       <CookieConsent />
       <BevakningsToastHost />
