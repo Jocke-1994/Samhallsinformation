@@ -14,6 +14,7 @@ import Datahantering from './Datahantering'
 import SupportVisningsnamnKort from './SupportVisningsnamnKort'
 import { useFlags } from '../../../context/FeatureFlagsContext'
 import { useAuth } from '../../../context/AuthContext'
+import { visaFel } from '../../../lib/felmeddelande'
 
 export default function Konto() {
   const [namn, setNamn] = useState<FormField>(makeField(''))
@@ -28,6 +29,9 @@ export default function Konto() {
   const [emailPassword, setEmailPassword] = useState('')
   const [pendingEmail, setPendingEmail] = useState<string | null>(null)
   const [laddningsfel, setLaddningsfel] = useState(false)
+  // Ett skrivande anrop i taget i Kontouppgifter (namn/e-postbyte): knapparna
+  // låses medan det pågår, så ett dubbeltryck inte ger två mejl eller en 429.
+  const [sparar, setSparar] = useState(false)
   const location = useLocation()
   const [highlightId, setHighlightId] = useState<string | null>(location.state?.highlightId ?? null)
   const flaggor = useFlags()
@@ -66,18 +70,23 @@ export default function Konto() {
     field: 'name',
     validate: () => string,
   ) {
+    if (sparar) return
     const err = validate()
     if (err) { setter(prev => ({ ...prev, error: err, saved: false })); return }
+    setSparar(true)
     try {
       const res = await updateMyProfile({ [field]: value })
       setAccessToken(res.accessToken)
       setter(prev => ({ ...prev, saved: true, error: '' }))
     } catch (e) {
-      setter(prev => ({ ...prev, error: e instanceof Error ? e.message : 'Något gick fel.', saved: false }))
+      setter(prev => ({ ...prev, error: visaFel(e, 'Namnet kunde inte sparas. Försök igen.'), saved: false }))
+    } finally {
+      setSparar(false)
     }
   }
 
   async function handleRequestEmailChange() {
+    if (sparar) return
     const value = epost.value.trim()
     if (!value.includes('@')) {
       setEpost(prev => ({ ...prev, error: 'Ange en giltig e-postadress.', saved: false }))
@@ -87,22 +96,31 @@ export default function Konto() {
       setEpost(prev => ({ ...prev, error: 'Ange ditt lösenord för att bekräfta bytet.', saved: false }))
       return
     }
+    setSparar(true)
     try {
       await requestEmailChange(value, emailPassword || undefined)
       setPendingEmail(value)
       setEmailPassword('')
       setEpost(prev => ({ ...prev, error: '' }))
     } catch (e) {
-      setEpost(prev => ({ ...prev, error: e instanceof Error ? e.message : 'Något gick fel.', saved: false }))
+      setEpost(prev => ({ ...prev, error: visaFel(e, 'Bekräftelsen kunde inte skickas. Försök igen om en stund.'), saved: false }))
+    } finally {
+      setSparar(false)
     }
   }
 
   async function handleCancelEmailChange() {
+    if (sparar) return
+    setSparar(true)
     try {
       await cancelEmailChange()
       setPendingEmail(null)
+      setEpost(prev => ({ ...prev, error: '' }))
     } catch {
-      // Ingen synlig feedback behövs — bannern ligger kvar och avbryt går att prova igen.
+      // Bannern ligger kvar (bytet är fortfarande aktivt), så felet måste synas.
+      setEpost(prev => ({ ...prev, error: 'Bytet kunde inte avbrytas. Försök igen.', saved: false }))
+    } finally {
+      setSparar(false)
     }
   }
 
@@ -140,6 +158,7 @@ export default function Konto() {
             epost={epost}
             pendingEmail={pendingEmail}
             requiresPassword={authProvider === 'local'}
+            sparar={sparar}
             emailPassword={emailPassword}
             onUpdateNamn={value => update(setNamn, value)}
             onUpdateEpost={value => update(setEpost, value)}
