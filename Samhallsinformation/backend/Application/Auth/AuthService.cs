@@ -2,6 +2,7 @@ namespace Samhallsinformation.Application.Auth;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -12,6 +13,7 @@ public class AuthService : IAuthService
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
     private const int MaxEmailLength = 254; // RFC 5321-gränsen för en adress
 
+    private readonly ILogger<AuthService>?    _logger;
     private readonly AppDbContext             _db;
     private readonly ITokenService            _tokens;
     private readonly IPasswordHasher<User>    _hasher;
@@ -22,9 +24,10 @@ public class AuthService : IAuthService
     private readonly LoginThrottle            _loginThrottle;
     private readonly string                   _frontendUrl;
 
-    public AuthService(AppDbContext db, ITokenService tokens, IPasswordHasher<User> hasher, IEmailService email, IGoogleTokenValidator google, IPushNotificationService push, IAktivitetsloggService aktivitetslogg, LoginThrottle loginThrottle, IConfiguration config)
+    public AuthService(AppDbContext db, ITokenService tokens, IPasswordHasher<User> hasher, IEmailService email, IGoogleTokenValidator google, IPushNotificationService push, IAktivitetsloggService aktivitetslogg, LoginThrottle loginThrottle, IConfiguration config, ILogger<AuthService>? logger = null)
     {
         _loginThrottle = loginThrottle;
+        _logger      = logger;
         _db          = db;
         _tokens      = tokens;
         _hasher      = hasher;
@@ -77,7 +80,7 @@ public class AuthService : IAuthService
         await _db.SaveChangesAsync();
 
         _ = _email.SendWelcomeAsync(user.Email, user.Name);
-        await PushDispatcher.DispatchNewUserAsync(_db, _push, _frontendUrl, user);
+        await NotifyStaffNewUserAsync(user);
         await _aktivitetslogg.LogAsync(AktörTyper.System, LoggTyper.Registrering, "Ny registrering", $"{user.Name} — via Lösenord");
 
         var verificationToken = new EmailVerificationToken { UserId = user.Id };
@@ -88,6 +91,21 @@ public class AuthService : IAuthService
         _ = _email.SendEmailVerificationAsync(user.Email, user.Name, verifyLink);
 
         return await IssueTokensAsync(user, isNewUser: true);
+    }
+
+    // Push till personalen är en sidoeffekt EFTER att kontot är sparat: ett fel eller
+    // en timeout där får aldrig ge registranten 500 (kontot finns redan, verifierings-
+    // token skulle utebli och omförsök ge 409). PushFanOut har egen timeout per enhet.
+    private async Task NotifyStaffNewUserAsync(User user)
+    {
+        try
+        {
+            await PushDispatcher.DispatchNewUserAsync(_db, _push, _frontendUrl, user);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Kunde inte skicka ny-användare-push för {UserId}", user.Id);
+        }
     }
 
     public async Task<AuthResult> LoginAsync(string email, string password)
@@ -166,7 +184,7 @@ public class AuthService : IAuthService
             await _db.SaveChangesAsync();
 
             _ = _email.SendWelcomeAsync(user.Email, user.Name);
-            await PushDispatcher.DispatchNewUserAsync(_db, _push, _frontendUrl, user);
+            await NotifyStaffNewUserAsync(user);
             await _aktivitetslogg.LogAsync(AktörTyper.System, LoggTyper.Registrering, "Ny registrering", $"{user.Name} — via Google");
         }
         else if (user.AuthProvider == "local" && !user.EmailVerified && (user.Role == "Admin" || user.Role == "Support"))
