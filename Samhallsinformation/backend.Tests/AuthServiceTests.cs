@@ -535,7 +535,7 @@ public class AuthServiceTests
     {
         using var db = NewDb();
         var google = Substitute.For<IGoogleTokenValidator>();
-        google.ValidateAsync("good-token").Returns(new GooglePayload("ny@example.com", "Ny Person"));
+        google.ValidateAsync("good-token").Returns(new GooglePayload("ny@example.com", "Ny Person", true));
 
         var service = NewService(db, google: google);
 
@@ -551,7 +551,7 @@ public class AuthServiceTests
     {
         using var db = NewDb();
         var google = Substitute.For<IGoogleTokenValidator>();
-        google.ValidateAsync("good-token").Returns(new GooglePayload("ny@example.com", "Ny Person"));
+        google.ValidateAsync("good-token").Returns(new GooglePayload("ny@example.com", "Ny Person", true));
 
         var tokens = Substitute.For<ITokenService>();
         tokens.GenerateAccessToken(Arg.Any<User>()).Returns("access-token");
@@ -580,12 +580,12 @@ public class AuthServiceTests
     public async Task GoogleLoginAsync_ExistingEmail_LogsInWithoutCreatingDuplicate()
     {
         using var db = NewDb();
-        var existing = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "hashed" };
+        var existing = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "hashed", EmailVerified = true };
         db.Users.Add(existing);
         await db.SaveChangesAsync();
 
         var google = Substitute.For<IGoogleTokenValidator>();
-        google.ValidateAsync("good-token").Returns(new GooglePayload("ada@example.com", "Ada"));
+        google.ValidateAsync("good-token").Returns(new GooglePayload("ada@example.com", "Ada", true));
 
         var tokens = Substitute.For<ITokenService>();
         tokens.GenerateAccessToken(Arg.Any<User>()).Returns("access-token");

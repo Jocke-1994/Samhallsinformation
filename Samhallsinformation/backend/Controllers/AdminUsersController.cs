@@ -38,8 +38,9 @@ public class AdminUsersController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(email)) return BadRequest("email krävs.");
 
+        var normalized = EmailNormalizer.Normalize(email);
         var user = await _db.Users
-            .Where(u => u.Email == email)
+            .Where(u => u.Email.ToLower() == normalized)
             .Select(u => new { u.Id, u.Name, u.Email })
             .FirstOrDefaultAsync();
 

@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Application.FeatureFlags;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -205,7 +206,8 @@ public class AdminFeatureIdeaController : ControllerBase
         var idea = await _db.FeatureIdeas.FindAsync(id);
         if (idea == null) return NotFound();
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == req.Email);
+        var normalizedEmail = EmailNormalizer.Normalize(req.Email);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
         if (user == null) return NotFound("Ingen användare med den e-posten.");
 
         var finnsRedan = await _db.FeatureIdeaTesters.AnyAsync(t => t.FeatureIdeaId == id && t.UserId == user.Id);
