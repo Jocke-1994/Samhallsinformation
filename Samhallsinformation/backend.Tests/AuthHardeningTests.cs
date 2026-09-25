@@ -43,7 +43,7 @@ public class AuthHardeningTests
 
         return new AuthService(db, tokens, Hasher, email ?? Substitute.For<IEmailService>(),
             google ?? Substitute.For<IGoogleTokenValidator>(), Substitute.For<IPushNotificationService>(),
-            Substitute.For<IAktivitetsloggService>(), config);
+            Substitute.For<IAktivitetsloggService>(), new LoginThrottle(), config);
     }
 
     private static User LocalUser(string email, string password, bool verified)

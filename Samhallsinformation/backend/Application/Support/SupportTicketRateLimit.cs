@@ -2,6 +2,7 @@ namespace Samhallsinformation.Application.Support;
 
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using Samhallsinformation.Application.RateLimiting;
 
 /// <summary>
 /// Rate limit-policy för <c>POST /api/support/tickets</c>. Endpointen är öppen
@@ -27,7 +28,7 @@ public static class SupportTicketRateLimit
         return RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: userId != null
                 ? $"user:{userId}"
-                : $"ip:{httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
+                : $"ip:{ClientIpPartition.KeyFor(httpContext.Connection.RemoteIpAddress)}",
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = userId != null ? AuthenticatedPermitLimit : AnonymousPermitLimit,

@@ -337,7 +337,11 @@ public class AuthController : ControllerBase
     private IActionResult ToActionResult(AuthResult result)
     {
         if (!result.Success)
+        {
+            if (result.RetryAfter is { } retryAfter)
+                Response.Headers.RetryAfter = ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString();
             return StatusCode(result.StatusCode, new { error = result.Error });
+        }
 
         if (result.Tokens != null)
             return Ok(new
