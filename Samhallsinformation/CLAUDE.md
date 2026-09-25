@@ -31,9 +31,10 @@ själv rakt av, du håller koll på helheten och avgör vem som gör vad.
 
 **Innan en ny uppgift:**
 1. Läs det här dokumentet (senaste sessionsloggen) + relevanta GitHub-issues.
-   När åtgärdsplanen (`docs/code-review/FIXPLAN.md`) tas upp: läs även issue
-   #597 (bevakning av alt C — refresh-token i httpOnly-cookie) och stäm av
-   villkoren
+   När åtgärdsplanen (`docs/code-review/FIXPLAN.md`) tas upp: läs även
+   Obsidian-beslutet `docs/vault/Beslut/Väntar på beslut/Beslut - Alt C
+   refresh-token i cookie.md` (bevakning av alt C — refresh-token i
+   httpOnly-cookie) och stäm av villkoren
 2. Bryt ner i atomära delar — en atomär del är **inte** bokstavligen "en fil",
    utan den minsta enhet som går att testa/granska oberoende. En
    databasändring utan den backend-endpoint som konsumerar den är sällan

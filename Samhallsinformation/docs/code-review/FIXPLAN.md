@@ -42,12 +42,12 @@ Mål: sluta ljuga för användare och laga det som är trasigt i live-funktioner
 | V1-6 | **"Läs mer hos källan":** länkkollen får aldrig ersätta knappen med "finns inte längre" vid timeout/403/5xx (tre lägen: levande/död/okänd) och `window.open` körs synkront i klickhändelsen | E7#2 | FE(+BE) | M | FE | ☐ |
 | V1-7 | **Bevakningsklockan:** Ångra-toasten renderas, serverfel visas, varning när sista bevakningen tas bort (vidgar Mitt flöde till hela Polisen) | E7#3 | FE | M | FE | ☐ |
 | V1-8 | **`adminFetch` med 401 → refresh + retry; bevakningar/sparade hämtas om vid fel:** Polisen-filtret får aldrig falla tillbaka på "visa allt" p.g.a. ett misslyckat anrop | E5#4, E5#5 | FE | M | Vitest | ☐ |
-| V1-9 | **Övervakning och larm (design först, sedan minimal första version):** en bakgrundstjänst utvärderar regler periodvis och larmar admins via befintlig admin-push + ett "Larm"-kort i Systemhälsa. Se [Övervakning](#övervakning-v1-9--design-och-återanvändning) nedan. | (återanvänds av E3#3, E6#8, E1#5; bevakar #597) | BE+FE+DB | L | enhet + guard | ☐ |
+| V1-9 | **Övervakning och larm (design först, sedan minimal första version):** en bakgrundstjänst utvärderar regler periodvis och larmar admins via befintlig admin-push + ett "Larm"-kort i Systemhälsa. Se [Övervakning](#övervakning-v1-9--design-och-återanvändning) nedan. | (återanvänds av E3#3, E6#8, E1#5; bevakar alt C-noten) | BE+FE+DB | L | enhet + guard | ☐ |
 
 Ordning: V1-0a/b först (parallellt), sedan V1-1…V1-8 i valfri ordning; V1-4 och V1-8 rör samma auth-kod → gör V1-4 före V1-8. V1-9 startar med en kort designrunda med användaren innan kod skrivs.
 
 ### Övervakning (V1-9) — design och återanvändning
-**Syfte:** en enda mekanism som *märker* saker åt oss i stället för att vi ska upptäcka dem av en slump. Skapades på användarens begäran 2026-09-25 (ursprungligen för att bevaka villkoren för alt C, issue #597) och är avsiktligt generell.
+**Syfte:** en enda mekanism som *märker* saker åt oss i stället för att vi ska upptäcka dem av en slump. Skapades på användarens begäran 2026-09-25 (ursprungligen för att bevaka villkoren för alt C, se Obsidian-noten "Beslut - Alt C refresh-token i cookie") och är avsiktligt generell.
 
 **Finns redan att bygga på (verifierat i koden):** `GET /api/admin/health` (`AdminHealthController`, 75 rader, Admin-only), admin-push via `PushDispatcher` (`adminIds`-vägarna), `NotificationDeliveryLog`, `AdminActivityLog`, fyra `AddHostedService`-tjänster i `Program.cs`. **Saknas:** tröskel-/regelmekanism, larmtillstånd (öppet/kvitterat) och en larmvy.
 
@@ -56,14 +56,14 @@ Ordning: V1-0a/b först (parallellt), sedan V1-1…V1-8 i valfri ordning; V1-4 o
 **Regler i första versionen (varje regel = liten funktion):**
 | Regel | Bevakar | Ur |
 |---|---|---|
-| `users_threshold` | registrerade användare ≥ 500 → "Stäm av alt C, issue #597" (tröskeln konfigurerbar) | #597 villkor 6 |
+| `users_threshold` | registrerade användare ≥ 500 → "Stäm av alt C (se Obsidian-beslutet om cookie-alternativet)" (tröskeln konfigurerbar) | alt C-notens villkor 6 |
 | `source_failing` | källa har misslyckats N cykler i rad eller inte hämtat på X timmar | E3#3, E3#1, E6#8 |
 | `webhook_errors` | 5xx/undantag i Resend-webhooken över tröskel per timme | E1#5 |
 | `push_failures` | hög andel misslyckade push-utskick | E3#4/#11 |
 
-**Senare regler (läggs till när respektive fix finns):** CSP-överträdelser (V3-22, #597 villkor 2), oväntade `Typ`-värden i Uppdateringar (E4#9), migreringsskyddets logg (V2-1), överväxt loggtabell (E2#6), ärenden utan svar > X timmar.
+**Senare regler (läggs till när respektive fix finns):** CSP-överträdelser (V3-22, alt C-notens villkor 2), oväntade `Typ`-värden i Uppdateringar (E4#9), migreringsskyddets logg (V2-1), överväxt loggtabell (E2#6), ärenden utan svar > X timmar.
 
-**Återanvändning (svar på användarens fråga):** ja — mekanismen är generell, så varje ny regel är en liten klass. Den gör också att fixarna i våg 2–3 kan *bevisas* i produktion (larmet tystnar) i stället för att vi litar på att de fungerar. **Skript-vakten** (#597 villkor 1) är däremot ett CI-test, inte en driftregel, och hör hemma i V1-0b.
+**Återanvändning (svar på användarens fråga):** ja — mekanismen är generell, så varje ny regel är en liten klass. Den gör också att fixarna i våg 2–3 kan *bevisas* i produktion (larmet tystnar) i stället för att vi litar på att de fungerar. **Skript-vakten** (alt C-notens villkor 1) är däremot ett CI-test, inte en driftregel, och hör hemma i V1-0b.
 
 **Öppna designfrågor (tas i designrundan):** var N:e minut (förslag 5); vilka som larmas (alla Admin); kvitteringsflöde; om `users_threshold` ska larma en gång eller påminna veckovis; hur admins faktiskt ska nås. **Obs:** flaggan `notif_push` är `false` i produktion (verifierat via `GET /api/feature-flags` 2026-09-25) och admin-push har tidigare visat sig tystas av dold global mute eller avstängd Android-kanal. Push kan alltså inte förutsättas fungera för larm; överväg mejl via Resend (finns redan) som primär kanal och push som komplement.
 
@@ -136,7 +136,7 @@ Mål: städa sådant som inte gör skada idag. Batchas per lager; körs sist ell
 | V4-2 | **Session-småfynd (FE):** aktiv vy överlever refresh (E5#6), `useSourceOrder` felhantering (E5#13), timeout/abort i API-lagret (E5#14) | E5#6, E5#13, E5#14 | FE | M | ☐ |
 | V4-3 | **Admin-småfynd (FE):** schemalagd åtgärd redigeras atomärt (E6#14), CSV-export escapad och utan mockrader (E6#16), tömt datumfält (E6#18), triage-motivering och flagg-nyckel (E6#22) | E6#14, E6#16, E6#18, E6#22 | FE | M | ☐ |
 | V4-4 | **Medborgar-småfynd (FE):** gästens "Skapa konto"-modal + mobilmeny (E7#4), `?section=` respekterar flaggor och sökindex (E7#7), registreringens friktion (E7#10), död kod (E7#11) | E7#4, E7#7, E7#10, E7#11 | FE | M | ☐ |
-| V4-5 | **Backlog från "under rangordningsgränsen":** skapa GitHub-issues av det som är värt att göra (t.ex. `auth`-rate limit på hela AuthController, refresh-tokens återkallas vid lösenordsbyte om ej gjort i V1-1, `notification-log` läcker endpoints till Support, `page`/`pageSize` klampas ej). Övrigt förkastas. | (enhetsfilernas mindre observationer) | – | S | ☐ |
+| V4-5 | **Backlog från "under rangordningsgränsen":** skriv upp det som är värt att göra som rå tanke i Obsidian (`1. Öppna_tankar/`) eller direkt som `Ideer/`-not — inga GitHub-issues (t.ex. `auth`-rate limit på hela AuthController, refresh-tokens återkallas vid lösenordsbyte om ej gjort i V1-1, `notification-log` läcker endpoints till Support, `page`/`pageSize` klampas ej). Övrigt förkastas. | (enhetsfilernas mindre observationer) | – | S | ☐ |
 | V4-6 | **Resterande testarbete** enligt enhet-8 (mål: handskriven logik från 32 % mot ~60 %; guard G1 raw-SQL↔modell, G2–G6; de 8 frontend-testerna) | E8 | BE+FE | L | ☐ |
 
 ---
@@ -157,7 +157,7 @@ Mål: städa sådant som inte gör skada idag. Batchas per lager; körs sist ell
   4. Ett säkerhetsincident-tillbud, extern penetrationstest eller granskning kräver det.
   5. API:t ändå flyttas till egen domän/subdomän (då är den svåraste delen redan gjord).
   6. Användarbasen växer markant efter kommande press/marknadsföring.
-- **Påminnelse:** när V3-22 (B) slutförs, öppna ett GitHub-issue för C med villkoren ovan så det syns i backloggen.
+- **Påminnelse:** beslutet ligger i Obsidian: `docs/vault/Beslut/Väntar på beslut/Beslut - Alt C refresh-token i cookie.md` (syns automatiskt under "Öppna beslut" i `_Oversikt`). När V3-22 (B) slutförs: stäm av villkor 2 och kryssa där.
 - Två befintliga tester låser fast buggar och ändras avsiktligt i V3-4 och V3-10.
 
 ## Uppskattning

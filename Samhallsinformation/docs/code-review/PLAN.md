@@ -8,7 +8,7 @@ Startad 2026-09-25 på `main` @ `1da5cf1`. Syfte: granska hela kodbasen i riskor
 - Varje enhet körs som `/code-review <sökväg> <nivå>`. Ingen `--fix` under granskningen — fynd samlas först.
 - Fynd sparas per enhet i `docs/code-review/enhet-N.md` med **granskad commit-SHA**. Ren dokumentation pushas direkt mot main.
 - Bara bekräftade fynd går vidare. Fixar = en PR per funktion, aldrig staplat. EF-migrationer följer bool-raw-SQL-regeln.
-- Efter granskningen: bekräftade fynd → GitHub-issues grupperade per funktion med allvarlighetsgrad.
+- Efter granskningen: bekräftade fynd ingår i FIXPLAN.md (PR:ar per funktion). Ingen GitHub-issue-hantering — uppföljning och beslut ligger i Obsidian-valvet (`docs/vault/Verktyg/Code-review 2026-09-25.md`).
 - Stoppvillkor: efter enhet 1–2 bedöms utfallet. Lågt utfall → sänk nivå på resten / hoppa över enhet 7.
 
 ## Enheter (riskordning)
