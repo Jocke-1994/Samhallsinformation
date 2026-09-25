@@ -565,6 +565,8 @@ function ArendeModal({
 interface Props {
   onPendingNotiser?:  (items: PendingNotis[]) => void
   defaultOpenId?:     string
+  /** Anropas när djuplänken öppnat sitt ärende, så föräldern nollställer den (V2-16). */
+  onDjuplänkKonsumerad?: () => void
   onÖppnaAnvändare?:  (epost: string) => void
 }
 
@@ -582,8 +584,17 @@ function StatChip({ label, value, color }: { label: string; value: number; color
   )
 }
 
-export default function SupportInbox({ onPendingNotiser, defaultOpenId, onÖppnaAnvändare }: Props) {
+export default function SupportInbox({ onPendingNotiser, defaultOpenId, onDjuplänkKonsumerad, onÖppnaAnvändare }: Props) {
   const [öppetId, setÖppetId]           = useState<string | null>(defaultOpenId ?? null)
+
+  // Djuplänken konsumeras en gång (V2-16): öppna ärendet och be föräldern
+  // nollställa id:t, så nästa besök i inboxen inte öppnar ett gammalt ärende.
+  // Fungerar även när komponenten redan är monterad (notisklockan i inboxen).
+  useEffect(() => {
+    if (!defaultOpenId) return
+    setÖppetId(defaultOpenId)
+    onDjuplänkKonsumerad?.()
+  }, [defaultOpenId, onDjuplänkKonsumerad])
   const [flik, setFlik]                 = useState<InboxFlik>('')
   const [statusFilter, setStatus]       = useState<ArendeStatus | ''>('')
   const [kategoriFilter, setKategori]   = useState('')
