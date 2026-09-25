@@ -1,4 +1,4 @@
-import { adminFetch } from './adminFetch'
+import { adminFetch, getToken } from './adminFetch'
 
 export type BannerÅskådare = 'Alla' | 'Besökare' | 'Användare'
 
@@ -19,9 +19,21 @@ export interface MaintenanceBannerRequest {
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
+// Publik lista — servern filtrerar på tid och målgrupp. Token skickas om den finns
+// så servern kan skilja inloggad från besökare (Användare-/Besökare-banderoller).
 export async function fetchMaintenanceBanners(): Promise<MaintenanceBanner[]> {
-  const res = await fetch(`${API_BASE}/api/maintenance-banners`)
+  const token = getToken()
+  const res = await fetch(`${API_BASE}/api/maintenance-banners`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  })
   if (!res.ok) throw new Error(`fetchMaintenanceBanners: ${res.status}`)
+  return res.json()
+}
+
+// Admin: hela listan (även kommande, avslutade och alla målgrupper).
+export async function fetchAdminMaintenanceBanners(): Promise<MaintenanceBanner[]> {
+  const res = await adminFetch('/api/admin/maintenance-banners')
+  if (!res.ok) throw new Error(`fetchAdminMaintenanceBanners: ${res.status}`)
   return res.json()
 }
 

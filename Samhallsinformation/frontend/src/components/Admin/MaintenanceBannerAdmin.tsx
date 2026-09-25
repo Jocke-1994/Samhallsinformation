@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   type MaintenanceBanner, type BannerÅskådare, type MaintenanceBannerRequest,
-  fetchMaintenanceBanners, createMaintenanceBanner, updateMaintenanceBanner, deleteMaintenanceBanner,
+  fetchAdminMaintenanceBanners, createMaintenanceBanner, updateMaintenanceBanner, deleteMaintenanceBanner,
 } from '../../api/maintenanceBanners'
 import { formatSvensktDatumTid, isoTillDatetimeLocal } from '../../lib/tid'
 
@@ -215,8 +215,8 @@ function FormModal({ redigerar, onSpara, onStäng }: {
 export default function MaintenanceBannerAdmin() {
   const queryClient = useQueryClient()
   const { data: banners = [] } = useQuery({
-    queryKey: ['maintenance-banners'],
-    queryFn:  fetchMaintenanceBanners,
+    queryKey: ['admin-maintenance-banners'],
+    queryFn:  fetchAdminMaintenanceBanners,
   })
 
   const [panelÖppen, setPanelÖppen] = useState(false)
@@ -224,6 +224,7 @@ export default function MaintenanceBannerAdmin() {
   const [taBort,     setTaBort]     = useState<MaintenanceBanner | null>(null)
 
   function invalidera() {
+    queryClient.invalidateQueries({ queryKey: ['admin-maintenance-banners'] })
     queryClient.invalidateQueries({ queryKey: ['maintenance-banners'] })
   }
 
