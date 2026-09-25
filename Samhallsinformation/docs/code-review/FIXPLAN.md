@@ -60,7 +60,7 @@ Mål: sluta ljuga för användare och laga det som är trasigt i live-funktioner
 | V1-6 | **"Läs mer hos källan":** länkkollen får aldrig ersätta knappen med "finns inte längre" vid timeout/403/5xx (tre lägen: levande/död/okänd) och `window.open` körs synkront i klickhändelsen | E7#2 | FE(+BE) | M | FE | ☑ mergad (PR #609) |
 | V1-7 | **Bevakningsklockan:** Ångra-toasten renderas, serverfel visas, varning när sista bevakningen tas bort (vidgar Mitt flöde till hela Polisen) | E7#3 | FE | M | FE | ☑ mergad (PR #603) |
 | V1-8 | **`adminFetch` med 401 → refresh + retry; bevakningar/sparade hämtas om vid fel:** Polisen-filtret får aldrig falla tillbaka på "visa allt" p.g.a. ett misslyckat anrop | E5#4, E5#5 | FE | M | Vitest | ☑ mergad (PR #619) |
-| V1-9 | **Övervakning och larm (design först, sedan minimal första version):** en bakgrundstjänst utvärderar regler periodvis och larmar admins via befintlig admin-push + ett "Larm"-kort i Systemhälsa. Se [Övervakning](#övervakning-v1-9--design-och-återanvändning) nedan. | (återanvänds av E3#3, E6#8, E1#5; bevakar alt C-noten) | BE+FE+DB | L | enhet + guard | ◐ pågår (mejl via Resend, 5 min, enligt P-A) |
+| V1-9 | **Övervakning och larm (design först, sedan minimal första version):** en bakgrundstjänst utvärderar regler periodvis och larmar admins via befintlig admin-push + ett "Larm"-kort i Systemhälsa. Se [Övervakning](#övervakning-v1-9--design-och-återanvändning) nedan. | (återanvänds av E3#3, E6#8, E1#5; bevakar alt C-noten) | BE+FE+DB | L | enhet + guard | ◐ PR #626 öppen, mergekonflikt i Program.cs löses |
 
 Ordning: V1-0a/b först (parallellt), sedan V1-1…V1-8 i valfri ordning; V1-4 och V1-8 rör samma auth-kod → gör V1-4 före V1-8. V1-9 startar med en kort designrunda med användaren innan kod skrivs.
 
@@ -101,11 +101,11 @@ Mål: stäng dataförlusts-, läckage- och missbruksytor.
 | V2-7 | **Uppdateringar: backend filtrerar synlighet + validerar `Typ`/`Synlighet`; frontend skickar token och får en `Typ`-fallback (ingen vit skärm).** Breaking → backend och minimal frontend i samma release. | E4#1, E4#9, E6#9 | BE+FE | M | enhet+FE | ☑ mergad (PR #617) |
 | V2-8 | **Publika DTO:er:** `GET /api/sources` utan `LastFetchError`/interna fält; `GET /api/maintenance-banners` bara aktiva och rätt målgrupp | E4#5, E4#10 | BE | S–M | enhet | ☑ mergad (PR #613) |
 | V2-9 | **Support-ticket missbruksskydd:** rate limit, längdgränser, e-postvalidering, kanal-allowlist; push till admin batchas | E1#8 | BE | M | enhet | ☑ mergad (PR #614) |
-| V2-10 | **Rate limit: kontobaserad räknare + IPv6 /64.** Spoofad `X-Forwarded-For` kringgår INTE gränsen (verifierat mot produktion 2026-09-25, se P-D), så `ForwardLimit`-delen utgår. Kvar: räknare per normaliserad e-post på login (brute force mot ett konto från många IP:n) och IPv6-partition per /64 | E1#1 | BE | M | enhet | ◐ pågår |
+| V2-10 | **Rate limit: kontobaserad räknare + IPv6 /64.** Spoofad `X-Forwarded-For` kringgår INTE gränsen (verifierat mot produktion 2026-09-25, se P-D), så `ForwardLimit`-delen utgår. Kvar: räknare per normaliserad e-post på login (brute force mot ett konto från många IP:n) och IPv6-partition per /64 | E1#1 | BE | M | enhet | ☑ mergad (PR #623) |
 | V2-11 | **Auth-härdning:** e-postnormalisering, lösenordspolicy vid registrering, Google-inloggning kräver `email_verified` och tar inte över obekräftat lokalt konto (D6 avgör migrering av befintliga) | E1#9 | BE(+DB) | M | enhet (auth-svit) | ☑ mergad (PR #622) |
 | V2-12 | **Push-endpoint valideras** (https + känd push-tjänst-allowlist) mot blind SSRF | E1#6 | BE | S | enhet | ☑ mergad (PR #610) |
 | V2-13 | **HTML-escape i alla mejl** (`toName`, `newEmail`, `subject`) | E3#8 | BE | S | enhet | ☑ mergad (PR #616) |
-| V2-14 | **GDPR-anonymisering fullständig:** enheter, audit, ärenden och push-loggar (`NotificationDeliveryLog.Body`) rensas/anonymiseras | E3#9 | BE+DB | M–L | enhet | ◐ pågår |
+| V2-14 | **GDPR-anonymisering fullständig:** enheter, audit, ärenden och push-loggar (`NotificationDeliveryLog.Body`) rensas/anonymiseras | E3#9 | BE+DB | M–L | enhet | ☑ mergad (PR #624) |
 | V2-15 | **Bekräftelse på destruktiva/globala admin-åtgärder:** ta bort källa, återställ flaggor, skicka "Ny version"-push, växla sajtinställning | E6#4, E6#5, E6#17, E6#21 | FE | M | FE | ☑ mergad (PR #618) |
 | V2-16 | **Djuplänk-state rensas** så en åtgärd aldrig träffar fel användare/ärende | E6#3 | FE | S | FE | ☑ mergad (PR #615) |
 | V2-17 | **Schemalagda supportsvar mejlas** (samma väg som `Reply`) + validering i `AddScheduledAction` | E3#2, E4#8 | BE | M | enhet | ☑ mergad (PR #620) |
@@ -119,13 +119,13 @@ Mål: tåla dålig extern data, dubbletter och fel utan att tyst tappa data elle
 
 | PR | Innehåll | Fynd | Lager | Storlek | Test | Status |
 |---|---|---|---|---|---|---|
-| V3-1 | **`EventSync` tål dubbletter** (GroupBy/first i stället för `ToDictionary`) | E3#1 | BE | S–M | enhet (SQLite) | ☐ |
+| V3-1 | **`EventSync` tål dubbletter** (GroupBy/first i stället för `ToDictionary`) | E3#1 | BE | S–M | enhet (SQLite) | ☑ mergad (PR #625) |
 | V3-2 | **Unikt index `Events(SourceId, ExternalId)` + index på SourceId + FK**, dedupera befintliga rader före migrering. Efter V3-1. | E2#7 | DB | M | SQLite + PG-rök | ☐ |
 | V3-3 | **Ingest med isolerad `DbContext` per källa;** trasig källa skriver `LastFetchError` och fäller inte batchen | E3#3 | BE | M | enhet (SQLite) | ☐ |
-| V3-4 | **Push-dedup på riktigt** (claim före utskick, atomärt, ej fail-open) + timeout och parallellism i utskick. Ändrar testet `Claim_UnknownClaimId_FailsOpenAsClaimed` avsiktligt. | E3#4, E3#11 | BE | M | enhet | ☐ |
+| V3-4 | **Push-dedup på riktigt** (claim före utskick, atomärt, ej fail-open) + timeout och parallellism i utskick. Ändrar testet `Claim_UnknownClaimId_FailsOpenAsClaimed` avsiktligt. | E3#4, E3#11 | BE | M | enhet | ☑ mergad (PR #627) |
 | V3-5 | **Krisinformation:** ogiltigt `Published` hoppar över posten, fäller inte källan | E3#7 | BE | S | enhet + fejk-HTTP | ☐ |
-| V3-6 | **UTC vid skrivning:** normalisera `DateTime.Kind` (converter/`EnsureUtcKind`) och tidsfilter i aktivitetsloggen; `DbCommandInterceptor`-test | E2#4, E4#2 | BE | M | interceptor + PG-rök | ☐ |
-| V3-7 | **`ErrorBoundary` runt appen och per sida + catch-all-route** | E7#8 (+ stödjer E6#9) | FE | S–M | Vitest | ☐ |
+| V3-6 | **UTC vid skrivning:** normalisera `DateTime.Kind` (converter/`EnsureUtcKind`) och tidsfilter i aktivitetsloggen; `DbCommandInterceptor`-test | E2#4, E4#2 | BE | M | interceptor + PG-rök | ◐ pågår |
+| V3-7 | **`ErrorBoundary` runt appen och per sida + catch-all-route** | E7#8 (+ stödjer E6#9) | FE | S–M | Vitest | ◐ pågår |
 | V3-8 | **Admin: fel visas som fel** (inte tomt/0/"100 % frisk"), `onError` i mutationer, formulär stänger först vid lyckat svar, Ångra/mass-spara med felhantering | E6#8, E6#10, E6#19, E6#20 | FE | L | FE | ☐ |
 | V3-9 | **Medborgarsidans mutationer visar fel;** supportformuläret behåller text vid kategoribyte | E7#9 | FE | M | FE | ☐ |
 | V3-10 | **Support-rollens behörighet** (efter D1): backend-policy + frontend-menyer i synk. Ändrar testet `AdminSupportController_RequiresAdminRole` avsiktligt. | E4#7, E6#7 | BE+FE | M | enhet | ☐ |
