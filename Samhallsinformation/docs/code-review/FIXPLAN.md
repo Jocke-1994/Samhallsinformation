@@ -34,7 +34,7 @@ Fynd refereras som **E{enhet}#{nummer}** (t.ex. E1#5 = enhet 1, fynd 5). Alla **
 - [ ] **P-C · V3-11 Mitt flöde på servern** — Claude skriver ett kort designförslag (ny parameter/endpoint, hur Polisen-bevakningar vägs in, hur Sparat påverkas) som användaren godkänner. Behövs före V3-11.
 
 **Claude gör själv (inget från användaren):**
-- [ ] **P-D · V2-10** — verifiera hur Railway skriver `X-Forwarded-For` (diagnostik-echo) så rate limit-fixen bygger på fakta.
+- [x] **P-D · V2-10** — KLAR 2026-09-25: testat mot produktionen (8 inloggningsförsök med slumpad spoofad `X-Forwarded-For` per anrop, sedan 8 utan). Båda serierna gav 401 ×5 och därefter 429 — spoofad header kringgår INTE rate limiten (Railways kant skriver över headern). E1#1:s huvudpåstående är motbevisat.
 - [ ] **P-E · V3-16** — verifiera vad Resends inbound-payload faktiskt innehåller om SPF/DKIM-utfall.
 - [ ] **P-F · V2-9, V3-17** — föreslå konkreta gränsvärden (ärendetextens längd, rate limit för anonyma ärenden, max antal Polisen-bevakningar per konto).
 - [ ] **P-G · V3-20** — inventera exakt vilka komponenter som märks MOCK, döljs eller tas bort (lista som användaren godkänner i förbifarten).
@@ -50,13 +50,13 @@ Mål: sluta ljuga för användare och laga det som är trasigt i live-funktioner
 
 | PR | Innehåll | Fynd | Lager | Storlek | Test | Status |
 |---|---|---|---|---|---|---|
-| V1-0a | **Testfundament backend:** delad SQLite-`TestDb`-hjälpare + baslinje-guard över anonyma endpoints (G4) | E8 fas 0 | BE | S | guard | ◐ PR "Testfundament backend: SQLite-TestDb och guard över anonyma endpoints" öppen (#598), CI grön, ej mergad |
-| V1-0b | **Testfundament frontend:** Vitest + React Testing Library + jsdom-uppsättning, ett röktest | E8 fas 2 | FE | S | rök | ◐ PR "Testfundament frontend" öppen (#599), CI körs, ej mergad |
+| V1-0a | **Testfundament backend:** delad SQLite-`TestDb`-hjälpare + baslinje-guard över anonyma endpoints (G4) | E8 fas 0 | BE | S | guard | ☑ mergad (PR #598 backend-testfundament) |
+| V1-0b | **Testfundament frontend:** Vitest + React Testing Library + jsdom-uppsättning, ett röktest | E8 fas 2 | FE | S | rök | ☑ mergad (PR #599 frontend-testfundament) |
 | V1-1 | **Lösenordsbyte på riktigt:** klient mot `PUT /api/auth/me/password`, felvisning, dölj kortet för Google-konton, serverside lösenordsregel (min 8) i `ChangePassword`, återkalla refresh-tokens vid byte. Kortet är **synligt i produktion idag** (ingen override på `konto_losenord`). | E7#1 (+ del av E1#9) | FE+BE | M | enhet+FE | ☐ |
 | V1-2 | **Webhook tål trasig indata:** `int.TryParse` + längdgräns på ticketnummer, try/catch runt JSON, idempotens på svix-id så Resend-retries inte ger dubbla ärenden | E1#5 | BE | M | enhet (webhook-svit) | ☐ |
-| V1-3 | **Ta bort `PreferencesController`** (öppen utan auth, oanvänd av frontend). Tabellen `UserPreferences` rörs inte. | E1#4 | BE | S | guard G4 | ☐ |
+| V1-3 | **Ta bort `PreferencesController`** (öppen utan auth, oanvänd av frontend). Tabellen `UserPreferences` rörs inte. | E1#4 | BE | S | guard G4 | ☑ mergad (PR #601) |
 | V1-4 | **Refresh loggar bara ut vid 401/403:** 429/5xx/nätverksfel ger retry med backoff; skydd mot tät refresh-loop vid klockskillnad | E5#2, E5#8 | FE | M | Vitest (AuthContext) | ☐ |
-| V1-5 | **`.env.production`:** sätt `VITE_USE_MOCK=false` (säkert oavsett Vercels miljövariabel, se D5) | E5#12 | FE | S | build | ☐ |
+| V1-5 | **`.env.production`:** sätt `VITE_USE_MOCK=false` (säkert oavsett Vercels miljövariabel, se D5) | E5#12 | FE | S | build | ☑ mergad (PR #600) |
 | V1-6 | **"Läs mer hos källan":** länkkollen får aldrig ersätta knappen med "finns inte längre" vid timeout/403/5xx (tre lägen: levande/död/okänd) och `window.open` körs synkront i klickhändelsen | E7#2 | FE(+BE) | M | FE | ☐ |
 | V1-7 | **Bevakningsklockan:** Ångra-toasten renderas, serverfel visas, varning när sista bevakningen tas bort (vidgar Mitt flöde till hela Polisen) | E7#3 | FE | M | FE | ☐ |
 | V1-8 | **`adminFetch` med 401 → refresh + retry; bevakningar/sparade hämtas om vid fel:** Polisen-filtret får aldrig falla tillbaka på "visa allt" p.g.a. ett misslyckat anrop | E5#4, E5#5 | FE | M | Vitest | ☐ |
@@ -101,7 +101,7 @@ Mål: stäng dataförlusts-, läckage- och missbruksytor.
 | V2-7 | **Uppdateringar: backend filtrerar synlighet + validerar `Typ`/`Synlighet`; frontend skickar token och får en `Typ`-fallback (ingen vit skärm).** Breaking → backend och minimal frontend i samma release. | E4#1, E4#9, E6#9 | BE+FE | M | enhet+FE | ☐ |
 | V2-8 | **Publika DTO:er:** `GET /api/sources` utan `LastFetchError`/interna fält; `GET /api/maintenance-banners` bara aktiva och rätt målgrupp | E4#5, E4#10 | BE | S–M | enhet | ☐ |
 | V2-9 | **Support-ticket missbruksskydd:** rate limit, längdgränser, e-postvalidering, kanal-allowlist; push till admin batchas | E1#8 | BE | M | enhet | ☐ |
-| V2-10 | **Rate limit mot spoofad `X-Forwarded-For`:** *verifiera först* mot Railway (diagnostik-echo) hur headern skrivs; därefter rätt `ForwardLimit`, IPv6 /64, räknare per e-post på login | E1#1 | BE | M | enhet | ☐ |
+| V2-10 | **Rate limit: kontobaserad räknare + IPv6 /64.** Spoofad `X-Forwarded-For` kringgår INTE gränsen (verifierat mot produktion 2026-09-25, se P-D), så `ForwardLimit`-delen utgår. Kvar: räknare per normaliserad e-post på login (brute force mot ett konto från många IP:n) och IPv6-partition per /64 | E1#1 | BE | M | enhet | ☐ |
 | V2-11 | **Auth-härdning:** e-postnormalisering, lösenordspolicy vid registrering, Google-inloggning kräver `email_verified` och tar inte över obekräftat lokalt konto (D6 avgör migrering av befintliga) | E1#9 | BE(+DB) | M | enhet (auth-svit) | ☐ |
 | V2-12 | **Push-endpoint valideras** (https + känd push-tjänst-allowlist) mot blind SSRF | E1#6 | BE | S | enhet | ☐ |
 | V2-13 | **HTML-escape i alla mejl** (`toName`, `newEmail`, `subject`) | E3#8 | BE | S | enhet | ☐ |
