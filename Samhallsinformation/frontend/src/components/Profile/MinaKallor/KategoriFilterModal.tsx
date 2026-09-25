@@ -88,13 +88,14 @@ function OmradeVal({ valda, onToggle, onVäljFlera, onAvmarkeraFlera }: {
 // kryssrutornas skull, och konverteras tillbaka till null vid Spara om inget
 // avmarkerats (samma "fullt set = null" konvention som backend/kontexten).
 export default function KategoriFilterModal({
-  kallNamn, initialKategorier, initialOmraden, onSpara, onClose,
+  kallNamn, initialKategorier, initialOmraden, onSpara, onClose, fel,
 }: {
   kallNamn:          string
   initialKategorier: string[] | null
   initialOmraden:    string[] | null
   onSpara:           (kategorier: string[] | null, omraden: string[] | null) => void
   onClose:           () => void
+  fel?:              string | null
 }) {
   const [flik, setFlik] = useState<Flik>('typ')
   const [valdaKategorier, setValdaKategorier] = useState<Set<string>>(new Set(initialKategorier ?? POLISEN_KATEGORIER))
@@ -195,6 +196,10 @@ export default function KategoriFilterModal({
             onVäljFlera={väljFleraOmraden}
             onAvmarkeraFlera={avmarkeraFleraOmraden}
           />
+        )}
+
+        {fel && (
+          <p role="alert" className="px-6 py-2 text-xs md:text-sm text-red-600 border-t border-slate-100 shrink-0">{fel}</p>
         )}
 
         <div className="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">

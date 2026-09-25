@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { usePolisenBevakningar, MAX_BEVAKNINGAR } from '../../context/PolisenBevakningarContext'
+import { BevakningError } from '../../api/polisenBevakningar'
 import { visaBevakningsToast } from './bevakningsToastStore'
 
 // Kontextuell prenumerationsklocka per händelse (PROTOTYP, FAS 4-diskussion,
@@ -201,8 +202,11 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
       }
       const namn = vad === 'bada' ? `${polisenTyp} i ${polisenOmrade}` : vad === 'typ' ? polisenTyp : polisenOmrade
       visaBevakningsToast({ typ: 'info', text: `Ny bevakning: ${namn}` })
-    } catch {
-      visaBevakningsToast({ typ: 'fel', text: 'Kunde inte skapa bevakningen. Försök igen.' })
+    } catch (e) {
+      visaBevakningsToast({
+        typ: 'fel',
+        text: e instanceof BevakningError ? e.message : 'Kunde inte skapa bevakningen. Försök igen.',
+      })
     } finally {
       arbetar.current = false
     }
