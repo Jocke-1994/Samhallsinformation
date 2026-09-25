@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { usePolisenBevakningar, MAX_BEVAKNINGAR } from '../../context/PolisenBevakningarContext'
+import { visaBevakningsToast } from './bevakningsToastStore'
 
 // Kontextuell prenumerationsklocka per händelse (PROTOTYP, FAS 4-diskussion,
 // session 24; skriven om för bevakningar — flera oberoende regler, session
@@ -10,11 +11,16 @@ import { usePolisenBevakningar, MAX_BEVAKNINGAR } from '../../context/PolisenBev
 // att händelsen visas (annars är det oklart vilken av flera överlappande
 // bevakningar som skulle tas bort).
 //
-// Menyn och toasten renderas via en portal till <body> med fixed positionering
-// (beräknad från klockans egen bounding rect) — NewsItem-kortet har
-// overflow-hidden för att klippa den infällbara innehållsdelen, vilket annars
-// klipper bort en absolut-positionerad meny (samma stacking-fälla som
-// FeedbackModal löste med createPortal, session 7).
+// Menyn och varningsdialogen renderas via en portal till <body> med fixed
+// positionering (menyn beräknad från klockans egen bounding rect) —
+// NewsItem-kortet har overflow-hidden för att klippa den infällbara
+// innehållsdelen, vilket annars klipper bort en absolut-positionerad meny
+// (samma stacking-fälla som FeedbackModal löste med createPortal, session 7).
+//
+// Toasten (bekräftelse/fel/Ångra) bor INTE här: kortet — och därmed klockan —
+// kan avmonteras i samma stund en bevakning tas bort eller skapas, och en
+// toast i klockans egen state dog då tyst (E7#3). Den ligger i
+// bevakningsToastStore och renderas av BevakningsToastHost (monterad i App).
 interface Props {
   polisenTyp:    string | null
   polisenOmrade: string | null
@@ -26,7 +32,9 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
 
   const [öppen, setÖppen] = useState(false)
   const [menyPos, setMenyPos] = useState({ top: 0, left: 0 })
-  const [toast, setToast] = useState<{ text: string; ångra: () => void } | null>(null)
+  const [visaSistaVarning, setVisaSistaVarning] = useState(false)
+  // Skydd mot dubbelklick medan ett anrop mot servern pågår.
+  const arbetar = useRef(false)
   const knappRef = useRef<HTMLButtonElement>(null)
   const menyRef = useRef<HTMLDivElement>(null)
 
@@ -47,30 +55,53 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
     return () => document.removeEventListener('mousedown', onClickAway)
   }, [öppen])
 
-  useEffect(() => {
-    if (!toast) return
-    const t = setTimeout(() => setToast(null), 5000)
-    return () => clearTimeout(t)
-  }, [toast])
-
   if (mode === 'mitt') {
     const matchande = polisenTyp || polisenOmrade ? matchandeBevakning(polisenTyp, polisenOmrade) : null
     if (!matchande) return null
+
+    // Är det den SISTA bevakningen tar borttagningen bort allt anpassat, och
+    // Mitt flöde går över till alla Polisen-händelser i hela landet
+    // (PolisenBevakningarContext.matchar: tom lista = allt syns). Det kräver
+    // en uttrycklig bekräftelse.
+    const ärSista = bevakningar.length === 1
 
     // Samma ikon (🔔) betyder tvärtom i "allt"-läget (lägg till) — ett enda
     // ogenomtänkt tryck fick tidigare ta bort en HEL bevakning direkt, utan
     // bekräftelse, bara en 5-sekunders ångra-toast som lätt missas. Byggd om
     // till samma öppna-en-meny-först-mönster som "allt"-lägets egen
     // bevaknings-meny, så borttagning kräver ett andra, tydligt märkt tryck.
-    async function taBortBevakning() {
-      if (!matchande) return
+    function begärTaBort() {
       setÖppen(false)
+      if (ärSista) setVisaSistaVarning(true)
+      else taBortBevakning()
+    }
+
+    async function taBortBevakning() {
+      if (!matchande || arbetar.current) return
+      arbetar.current = true
+      setÖppen(false)
+      setVisaSistaVarning(false)
       const kopia = matchande
-      await taBort(kopia.id)
-      setToast({
-        text: 'Bevakning borttagen',
-        ångra: () => { skapa(kopia.kategorier ? [...kopia.kategorier] : null, kopia.omraden ? [...kopia.omraden] : null) },
-      })
+      const sista = ärSista
+      try {
+        await taBort(kopia.id)
+        visaBevakningsToast({
+          typ: 'info',
+          text: sista
+            ? 'Bevakning borttagen — Mitt flöde visar nu alla Polisen-händelser i hela landet'
+            : 'Bevakning borttagen',
+          ångra: {
+            kategorier: kopia.kategorier ? [...kopia.kategorier] : null,
+            omraden:    kopia.omraden    ? [...kopia.omraden]    : null,
+          },
+        })
+      } catch {
+        // taBort() kastar före den ändrar kontextens state, så listan är
+        // orörd — det enda som behövs är att tala om att det misslyckades.
+        visaBevakningsToast({ typ: 'fel', text: 'Kunde inte ta bort bevakningen. Försök igen.' })
+      } finally {
+        arbetar.current = false
+      }
     }
 
     return (
@@ -93,7 +124,7 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
           >
             <p className="px-3 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Bevakning</p>
             <button
-              onClick={e => { e.stopPropagation(); taBortBevakning() }}
+              onClick={e => { e.stopPropagation(); begärTaBort() }}
               className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors"
             >
               Ta bort den här bevakningen
@@ -102,12 +133,41 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
           document.body,
         )}
 
-        {toast && createPortal(
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-3">
-            <span>{toast.text}</span>
-            <button onClick={() => { toast.ångra(); setToast(null) }} className="font-semibold text-violet-300 hover:text-violet-200 transition-colors">
-              Ångra
-            </button>
+        {visaSistaVarning && createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            onClick={e => { e.stopPropagation(); setVisaSistaVarning(false) }}
+          >
+            <div
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="sista-bevakning-rubrik"
+              aria-describedby="sista-bevakning-text"
+              onClick={e => e.stopPropagation()}
+              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-5 w-full max-w-sm"
+            >
+              <h2 id="sista-bevakning-rubrik" className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-2">
+                Ta bort din sista bevakning?
+              </h2>
+              <p id="sista-bevakning-text" className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                Utan bevakningar visar Mitt flöde alla Polisen-händelser i hela landet, inte bara det du bevakar nu.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  autoFocus
+                  onClick={e => { e.stopPropagation(); setVisaSistaVarning(false) }}
+                  className="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); taBortBevakning() }}
+                  className="px-3.5 py-2 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-700 text-white transition-colors"
+                >
+                  Ta bort ändå
+                </button>
+              </div>
+            </div>
           </div>,
           document.body,
         )}
@@ -126,18 +186,26 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
   async function skapaBevakning(vad: 'typ' | 'omrade' | 'bada') {
     setÖppen(false)
     if (vidTak) {
-      setToast({ text: `Max ${MAX_BEVAKNINGAR} bevakningar — hantera dem i Mina källor`, ångra: () => {} })
+      visaBevakningsToast({ typ: 'info', text: `Max ${MAX_BEVAKNINGAR} bevakningar — hantera dem i Mina källor` })
       return
     }
+    if (arbetar.current) return
+    arbetar.current = true
     const kategorier = (vad === 'typ' || vad === 'bada') && polisenTyp ? [polisenTyp] : null
     const omraden     = (vad === 'omrade' || vad === 'bada') && polisenOmrade ? [polisenOmrade] : null
-    const lyckades = await skapa(kategorier, omraden)
-    if (!lyckades) {
-      setToast({ text: `Max ${MAX_BEVAKNINGAR} bevakningar — hantera dem i Mina källor`, ångra: () => {} })
-      return
+    try {
+      const lyckades = await skapa(kategorier, omraden)
+      if (!lyckades) {
+        visaBevakningsToast({ typ: 'info', text: `Max ${MAX_BEVAKNINGAR} bevakningar — hantera dem i Mina källor` })
+        return
+      }
+      const namn = vad === 'bada' ? `${polisenTyp} i ${polisenOmrade}` : vad === 'typ' ? polisenTyp : polisenOmrade
+      visaBevakningsToast({ typ: 'info', text: `Ny bevakning: ${namn}` })
+    } catch {
+      visaBevakningsToast({ typ: 'fel', text: 'Kunde inte skapa bevakningen. Försök igen.' })
+    } finally {
+      arbetar.current = false
     }
-    const namn = vad === 'bada' ? `${polisenTyp} i ${polisenOmrade}` : vad === 'typ' ? polisenTyp : polisenOmrade
-    setToast({ text: `Ny bevakning: ${namn}`, ångra: () => {} })
   }
 
   return (
@@ -183,13 +251,6 @@ export default function PrenumerationsKlocka({ polisenTyp, polisenOmrade, mode }
               Typ &amp; Område · båda
             </button>
           )}
-        </div>,
-        document.body,
-      )}
-
-      {toast && createPortal(
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-3">
-          <span>{toast.text}</span>
         </div>,
         document.body,
       )}
