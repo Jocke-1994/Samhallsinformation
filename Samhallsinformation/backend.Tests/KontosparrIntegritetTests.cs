@@ -52,7 +52,7 @@ public class KontosparrIntegritetTests
         config["FRONTEND_URL"].Returns("https://test.local");
         return new AuthService(db, Substitute.For<ITokenService>(), Substitute.For<IPasswordHasher<User>>(),
             Substitute.For<IEmailService>(), Substitute.For<IGoogleTokenValidator>(),
-            Substitute.For<IPushNotificationService>(), Substitute.For<IAktivitetsloggService>(), config);
+            Substitute.For<IPushNotificationService>(), Substitute.For<IAktivitetsloggService>(), new LoginThrottle(), config);
     }
 
     private static User AdminSuspendedUser(string reason = "Missbruk") => new()

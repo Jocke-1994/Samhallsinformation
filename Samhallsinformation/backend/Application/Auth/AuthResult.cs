@@ -9,6 +9,8 @@ public class AuthResult
     public string?      Error      { get; }
     public string?      Message    { get; }
     public AuthTokens?  Tokens     { get; }
+    /// <summary>Sätts endast vid 429 från kontospärren — controllern skickar det som Retry-After.</summary>
+    public TimeSpan?    RetryAfter { get; private init; }
 
     private AuthResult(bool success, int statusCode, string? error, string? message, AuthTokens? tokens)
     {
@@ -24,4 +26,7 @@ public class AuthResult
     public static AuthResult Ok(string message) => new(true, 200, null, message, null);
 
     public static AuthResult Fail(int statusCode, string error) => new(false, statusCode, error, null, null);
+
+    public static AuthResult TooManyAttempts(string error, TimeSpan retryAfter) =>
+        new(false, 429, error, null, null) { RetryAfter = retryAfter };
 }
