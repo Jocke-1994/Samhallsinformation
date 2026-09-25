@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
+using Samhallsinformation.Infrastructure;
 using Samhallsinformation.Infrastructure.Auth;
 using Samhallsinformation.Ingestors;
 using Samhallsinformation.Models;
@@ -219,13 +220,18 @@ using (var scope = app.Services.CreateScope())
 
     if (databaseUrl != null || pgHost != null)
     {
-        bool alreadyMigrated;
-        try { alreadyMigrated = (await db.Database.GetAppliedMigrationsAsync()).Any(); }
-        catch { alreadyMigrated = false; }
-
-        if (!alreadyMigrated)
+        // Beslutet ligger i StartupSchemaGuard (E2#2): aldrig DROP p.g.a. ett undantag och
+        // aldrig DROP när databasen innehåller data. En krasch vid start är bättre än dataförlust.
+        var schemaDecision = StartupSchemaGuard.Decide(await StartupSchemaGuard.InspectAsync(db));
+        if (schemaDecision.Action == SchemaAction.Abort)
         {
-            // Ingen migrationshistorik → droppa och skapa fresh med MigrateAsync
+            app.Logger.LogError("Startavbrott: {Reason}", schemaDecision.Reason);
+            throw new InvalidOperationException(schemaDecision.Reason);
+        }
+
+        if (schemaDecision.Action == SchemaAction.ResetLegacySchema)
+        {
+            // Ingen migrationshistorik och inga data → droppa och skapa fresh med MigrateAsync
             await db.Database.ExecuteSqlRawAsync(@"
                 DROP TABLE IF EXISTS ""Events"";
                 DROP TABLE IF EXISTS ""UserPreferences"";
