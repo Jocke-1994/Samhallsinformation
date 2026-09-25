@@ -253,14 +253,14 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
               <span className="text-4xl">🗂️</span>
               <p className="text-slate-700 dark:text-slate-200 font-semibold text-base">Inget matchar dina prenumerationer just nu</p>
               <p className="text-slate-400 text-sm max-w-xs leading-relaxed">
-                Lägg till fler källor, typer eller områden i Mina källor — eller prenumerera direkt via klockan på en händelse i Alla händelser.
+                Lägg till fler källor, typer eller områden i Mina källor — eller prenumerera direkt via klockan på en händelse i {ALLA_HANDELSER_LABEL}.
               </p>
               <div className="flex items-center gap-3 mt-1">
                 <button
                   onClick={() => onViewModeChange('Allt')}
                   className="px-4 py-2 bg-white border border-violet-200 text-violet-600 hover:bg-violet-50 text-sm font-semibold rounded-xl transition-colors"
                 >
-                  Visa Alla händelser
+                  Visa {ALLA_HANDELSER_LABEL}
                 </button>
                 <button
                   onClick={() => navigate('/profil?section=mina-kallor')}

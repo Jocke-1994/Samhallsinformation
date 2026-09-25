@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.FeatureFlags;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -34,12 +35,16 @@ public class FeatureFlagsController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> SetOverride(string key, [FromBody] SetFlagRequest req)
     {
-        var existing = await _db.FeatureFlagOverrides.FindAsync(key);
-        var gammalt  = existing?.Value;
-        if (existing == null)
-            _db.FeatureFlagOverrides.Add(new FeatureFlagOverride { Key = key, Value = req.Value });
-        else
-            existing.Value = req.Value;
+        var existing = await FeatureFlagActivation.GetOrCreateOverrideAsync(_db, key);
+        var ärNy     = _db.Entry(existing).State == EntityState.Added;
+        var gammalt  = ärNy ? (bool?)null : existing.Value;
+        existing.Value = req.Value;
+        // En flagga som slås på direkt via den här vanliga på/av-brytaren
+        // (utan att gå via schemaläggningsflödet) ska inte lämna en
+        // föråldrad "redo att lanseras"-markering kvar — annars återkommer
+        // ✓-badgen ospärrat om flaggan senare stängs av igen (code
+        // review-fynd, PR #590).
+        if (req.Value) existing.RedoAttLanseras = false;
 
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
@@ -73,12 +78,7 @@ public class FeatureFlagsController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> SetRedoAttLanseras(string key, [FromBody] SetRedoRequest req)
     {
-        var existing = await _db.FeatureFlagOverrides.FindAsync(key);
-        if (existing == null)
-        {
-            existing = new FeatureFlagOverride { Key = key, Value = false };
-            _db.FeatureFlagOverrides.Add(existing);
-        }
+        var existing = await FeatureFlagActivation.GetOrCreateOverrideAsync(_db, key);
         existing.RedoAttLanseras = req.RedoAttLanseras;
 
         await _db.SaveChangesAsync();

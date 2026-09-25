@@ -4,7 +4,7 @@ import {
   type MaintenanceBanner, type BannerÅskådare, type MaintenanceBannerRequest,
   fetchMaintenanceBanners, createMaintenanceBanner, updateMaintenanceBanner, deleteMaintenanceBanner,
 } from '../../api/maintenanceBanners'
-import { formatSvensktDatumTid } from '../../lib/tid'
+import { formatSvensktDatumTid, isoTillDatetimeLocal } from '../../lib/tid'
 
 const ÅSKÅDARE: BannerÅskådare[] = ['Alla', 'Besökare', 'Användare']
 
@@ -12,15 +12,6 @@ const ÅSKÅDARE_BESKRIVNING: Record<BannerÅskådare, string> = {
   'Alla':      'Alla besökare, inloggade som utloggade',
   'Besökare':  'Bara utloggade besökare',
   'Användare': 'Bara inloggade användare',
-}
-
-// datetime-local ger/tar lokal (webbläsarens) väggklocketid, inte UTC — admin
-// jobbar alltid från Sverige så vi konverterar rakt av via Date, ingen egen
-// tidszonslogik behövs.
-function isoTillDatetimeLocal(iso: string): string {
-  const d = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 // Enda standardtexten som finns idag — fler kan läggas till som egna

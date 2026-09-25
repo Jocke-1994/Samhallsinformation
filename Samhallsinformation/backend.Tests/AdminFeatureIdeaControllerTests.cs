@@ -248,4 +248,42 @@ public class AdminFeatureIdeaControllerTests
         Assert.NotNull(attr);
         Assert.Equal("Admin", attr!.Roles);
     }
+
+    [Fact]
+    public async Task SetStage_ReClickingSameStage_DoesNotResetRedoAttLanseras()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var idea = new FeatureIdea { IdeaNumber = 1, Title = "Idé", CreatedByUserId = admin.Id, FlagKey = "kallor_lan_filter" };
+        db.FeatureIdeas.Add(idea);
+        await db.SaveChangesAsync();
+        var controller = NewController(db, admin.Id);
+
+        await controller.SetStage(idea.Id, new SetStageRequest("lanseringsklar"));
+        db.FeatureFlagOverrides.Single().RedoAttLanseras = false; // admin ångrar sig manuellt
+        await db.SaveChangesAsync();
+
+        // Omklick på samma, redan valda stadium — ska INTE återställa flaggan.
+        await controller.SetStage(idea.Id, new SetStageRequest("lanseringsklar"));
+
+        Assert.False(db.FeatureFlagOverrides.Single().RedoAttLanseras);
+    }
+
+    [Fact]
+    public async Task SetStage_DemotedFromLanseringsklar_ClearsRedoAttLanseras()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var idea = new FeatureIdea { IdeaNumber = 1, Title = "Idé", CreatedByUserId = admin.Id, FlagKey = "kallor_lan_filter" };
+        db.FeatureIdeas.Add(idea);
+        await db.SaveChangesAsync();
+        var controller = NewController(db, admin.Id);
+
+        await controller.SetStage(idea.Id, new SetStageRequest("lanseringsklar"));
+        Assert.True(db.FeatureFlagOverrides.Single().RedoAttLanseras);
+
+        await controller.SetStage(idea.Id, new SetStageRequest("byggs"));
+
+        Assert.False(db.FeatureFlagOverrides.Single().RedoAttLanseras);
+    }
 }
