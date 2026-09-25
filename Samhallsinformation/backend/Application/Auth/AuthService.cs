@@ -206,8 +206,9 @@ public class AuthService : IAuthService
         if (resetToken == null || resetToken.UsedAt != null || resetToken.ExpiresAt < DateTime.UtcNow)
             return AuthResult.Fail(400, "Länken är ogiltig eller har gått ut");
 
-        if (newPassword.Length < 8)
-            return AuthResult.Fail(400, "Lösenordet måste vara minst 8 tecken");
+        var policyFel = PasswordPolicy.Validate(newPassword);
+        if (policyFel != null)
+            return AuthResult.Fail(400, policyFel);
 
         resetToken.User.PasswordHash = _hasher.HashPassword(resetToken.User, newPassword);
         resetToken.UsedAt = DateTime.UtcNow;
@@ -218,6 +219,48 @@ public class AuthService : IAuthService
             Setting   = "password",
             ChangedBy = "reset",
         });
+
+        await _db.SaveChangesAsync();
+        return AuthResult.Ok("Lösenordet är uppdaterat");
+    }
+
+    public async Task<AuthResult> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, string? keepRefreshToken)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+            return AuthResult.Fail(404, "Användaren hittades inte");
+
+        // Google-konton har inget lösenord att byta (samma resonemang som i LoginAsync/
+        // RequestEmailChangeAsync) — och hashern kan kasta på ett tomt hash-värde.
+        if (user.AuthProvider != "local" || string.IsNullOrEmpty(user.PasswordHash))
+            return AuthResult.Fail(400, "Det här kontot loggar in via Google och har inget lösenord att byta.");
+
+        // 400, inte 401: ett 401 tolkas av klienten som "sessionen har gått ut" (och
+        // V1-8 gör refresh + retry på 401) — fel lösenord i ett formulär är inget sådant.
+        if (string.IsNullOrEmpty(currentPassword)
+            || _hasher.VerifyHashedPassword(user, user.PasswordHash, currentPassword) == PasswordVerificationResult.Failed)
+            return AuthResult.Fail(400, "Nuvarande lösenord stämmer inte");
+
+        var policyFel = PasswordPolicy.Validate(newPassword);
+        if (policyFel != null)
+            return AuthResult.Fail(400, policyFel);
+
+        user.PasswordHash = _hasher.HashPassword(user, newPassword);
+
+        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "password", OldValue = null, NewValue = null, ChangedBy = "user" });
+
+        // Ett lösenordsbyte återkallar alla andra sessioner — annars överlever en kapad
+        // session (stulen refresh-token) bytet i upp till 30 dagar. Sessionen på enheten
+        // som byter behålls: klienten skickar sin egen refresh-token, som är den enda
+        // som INTE återkallas. Saknas den (eller matchar ingen aktiv token) återkallas
+        // allt och användaren får logga in igen — fail-säkert.
+        var keepHash = string.IsNullOrEmpty(keepRefreshToken) ? null : _tokens.HashToken(keepRefreshToken);
+        var aktiva = await _db.RefreshTokens
+            .Where(t => t.UserId == userId && t.RevokedAt == null)
+            .ToListAsync();
+        foreach (var rt in aktiva)
+            if (keepHash == null || rt.TokenHash != keepHash)
+                rt.RevokedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
         return AuthResult.Ok("Lösenordet är uppdaterat");

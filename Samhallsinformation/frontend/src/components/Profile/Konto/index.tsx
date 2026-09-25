@@ -22,6 +22,9 @@ export default function Konto() {
   // innehåll) eftersom ett e-postbyte inte slår igenom förrän länken i mejlet klickas.
   const [accountEmail, setAccountEmail] = useState('')
   const [authProvider, setAuthProvider] = useState('local')
+  // Lösenordskortet väntar på /me-svaret — annars skulle det blinka fram för
+  // Google-konton (authProvider defaultar till 'local' tills svaret kommit).
+  const [meLaddad, setMeLaddad] = useState(false)
   const [emailPassword, setEmailPassword] = useState('')
   const [pendingEmail, setPendingEmail] = useState<string | null>(null)
   const [laddningsfel, setLaddningsfel] = useState(false)
@@ -47,6 +50,7 @@ export default function Konto() {
         setAccountEmail(data.email)
         setAuthProvider(data.authProvider)
         setPendingEmail(data.pendingEmail)
+        setMeLaddad(true)
       })
       .catch(() => { if (!avbruten) setLaddningsfel(true) })
     return () => { avbruten = true }
@@ -144,7 +148,7 @@ export default function Konto() {
             onRequestEmailChange={handleRequestEmailChange}
             onCancelEmailChange={handleCancelEmailChange}
           />}
-          {flaggor.konto_losenord && <LösenordByte />}
+          {flaggor.konto_losenord && meLaddad && <LösenordByte harLosenord={authProvider === 'local'} />}
           {flaggor.konto_visningsnamn && ärSupportEllerAdmin && <SupportVisningsnamnKort />}
           {flaggor.konto_tvafaktor && <TvafaktorKort harTelefon={false} />}
           {flaggor.konto_samtycke && <SparSamtycke />}

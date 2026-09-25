@@ -16,6 +16,11 @@ public interface IAuthService
 
     Task<AuthResult> ResetPasswordAsync(string token, string newPassword);
 
+    // Byter lösenord för en inloggad lösenordsanvändare: kräver rätt nuvarande lösenord
+    // och att det nya uppfyller PasswordPolicy, och återkallar alla refresh-tokens
+    // utom keepRefreshToken (enheten som byter behåller sin session).
+    Task<AuthResult> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, string? keepRefreshToken);
+
     Task<AuthResult> VerifyEmailAsync(string token);
 
     Task<AuthResult> ResendVerificationAsync(Guid userId);

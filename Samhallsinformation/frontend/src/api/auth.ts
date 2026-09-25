@@ -39,6 +39,34 @@ export async function updateMyProfile(fields: { name?: string }): Promise<{ acce
   return res.json()
 }
 
+// Byter lösenord för det inloggade kontot (PUT /api/auth/me/password). Backend
+// återkallar kontots övriga sessioner; enhetens egen refresh-token skickas med
+// så att just den sessionen behålls. Felen är redan skrivna på svenska för
+// UI:t: 400 bär serverns egen text (fel nuvarande lösenord, för kort nytt
+// lösenord, Google-konto), övriga statusar och nätverksfel får en generell text.
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  let res: Response
+  try {
+    res = await adminFetch('/api/auth/me/password', {
+      method: 'PUT',
+      body: JSON.stringify({
+        currentPassword,
+        newPassword,
+        refreshToken: localStorage.getItem('si_refresh_token'),
+      }),
+    })
+  } catch {
+    throw new Error('Kunde inte nå servern. Kontrollera din anslutning och försök igen.')
+  }
+  if (res.ok) return
+
+  const err = await res.json().catch(() => ({})) as { error?: string }
+  if (res.status === 400 && err.error) throw new Error(err.error)
+  if (res.status === 401) throw new Error('Din session har gått ut. Logga in igen och försök på nytt.')
+  if (res.status === 429) throw new Error('För många försök på kort tid. Vänta en minut och försök igen.')
+  throw new Error('Något gick fel när lösenordet skulle bytas. Försök igen om en stund.')
+}
+
 // Byter inte e-posten direkt — skickar en bekräftelselänk till den nya
 // adressen. Kontots e-post ändras först när länken klickas (confirmEmailChange).
 // currentPassword krävs för lösenordskonton (kollas av backend) — en kapad
