@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { FLAG_GRUPPER, type FlagKey, type FlagState } from '../../lib/featureFlags'
+import { FLAG_GRUPPER, FLAG_DEFINITIONER, type FlagKey, type FlagState } from '../../lib/featureFlags'
+import ConfirmDialog from '../common/ConfirmDialog'
 import { fetchAdminFeatureFlags, setFeatureFlagRedo } from '../../api/featureFlags'
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 
 export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ }: Props) {
   const [öppna, setÖppna] = useState<Set<string>>(new Set())
+  const [bekräftaÅterställ, setBekräftaÅterställ] = useState(false)
   const queryClient = useQueryClient()
 
   // Redo-markeringen (schemaläggs i Uppdateringar) hör inte till den
@@ -40,6 +42,10 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ }: 
   const totalAktiva = Object.values(flaggor).filter(Boolean).length
   const total = Object.keys(flaggor).length
 
+  // Flaggor vars nuvarande värde avviker från kodens standard — det är dessa
+  // som faktiskt ändras för alla besökare när overrides tas bort.
+  const ändras = FLAG_DEFINITIONER.filter(f => flaggor[f.key] !== f.defaultAktiv)
+
   return (
     <div className="flex flex-col gap-6">
 
@@ -47,12 +53,38 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ }: 
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500">{totalAktiva} av {total} funktioner aktiverade</p>
         <button
-          onClick={onÅterställ}
+          onClick={() => setBekräftaÅterställ(true)}
           className="text-sm text-slate-500 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg transition-colors"
         >
-          Återställ standardvärden
+          Återställ standardvärden för alla
         </button>
       </div>
+
+      {bekräftaÅterställ && (
+        <ConfirmDialog
+          rubrik="Återställa standardvärden för alla besökare?"
+          bekräftaText="Återställ för alla"
+          onBekräfta={() => { setBekräftaÅterställ(false); onÅterställ() }}
+          onAvbryt={() => setBekräftaÅterställ(false)}
+        >
+          <p>
+            Alla flaggors overrides tas bort, även markeringarna "Redo att lanseras". Flaggorna är
+            globala: funktioner kan slås av eller på för <strong>alla användare</strong> direkt.
+          </p>
+          {ändras.length === 0 ? (
+            <p>Just nu avviker ingen flagga från standardvärdet.</p>
+          ) : (
+            <>
+              <p><strong>{ändras.length}</strong> {ändras.length === 1 ? 'flagga ändras' : 'flaggor ändras'}:</p>
+              <ul className="list-disc pl-5 max-h-40 overflow-y-auto">
+                {ändras.map(f => (
+                  <li key={f.key}>{f.label}: {flaggor[f.key] ? 'på' : 'av'} → {f.defaultAktiv ? 'på' : 'av'}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </ConfirmDialog>
+      )}
 
       {/* Accordion-kort */}
       <div className="flex flex-col gap-3">
