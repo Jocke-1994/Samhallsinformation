@@ -30,6 +30,10 @@ jobs:
         working-directory: Samhallsinformation/frontend
         run: npm install
 
+      - name: Test
+        working-directory: Samhallsinformation/frontend
+        run: npm test
+
       - name: Build
         working-directory: Samhallsinformation/frontend
         run: npm run build
