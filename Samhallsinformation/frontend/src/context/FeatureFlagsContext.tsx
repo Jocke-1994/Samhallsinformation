@@ -1,9 +1,11 @@
 import { createContext, useContext } from 'react'
-import { useFeatureFlags } from '../hooks/useFeatureFlags'
+import { useFeatureFlags, type FlaggLäge } from '../hooks/useFeatureFlags'
 import type { FlagKey, FlagState } from '../lib/featureFlags'
 
 interface FeatureFlagsContextValue {
   flaggor: FlagState
+  läge: FlaggLäge
+  laddat: boolean
   växlaFlagg: (key: FlagKey) => void
   återställ: () => void
 }
@@ -19,6 +21,14 @@ export function useFlags(): FlagState {
   const ctx = useContext(FeatureFlagsContext)
   if (!ctx) throw new Error('useFlags måste användas inom FeatureFlagsProvider')
   return ctx.flaggor
+}
+
+// Konsumenter som inte vill visa/dölja UI förrän flaggorna är hämtade kan
+// vänta på `laddat` (false bara under första hämtningen).
+export function useFlaggLäge(): { läge: FlaggLäge; laddat: boolean } {
+  const ctx = useContext(FeatureFlagsContext)
+  if (!ctx) throw new Error('useFlaggLäge måste användas inom FeatureFlagsProvider')
+  return { läge: ctx.läge, laddat: ctx.laddat }
 }
 
 export function useFeatureFlagsAdmin() {

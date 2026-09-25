@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FLAG_GRUPPER, FLAG_DEFINITIONER, type FlagKey, type FlagState } from '../../lib/featureFlags'
 import ConfirmDialog from '../common/ConfirmDialog'
 import { fetchAdminFeatureFlags, setFeatureFlagRedo } from '../../api/featureFlags'
+import { ADMIN_FLAGG_QUERY_KEY, invalideraFlaggor } from '../../lib/flaggCache'
 
 interface Props {
   flaggor: FlagState
@@ -18,7 +19,7 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ }: 
   // Redo-markeringen (schemaläggs i Uppdateringar) hör inte till den
   // publika flagg-kontexten — hämtas separat bara för den här panelen.
   const { data: adminFlaggor = [] } = useQuery({
-    queryKey: ['admin-feature-flags'],
+    queryKey: ADMIN_FLAGG_QUERY_KEY,
     queryFn:  fetchAdminFeatureFlags,
   })
   const redoMap: Record<string, boolean> = Object.fromEntries(
@@ -27,7 +28,7 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ }: 
 
   const { mutate: växlaRedo } = useMutation({
     mutationFn: ({ key, redo }: { key: string; redo: boolean }) => setFeatureFlagRedo(key, redo),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-feature-flags'] }),
+    onSuccess: () => invalideraFlaggor(queryClient),
   })
 
   function växlaGrupp(key: string) {

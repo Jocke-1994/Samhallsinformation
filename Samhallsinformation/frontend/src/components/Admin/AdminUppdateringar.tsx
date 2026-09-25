@@ -7,6 +7,7 @@ import {
   type PunktTyp, type Synlighet,
 } from '../../api/uppdateringar'
 import { fetchAdminFeatureFlags } from '../../api/featureFlags'
+import { ADMIN_FLAGG_QUERY_KEY, invalideraFlaggor } from '../../lib/flaggCache'
 import { fetchAdminFaq } from '../../api/faq'
 import { isoTillDatetimeLocal } from '../../lib/tid'
 import ConfirmDialog from '../common/ConfirmDialog'
@@ -188,7 +189,7 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
   const [schemaDatum,  setSchemaDatum]  = useState(redigerar?.schemalagdPubliceringUtc ? isoTillDatetimeLocal(redigerar.schemalagdPubliceringUtc) : '')
   const [valdaFlaggor, setValdaFlaggor] = useState<string[]>(redigerar?.schemalagdaFlaggor ?? [])
 
-  const { data: adminFlaggor = [] } = useQuery({ queryKey: ['admin-feature-flags'], queryFn: fetchAdminFeatureFlags })
+  const { data: adminFlaggor = [] } = useQuery({ queryKey: ADMIN_FLAGG_QUERY_KEY, queryFn: fetchAdminFeatureFlags })
   const redoFlaggor = adminFlaggor.filter(f => f.redoAttLanseras && !f.value)
 
   const { data: faqItems = [] } = useQuery({ queryKey: ['admin-faq'], queryFn: fetchAdminFaq })
@@ -489,6 +490,9 @@ export default function AdminUppdateringar() {
   function invalidera() {
     queryClient.invalidateQueries({ queryKey: ['admin-uppdateringar'] })
     queryClient.invalidateQueries({ queryKey: ['uppdateringar'] })
+    // Publicering aktiverar flaggor server-side (ActivateFlagsAsync) — uppdatera
+    // både publik och admin-flaggvy så ändringen syns direkt.
+    invalideraFlaggor(queryClient)
   }
 
   const createMutation = useMutation({ mutationFn: createUppdatering, onSuccess: invalidera })
