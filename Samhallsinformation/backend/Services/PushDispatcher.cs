@@ -1,10 +1,8 @@
 namespace Samhallsinformation.Services;
 
-using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
-using WebPush;
 
 public static class PushDispatcher
 {
@@ -247,43 +245,37 @@ public static class PushDispatcher
         // anropet — devices kan spänna över flera användare, t.ex. alla
         // admins) — så en användares egna enheter kapplöper om att visa
         // notisen, utan att påverka någon annan användares kapplöpning.
-        foreach (var userGroup in devices.GroupBy(d => d.UserId))
+        //
+        // Claim-raderna sparas INNAN första utskicket (E3#4): en enhet som får sin
+        // push inom några hundra ms anropar /api/push/claim direkt, och då måste
+        // raden redan finnas i databasen — annars kan ingen dedupe ske.
+        var claimByUser = devices
+            .Select(d => d.UserId).Distinct()
+            .ToDictionary(userId => userId, userId => new PushDispatchClaim { UserId = userId });
+        db.PushDispatchClaims.AddRange(claimByUser.Values);
+        await db.SaveChangesAsync(ct);
+
+        // Parallellt med begränsad grad + timeout per enhet (E3#11). Fan-out rör
+        // inte db — loggning och städning sker här, på en tråd, efteråt.
+        var items = devices.Select(d => new PushSendItem(d, claimByUser[d.UserId].Id)).ToList();
+        var results = await PushFanOut.SendAsync(push, items, title, body, url, PushFanOutOptions.Default, ct);
+
+        foreach (var r in results)
         {
-            var claim = new PushDispatchClaim { UserId = userGroup.Key };
-            db.PushDispatchClaims.Add(claim);
-
-            foreach (var device in userGroup)
+            db.NotificationDeliveryLogs.Add(new NotificationDeliveryLog
             {
-                var log = new NotificationDeliveryLog
-                {
-                    UserId    = device.UserId,
-                    SourceId  = sourceId,
-                    Channel   = "push",
-                    Recipient = device.Endpoint,
-                    Subject   = title,
-                    Body      = body,
-                };
+                UserId       = r.Device.UserId,
+                SourceId     = sourceId,
+                Channel      = "push",
+                Recipient    = r.Device.Endpoint,
+                Subject      = title,
+                Body         = body,
+                Status       = r.Status,
+                ErrorMessage = r.ErrorMessage,
+            });
 
-                try
-                {
-                    await push.SendAsync(device, title, body, url, claim.Id, ct);
-                    log.Status = "sent";
-                }
-                catch (WebPushException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone)
-                {
-                    // Subskriptionen är död (webbläsaren har glömt den) — städa bort enheten.
-                    log.Status = "expired";
-                    log.ErrorMessage = ex.Message;
-                    db.UserDevices.Remove(device);
-                }
-                catch (Exception ex)
-                {
-                    log.Status = "failed";
-                    log.ErrorMessage = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
-                }
-
-                db.NotificationDeliveryLogs.Add(log);
-            }
+            // Död subskription — städa bort enheten.
+            if (r.Status == "expired") db.UserDevices.Remove(r.Device);
         }
 
         await db.SaveChangesAsync(ct);

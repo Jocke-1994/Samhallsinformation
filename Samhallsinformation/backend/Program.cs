@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Application.Monitoring;
+using Samhallsinformation.Application.RateLimiting;
 using Samhallsinformation.Application.Support;
 using Samhallsinformation.Data;
 using Samhallsinformation.Infrastructure.Auth;
@@ -89,7 +90,8 @@ builder.Services.AddRateLimiter(options =>
 {
     // Partitionerad per IP — utan detta delar ALLA anropare samma räknare.
     options.AddPolicy("auth", httpContext => RateLimitPartition.GetFixedWindowLimiter(
-        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        // /64-prefix för IPv6 (V2-10) — annars roterar en angripare fritt inom sitt /64.
+        partitionKey: ClientIpPartition.KeyFor(httpContext.Connection.RemoteIpAddress),
         factory: _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 5,
@@ -164,6 +166,8 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 builder.Services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+// Kontobaserad inloggningsspärr (V2-10) — processlokal räknare, måste vara singleton.
+builder.Services.AddSingleton<LoginThrottle>();
 
 // Aktivitetslogg (#491 wave 1) — behöver HttpContext för att fånga Vem/Ip/Enhet automatiskt
 builder.Services.AddHttpContextAccessor();

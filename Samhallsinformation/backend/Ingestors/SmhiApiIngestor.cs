@@ -55,6 +55,12 @@ public class SmhiApiIngestor : IIngestor
 
         foreach (var warning in warnings)
         {
+            if (warning.Id == null)
+            {
+                _logger.LogWarning("SMHI-varning utan id hoppades över");
+                continue;
+            }
+
             foreach (var area in warning.WarningAreas ?? [])
             {
                 var areaName  = area.AreaName?.Sv ?? "Sverige";
@@ -89,7 +95,7 @@ public class SmhiApiIngestor : IIngestor
                 var ev = new CanonicalEvent
                 {
                     SourceId    = Source.Id,
-                    ExternalId  = $"smhi-{warning.Id}-{area.Id}",
+                    ExternalId  = $"smhi-{warning.Id}-{area.Id?.ToString() ?? areaName}",
                     Title       = title,
                     Content     = content,
                     PublishedAt = ParseDate(area.Published ?? area.ApproximateStart),

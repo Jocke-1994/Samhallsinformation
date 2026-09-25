@@ -43,7 +43,7 @@ public class ChangePasswordTests
 
         return new AuthService(db, tokens, Hasher, Substitute.For<IEmailService>(),
             Substitute.For<IGoogleTokenValidator>(), Substitute.For<IPushNotificationService>(),
-            Substitute.For<IAktivitetsloggService>(), config);
+            Substitute.For<IAktivitetsloggService>(), new LoginThrottle(), config);
     }
 
     private static async Task<User> AddLocalUserAsync(AppDbContext db)

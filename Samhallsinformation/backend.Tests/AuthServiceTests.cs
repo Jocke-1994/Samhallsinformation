@@ -40,7 +40,7 @@ public class AuthServiceTests
         var config = Substitute.For<IConfiguration>();
         config["FRONTEND_URL"].Returns("https://test.local");
 
-        return new AuthService(db, tokens, hasher, email, google, push, aktivitetslogg, config);
+        return new AuthService(db, tokens, hasher, email, google, push, aktivitetslogg, new LoginThrottle(), config);
     }
 
     [Fact]

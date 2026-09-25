@@ -446,7 +446,7 @@ public class PushDispatcherTests
         db.UserDevices.Add(new UserDevice { UserId = admin.Id, Endpoint = "https://push.example/admin-ep-2", P256dh = "p", Auth = "a" });
         db.SaveChanges();
         var push = Substitute.For<IPushNotificationService>();
-        var claimIds = new List<Guid?>();
+        var claimIds = new System.Collections.Concurrent.ConcurrentBag<Guid?>();
         push.SendAsync(Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(),
                 Arg.Do<Guid?>(id => claimIds.Add(id)), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
@@ -454,11 +454,12 @@ public class PushDispatcherTests
         await PushDispatcher.DispatchNewTicketAsync(db, push, "https://test.local", NewTicket());
 
         Assert.Equal(2, claimIds.Count);
-        Assert.NotNull(claimIds[0]);
-        Assert.Equal(claimIds[0], claimIds[1]);
+        var distinct = claimIds.Distinct().ToList(); // båda enheterna delar ETT claimId
+        var first = Assert.Single(distinct);
+        Assert.NotNull(first);
         var claim = Assert.Single(db.PushDispatchClaims);
         Assert.Equal(admin.Id, claim.UserId);
-        Assert.Equal(claimIds[0], claim.Id);
+        Assert.Equal(first, claim.Id);
     }
 
     [Fact]
