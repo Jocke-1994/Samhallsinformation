@@ -157,6 +157,13 @@ public class PushController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Subscribe([FromBody] SubscribeRequest req)
     {
+        // Blind SSRF-skydd (E1#6): servern POST:ar senare mot endpointen, så den
+        // måste vara https och tillhöra en känd push-tjänst.
+        if (!PushEndpointValidator.TryValidate(
+                req.Endpoint, out var endpointError,
+                PushEndpointValidator.ParseExtraHosts(_config[PushEndpointValidator.ExtraHostsConfigKey])))
+            return BadRequest(new { error = endpointError });
+
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
         // Upsert på Endpoint (inte UserId+Endpoint) — ett endpoint tillhör en
