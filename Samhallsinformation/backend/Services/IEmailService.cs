@@ -29,4 +29,11 @@ public interface IEmailService
     // Hämtar textinnehållet för ett inkommet mejl — webhooken levererar bara
     // metadata (avsändare/mottagare/id), själva texten hämtas separat.
     Task<string?> GetReceivedEmailTextAsync(string emailId);
+
+    // Driftlarm från övervakningen (V1-9) till en admin. Ett mejl kan innehålla flera larm
+    // (alla som blev nya/återöppnade i samma cykel) så en bred driftstörning inte ger ett mejl per källa.
+    Task SendAdminAlertsAsync(string toEmail, string toName, IReadOnlyList<AdminAlertMailItem> alerts, string adminUrl);
 }
+
+/// <summary>Ett larm i ett driftlarmsmejl (V1-9).</summary>
+public sealed record AdminAlertMailItem(string Severity, string Title, string Detail, DateTime RaisedAtUtc);

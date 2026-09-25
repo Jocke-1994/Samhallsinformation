@@ -164,6 +164,48 @@ public class ResendEmailService : IEmailService
         await SendAsync(fromAddress ?? _fromSupport, toEmail, $"Svar på ditt ärende: {EmailHtml.SingleLine(subject)}", html, replyTo);
     }
 
+    public async Task SendAdminAlertsAsync(string toEmail, string toName, IReadOnlyList<AdminAlertMailItem> alerts, string adminUrl)
+    {
+        var rader = new StringBuilder();
+        foreach (var a in alerts)
+        {
+            var (etikett, färg) = a.Severity switch
+            {
+                "critical" => ("Kritisk", "#dc2626"),
+                "warning"  => ("Varning", "#d97706"),
+                _          => ("Info",    "#2563eb"),
+            };
+            rader.Append($"""
+                <div style="border:1px solid #e2e8f0;border-left:4px solid {färg};border-radius:8px;padding:12px 16px;margin:12px 0">
+                  <p style="margin:0 0 4px;color:{färg};font-size:12px;font-weight:700;text-transform:uppercase">{etikett}</p>
+                  <p style="margin:0 0 4px;color:#0f172a;font-weight:600">{EmailHtml.EncodeSingleLine(a.Title)}</p>
+                  <p style="margin:0;color:#475569;font-size:14px">{EmailHtml.Encode(a.Detail)}</p>
+                </div>
+                """);
+        }
+
+        var html = $"""
+            <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
+              <h2 style="color:#7c3aed;margin-bottom:8px">Driftlarm</h2>
+              <p style="color:#334155">Hej {EmailHtml.Encode(toName)},</p>
+              <p style="color:#334155">Övervakningen har upptäckt {(alerts.Count == 1 ? "ett nytt larm" : $"{alerts.Count} nya larm")}:</p>
+              {rader}
+              <a href="{EmailHtml.Encode(adminUrl)}" style="display:inline-block;margin:24px 0;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
+                Öppna adminpanelen
+              </a>
+              <p style="color:#64748b;font-size:13px">Kvittera larmet under Felsökning &rarr; Larm när du har tagit hand om det. Du får bara ett mejl per nytt larm.</p>
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+              <p style="color:#94a3b8;font-size:12px">Samhällsinformation &mdash; opartisk myndighetsinformation</p>
+            </div>
+            """;
+
+        var subject = alerts.Count == 1
+            ? $"Driftlarm: {EmailHtml.SingleLine(alerts[0].Title)}"
+            : $"Driftlarm: {alerts.Count} nya larm";
+
+        await SendAsync(_fromNoreply, toEmail, subject, html);
+    }
+
     public async Task<string?> GetReceivedEmailTextAsync(string emailId)
     {
         var res = await _http.GetAsync($"/emails/receiving/{emailId}");
