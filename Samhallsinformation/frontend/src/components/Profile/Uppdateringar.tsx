@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { KändBugg, KommandeVersion } from '../../types'
 import { useFlags } from '../../context/FeatureFlagsContext'
-import { fetchUppdateringar, type PunktTyp } from '../../api/uppdateringar'
+import { fetchUppdateringar, uppdateringarQueryKey } from '../../api/uppdateringar'
+import { useAuth } from '../../context/AuthContext'
+import { getTypConfig } from '../../lib/uppdateringTyp'
 
 function formatDatum(iso: string): string {
   return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -27,13 +29,6 @@ const PA_GANG: KommandeVersion | null = {
   plannedDate: 'Höst 2026',
 }
 
-const TYPE_CONFIG: Record<PunktTyp, { label: string; pill: string }> = {
-  'ny-funktion':  { label: 'Nytt',         pill: 'bg-violet-100 text-violet-700' },
-  'förbättring':  { label: 'Förbättrat',   pill: 'bg-amber-100 text-amber-700'  },
-  'buggfix':      { label: 'Fixat',        pill: 'bg-green-100 text-green-700'  },
-  'känt-problem': { label: 'Känt problem', pill: 'bg-red-100 text-red-700'      },
-  'kommer-snart': { label: 'Kommer snart', pill: 'bg-emerald-100 text-emerald-700' },
-}
 
 const ALLVAR_CONFIG: Record<KändBugg['allvar'], { bar: string; bg: string; label: string; labelColor: string }> = {
   låg:   { bar: 'bg-slate-300', bg: 'bg-slate-50 border-slate-200',  label: 'Låg prioritet',   labelColor: 'text-slate-500' },
@@ -43,8 +38,9 @@ const ALLVAR_CONFIG: Record<KändBugg['allvar'], { bar: string; bg: string; labe
 
 export default function Uppdateringar() {
   const flaggor = useFlags()
+  const { isLoggedIn } = useAuth()
   const { data: uppdateringar = [] } = useQuery({
-    queryKey: ['uppdateringar'],
+    queryKey: uppdateringarQueryKey(isLoggedIn),
     queryFn:  fetchUppdateringar,
   })
   const [latest, ...historik] = uppdateringar
@@ -74,10 +70,10 @@ export default function Uppdateringar() {
       </div>
       <div style={{ padding: '1.25rem 2rem' }} className="flex flex-col gap-2.5">
         {latest.punkter.map(p => {
-          const cfg = TYPE_CONFIG[p.typ]
+          const cfg = getTypConfig(p.typ)
           return (
             <div key={p.id} className="flex items-start gap-3">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.pill}`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.badge}`}>
                 {cfg.label}
               </span>
               <span className="text-sm text-slate-700 leading-relaxed">{p.text}</span>
@@ -223,9 +219,9 @@ export default function Uppdateringar() {
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {release.punkter.map(p => {
-                      const cfg = TYPE_CONFIG[p.typ]
+                      const cfg = getTypConfig(p.typ)
                       return (
-                        <span key={p.id} className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.pill}`}>
+                        <span key={p.id} className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.badge}`}>
                           {p.plats}
                         </span>
                       )
@@ -237,10 +233,10 @@ export default function Uppdateringar() {
               {isOpen && (
                 <div style={{ padding: '0 2.5rem 1.25rem' }} className="flex flex-col gap-2">
                   {release.punkter.map(p => {
-                    const cfg = TYPE_CONFIG[p.typ]
+                    const cfg = getTypConfig(p.typ)
                     return (
                       <div key={p.id} className="flex items-start gap-2.5">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.pill}`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.badge}`}>
                           {cfg.label}
                         </span>
                         <span className="text-sm text-slate-600 leading-relaxed">{p.text}</span>
