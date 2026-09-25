@@ -10,31 +10,16 @@ import { fetchAdminFeatureFlags } from '../../api/featureFlags'
 import { fetchAdminFaq } from '../../api/faq'
 import { isoTillDatetimeLocal } from '../../lib/tid'
 import ConfirmDialog from '../common/ConfirmDialog'
+import { getTypConfig, PUNKT_TYPER } from '../../lib/uppdateringTyp'
 
 // ---------------------------------------------------------------------------
 // Konfiguration
 // ---------------------------------------------------------------------------
 
-const TYP_CONFIG: Record<PunktTyp, { label: string; pill: string; pillAktiv: string; dot: string }> = {
-  'ny-funktion':  { label: 'Ny funktion',  dot: 'bg-violet-500',  pill: 'border-slate-200 text-slate-500 hover:bg-slate-50',              pillAktiv: 'bg-violet-100 text-violet-700 border-violet-200'   },
-  'förbättring':  { label: 'Förbättring',  dot: 'bg-amber-400',   pill: 'border-slate-200 text-slate-500 hover:bg-slate-50',              pillAktiv: 'bg-amber-100 text-amber-700 border-amber-200'       },
-  'buggfix':      { label: 'Buggfix',      dot: 'bg-green-500',   pill: 'border-slate-200 text-slate-500 hover:bg-slate-50',              pillAktiv: 'bg-green-100 text-green-700 border-green-200'       },
-  'känt-problem': { label: 'Känt problem', dot: 'bg-red-500',     pill: 'border-slate-200 text-slate-500 hover:bg-slate-50',              pillAktiv: 'bg-red-100 text-red-700 border-red-200'             },
-  'kommer-snart': { label: 'Kommer snart', dot: 'bg-emerald-500', pill: 'border-slate-200 text-slate-500 hover:bg-slate-50',              pillAktiv: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-}
-
-const TYP_PILL_LISTA: Record<PunktTyp, string> = {
-  'ny-funktion':  'bg-violet-100 text-violet-700 border border-violet-200',
-  'förbättring':  'bg-amber-100 text-amber-700 border border-amber-200',
-  'buggfix':      'bg-green-100 text-green-700 border border-green-200',
-  'känt-problem': 'bg-red-100 text-red-700 border border-red-200',
-  'kommer-snart': 'bg-emerald-100 text-emerald-700 border border-emerald-200',
-}
-
 const ALLA_TYPER:    Array<PunktTyp | 'Alla'>  = ['Alla', 'ny-funktion', 'förbättring', 'buggfix', 'känt-problem', 'kommer-snart']
 const ALLA_STATUSAR: Array<'publicerad' | 'utkast' | 'Alla'> = ['Alla', 'publicerad', 'utkast']
 const PLATS_OPTIONS = ['Allmänt', 'Nyhetsflöde', 'Mina källor', 'Notifieringar', 'Konto']
-const ALLA_TYPER_FORM = Object.keys(TYP_CONFIG) as PunktTyp[]
+const ALLA_TYPER_FORM = PUNKT_TYPER
 
 function typSummary(punkter: { typ: PunktTyp }[]) {
   const seen = new Map<PunktTyp, number>()
@@ -381,9 +366,9 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
                     {ALLA_TYPER_FORM.map(t => (
                       <button key={t} onClick={() => updatePunkt(p.radId, 'typ', t)}
                         className={`text-xs font-medium px-2 py-0.5 rounded-full border transition-colors ${
-                          p.typ === t ? TYP_CONFIG[t].pillAktiv : TYP_CONFIG[t].pill
+                          p.typ === t ? getTypConfig(t).formPillAktiv : getTypConfig(t).formPill
                         }`}>
-                        {TYP_CONFIG[t].label}
+                        {getTypConfig(t).adminLabel}
                       </button>
                     ))}
                   </div>
@@ -594,10 +579,10 @@ export default function AdminUppdateringar() {
               <button key={t} onClick={() => setTypFilter(t)}
                 className={`text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
                   typFilter === t
-                    ? t === 'Alla' ? 'bg-violet-100 text-violet-700' : TYP_PILL_LISTA[t as PunktTyp]
+                    ? t === 'Alla' ? 'bg-violet-100 text-violet-700' : getTypConfig(t).listPill
                     : 'text-slate-500 hover:bg-slate-100'
                 }`}>
-                {t === 'Alla' ? 'Alla typer' : TYP_CONFIG[t as PunktTyp].label}
+                {t === 'Alla' ? 'Alla typer' : getTypConfig(t).adminLabel}
               </button>
             ))}
           </div>
@@ -642,8 +627,8 @@ export default function AdminUppdateringar() {
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {summary.map(({ typ, antal }) => (
-                        <span key={typ} className={`text-xs font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${TYP_PILL_LISTA[typ]}`}>
-                          {TYP_CONFIG[typ].label}{antal > 1 ? ` ×${antal}` : ''}
+                        <span key={typ} className={`text-xs font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${getTypConfig(typ).listPill}`}>
+                          {getTypConfig(typ).adminLabel}{antal > 1 ? ` ×${antal}` : ''}
                         </span>
                       ))}
                     </div>

@@ -319,7 +319,7 @@ public class AuthController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        var cancelLink = $"{_frontendUrl.TrimEnd('/')}/cancel-deletion?token={user.DeletionCancelToken}";
+        var cancelLink = $"{_frontendUrl.TrimEnd('/')}/cancel-deletion?token={Uri.EscapeDataString(user.DeletionCancelToken)}";
         _ = _email.SendAccountDeletionScheduledAsync(user.Email, user.Name, cancelLink, user.DeletionScheduledAt.Value);
 
         return Ok(new { deletionScheduledAt = user.DeletionScheduledAt });

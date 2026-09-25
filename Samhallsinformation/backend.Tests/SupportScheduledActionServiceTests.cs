@@ -1,6 +1,10 @@
 namespace Samhallsinformation.Tests;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
+using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Support;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 using Samhallsinformation.Services;
@@ -14,6 +18,13 @@ public class SupportScheduledActionServiceTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         return new AppDbContext(options);
+    }
+
+    private static Task RunAsync(AppDbContext db)
+    {
+        var delivery = new SupportReplyDelivery(
+            db, Substitute.For<IAktivitetsloggService>(), Substitute.For<IEmailService>(), NullLogger<SupportReplyDelivery>.Instance);
+        return SupportScheduledActionService.ExecuteDueActionsAsync(db, delivery, NullLogger.Instance);
     }
 
     private static (User agent, SupportTicket ticket) SeedTicket(AppDbContext db)
@@ -38,7 +49,7 @@ public class SupportScheduledActionServiceTests
         });
         await db.SaveChangesAsync();
 
-        await SupportScheduledActionService.ExecuteDueActionsAsync(db);
+        await RunAsync(db);
 
         var message = Assert.Single(db.SupportTicketMessages);
         Assert.False(message.IsInternal);
@@ -58,7 +69,7 @@ public class SupportScheduledActionServiceTests
         });
         await db.SaveChangesAsync();
 
-        await SupportScheduledActionService.ExecuteDueActionsAsync(db);
+        await RunAsync(db);
 
         var message = Assert.Single(db.SupportTicketMessages);
         Assert.True(message.IsInternal);
@@ -78,7 +89,7 @@ public class SupportScheduledActionServiceTests
         });
         await db.SaveChangesAsync();
 
-        await SupportScheduledActionService.ExecuteDueActionsAsync(db);
+        await RunAsync(db);
 
         Assert.Equal(nyAgent.Id, db.SupportTickets.Single().AssignedToUserId);
         var message = Assert.Single(db.SupportTicketMessages);
@@ -98,7 +109,7 @@ public class SupportScheduledActionServiceTests
         });
         await db.SaveChangesAsync();
 
-        await SupportScheduledActionService.ExecuteDueActionsAsync(db);
+        await RunAsync(db);
 
         Assert.Empty(db.SupportTicketMessages);
         Assert.False(db.SupportTicketScheduledActions.Single().Executed);
@@ -116,7 +127,7 @@ public class SupportScheduledActionServiceTests
         });
         await db.SaveChangesAsync();
 
-        await SupportScheduledActionService.ExecuteDueActionsAsync(db);
+        await RunAsync(db);
 
         Assert.Empty(db.SupportTicketMessages);
     }
