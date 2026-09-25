@@ -49,7 +49,10 @@ export async function changePassword(currentPassword: string, newPassword: strin
   try {
     res = await adminFetch('/api/auth/me/password', {
       method: 'PUT',
-      body: JSON.stringify({
+      // Funktion, inte sträng: får anropet 401 förnyas sessionen och
+      // refresh-token roteras — omförsöket måste skicka den NYA, annars
+      // återkallar backend enhetens egen session tillsammans med de övriga.
+      body: () => JSON.stringify({
         currentPassword,
         newPassword,
         refreshToken: localStorage.getItem('si_refresh_token'),

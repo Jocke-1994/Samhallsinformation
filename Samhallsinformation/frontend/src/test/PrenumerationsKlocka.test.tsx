@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import PrenumerationsKlocka from '../components/NewsFeed/PrenumerationsKlocka'
 import BevakningsToastHost from '../components/NewsFeed/BevakningsToastHost'
 import { stängBevakningsToast } from '../components/NewsFeed/bevakningsToastStore'
@@ -20,11 +21,15 @@ const inbrott: api.BevakningDto = { id: 'b1', kategorier: ['Inbrott'], omraden: 
 const stold:   api.BevakningDto = { id: 'b2', kategorier: ['Stöld'],   omraden: null }
 
 function renderaKlocka(props: { mode: 'allt' | 'mitt'; typ: string | null; omrade: string | null }) {
+  // Färsk QueryClient per render: kontexten hämtar via react-query
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <PolisenBevakningarProvider>
-      <PrenumerationsKlocka polisenTyp={props.typ} polisenOmrade={props.omrade} mode={props.mode} />
-      <BevakningsToastHost />
-    </PolisenBevakningarProvider>,
+    <QueryClientProvider client={queryClient}>
+      <PolisenBevakningarProvider>
+        <PrenumerationsKlocka polisenTyp={props.typ} polisenOmrade={props.omrade} mode={props.mode} />
+        <BevakningsToastHost />
+      </PolisenBevakningarProvider>
+    </QueryClientProvider>,
   )
 }
 

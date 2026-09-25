@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
+import { registerAuthBridge } from '../api/authBridge'
 import {
   MAX_REFRESH_FORSOK,
   beraknaRefreshFordrojning,
@@ -10,6 +11,9 @@ export type SystemRoll = 'Användare' | 'Support' | 'Admin'
 
 interface AuthContextType {
   isLoggedIn: boolean
+  // Aktuell access-token. Konsumenter som hämtar användarspecifik data
+  // använder den bara som "har sessionen förnyats/bytts?"-signal.
+  accessToken: string | null
   roll: SystemRoll
   aktivVy: SystemRoll
   email: string | null
@@ -186,6 +190,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const doRefresh = useCallback(() => forsokRefresh(1), [forsokRefresh])
 
+  // Bron till API-lagret (adminFetch): ett 401 förnyar sessionen via samma
+  // single-flight-refresh som timern. Layout-effekt, inte vanlig effekt:
+  // barnens (t.ex. bevakningskontexternas) första hämtning körs i en vanlig
+  // effekt, som annars hinner före förälderns registrering.
+  useLayoutEffect(() => registerAuthBridge({
+    getToken: () => localStorage.getItem('si_token'),
+    refresh: doRefresh,
+  }), [doRefresh])
+
   // Schemalägg nästa refresh ~2 min innan access-token går ut. Körs om varje
   // gång token ändras (login/register/refresh) så nästa refresh läggs på nytt.
   // Golvet i beraknaRefreshFordrojning (bara för en nyss erhållen token) hindrar
@@ -246,7 +259,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, roll, aktivVy, email, name, emailVerified, login, register, loginWithGoogle, logout, byttVy, refreshSession: doRefresh, setAccessToken }}>
+    <AuthContext.Provider value={{ isLoggedIn, accessToken: token, roll, aktivVy, email, name, emailVerified, login, register, loginWithGoogle, logout, byttVy, refreshSession: doRefresh, setAccessToken }}>
       {children}
     </AuthContext.Provider>
   )

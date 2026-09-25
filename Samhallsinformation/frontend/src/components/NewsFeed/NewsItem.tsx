@@ -62,7 +62,7 @@ function EventContent({ content }: { content: string }) {
 export default function NewsItem({ event, isRead, sourceName, sourceShortName, viewMode = 'allt', checkbox }: Props) {
   const { isLoggedIn } = useAuth()
   const flaggor = useFlags()
-  const { sparade, toggleSparad } = useSavedEvents()
+  const { sparade, lage: sparatLage, toggleSparad } = useSavedEvents()
   const [expanded, setExpanded] = useState(false)
   const [länkDöd, setLänkDöd] = useState(false)
   const [delaFeedback, setDelaFeedback] = useState<string | null>(null)
@@ -185,9 +185,14 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
           {flaggor.flode_sparat && isLoggedIn && (
             <button
               onClick={e => { e.stopPropagation(); toggleSparad(event.id) }}
-              title={ärSparad ? 'Ta bort från Sparat' : 'Spara den här händelsen'}
+              // Listan över sparade är okänd (hämtas/misslyckades): ikonen kan
+              // inte visa sanningen och ett tryck vore en gissning.
+              disabled={sparatLage !== 'klar'}
+              title={sparatLage !== 'klar'
+                ? 'Dina sparade händelser är inte hämtade just nu'
+                : ärSparad ? 'Ta bort från Sparat' : 'Spara den här händelsen'}
               aria-label={ärSparad ? 'Ta bort från Sparat' : 'Spara'}
-              className={`p-1.5 -my-1.5 rounded-full shrink-0 transition-colors ${
+              className={`p-1.5 -my-1.5 rounded-full shrink-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 ärSparad ? 'text-amber-500 hover:text-amber-600' : 'text-slate-300 hover:text-slate-500 dark:hover:text-slate-300'
               }`}
             >

@@ -14,7 +14,7 @@ vi.mock('../api/events', () => ({
 }))
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: false }) }))
 vi.mock('../context/SavedEventsContext', () => ({
-  useSavedEvents: () => ({ sparade: new Set<string>(), toggleSparad: vi.fn() }),
+  useSavedEvents: () => ({ sparade: new Set<string>(), lage: 'klar', toggleSparad: vi.fn() }),
 }))
 vi.mock('../context/FeatureFlagsContext', () => ({ useFlags: () => ({ flode_dela: false }) }))
 vi.mock('../services/readState', () => ({ markAsRead: vi.fn() }))

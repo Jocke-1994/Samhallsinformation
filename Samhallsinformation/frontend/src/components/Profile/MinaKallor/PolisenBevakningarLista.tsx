@@ -13,7 +13,7 @@ function sammanfatta(lista: string[] | null, allaLabel: string): string {
 // direkt mot en global PolisenFilterContext) med en lista av flera
 // oberoende bevakningar — se PolisenBevakningarContext för ELLER-logiken.
 export default function PolisenBevakningarLista({ kallNamn }: { kallNamn: string }) {
-  const { bevakningar, skapa, uppdatera, taBort } = usePolisenBevakningar()
+  const { bevakningar, lage, forsokIgen, skapa, uppdatera, taBort } = usePolisenBevakningar()
   const [redigerar, setRedigerar] = useState<Bevakning | 'ny' | null>(null)
 
   const vidTak = bevakningar.length >= MAX_BEVAKNINGAR
@@ -45,7 +45,14 @@ export default function PolisenBevakningarLista({ kallNamn }: { kallNamn: string
         </div>
       )}
 
-      {vidTak ? (
+      {lage === 'laddar' ? (
+        <p className="text-xs text-slate-400">Hämtar dina bevakningar...</p>
+      ) : lage === 'fel' ? (
+        <p className="text-xs text-slate-500">
+          Kunde inte hämta dina bevakningar.{' '}
+          <button onClick={forsokIgen} className="font-semibold text-violet-600 hover:text-violet-800">Försök igen</button>
+        </p>
+      ) : vidTak ? (
         <p className="text-xs text-slate-400">Max {MAX_BEVAKNINGAR} bevakningar nådda — ta bort en för att lägga till en ny.</p>
       ) : (
         <button
