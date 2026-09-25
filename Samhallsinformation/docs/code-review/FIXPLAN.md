@@ -27,7 +27,7 @@ Fynd refereras som **E{enhet}#{nummer}** (t.ex. E1#5 = enhet 1, fynd 5). Alla **
 
 ---
 
-## Våg 1 — Akut: fel som riktiga användare träffar idag (10 PR:ar)
+## Våg 1 — Akut: fel som riktiga användare träffar idag (11 PR:ar)
 Mål: sluta ljuga för användare och laga det som är trasigt i live-funktioner. Snabb release.
 
 | PR | Innehåll | Fynd | Lager | Storlek | Test | Status |
@@ -42,8 +42,30 @@ Mål: sluta ljuga för användare och laga det som är trasigt i live-funktioner
 | V1-6 | **"Läs mer hos källan":** länkkollen får aldrig ersätta knappen med "finns inte längre" vid timeout/403/5xx (tre lägen: levande/död/okänd) och `window.open` körs synkront i klickhändelsen | E7#2 | FE(+BE) | M | FE | ☐ |
 | V1-7 | **Bevakningsklockan:** Ångra-toasten renderas, serverfel visas, varning när sista bevakningen tas bort (vidgar Mitt flöde till hela Polisen) | E7#3 | FE | M | FE | ☐ |
 | V1-8 | **`adminFetch` med 401 → refresh + retry; bevakningar/sparade hämtas om vid fel:** Polisen-filtret får aldrig falla tillbaka på "visa allt" p.g.a. ett misslyckat anrop | E5#4, E5#5 | FE | M | Vitest | ☐ |
+| V1-9 | **Övervakning och larm (design först, sedan minimal första version):** en bakgrundstjänst utvärderar regler periodvis och larmar admins via befintlig admin-push + ett "Larm"-kort i Systemhälsa. Se [Övervakning](#övervakning-v1-9--design-och-återanvändning) nedan. | (återanvänds av E3#3, E6#8, E1#5; bevakar #597) | BE+FE+DB | L | enhet + guard | ☐ |
 
-Ordning: V1-0a/b först (parallellt), sedan V1-1…V1-8 i valfri ordning; V1-4 och V1-8 rör samma auth-kod → gör V1-4 före V1-8.
+Ordning: V1-0a/b först (parallellt), sedan V1-1…V1-8 i valfri ordning; V1-4 och V1-8 rör samma auth-kod → gör V1-4 före V1-8. V1-9 startar med en kort designrunda med användaren innan kod skrivs.
+
+### Övervakning (V1-9) — design och återanvändning
+**Syfte:** en enda mekanism som *märker* saker åt oss i stället för att vi ska upptäcka dem av en slump. Skapades på användarens begäran 2026-09-25 (ursprungligen för att bevaka villkoren för alt C, issue #597) och är avsiktligt generell.
+
+**Finns redan att bygga på (verifierat i koden):** `GET /api/admin/health` (`AdminHealthController`, 75 rader, Admin-only), admin-push via `PushDispatcher` (`adminIds`-vägarna), `NotificationDeliveryLog`, `AdminActivityLog`, fyra `AddHostedService`-tjänster i `Program.cs`. **Saknas:** tröskel-/regelmekanism, larmtillstånd (öppet/kvitterat) och en larmvy.
+
+**Föreslagen kärna:** `MonitoringService` (ny `BackgroundService`) → utvärderar regler var N:e minut → skapar/uppdaterar ett larm i en tabell (`AdminAlerts`: regel-nyckel, allvarlighet, första/senaste gång, antal, kvitterad av) → skickar admin-push vid *nytt* larm (inte varje cykel) → visas som kort i Systemhälsa med kvittera-knapp. Ny tabell med bool/DateTime → raw-SQL-block i Program.cs i samma PR.
+
+**Regler i första versionen (varje regel = liten funktion):**
+| Regel | Bevakar | Ur |
+|---|---|---|
+| `users_threshold` | registrerade användare ≥ 500 → "Stäm av alt C, issue #597" (tröskeln konfigurerbar) | #597 villkor 6 |
+| `source_failing` | källa har misslyckats N cykler i rad eller inte hämtat på X timmar | E3#3, E3#1, E6#8 |
+| `webhook_errors` | 5xx/undantag i Resend-webhooken över tröskel per timme | E1#5 |
+| `push_failures` | hög andel misslyckade push-utskick | E3#4/#11 |
+
+**Senare regler (läggs till när respektive fix finns):** CSP-överträdelser (V3-22, #597 villkor 2), oväntade `Typ`-värden i Uppdateringar (E4#9), migreringsskyddets logg (V2-1), överväxt loggtabell (E2#6), ärenden utan svar > X timmar.
+
+**Återanvändning (svar på användarens fråga):** ja — mekanismen är generell, så varje ny regel är en liten klass. Den gör också att fixarna i våg 2–3 kan *bevisas* i produktion (larmet tystnar) i stället för att vi litar på att de fungerar. **Skript-vakten** (#597 villkor 1) är däremot ett CI-test, inte en driftregel, och hör hemma i V1-0b.
+
+**Öppna designfrågor (tas i designrundan):** var N:e minut (förslag 5); vilka som larmas (alla Admin); kvitteringsflöde; om `users_threshold` ska larma en gång eller påminna veckovis; hur admins faktiskt ska nås. **Obs:** flaggan `notif_push` är `false` i produktion (verifierat via `GET /api/feature-flags` 2026-09-25) och admin-push har tidigare visat sig tystas av dold global mute eller avstängd Android-kanal. Push kan alltså inte förutsättas fungera för larm; överväg mejl via Resend (finns redan) som primär kanal och push som komplement.
 
 ---
 
@@ -139,7 +161,7 @@ Mål: städa sådant som inte gör skada idag. Batchas per lager; körs sist ell
 - Två befintliga tester låser fast buggar och ändras avsiktligt i V3-4 och V3-10.
 
 ## Uppskattning
-- **56 PR:ar:** våg 1 = 10, våg 2 = 17, våg 3 = 23, våg 4 = 6.
+- **57 PR:ar:** våg 1 = 11, våg 2 = 17, våg 3 = 23, våg 4 = 6. (V1-9 Övervakning tillkom efter att planen skrevs, på användarens begäran 2026-09-25; den är inte kopplad till något enskilt fynd men lagar bl.a. E3#3 och E6#8 på datasidan.)
 - Testarbetet enligt enhet-8 ligger delvis inbakat i varje PR (regressionstester) och delvis i V4-6. Enhet-8 uppskattar hela testinsatsen till ~135–145 tester och ~75–85 h (agentens siffror, overifierade).
 - Rekommenderad takt: en våg i taget, verifiera mot produktion efter varje våg. Sök-funktionen byggs efter våg 1 (och gärna våg 2), eftersom den delar mycket med de publika endpoints som våg 2 rör.
 
