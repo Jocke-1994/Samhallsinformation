@@ -1,4 +1,10 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
+import {
+  MAX_REFRESH_FORSOK,
+  beraknaRefreshFordrojning,
+  beraknaRetryFordrojning,
+  beslutaAtgardVidFel,
+} from '../lib/refreshPolicy'
 
 export type SystemRoll = 'Användare' | 'Support' | 'Admin'
 
@@ -30,9 +36,6 @@ const AuthContext = createContext<AuthContextType | null>(null)
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
-// Hur lång tid innan access-token går ut som en ny hämtas
-const REFRESH_MARGIN_MS = 2 * 60 * 1000
-
 function decodePayload(token: string): Record<string, unknown> | null {
   try {
     return JSON.parse(atob(token.split('.')[1]))
@@ -51,6 +54,11 @@ function parseRole(token: string): SystemRoll {
 function decodeExp(token: string): number | null {
   const exp = decodePayload(token)?.['exp']
   return typeof exp === 'number' ? exp * 1000 : null
+}
+
+function decodeIat(token: string): number | null {
+  const iat = decodePayload(token)?.['iat']
+  return typeof iat === 'number' ? iat * 1000 : null
 }
 
 function parseEmail(token: string): string | null {
@@ -94,7 +102,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => (localStorage.getItem('si_aktiv_vy') as SystemRoll) ?? roll
   )
 
+  // Väntande omförsök efter ett tillfälligt refresh-fel, och pågående anrop
+  // (så att timer och manuellt refreshSession() inte roterar token parallellt).
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const refreshPagaendeRef = useRef<Promise<void> | null>(null)
+  const forsokRefreshRef = useRef<((forsok: number) => Promise<void>) | null>(null)
+
+  const avbrytRetry = useCallback(() => {
+    if (retryTimerRef.current !== null) {
+      clearTimeout(retryTimerRef.current)
+      retryTimerRef.current = null
+    }
+  }, [])
+
+  useEffect(() => avbrytRetry, [avbrytRetry])
+
   const clearSession = useCallback(() => {
+    avbrytRetry()
     refreshTokenRef.current = null
     localStorage.removeItem('si_token')
     localStorage.removeItem('si_refresh_token')
@@ -102,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('si_aktiv_vy')
     setToken(null)
     setAktivVy('Användare')
-  }, [])
+  }, [avbrytRetry])
 
   const applyTokens = useCallback((data: TokenPair) => {
     localStorage.setItem('si_token', data.accessToken)
@@ -115,29 +139,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(data.accessToken)
   }, [])
 
-  const doRefresh = useCallback(async () => {
+  // Sessionen avslutas ENDAST när servern avvisar refresh-token (401/403).
+  // 429, 5xx och nätverksfel är tillfälliga: refresh-token är fortfarande giltig
+  // (30 dagar), så vi behåller sessionen och försöker igen med backoff.
+  const forsokRefresh = useCallback((forsok: number): Promise<void> => {
+    if (refreshPagaendeRef.current) return refreshPagaendeRef.current
+    avbrytRetry()
     const rt = refreshTokenRef.current
-    if (!rt) { clearSession(); return }
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/refresh`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ refreshToken: rt }),
-      })
-      if (!res.ok) { clearSession(); return }
-      applyTokens(await res.json())
-    } catch {
-      clearSession()
-    }
-  }, [applyTokens, clearSession])
+    if (!rt) { clearSession(); return Promise.resolve() }
+
+    const anrop = (async () => {
+      let status: number | null = null
+      let retryAfter: string | null = null
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ refreshToken: rt }),
+        })
+        // Användaren har loggat ut (eller loggat in på nytt) medan anropet pågick
+        if (refreshTokenRef.current !== rt) return
+        if (res.ok) { applyTokens(await res.json()); return }
+        status = res.status
+        retryAfter = res.headers.get('Retry-After')
+      } catch {
+        status = null
+      }
+
+      if (beslutaAtgardVidFel(status) === 'loggaUt') { clearSession(); return }
+      if (forsok >= MAX_REFRESH_FORSOK) return
+      retryTimerRef.current = setTimeout(
+        () => { void forsokRefreshRef.current?.(forsok + 1) },
+        beraknaRetryFordrojning(forsok, retryAfter),
+      )
+    })().finally(() => { refreshPagaendeRef.current = null })
+
+    refreshPagaendeRef.current = anrop
+    return anrop
+  }, [applyTokens, clearSession, avbrytRetry])
+
+  // Omförsöket anropar forsokRefresh via en ref (en useCallback får inte referera sig själv).
+  useEffect(() => { forsokRefreshRef.current = forsokRefresh }, [forsokRefresh])
+
+  const doRefresh = useCallback(() => forsokRefresh(1), [forsokRefresh])
 
   // Schemalägg nästa refresh ~2 min innan access-token går ut. Körs om varje
   // gång token ändras (login/register/refresh) så nästa refresh läggs på nytt.
+  // Golvet i beraknaRefreshFordrojning hindrar en tät loop vid klockskillnad.
   useEffect(() => {
     if (!token) return
     const exp = decodeExp(token)
     if (exp === null) return
-    const delay = Math.max(0, exp - Date.now() - REFRESH_MARGIN_MS)
+    const delay = beraknaRefreshFordrojning(exp, Date.now(), decodeIat(token))
     const timer = setTimeout(doRefresh, delay)
     return () => clearTimeout(timer)
   }, [token, doRefresh])
