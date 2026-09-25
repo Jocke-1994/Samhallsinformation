@@ -14,6 +14,7 @@ import VerifyEmailPage from './pages/VerifyEmailPage'
 import ConfirmEmailChangePage from './pages/ConfirmEmailChangePage'
 import CancelDeletionPage from './pages/CancelDeletionPage'
 import CookieConsent from './components/CookieConsent/CookieConsent'
+import BevakningsToastHost from './components/NewsFeed/BevakningsToastHost'
 import OmPage from './pages/OmPage'
 import VillkorPage from './pages/VillkorPage'
 import UppdateringarPage from './pages/UppdateringarPage'
@@ -273,6 +274,7 @@ export default function App() {
         </Routes>
       </div>
       <CookieConsent />
+      <BevakningsToastHost />
     </div>
   )
 }
