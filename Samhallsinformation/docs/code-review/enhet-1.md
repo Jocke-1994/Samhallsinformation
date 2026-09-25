@@ -23,6 +23,8 @@ Inga kritiska fel i signaturverifieringen (Svix/HMAC, replay-fönster, fixed-tim
 - Föreslagen fix: verifiera live (`curl -H "X-Forwarded-For: 1.2.3.4"` mot en diagnostik-echo, som förra gången) om Railway skriver över eller lägger till; sätt `ForwardLimit` till det verkliga antalet betrodda hopp (2) så bara de högraste posterna används; normalisera IPv6 till /64 i partitionsnyckeln; lägg till räknare per normaliserad e-post på login.
 
 ### 2. Fail-open dev-hemligheter i produktionskoden — PLAUSIBLE (beror på Railway-env), hög om env saknas
+> **Uppdatering 2026-09-25:** användaren bekräftar att `JWT_SECRET` och `VAPID_PRIVATE_KEY` är satta i Railway → inget akut produktionshot. Kvarstår som härdning (fail-fast vid start istället för tyst fallback, enda källa för hemligheten). **Öppen fråga:** är Railway-värdet för VAPID ett annat än den incheckade nyckeln? Om ja är den incheckade bara en dev-nyckel och ingen rotation behövs; om det är samma nyckel måste den roteras (ligger i git-historiken).
+
 - `Program.cs:63-65` och `Infrastructure/Auth/JwtTokenService.cs:17-19`: `JWT_SECRET ?? "dev-secret-change-in-production-at-least-32-chars"`. Om variabeln saknas/felstavas i en miljö startar appen utan fel och alla JWT signeras med en publik sträng -> vem som helst kan smida en admin-token (`role=Admin`).
 - `Program.cs:123-124`: `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` har hårdkodade fallbackar, inklusive PRIVAT nyckel, incheckad i git. Om de används i prod kan alla som läser repot skicka push som ser ut att komma från tjänsten till alla prenumeranter.
 - Extra: hemligheten dupliceras på två ställen (Program.cs + JwtTokenService) och kan glida isär.
