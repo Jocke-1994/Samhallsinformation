@@ -194,7 +194,7 @@ const MAINTENANCE_DISMISS_PREFIX = 'si_maintenance_dismissed_'
 function MaintenanceBanners() {
   const { isLoggedIn } = useAuth()
   const { data: banners = [] } = useQuery({
-    queryKey: ['maintenance-banners'],
+    queryKey: ['maintenance-banners', isLoggedIn],
     queryFn: fetchMaintenanceBanners,
     staleTime: 5 * 60_000,
   })

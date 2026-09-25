@@ -9,9 +9,10 @@ using Samhallsinformation.Models;
 
 // Publik läsning (alla besökare behöver kunna se meddelandena för att
 // banderollen ska synas innan inloggning), admin-styrd skrivning. Flera rader
-// kan vara aktiva samtidigt — tid- och målgruppsfiltrering sker i frontend,
-// inte här, så admin-panelen kan visa/redigera även framtida och redan
-// avslutade meddelanden.
+// kan vara aktiva samtidigt. Den publika listan filtreras på servern (bara
+// pågående banderoller med rätt målgrupp för anroparen) så framtida,
+// avslutade och inloggad-bara meddelanden inte läcker till anonyma. Admin-
+// panelen läser hela listan via GET api/admin/maintenance-banners.
 [ApiController]
 public class MaintenanceBannersController : ControllerBase
 {
@@ -29,6 +30,30 @@ public class MaintenanceBannersController : ControllerBase
     [HttpGet("api/maintenance-banners")]
     [AllowAnonymous]
     public async Task<IActionResult> GetAll()
+    {
+        // [AllowAnonymous] men JWT-middleware fyller ändå User när en giltig
+        // token skickas (samma mönster som SupportController.Create).
+        var inloggad = User.Identity?.IsAuthenticated == true;
+        var nu = DateTime.UtcNow;
+
+        var banners = await _db.MaintenanceBanners
+            .Where(b => b.StartUtc <= nu && nu <= b.EndUtc)
+            .OrderBy(b => b.StartUtc)
+            .ToListAsync();
+
+        // "Alla" för alla; "Besökare" bara utloggade; "Användare" bara inloggade.
+        // Admin/support räknas som inloggade — ingen egen intern målgrupp finns.
+        var synliga = banners.Where(b =>
+            b.Audience == "Alla"
+            || (b.Audience == "Besökare" && !inloggad)
+            || (b.Audience == "Användare" && inloggad));
+
+        return Ok(synliga.Select(ToDto));
+    }
+
+    [HttpGet("api/admin/maintenance-banners")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetAllAdmin()
     {
         var banners = await _db.MaintenanceBanners.OrderBy(b => b.StartUtc).ToListAsync();
         return Ok(banners.Select(ToDto));

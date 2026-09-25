@@ -29,7 +29,13 @@ public class SourcesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetSources()
     {
-        var sources = await _db.Sources.Where(s => s.IsPublished).ToListAsync();
+        // Publik DTO — bara det frontend läser (sidomeny, Mina källor, onboarding).
+        // Aldrig LastFetchError/LastFetchedAt/Url/BaseUrl/Type/IsPublished utåt;
+        // de finns kvar i /api/admin/sources.
+        var sources = await _db.Sources
+            .Where(s => s.IsPublished)
+            .Select(s => new PublicSourceDto(s.Id, s.Name, s.ShortName, s.IsActive))
+            .ToListAsync();
         return Ok(sources);
     }
 
@@ -167,6 +173,9 @@ public class SourcesController : ControllerBase
         return NoContent();
     }
 }
+
+// IsActive behålls: Sidebar och useUnreadSourceIds filtrerar på s.isActive.
+public record PublicSourceDto(int Id, string Name, string ShortName, bool IsActive);
 
 public record CreateSourceRequest(
     string Name,
