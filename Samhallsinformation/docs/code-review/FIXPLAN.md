@@ -25,6 +25,24 @@ Fynd refereras som **E{enhet}#{nummer}** (t.ex. E1#5 = enhet 1, fynd 5). Alla **
 | D5 | Löst utan användarens hjälp: V1-5 *sätter* `VITE_USE_MOCK=false` i `.env.production` i stället för att ta bort filen. Fungerar oavsett vad Vercel har (Vercels miljövariabel vinner om den finns, annars gäller filen). Sessionsloggen (PR #218) bekräftar att variabeln sattes till `false` i Vercel. | **Löst** | V1-5 |
 | D6 | E-postnormalisering, **rekommendation:** normalisera till gemener + skiftlägesokänsligt uppslag framåt. Migreringen kontrollerar först om normaliseringen skulle ge dubbletter; ger den det avbryts den och loggar vilka konton det gäller (ingen tyst sammanslagning). | **Enligt rekommendation** | V2-11 |
 
+## Planeringsstatus — "har jag allt jag behöver?"
+**Planeringen är klar när alla rutor nedan är kryssade.** PM (Claude) meddelar användaren i samma stund. Tills dess gäller: **våg 1 kan köras redan nu** (V1-0a…V1-8 är tillräckligt specade), det enda som saknas i våg 1 är designrundan för V1-9.
+
+**Behöver användarens svar (Claude förbereder underlaget, användaren beslutar):**
+- [ ] **P-A · V1-9 designrunda** — fyra korta frågor: körintervall (förslag 5 min), vem larmas och via vilken kanal (förslag: mejl via Resend som primär, push som komplement — `notif_push` är av i produktion), kvitteringsflöde, om 500-användarlarmet ska påminna veckovis. Behövs före V1-9.
+- [ ] **P-B · V2-14 GDPR-omfång** — vad ska raderas respektive anonymiseras vid kontoradering, och vad får sparas (supportärenden, audit-loggar, push-loggar)? Delvis ett juridiskt/integritetsbeslut. Claude tar fram en tabell med förslag per datatyp. Behövs före V2-14.
+- [ ] **P-C · V3-11 Mitt flöde på servern** — Claude skriver ett kort designförslag (ny parameter/endpoint, hur Polisen-bevakningar vägs in, hur Sparat påverkas) som användaren godkänner. Behövs före V3-11.
+
+**Claude gör själv (inget från användaren):**
+- [ ] **P-D · V2-10** — verifiera hur Railway skriver `X-Forwarded-For` (diagnostik-echo) så rate limit-fixen bygger på fakta.
+- [ ] **P-E · V3-16** — verifiera vad Resends inbound-payload faktiskt innehåller om SPF/DKIM-utfall.
+- [ ] **P-F · V2-9, V3-17** — föreslå konkreta gränsvärden (ärendetextens längd, rate limit för anonyma ärenden, max antal Polisen-bevakningar per konto).
+- [ ] **P-G · V3-20** — inventera exakt vilka komponenter som märks MOCK, döljs eller tas bort (lista som användaren godkänner i förbifarten).
+- [ ] **P-H · Acceptanskriterier** — skriv en kort "klar när…"-lista per PR i våg 1–2 så en agent kan starta utan att fråga tillbaka.
+- [ ] **P-I · V3-22** — kartlägg vilka externa källor sidan faktiskt använder (underlag för CSP-tillåtelselistan och skript-vakten).
+
+**Ordning:** P-D…P-I är Claudes och kan göras nu. P-A behövs när V1-9 ska starta, P-B före V2-14, P-C före V3-11 — inget av dem blockerar V1-1…V1-8.
+
 ---
 
 ## Våg 1 — Akut: fel som riktiga användare träffar idag (11 PR:ar)
