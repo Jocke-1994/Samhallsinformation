@@ -15,15 +15,15 @@ Fynd refereras som **E{enhet}#{nummer}** (t.ex. E1#5 = enhet 1, fynd 5). Alla **
 **Storlek:** S ≈ under 1 h arbete, M ≈ 1–3 h, L ≈ över 3 h. **Lager:** BE / FE / DB.
 **Status:** ☐ ej påbörjad · ◐ pågår · ☑ mergad.
 
-## Beslut som behövs från dig (blockerar specifika PR:ar)
-| # | Beslut | Blockerar |
-|---|---|---|
-| D1 | Ska Support-rollen ha åtkomst till Support-inboxen och Användarlistan (UI:t tror det, backend säger Admin-only)? Rekommendation: ja, för Support-inbox; Användarlistan skrivskyddad. | V3-10 |
-| D2 | Mitt flöde: filtrera på servern (ny parameter/endpoint) i stället för klienten över 50 händelser. Kräver kort designbeslut. | V3-11 |
-| D3 | Mock-UI (~2 700 rader + Impersonation/Felsökning/Notifieringsinställningar): dölj bakom flagga, märk tydligt MOCK, eller ta bort? Rekommendation: märk MOCK i admin, ta bort/dölj medborgarmock. | V3-20 |
-| D4 | Token-lagring i localStorage + tredjeparts `chat.js` utan CSP: inför CSP och/eller flytta refresh-token till httpOnly-cookie? Större arkitekturbeslut. | V3-22 |
-| D5 | Vercel: bekräfta att miljövariabeln `VITE_USE_MOCK` är satt till `false` i produktion innan `.env.production` tas bort. | V1-5 |
-| D6 | E-postnormalisering: befintliga användare kan ha blandade versaler — OK att slå ihop/normalisera i migrering, eller bara göra uppslag skiftlägesokänsligt? | V2-11 |
+## Beslut (besvarade 2026-09-25 utom D4)
+| # | Beslut | Svar | Påverkar |
+|---|---|---|---|
+| D1 | Support-rollen får åtkomst till Support-inboxen (Användarlistan skrivskyddad). | **Ja** | V3-10 |
+| D2 | Mitt flöde filtreras på servern i stället för klienten över 50 händelser. | **Ja** | V3-11 |
+| D3 | Mock-UI: märk tydligt MOCK i admin, ta bort/dölj medborgarmock. | **Enligt rekommendation** | V3-20 |
+| D4 | Token-lagring i localStorage + `chat.js` (från kundtjänstbotens egen server) utan CSP. Alternativ: (A) inget nu, (B) CSP först i "rapportera-läge", (C) refresh-token i httpOnly-cookie. **Rekommendation: A nu, B senare.** | **Öppen — ej brådskande** | V3-22 |
+| D5 | Löst utan användarens hjälp: V1-5 *sätter* `VITE_USE_MOCK=false` i `.env.production` i stället för att ta bort filen. Fungerar oavsett vad Vercel har (Vercels miljövariabel vinner om den finns, annars gäller filen). Sessionsloggen (PR #218) bekräftar att variabeln sattes till `false` i Vercel. | **Löst** | V1-5 |
+| D6 | E-postnormalisering, **rekommendation:** normalisera till gemener + skiftlägesokänsligt uppslag framåt. Migreringen kontrollerar först om normaliseringen skulle ge dubbletter; ger den det avbryts den och loggar vilka konton det gäller (ingen tyst sammanslagning). | **Enligt rekommendation** | V2-11 |
 
 ---
 
@@ -38,7 +38,7 @@ Mål: sluta ljuga för användare och laga det som är trasigt i live-funktioner
 | V1-2 | **Webhook tål trasig indata:** `int.TryParse` + längdgräns på ticketnummer, try/catch runt JSON, idempotens på svix-id så Resend-retries inte ger dubbla ärenden | E1#5 | BE | M | enhet (webhook-svit) | ☐ |
 | V1-3 | **Ta bort `PreferencesController`** (öppen utan auth, oanvänd av frontend). Tabellen `UserPreferences` rörs inte. | E1#4 | BE | S | guard G4 | ☐ |
 | V1-4 | **Refresh loggar bara ut vid 401/403:** 429/5xx/nätverksfel ger retry med backoff; skydd mot tät refresh-loop vid klockskillnad | E5#2, E5#8 | FE | M | Vitest (AuthContext) | ☐ |
-| V1-5 | **`.env.production`:** ta bort `VITE_USE_MOCK=true` (efter D5) | E5#12 | FE | S | build | ☐ |
+| V1-5 | **`.env.production`:** sätt `VITE_USE_MOCK=false` (säkert oavsett Vercels miljövariabel, se D5) | E5#12 | FE | S | build | ☐ |
 | V1-6 | **"Läs mer hos källan":** länkkollen får aldrig ersätta knappen med "finns inte längre" vid timeout/403/5xx (tre lägen: levande/död/okänd) och `window.open` körs synkront i klickhändelsen | E7#2 | FE(+BE) | M | FE | ☐ |
 | V1-7 | **Bevakningsklockan:** Ångra-toasten renderas, serverfel visas, varning när sista bevakningen tas bort (vidgar Mitt flöde till hela Polisen) | E7#3 | FE | M | FE | ☐ |
 | V1-8 | **`adminFetch` med 401 → refresh + retry; bevakningar/sparade hämtas om vid fel:** Polisen-filtret får aldrig falla tillbaka på "visa allt" p.g.a. ett misslyckat anrop | E5#4, E5#5 | FE | M | Vitest | ☐ |
@@ -122,7 +122,7 @@ Mål: städa sådant som inte gör skada idag. Batchas per lager; körs sist ell
 ## Beroenden och kritisk väg
 - V1-0a/b före alla PR:ar som skriver test i respektive lager.
 - V1-4 före V1-8 (samma auth-kod). V2-4 före V3-4 (push). V3-1 före V3-2 (dubbletter innan unikt index). V2-7 släpps som en enhet (BE+FE).
-- Beslut D1–D6 behövs först när respektive PR ska starta; våg 1 och stora delar av våg 2 är fria från beslut (undantag D5 för V1-5, D6 för V2-11).
+- Beslut D1–D3, D5 och D6 är fattade. Enda öppna beslutet är D4 (V3-22), som inte blockerar något före våg 3.
 - Två befintliga tester låser fast buggar och ändras avsiktligt i V3-4 och V3-10.
 
 ## Uppskattning
