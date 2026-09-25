@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { usePolisenBevakningar, MAX_BEVAKNINGAR, type Bevakning } from '../../../context/PolisenBevakningarContext'
+import { BevakningError } from '../../../api/polisenBevakningar'
 import KategoriFilterModal from './KategoriFilterModal'
 
 function sammanfatta(lista: string[] | null, allaLabel: string): string {
@@ -15,16 +16,24 @@ function sammanfatta(lista: string[] | null, allaLabel: string): string {
 export default function PolisenBevakningarLista({ kallNamn }: { kallNamn: string }) {
   const { bevakningar, lage, forsokIgen, skapa, uppdatera, taBort } = usePolisenBevakningar()
   const [redigerar, setRedigerar] = useState<Bevakning | 'ny' | null>(null)
+  const [sparfel, setSparfel] = useState<string | null>(null)
 
   const vidTak = bevakningar.length >= MAX_BEVAKNINGAR
 
   async function handleSpara(kategorier: string[] | null, omraden: string[] | null) {
-    if (redigerar === 'ny') {
-      await skapa(kategorier, omraden)
-    } else if (redigerar) {
-      await uppdatera(redigerar.id, kategorier, omraden)
+    setSparfel(null)
+    try {
+      if (redigerar === 'ny') {
+        await skapa(kategorier, omraden)
+      } else if (redigerar) {
+        await uppdatera(redigerar.id, kategorier, omraden)
+      }
+      setRedigerar(null)
+    } catch (e) {
+      // Serverns text (t.ex. "Max 5 bevakningar per användare.") visas som den är;
+      // modalen står kvar öppen så valen inte går förlorade.
+      setSparfel(e instanceof BevakningError ? e.message : 'Kunde inte spara bevakningen. Försök igen.')
     }
-    setRedigerar(null)
   }
 
   return (
@@ -69,7 +78,8 @@ export default function PolisenBevakningarLista({ kallNamn }: { kallNamn: string
           initialKategorier={redigerar === 'ny' ? null : (redigerar.kategorier ? [...redigerar.kategorier] : null)}
           initialOmraden={redigerar === 'ny' ? null : (redigerar.omraden ? [...redigerar.omraden] : null)}
           onSpara={handleSpara}
-          onClose={() => setRedigerar(null)}
+          onClose={() => { setSparfel(null); setRedigerar(null) }}
+          fel={sparfel}
         />
       )}
     </div>
