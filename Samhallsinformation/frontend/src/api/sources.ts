@@ -1,5 +1,6 @@
 import type { Source, AdminSource } from '../types'
 import { adminFetch } from './adminFetch'
+import { LANG_TIMEOUT_MS, felFranSvar, publikFetch } from './hamta'
 
 const MOCK_SOURCES: Source[] = [
   { id: 1,  name: 'Polisen',                      shortName: 'Polisen',             baseUrl: 'https://polisen.se',                    isActive: true,  scope: 'nationell' },
@@ -13,18 +14,16 @@ const MOCK_SOURCES: Source[] = [
 ]
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
-
 export async function fetchSources(): Promise<Source[]> {
   if (USE_MOCK) return MOCK_SOURCES
-  const res = await fetch(`${API_BASE}/api/sources`)
-  if (!res.ok) throw new Error(`fetchSources: ${res.status}`)
+  const res = await publikFetch(`/api/sources`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchSources')
   return res.json()
 }
 
 export async function fetchAdminSources(): Promise<AdminSource[]> {
   const res = await adminFetch('/api/admin/sources')
-  if (!res.ok) throw new Error(`fetchAdminSources: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminSources')
   return res.json()
 }
 
@@ -35,7 +34,7 @@ export async function createAdminSource(req: {
     method: 'POST',
     body: JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`createAdminSource: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'createAdminSource')
   return res.json()
 }
 
@@ -46,7 +45,7 @@ export async function updateAdminSource(id: number, req: {
     method: 'PATCH',
     body: JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`updateAdminSource: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'updateAdminSource')
   return res.json()
 }
 
@@ -54,16 +53,14 @@ export async function deleteAdminSource(id: number): Promise<void> {
   const res = await adminFetch(`/api/admin/sources/${id}`, { method: 'DELETE' })
   if (!res.ok) {
     // Serverns svenska felmeddelande (t.ex. "Dedikerade källor kan inaktiveras men inte raderas …").
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `deleteAdminSource: ${res.status}`)
+    throw await felFranSvar(res, 'deleteAdminSource')
   }
 }
 
 export async function resyncAdminSource(id: number): Promise<{ inserted: number; updated: number }> {
-  const res = await adminFetch(`/api/admin/sources/${id}/resync`, { method: 'POST' })
+  const res = await adminFetch(`/api/admin/sources/${id}/resync`, { method: 'POST', timeoutMs: LANG_TIMEOUT_MS })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `resyncAdminSource: ${res.status}`)
+    throw await felFranSvar(res, 'resyncAdminSource')
   }
   return res.json()
 }

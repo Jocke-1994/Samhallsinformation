@@ -1,4 +1,5 @@
 import { adminFetch } from './adminFetch'
+import { felFranSvar } from './hamta'
 
 export interface BevakningDto {
   id:         string
@@ -26,12 +27,12 @@ async function throwOnFail(res: Response, namn: string): Promise<void> {
     const text = (await res.text().catch(() => '')).trim()
     if (text.length > 0 && text.length < 200) throw new BevakningError(text)
   }
-  throw new Error(`${namn}: ${res.status}`)
+  throw await felFranSvar(res, namn)
 }
 
 export async function fetchBevakningar(): Promise<BevakningDto[]> {
   const res = await adminFetch('/api/user/polisen-bevakningar')
-  if (!res.ok) throw new Error(`fetchBevakningar: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchBevakningar')
   return res.json()
 }
 
@@ -55,5 +56,5 @@ export async function updateBevakning(id: string, req: BevakningRequest): Promis
 
 export async function deleteBevakning(id: string): Promise<void> {
   const res = await adminFetch(`/api/user/polisen-bevakningar/${id}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`deleteBevakning: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'deleteBevakning')
 }

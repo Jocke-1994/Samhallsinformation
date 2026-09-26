@@ -1,5 +1,6 @@
 import type { CanonicalEvent, EventsResponse } from '../types'
 import { adminFetch } from './adminFetch'
+import { felFranSvar, publikFetch } from './hamta'
 
 interface FetchEventsParams {
   shortName?: string
@@ -215,8 +216,6 @@ const MOCK_EVENTS: CanonicalEvent[] = [
 ]
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
-
 export async function fetchEvents(params: FetchEventsParams = {}): Promise<EventsResponse> {
   if (USE_MOCK) {
     return { total: MOCK_EVENTS.length, page: 1, pageSize: MOCK_EVENTS.length, events: MOCK_EVENTS }
@@ -229,8 +228,8 @@ export async function fetchEvents(params: FetchEventsParams = {}): Promise<Event
   if (params.page) query.set('page', String(params.page))
   if (params.pageSize) query.set('pageSize', String(params.pageSize))
 
-  const res = await fetch(`${API_BASE}/api/events?${query}`)
-  if (!res.ok) throw new Error(`fetchEvents: ${res.status}`)
+  const res = await publikFetch(`/api/events?${query}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchEvents')
   return res.json()
 }
 
@@ -241,7 +240,7 @@ export async function fetchMittFlode(page: number, pageSize: number): Promise<Ev
     return { total: MOCK_EVENTS.length, page: 1, pageSize: MOCK_EVENTS.length, events: MOCK_EVENTS, hasMore: false, totalExakt: true }
   }
   const res = await adminFetch(`/api/user/feed?page=${page}&pageSize=${pageSize}`)
-  if (!res.ok) throw new Error(`fetchMittFlode: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchMittFlode')
   return res.json()
 }
 
@@ -268,7 +267,7 @@ export type LänkStatus = 'alive' | 'dead' | 'unknown'
 export async function checkEventLinkStatus(eventId: string): Promise<LänkStatus> {
   if (USE_MOCK) return 'alive'
   try {
-    const res = await fetch(`${API_BASE}/api/events/${eventId}/link-status`)
+    const res = await publikFetch(`/api/events/${eventId}/link-status`)
     if (!res.ok) return 'unknown'
     const data: { status?: string } = await res.json()
     // Bara ett uttryckligt 'dead' räknas — saknat/okänt fält (t.ex. äldre backend) blir 'unknown'.

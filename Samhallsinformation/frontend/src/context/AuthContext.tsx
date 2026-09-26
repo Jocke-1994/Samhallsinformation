@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { registerAuthBridge } from '../api/authBridge'
+import { fetchMedTimeout } from '../api/hamta'
 import { rensaAnvandardata } from '../lib/queryRensning'
 import { avregistreraPushEnhet } from '../lib/pushAvregistrering'
 import { valjAktivVy } from '../lib/aktivVy'
@@ -87,7 +88,7 @@ function parseEmailVerified(token: string): boolean {
 }
 
 async function authRequest(url: string, body: object): Promise<TokenPair & { role: string; name: string; isNewUser?: boolean }> {
-  const res = await fetch(url, {
+  const res = await fetchMedTimeout(url, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(body),
@@ -108,7 +109,10 @@ interface RefreshSvar {
 // Ett anrop mot /refresh. status === null = fetch kastade (nätverksfel).
 async function hamtaNyaTokens(refreshToken: string): Promise<RefreshSvar> {
   try {
-    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+    // Med tidsgräns: ett hängande anrop skulle annars hålla både single-flight-
+    // förnyelsen och Web Lock-låset för alla flikar. Ett timeout räknas som
+    // nätverksfel (status null) och ger samma omförsök med backoff.
+    const res = await fetchMedTimeout(`${API_BASE}/api/auth/refresh`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ refreshToken }),
