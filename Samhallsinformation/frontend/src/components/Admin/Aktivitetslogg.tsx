@@ -5,7 +5,7 @@ import { saveAdminUserEvent, unsaveAdminUserEvent } from '../../api/adminUsers'
 
 export type LoggTyp =
   | 'Ingestor' | 'Notis' | 'Fel' | 'Kontoåtgärd'
-  | 'Konfiguration' | 'Konto' | 'Ärende' | 'Push' | 'Registrering'
+  | 'Konfiguration' | 'Konto' | 'Ärende' | 'Push' | 'Registrering' | 'Säkerhet'
 type LoggStatus = 'OK' | 'Fel' | 'Varning'
 type TidsFilter = 'Idag' | '7 dagar' | '30 dagar' | 'Alla'
 
@@ -46,6 +46,7 @@ export const TYP_MÄRKE: Record<LoggTyp, string> = {
   Ärende:        'bg-blue-100 text-blue-700',
   Push:          'bg-fuchsia-100 text-fuchsia-700',
   Registrering:  'bg-teal-100 text-teal-700',
+  Säkerhet:      'bg-rose-100 text-rose-700',
 }
 
 export const TYP_IKON: Record<LoggTyp, string> = {
@@ -58,6 +59,7 @@ export const TYP_IKON: Record<LoggTyp, string> = {
   Ärende:        '🎫',
   Push:          '📣',
   Registrering:  '✨',
+  Säkerhet:      '🛡️',
 }
 
 const STATUS_MÄRKE: Record<LoggStatus, string> = {

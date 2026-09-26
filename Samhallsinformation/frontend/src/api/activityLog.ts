@@ -12,6 +12,7 @@ export type LoggTyp =
   | 'Ärende'
   | 'Push'
   | 'Registrering'
+  | 'Säkerhet'
 
 export type LoggStatus = 'OK' | 'Fel' | 'Varning'
 
