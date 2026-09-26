@@ -113,7 +113,7 @@ async function öppnaAnna() {
 }
 
 describe('Användare som Support: skrivskyddat', () => {
-  it('visar listan men ingen massmarkering, och hämtar inte kontospärr-notiserna (Admin-only)', async () => {
+  it('visar listan men ingen massmarkering', async () => {
     somSupport()
     visa(<Anvandare />)
     await screen.findByText('Anna')
@@ -121,7 +121,6 @@ describe('Användare som Support: skrivskyddat', () => {
     expect(screen.getByText('Bertil')).toBeInTheDocument()
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
     expect(screen.getByText(/Skrivskyddad vy/)).toBeInTheDocument()
-    expect(hämtaNotiser).not.toHaveBeenCalled()
   })
 
   it('detaljpanelen visar uppgifterna men inga åtgärdsknappar för en aktiv användare', async () => {
@@ -184,19 +183,17 @@ describe('Användare som Support: skrivskyddat', () => {
     await screen.findByText('Anna')
 
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
-    expect(hämtaNotiser).not.toHaveBeenCalled()
   })
 })
 
 describe('Användare som Admin: oförändrat', () => {
-  it('listan har massmarkering och notiserna hämtas', async () => {
+  it('listan har massmarkering', async () => {
     visa(<Anvandare />)
     await screen.findByText('Anna')
 
     expect(screen.getByRole('checkbox', { name: 'Markera alla' })).toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: 'Markera Anna' })).toBeInTheDocument()
     expect(screen.queryByText(/Skrivskyddad vy/)).not.toBeInTheDocument()
-    await waitFor(() => expect(hämtaNotiser).toHaveBeenCalled())
   })
 
   it('detaljpanelen har alla åtgärder', async () => {
@@ -204,7 +201,7 @@ describe('Användare som Admin: oförändrat', () => {
     await öppnaAnna()
 
     for (const namn of [
-      'Logga in som', 'Stäng av konto', 'Radera konto (GDPR)', 'Skicka lösenordsåterställning',
+      'Stäng av konto', 'Radera konto (GDPR)', 'Skicka lösenordsåterställning',
       '+ Ny bevakning', 'Ändra', 'Push på', 'Ny händelse på', 'Ny version av',
     ]) {
       expect(knapp(namn), `knappen "${namn}" ska finnas`).not.toBeNull()

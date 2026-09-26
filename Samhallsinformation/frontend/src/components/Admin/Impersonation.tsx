@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { AdminSection } from './AdminSidebar'
+import { MockBanner, MockBadge, IngetKopplatAn } from '../common/MockBadge'
 
 interface ImpersonationProps {
   onNavigate: (section: AdminSection) => void
@@ -19,20 +20,11 @@ interface AnvändareSök {
   telefon?:         string
 }
 
-interface Session {
-  id:           number
-  adminNamn:    string
-  användarNamn: string
-  användarId:   number
-  start:        string
-  längd:        string
-  anteckning?:  string
-}
-
 // ---------------------------------------------------------------------------
 // Data
 // ---------------------------------------------------------------------------
 
+// Påhittade exempelanvändare — inga riktiga konton. Sidan är en MOCK (V3-20, D3).
 const ANVÄNDARE: AnvändareSök[] = [
   { id: 1,  namn: 'Joakim Rehn',     epost: 'joakim@example.com',      roller: ['Admin', 'Support', 'Användare'],  status: 'Aktiv',    inloggningsmetod: 'E-post', telefon: '+46 70 123 45 67' },
   { id: 2,  namn: 'Anna Svensson',   epost: 'anna.svensson@mail.se',   roller: ['Support', 'Användare'],           status: 'Aktiv',    inloggningsmetod: 'Google', telefon: '+46 73 234 56 78' },
@@ -44,14 +36,6 @@ const ANVÄNDARE: AnvändareSök[] = [
   { id: 8,  namn: 'Karin Andersson', epost: 'karin.a@mail.se',         roller: ['Användare'],                      status: 'Aktiv',    inloggningsmetod: 'BankID', telefon: '+46 70 567 89 01' },
   { id: 9,  namn: 'Magnus Bergström',epost: 'magnus.b@gmail.com',      roller: ['Betatestare', 'Användare'],       status: 'Avstängd', inloggningsmetod: 'E-post'                              },
   { id: 10, namn: 'Lena Holm',       epost: 'lena.h@outlook.com',      roller: ['Användare'],                      status: 'Aktiv',    inloggningsmetod: 'BankID', telefon: '+46 73 678 90 12' },
-]
-
-const MOCK_SESSIONER: Session[] = [
-  { id: 1, adminNamn: 'Joakim Rehn', användarNamn: 'Erik Lindqvist',    användarId: 3,  start: '2026-05-16 14:22', längd: '8 min 14 s',  anteckning: 'Kontrollera att +46 76 345 67 89 är inlagt och tar emot SMS-notiser' },
-  { id: 2, adminNamn: 'Joakim Rehn', användarNamn: 'Maria Johansson',   användarId: 4,  start: '2026-05-14 09:05', längd: '3 min 47 s',  anteckning: 'Verifiera att notishistorik visas korrekt efter datamigrering' },
-  { id: 3, adminNamn: 'Joakim Rehn', användarNamn: 'Magnus Bergström',  användarId: 9,  start: '2026-05-10 11:30', längd: '12 min 02 s', anteckning: 'Kontrollera att avstängt konto blockerar åtkomst korrekt' },
-  { id: 4, adminNamn: 'Joakim Rehn', användarNamn: 'Lars Petersson',    användarId: 5,  start: '2026-05-07 16:48', längd: '1 min 55 s'  },
-  { id: 5, adminNamn: 'Joakim Rehn', användarNamn: 'Sofia Nilsson',     användarId: 6,  start: '2026-04-30 10:11', längd: '5 min 33 s',  anteckning: 'Repro av bugg SUP-0038 — källknapp saknas i sidebar' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -92,67 +76,6 @@ function initialer(namn: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Bekräftelsedialog
-// ---------------------------------------------------------------------------
-
-function StartSessionModal({ användare, onBekräfta, onStäng }: {
-  användare:  AnvändareSök
-  onBekräfta: (kommentar: string) => void
-  onStäng:    () => void
-}) {
-  const [kommentar, setKommentar] = useState('')
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="bg-gradient-to-br from-amber-500 to-amber-700 px-6 py-5 flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-white">Logga in som användare</h2>
-            <p className="text-amber-100 text-sm mt-0.5">{användare.namn}</p>
-          </div>
-          <button onClick={onStäng} className="text-amber-200 hover:text-white transition-colors">✕</button>
-        </div>
-        <div className="px-6 py-5 flex flex-col gap-4">
-          <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
-            <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700 shrink-0">
-              {initialer(användare.namn)}
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800">{användare.namn}</p>
-              <p className="text-xs text-slate-400">{användare.epost} · ID #{användare.id}</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-              Anteckning <span className="normal-case text-slate-400 font-normal">(frivillig)</span>
-            </label>
-            <textarea
-              rows={2}
-              value={kommentar}
-              onChange={e => setKommentar(e.target.value)}
-              placeholder="T.ex. 'Kontrollera att +46 70 123 45 67 tar emot SMS'"
-              className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none placeholder:text-slate-300"
-            />
-          </div>
-
-          <ul className="text-xs text-slate-600 flex flex-col gap-1.5 pl-1">
-            <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0">•</span>En ny flik öppnas med användarens vy</li>
-            <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0">•</span>Användaren märker ingenting och loggas inte ut</li>
-            <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0">•</span>Sessionen loggas i aktivitetsloggen</li>
-          </ul>
-
-          <div className="flex gap-3">
-            <button onClick={onStäng} className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Avbryt</button>
-            <button onClick={() => onBekräfta(kommentar)} className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold rounded-xl transition-colors">Öppna session</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Huvudkomponent
 // ---------------------------------------------------------------------------
 
@@ -161,7 +84,6 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
   const [rollFilter, setRollFilter]     = useState<Roll | 'Alla'>('Alla')
   const [statusFilter, setStatusFilter] = useState<Status | 'Alla'>('Alla')
   const [inloggFilter, setInloggFilter] = useState<Inloggningsmetod | 'Alla'>('Alla')
-  const [sessionMål, setSessionMål]     = useState<AnvändareSök | null>(null)
 
   function matchSökning(u: AnvändareSök): boolean {
     const t = sökning.trim()
@@ -205,56 +127,19 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
     return matchSökning(u)
   })
 
-  function startaSession(u: AnvändareSök, kommentar: string) {
-    const url = `/?impersonating=${u.id}&namn=${encodeURIComponent(u.namn)}`
-    window.open(url, '_blank')
-    console.info(`Impersonation started — user #${u.id}, anteckning: "${kommentar}"`)
-    setSessionMål(null)
-  }
-
   return (
     <div className="flex flex-col gap-6">
 
-      {sessionMål && (
-        <StartSessionModal
-          användare={sessionMål}
-          onBekräfta={kommentar => startaSession(sessionMål, kommentar)}
-          onStäng={() => setSessionMål(null)}
-        />
-      )}
-
-      {/* Info */}
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl px-6 py-5 flex gap-3 items-start">
-        <span className="text-xl shrink-0 mt-0.5">🎭</span>
-        <div className="flex flex-col gap-3 flex-1">
-          <p className="text-sm text-amber-800">
-            Sök fram en användare och klicka <strong>Logga in som</strong> för att öppna en session i en ny flik.
-            En tydlig banner visas i fliken. Användaren märker ingenting. Varje session loggas i aktivitetsloggen.
-          </p>
-          <div className="border-t border-amber-200 pt-3 flex flex-col gap-1.5">
-            <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide">Söksyntax</p>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-              {[
-                { prefix: '#3',        beskrivning: 'Söker på användar-ID'         },
-                { prefix: 'namn: Anna',beskrivning: 'Söker enbart i namn'          },
-                { prefix: 'mail: @',   beskrivning: 'Söker enbart i e-postadress'  },
-                { prefix: 'tel: 070',  beskrivning: 'Söker enbart i telefonnummer' },
-              ].map(({ prefix, beskrivning }) => (
-                <div key={prefix} className="flex items-center gap-2">
-                  <code className="bg-amber-100 border border-amber-200 text-amber-800 text-xs px-1.5 py-0.5 rounded font-mono shrink-0">{prefix}</code>
-                  <span className="text-xs text-amber-700">{beskrivning}</span>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-amber-600 mt-0.5">Utan prefix söks namn, e-post, ID och telefonnummer samtidigt.</p>
-          </div>
-        </div>
-      </div>
+      <MockBanner>
+        Impersonation finns inte på riktigt: det finns ingen backend som ger en admin en session som en annan användare,
+        och inget loggas i aktivitetsloggen. Användarna nedan är påhittade exempel — inte riktiga konton — och
+        knapparna är avstängda så att inget låtsas hända.
+      </MockBanner>
 
       {/* Sök & filtrera */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-base font-semibold text-slate-900">Sök användare</h3>
+          <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">Sök användare <MockBadge /></h3>
           <p className="text-xs text-slate-400 mt-0.5">Filtrera på namn, e-post, ID eller telefonnummer</p>
         </div>
 
@@ -363,10 +248,11 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button
-                    onClick={() => setSessionMål(u)}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white transition-colors whitespace-nowrap"
+                    disabled
+                    title="Inte kopplat — impersonation saknar backend"
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed whitespace-nowrap"
                   >
-                    Logga in som
+                    Inte tillgängligt
                   </button>
                 </td>
               </tr>
@@ -382,62 +268,14 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
         </table>
       </div>
 
-      {/* Sessionshistorik */}
+      {/* Sessionshistorik — ingen data finns, så ingen påhittad historik visas */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
           <h3 className="text-base font-semibold text-slate-900">Sessionshistorik</h3>
-          <p className="text-xs text-slate-400 mt-0.5">Senaste impersonation-sessioner</p>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase tracking-wide">
-              <th className="text-left px-6 py-3 font-medium">Admin</th>
-              <th className="text-left px-4 py-3 font-medium">Impersonerade</th>
-              <th className="text-left px-4 py-3 font-medium">Anteckning</th>
-              <th className="text-left px-4 py-3 font-medium">Start</th>
-              <th className="text-left px-4 py-3 font-medium">Längd</th>
-              <th className="text-left px-4 py-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {MOCK_SESSIONER.map(s => (
-              <tr key={s.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center text-xs font-bold text-violet-700 shrink-0">
-                      {initialer(s.adminNamn)}
-                    </div>
-                    <span className="text-sm text-slate-700">{s.adminNamn}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">
-                      {initialer(s.användarNamn)}
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-700">{s.användarNamn}</p>
-                      <p className="text-xs text-slate-400">ID #{s.användarId}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3 max-w-xs">
-                  {s.anteckning
-                    ? <p className="text-xs text-slate-500 italic">{s.anteckning}</p>
-                    : <span className="text-slate-300 text-xs">—</span>
-                  }
-                </td>
-                <td className="px-4 py-3 text-sm text-slate-500 font-mono whitespace-nowrap">{s.start}</td>
-                <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">{s.längd}</td>
-                <td className="px-4 py-3">
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-slate-100 text-slate-500 border-slate-200">
-                    Avslutad
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <IngetKopplatAn rubrik="Ingen sessionshistorik">
+          Inga impersonation-sessioner startas eller sparas, så det finns inget riktigt spår att visa.
+        </IngetKopplatAn>
       </div>
 
     </div>

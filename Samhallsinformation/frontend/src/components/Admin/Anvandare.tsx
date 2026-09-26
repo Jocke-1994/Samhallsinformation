@@ -2,11 +2,9 @@ import { useState, useEffect, Fragment } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createActivityLogEntry } from '../../api/activityLog'
 import { useAuth } from '../../context/AuthContext'
-import { useAnvandare } from '../../hooks/useAnvandare'
-import { kontoNotiserNyckel } from '../../lib/queryNycklar'
 import { effektivAdminRoll } from '../../lib/adminNavigering'
 import {
-  fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
+  fetchAdminUsers, setAdminUserStatus, deleteAdminUser, cancelUserDeletion,
   fetchAdminUserSavedEvents, unsaveAdminUserEvent,
   fetchAdminUserPolisenBevakningar, fetchAdminUserNotificationLog, fetchAdminUserSettingLog, type AdminUserDto,
   createAdminUserPolisenBevakning, updateAdminUserPolisenBevakning, deleteAdminUserPolisenBevakning,
@@ -18,8 +16,8 @@ import {
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import { checkEventLinkStatus } from '../../api/events'
 import { searchEvents, type AdminSearchEvent } from '../../api/eventSearch'
-import type { PendingNotis } from '../../types/adminNotis'
 import KategoriFilterModal from '../Profile/MinaKallor/KategoriFilterModal'
+import { IngetKopplatAn } from '../common/MockBadge'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd' | 'Raderas snart' | 'Raderat'
@@ -51,20 +49,6 @@ interface Användare {
   raderasVid?:      string
   inloggningsmetod: Inloggningsmetod
   kontaktuppgifter: Kontaktuppgift[]
-}
-
-interface AktivitetRad {
-  tid:      string
-  händelse: string
-}
-
-interface NotifKälla {
-  källNamn:          string
-  aktiv:             boolean
-  kanaler:           KontaktTyp[]
-  kontaktuppgiftIds: number[]      // vilka kontaktuppgifter som används per kanal
-  geografier:        string[]
-  kategorier:        string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -106,31 +90,6 @@ function mapAdminUser(dto: AdminUserDto, joinNr: number): Användare {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Mock-data — bara Aktivitet-fliken (inloggningsspårning) har ingen backend-
-// motsvarighet än, se `[[project_admin_anvandare]]`. Nyckeln nedan (3, 6...)
-// matchar inga riktiga användar-ID:n (nu riktiga GUID:er) — visas därför bara
-// som ett tomt "inget än"-läge tills det kopplas mot riktig data i en
-// framtida omgång. Polisen-filter, Supportärenden (fetchAdminTickets) och
-// Notishistorik använder alla riktig data, se längre ner.
-// ---------------------------------------------------------------------------
-
-const MOCK_AKTIVITET: Record<string, AktivitetRad[]> = {
-  3: [
-    { tid: 'Idag 10:42',   händelse: 'Loggade in'                            },
-    { tid: 'Idag 10:43',   händelse: 'Öppnade Polisen-källan'                },
-    { tid: 'Igår 18:30',   händelse: 'Loggade in'                            },
-    { tid: 'Igår 18:31',   händelse: 'Uppdaterade notifieringsinställningar' },
-    { tid: '2026-03-30',   händelse: 'Lade till e-post erik@arbete.se'       },
-    { tid: '2026-03-10',   händelse: 'Skapade konto'                         },
-  ],
-  6: [
-    { tid: 'Idag 08:50',   händelse: 'Loggade in'                   },
-    { tid: 'Igår 20:10',   händelse: 'Läste 4 artiklar från Polisen' },
-    { tid: '2026-03-20',   händelse: 'Skapade konto'                 },
-  ],
-}
-
 function ticketNr(t: AdminTicketListItemDto): string {
   return `SUP-${String(t.ticketNumber).padStart(4, '0')}`
 }
@@ -140,30 +99,6 @@ const ARENDE_STATUS_CLS: Record<ArendeStatusMini, string> = {
   'Under behandling': 'bg-amber-50 text-amber-700 border border-amber-200',
   'Hanterat':         'bg-green-50 text-green-700 border border-green-200',
   'Stängt':           'bg-slate-100 text-slate-500 border border-slate-200',
-}
-
-const MOCK_NOTIF: Record<string, NotifKälla[]> = {
-  3: [
-    { källNamn: 'Polisen',         aktiv: true,  kanaler: ['E-post', 'SMS'], kontaktuppgiftIds: [301, 303], geografier: ['Norrköping', 'Göteborg', 'Nationellt'], kategorier: ['Brott', 'Trafikhändelse']             },
-    { källNamn: 'SMHI',            aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [301],       geografier: ['Västra Götaland', 'Nationellt'],        kategorier: ['Vädervarning']                        },
-    { källNamn: 'MSB',             aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [302],       geografier: ['Nationellt'],                           kategorier: ['Krisberedskap']                       },
-    { källNamn: 'Trafikverket',    aktiv: false, kanaler: [],                kontaktuppgiftIds: [],          geografier: [],                                       kategorier: []                                      },
-    { källNamn: 'Krisinformation', aktiv: false, kanaler: [],                kontaktuppgiftIds: [],          geografier: [],                                       kategorier: []                                      },
-  ],
-  6: [
-    { källNamn: 'Polisen',         aktiv: true,  kanaler: ['E-post', 'SMS'], kontaktuppgiftIds: [601, 602], geografier: ['Göteborg', 'Malmö'],                   kategorier: ['Brott']                               },
-    { källNamn: 'SMHI',            aktiv: false, kanaler: [],                kontaktuppgiftIds: [],          geografier: [],                                       kategorier: []                                      },
-    { källNamn: 'MSB',             aktiv: false, kanaler: [],                kontaktuppgiftIds: [],          geografier: [],                                       kategorier: []                                      },
-    { källNamn: 'Trafikverket',    aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [601],       geografier: ['Göteborg'],                             kategorier: ['Trafikstörning', 'Vägarbete']         },
-    { källNamn: 'Krisinformation', aktiv: false, kanaler: [],                kontaktuppgiftIds: [],          geografier: [],                                       kategorier: []                                      },
-  ],
-  1: [
-    { källNamn: 'Polisen',         aktiv: true,  kanaler: ['E-post', 'SMS'], kontaktuppgiftIds: [102, 103], geografier: ['Nationellt'],                           kategorier: ['Brott', 'Trafikhändelse', 'Övrigt']   },
-    { källNamn: 'SMHI',            aktiv: true,  kanaler: ['E-post', 'SMS'], kontaktuppgiftIds: [101, 103], geografier: ['Nationellt'],                           kategorier: ['Vädervarning']                        },
-    { källNamn: 'MSB',             aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [101],       geografier: ['Nationellt'],                           kategorier: ['Krisberedskap']                       },
-    { källNamn: 'Trafikverket',    aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [101],       geografier: ['Nationellt'],                           kategorier: ['Trafikstörning']                      },
-    { källNamn: 'Krisinformation', aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [101],       geografier: ['Nationellt'],                           kategorier: ['Krisberedskap', 'Samhällsinformation'] },
-  ],
 }
 
 // ---------------------------------------------------------------------------
@@ -473,60 +408,6 @@ function RaderaModal({ antal, namn, namnLista, fel, raderar, resultat, onBekräf
   )
 }
 
-function ImpersonationModal({ användare, onBekräfta, onStäng }: {
-  användare: Användare
-  onBekräfta: (kommentar: string) => void
-  onStäng: () => void
-}) {
-  const [kommentar, setKommentar] = useState('')
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="bg-gradient-to-br from-amber-500 to-amber-700 px-6 py-5 flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-white">Logga in som användare</h2>
-            <p className="text-amber-100 text-sm mt-0.5">{användare.namn}</p>
-          </div>
-          <button onClick={onStäng} className="text-amber-200 hover:text-white transition-colors">✕</button>
-        </div>
-        <div className="px-6 py-5 flex flex-col gap-4">
-          <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
-            <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700 shrink-0">
-              {användare.namn.split(' ').map(n => n[0]).join('').slice(0, 2)}
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800">{användare.namn}</p>
-              <p className="text-xs text-slate-400">{användare.epost} · <span title={`GUID: ${användare.id}`} className="cursor-help underline decoration-dotted">Nr {användare.joinNr}</span></p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-              Anteckning <span className="normal-case text-slate-400 font-normal">(frivillig)</span>
-            </label>
-            <textarea
-              rows={2}
-              value={kommentar}
-              onChange={e => setKommentar(e.target.value)}
-              placeholder="T.ex. 'Kontrollera att +46 70 123 45 67 tar emot SMS'"
-              className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none placeholder:text-slate-300"
-            />
-          </div>
-          <ul className="text-xs text-slate-600 flex flex-col gap-1.5 pl-1">
-            <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0">•</span>En ny flik öppnas med användarens vy</li>
-            <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0">•</span>Användaren märker ingenting och loggas inte ut</li>
-            <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0">•</span>Sessionen loggas i aktivitetsloggen</li>
-          </ul>
-          <div className="flex gap-3">
-            <button onClick={onStäng} className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Avbryt</button>
-            <button onClick={() => onBekräfta(kommentar)} className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold rounded-xl transition-colors">Öppna session</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ---------------------------------------------------------------------------
 // Huvudkomponent
 // ---------------------------------------------------------------------------
@@ -537,17 +418,15 @@ interface AnvandareProps {
   defaultFlik?:       DetaljFlik
   /** Anropas när djuplänken öppnat sin användare, så föräldern nollställer den (V2-16). */
   onDjuplänkKonsumerad?: () => void
-  onPendingNotiser?:  (items: PendingNotis[]) => void
 }
 
-export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onDjuplänkKonsumerad, onPendingNotiser }: AnvandareProps) {
+export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onDjuplänkKonsumerad }: AnvandareProps) {
   const { aktivVy, roll, email: egenEpostRå } = useAuth()
   // Support (och en Admin som förhandsvisar Support-vyn) LÄSER användarna — inga
-  // åtgärder: ingen avstängning/radering/mejl/"Logga in som"/bevakningar/källor/push/
+  // åtgärder: ingen avstängning/radering/mejl/bevakningar/källor/push/
   // sparat och ingen massmarkering. Backend nekar dessa med 403 för Support (D1, V3-10),
   // så knapparna döljs i stället för att ge en felruta.
   const skrivskyddad = effektivAdminRoll(roll, aktivVy) === 'Support'
-  const anvandare = useAnvandare()
   const egenEpost = egenEpostRå?.toLowerCase() ?? null
   const queryClient = useQueryClient()
   const { data: adminUsers, isLoading: laddar, isError: laddningFel, refetch } = useQuery({
@@ -569,7 +448,6 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   const [massArbetar, setMassArbetar]           = useState(false)
   const [massResultat, setMassResultat]         = useState<MassResultat | null>(null)
   const [enkildRollÄndring, setEnkildRollÄndring] = useState<Användare | null>(null)
-  const [impersonationMål, setImpersonationMål]   = useState<Användare | null>(null)
   const [skickarLösenordsåterställning, setSkickarLösenordsåterställning] = useState(false)
   const [skickarVerifieringsmail, setSkickarVerifieringsmail]             = useState(false)
   const [mejlFeedback, setMejlFeedback]                                   = useState<string | null>(null)
@@ -639,25 +517,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     })
   }, [användare])
 
-  const { data: kontoNotiser = [] } = useQuery({
-    queryKey: kontoNotiserNyckel(anvandare),
-    queryFn:  fetchUserNotifications,
-    refetchInterval: 30_000,
-    enabled:  !skrivskyddad, // kontospärr-påminnelser är ett Admin-arbetsflöde (Admin-only i backend)
-  })
-
   const { data: valdsÄrenden = [] } = useQuery({
     queryKey: ['admin-tickets-for-user', vald?.id],
     queryFn:  () => fetchAdminTickets({ userId: vald!.id }),
     enabled:  !!vald,
   })
-
-  useEffect(() => {
-    if (!onPendingNotiser) return
-    onPendingNotiser(kontoNotiser.map(n => ({
-      arendeId: n.userId, amne: n.namn, typ: 'kontospärrning' as const, notering: n.notering, epost: n.epost,
-    })))
-  }, [kontoNotiser, onPendingNotiser])
 
   const { data: polisenBevakningar = [], isLoading: bevakningarLaddar } = useQuery({
     queryKey: ['admin-polisen-bevakningar', vald?.id],
@@ -783,7 +647,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     const u = användare.find(x => x.epost === defaultÖppnaEpost)
     if (u) {
       setVald(u)
-      setDetaljFlik(defaultFlik ?? 'notifinstallningar')
+      setDetaljFlik(defaultFlik ?? 'oversikt')
       onDjuplänkKonsumerad?.()
     }
   }, [defaultÖppnaEpost, defaultFlik, användare, onDjuplänkKonsumerad])
@@ -1007,16 +871,6 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
       {enkildStängAv && (
         <StängAvModal antal={1} onSpara={(anledning, påminnelseOm) => stängAvEnkild(enkildStängAv, anledning, påminnelseOm)} onStäng={() => setEnkildStängAv(null)} />
       )}
-      {impersonationMål && (
-        <ImpersonationModal
-          användare={impersonationMål}
-          onBekräfta={(_kommentar) => {
-            window.open(`/?impersonating=${impersonationMål.id}&namn=${encodeURIComponent(impersonationMål.namn)}`, '_blank')
-            setImpersonationMål(null)
-          }}
-          onStäng={() => setImpersonationMål(null)}
-        />
-      )}
       {enkildRadera && (
         <RaderaModal antal={1} namn={enkildRadera.namn} fel={raderaFel} raderar={raderar}
           onBekräfta={() => raderaEnkild(enkildRadera)}
@@ -1184,9 +1038,6 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {!skrivskyddad && (
-                <button onClick={() => setImpersonationMål(vald)} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white transition-colors">Logga in som</button>
-              )}
               <button onClick={() => setVald(null)} className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none">✕</button>
             </div>
           </div>
@@ -1602,66 +1453,21 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
             </div>
           )}
 
-          {/* ── Notifieringsinställningar ── */}
+          {/* ── Notifieringsinställningar ── inget API bakom fliken; riktig data ligger under Översikt */}
           {detaljFlik === 'notifinstallningar' && (
-            <div className="px-6 py-5">
-              {!(MOCK_NOTIF[vald.id]?.some(k => k.aktiv)) ? (
-                <p className="text-center text-sm text-slate-400 py-10">Användaren har inga aktiva notifieringar.</p>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {(MOCK_NOTIF[vald.id] ?? []).map(k => (
-                    <div key={k.källNamn} className={`rounded-xl border px-5 py-4 ${k.aktiv ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50 opacity-60'}`}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${k.aktiv ? 'bg-green-500' : 'bg-slate-300'}`} />
-                          <p className="text-sm font-semibold text-slate-800">{k.källNamn}</p>
-                        </div>
-                        <div className="flex gap-1">
-                          {k.kanaler.map(kanal => (
-                            <span key={kanal} className={`text-xs font-medium px-2 py-0.5 rounded-full ${KANAL_CLS[kanal]}`}>{kanal}</span>
-                          ))}
-                        </div>
-                      </div>
-                      {k.aktiv && (
-                        <div className="grid grid-cols-3 gap-3">
-                          <div>
-                            <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1.5">Skickas till</p>
-                            <div className="flex flex-col gap-1">
-                              {k.kontaktuppgiftIds.map(kid => {
-                                const ku = vald.kontaktuppgifter.find(x => x.id === kid)
-                                if (!ku) return null
-                                return (
-                                  <div key={kid} className="flex items-center gap-1.5">
-                                    <span className={`text-xs font-medium px-1.5 py-0 rounded-full ${KANAL_CLS[ku.typ]}`}>{ku.typ}</span>
-                                    <span className="text-xs text-slate-600 truncate">{ku.värde}</span>
-                                    {!ku.verifierad && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Ej verifierad" />}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1.5">Geografier</p>
-                            <div className="flex flex-wrap gap-1">
-                              {k.geografier.length > 0
-                                ? k.geografier.map(g => <span key={g} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{g}</span>)
-                                : <span className="text-xs text-slate-400">Alla</span>}
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1.5">Kategorier</p>
-                            <div className="flex flex-wrap gap-1">
-                              {k.kategorier.length > 0
-                                ? k.kategorier.map(kat => <span key={kat} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{kat}</span>)
-                                : <span className="text-xs text-slate-400">Alla</span>}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="pb-8">
+              <IngetKopplatAn rubrik="Inga notifieringsinställningar visas här">
+                Den här fliken är inte kopplad till backend. Användarens riktiga aktiva källor,
+                Polisen-bevakningar och push-inställningar finns under Översikt.
+              </IngetKopplatAn>
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setDetaljFlik('oversikt')}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors"
+                >
+                  Visa under Översikt
+                </button>
+              </div>
             </div>
           )}
 
@@ -1797,20 +1603,12 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
             </div>
           )}
 
-          {/* ── Aktivitet ── */}
+          {/* ── Aktivitet ── ingen inloggningsspårning finns än */}
           {detaljFlik === 'aktivitet' && (
-            <div className="divide-y divide-slate-50">
-              {(MOCK_AKTIVITET[vald.id] ?? []).length === 0 ? (
-                <p className="px-6 py-10 text-center text-sm text-slate-400">Ingen aktivitet registrerad.</p>
-              ) : (
-                (MOCK_AKTIVITET[vald.id] ?? []).map((a, i) => (
-                  <div key={i} className="flex items-center gap-4 px-6 py-3">
-                    <span className="text-xs text-slate-400 font-mono w-32 shrink-0">{a.tid}</span>
-                    <p className="text-sm text-slate-700">{a.händelse}</p>
-                  </div>
-                ))
-              )}
-            </div>
+            <IngetKopplatAn rubrik="Ingen aktivitet registreras än">
+              Inloggningar och användaraktivitet spåras inte, så den här fliken kan inte visa något.
+              Det betyder inte att användaren är inaktiv.
+            </IngetKopplatAn>
           )}
 
         </div>
