@@ -182,6 +182,7 @@ builder.Services.AddSingleton<LoginThrottle>();
 // Aktivitetslogg (#491 wave 1) — behöver HttpContext för att fånga Vem/Ip/Enhet automatiskt
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAktivitetsloggService, AktivitetsloggService>();
+builder.Services.AddScoped<Samhallsinformation.Application.Feed.IUserFeedService, Samhallsinformation.Application.Feed.UserFeedService>();
 
 // CSP i rapportera-läge (V3-22, D4 alt B): mottagare för webbläsarnas överträdelserapporter.
 builder.Services.AddScoped<ICspReportService, CspReportService>();

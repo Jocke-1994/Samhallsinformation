@@ -234,6 +234,17 @@ export async function fetchEvents(params: FetchEventsParams = {}): Promise<Event
   return res.json()
 }
 
+// Mitt flöde, filtrerat på servern (V3-11): användarens aktiva källor, med
+// Polisen matchad mot användarens bevakningar. Kräver inloggning (401 annars).
+export async function fetchMittFlode(page: number, pageSize: number): Promise<EventsResponse> {
+  if (USE_MOCK) {
+    return { total: MOCK_EVENTS.length, page: 1, pageSize: MOCK_EVENTS.length, events: MOCK_EVENTS, hasMore: false, totalExakt: true }
+  }
+  const res = await adminFetch(`/api/user/feed?page=${page}&pageSize=${pageSize}`)
+  if (!res.ok) throw new Error(`fetchMittFlode: ${res.status}`)
+  return res.json()
+}
+
 // Ren analytics, ingen UI beror på svaret — skickas via adminFetch (trots
 // namnet den delade, valfria-auth-wrappern) så en inloggad användares JWT
 // följer med om den finns, men anropet fungerar likagärna helt utloggat.

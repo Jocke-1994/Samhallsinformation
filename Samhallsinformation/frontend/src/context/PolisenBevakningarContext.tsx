@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   fetchBevakningar, createBevakning, updateBevakning, deleteBevakning, type BevakningDto, type BevakningRequest,
 } from '../api/polisenBevakningar'
@@ -52,6 +53,11 @@ export function PolisenBevakningarProvider({ children }: { children: ReactNode }
   const { data: rader, lage, forsokIgen, uppdatera: uppdateraLista } =
     useInloggadHamtning<BevakningDto[]>('polisen-bevakningar', fetchBevakningar)
   const bevakningar = useMemo(() => (rader ?? []).map(frånDto), [rader])
+  const queryClient = useQueryClient()
+
+  // Mitt flöde filtreras på servern efter bevakningarna (V3-11): en ändring ska
+  // ge ett omhämtat flöde, inte vänta på nästa besök.
+  const flodetBehoverHamtasOm = () => { void queryClient.invalidateQueries({ queryKey: ['mitt-flode'] }) }
 
   // Tom lista = inget anpassat = allt syns (matchar backendens
   // PolisenBevakningMatcher.Matches exakt) — men bara när listan faktiskt
@@ -114,6 +120,7 @@ export function PolisenBevakningarProvider({ children }: { children: ReactNode }
     const req: BevakningRequest = { kategorier, omraden }
     const ny = await createBevakning(req)
     uppdateraLista(prev => [...prev, ny])
+    flodetBehoverHamtasOm()
     return true
   }
 
@@ -121,11 +128,13 @@ export function PolisenBevakningarProvider({ children }: { children: ReactNode }
     const req: BevakningRequest = { kategorier, omraden }
     const uppdaterad = await updateBevakning(id, req)
     uppdateraLista(prev => prev.map(b => b.id === id ? uppdaterad : b))
+    flodetBehoverHamtasOm()
   }
 
   async function taBort(id: string): Promise<void> {
     await deleteBevakning(id)
     uppdateraLista(prev => prev.filter(b => b.id !== id))
+    flodetBehoverHamtasOm()
   }
 
   const value: PolisenBevakningarContextValue = {
