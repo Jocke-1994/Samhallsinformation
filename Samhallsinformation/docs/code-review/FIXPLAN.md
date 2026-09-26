@@ -129,7 +129,7 @@ Mål: tåla dålig extern data, dubbletter och fel utan att tyst tappa data elle
 | V3-8 | **Admin: fel visas som fel** (inte tomt/0/"100 % frisk"), `onError` i mutationer, formulär stänger först vid lyckat svar, Ångra/mass-spara med felhantering | E6#8, E6#10, E6#19, E6#20 | FE | L | FE | ☐ |
 | V3-9 | **Medborgarsidans mutationer visar fel;** supportformuläret behåller text vid kategoribyte | E7#9 | FE | M | FE | ☑ mergad (PR #635) |
 | V3-10 | **Support-rollens behörighet** (efter D1): backend-policy + frontend-menyer i synk. Ändrar testet `AdminSupportController_RequiresAdminRole` avsiktligt. | E4#7, E6#7 | BE+FE | M | enhet | ☑ mergad (PR #641) |
-| V3-11 | **Mitt flöde filtreras på servern** (efter D2); ersätter klientfiltret över 50 händelser; gäller även Sparat | E5#1 | BE+FE | L | enhet+FE | ☐ |
+| V3-11 | **Mitt flöde filtreras på servern** (efter D2); ersätter klientfiltret över 50 händelser; gäller även Sparat | E5#1 | BE+FE | L | enhet+FE | ◐ pågår (avbröts av usage-gräns, återupptas) |
 | V3-12 | **Sessioner mellan flikar/PWA:** `storage`-synk av refresh-token, react-query-cachen töms vid logout, användar-id i user-specifika query-nycklar | E5#3, E5#7 | FE | M | Vitest | ☑ mergad (PR #636) |
 | V3-13 | **Push-prenumeration knuten till inloggad användare;** utloggning avregistrerar enheten; push-kortet visar riktig enhetsstatus utan att skriva över kontots inställningar | E5#9, E7#6 | FE(+BE) | M | FE+enhet | ☑ mergad (PR #642) |
 | V3-14 | **Feature-flaggor:** ingen tyst `defaultAktiv`-fallback vid fel, invalidera båda mutationsvägarna | E5#10 | FE | S | Vitest | ☑ mergad (PR #631) |
@@ -140,7 +140,7 @@ Mål: tåla dålig extern data, dubbletter och fel utan att tyst tappa data elle
 | V3-19 | **FAQ-seed skriver aldrig över adminens ändringar** och återskapar inte raderade frågor | E2#1 | BE | S | enhet | ☑ mergad (PR #640) |
 | V3-20 | **Mock-hygien** (efter D3): admin-mock märks MOCK eller döljs, medborgarmock bakom flagga tas bort/döljs, notisklockan lagas så två komponenter inte skriver över varandra | E6#6, E6#11, E6#12, E6#13, E7#5 | FE | M–L | FE | ◐ pågår |
 | V3-21 | **Redigera källa skriver inte över `isPublished` med gammal kopia** | E6#15 | FE | S | FE | ☑ mergad (PR #639) |
-| V3-22 | **Token-lagring/CSP** (efter D4) | E5#11 | FE+BE | M–L | – | ◐ pågår |
+| V3-22 | **Token-lagring/CSP** (efter D4) | E5#11 | FE+BE | M–L | – | ☑ mergad (PR #644) — CSP i rapportera-läge; falsklarm från Claudes egen testrapport möjligt |
 | V3-23 | **Start mot tom PostgreSQL fungerar** (schema-ordning, typläkning i rätt gren) | E2#3 | DB | M | PG-rök | ☐ |
 
 ---
