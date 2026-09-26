@@ -53,6 +53,9 @@ public class WebhooksController : ControllerBase
     // mejl inte bägge passerar kollen. Gäller bara inom en processinstans.
     private static readonly SemaphoreSlim _bearbetningsLås = new(1, 1);
 
+    // Antal svar sedan uppstart som accepterats trots att Resend inte levererade något authentication-objekt.
+    private static long _utanAutentiseringAntal;
+
     private readonly AppDbContext _db;
     private readonly IEmailService _email;
     private readonly IConfiguration _config;
@@ -233,13 +236,31 @@ public class WebhooksController : ControllerBase
         }
         var text = mejl.Text;
 
-        // Spoofing-skydd, steg 2 (E1#10): avsändarens From-domän måste ha klarat DMARC eller DKIM hos Resends
+        // Spoofing-skydd, steg 2 (E1#10): avsändarens From-domän ska ha klarat DMARC eller DKIM hos Resends
         // mottagande server. Annars läggs mejlet INTE in som kundens meddelande (ingen push, ingen oläst-markering,
         // ärendets status/tidsstämplar rörs inte) utan som en tydligt märkt intern anteckning som support kan bedöma.
-        if (mejl.Authentication?.IsSenderVerified != true)
+        //  - SUPPORT_REPLY_REQUIRE_AUTH=false: kravet är avstängt (kill-switch), utfallet loggas bara.
+        //  - authentication saknas helt (null/fältet finns inte, t.ex. äldre mejl): kan inte verifieras — accepteras som förut
+        //    med en Warning och en räknare. Ett falskt mejl bedöms alltid av Resends mottagande server, så för det finns objektet.
+        //  - objektet finns men varken dmarc eller dkim är pass: flaggad intern anteckning.
+        var kravAktivt = !string.Equals(_config["SUPPORT_REPLY_REQUIRE_AUTH"], "false", StringComparison.OrdinalIgnoreCase);
+        if (mejl.Authentication == null)
         {
-            await SparaOverifieratMejlSomInternAnteckningAsync(ticket, emailId, fromEpost, text, mejl.Authentication);
-            return;
+            var antal = Interlocked.Increment(ref _utanAutentiseringAntal);
+            _logger.LogWarning(
+                "Resend-webhook: authentication saknas — kunde inte verifiera avsändaren, accepterar (ärende {TicketNumber}, email_id {EmailId}; {Antal} sådana sedan uppstart).",
+                ticket.TicketNumber, emailId, antal);
+        }
+        else if (!mejl.Authentication.IsSenderVerified)
+        {
+            if (kravAktivt)
+            {
+                await SparaOverifieratMejlSomInternAnteckningAsync(ticket, emailId, fromEpost, text, mejl.Authentication);
+                return;
+            }
+            _logger.LogWarning(
+                "Resend-webhook: avsändaren {From} för ärende {TicketNumber} klarade inte SPF/DKIM/DMARC ({Utfall}), email_id {EmailId} — SUPPORT_REPLY_REQUIRE_AUTH=false, accepterar ändå.",
+                fromEpost, ticket.TicketNumber, mejl.Authentication, emailId);
         }
 
         var sparadText = KlippBortCiterat(text);

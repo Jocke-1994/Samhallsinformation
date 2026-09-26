@@ -42,11 +42,12 @@ public class WebhooksControllerTests
         public required IConfiguration Config { get; init; }
     }
 
-    private static Harness NewHarness(AppDbContext db, string? secret = null, bool withSecret = true, bool acceptLegacy = true)
+    private static Harness NewHarness(AppDbContext db, string? secret = null, bool withSecret = true, bool acceptLegacy = true, bool requireAuth = true)
     {
         var values = new Dictionary<string, string?>();
         if (withSecret) values["RESEND_WEBHOOK_SECRET"] = secret ?? Secret;
         if (!acceptLegacy) values["SUPPORT_REPLY_ACCEPT_LEGACY"] = "false";
+        if (!requireAuth) values["SUPPORT_REPLY_REQUIRE_AUTH"] = "false";
         return new Harness
         {
             Db = db,
@@ -447,19 +448,105 @@ public class WebhooksControllerTests
     }
 
     [Fact]
-    public async Task Svar_AutentiseringSaknasHelt_BehandlasSomOverifierat()
+    public async Task Svar_AutentiseringSaknasHelt_AccepterasSomKundsvarMedWarning()
     {
-        // "authentication": null (äldre mejl) eller fältet saknas -> fail-closed.
+        // "authentication": null / fältet saknas (äldre mejl, API-svar utan fältet): kan inte verifieras -> accepteras
+        // som förut, men loggas som Warning så vi ser hur ofta det händer.
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        var ticket = AddTicket(db, 12, "kund@example.com");
+        h.Email.GetReceivedEmailAsync("em_1").Returns(new ReceivedEmail("Hej", null));
+        var body = Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]);
+        var logg = new LogCapture();
+
+        await NewController(h, body, logger: logg).ResendInbound();
+
+        var message = Assert.Single(db.SupportTicketMessages);
+        Assert.Equal("user", message.SenderType);
+        Assert.False(message.IsInternal);
+        Assert.NotNull(db.SupportTickets.Single(t => t.Id == ticket.Id).LastUserMessageAt);
+        Assert.Contains(logg.Entries, e => e.Level == LogLevel.Warning && e.Message.Contains("authentication saknas") && e.Message.Contains("accepterar"));
+    }
+
+    [Fact]
+    public async Task Svar_AutentiseringSaknasHelt_RaknasIEnRaknare()
+    {
         using var db = TestDb.Create();
         var h = NewHarness(db);
         AddTicket(db, 12, "kund@example.com");
-        h.Email.GetReceivedEmailAsync("em_1").Returns(new ReceivedEmail("Hej", null));
-        var body = Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]);
+        h.Email.GetReceivedEmailAsync("em_1").Returns(new ReceivedEmail("Ett", null));
+        h.Email.GetReceivedEmailAsync("em_2").Returns(new ReceivedEmail("Två", null));
+        var logg = new LogCapture();
 
-        await NewController(h, body).ResendInbound();
+        await NewController(h, Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]), svixId: "msg_1", logger: logg).ResendInbound();
+        await NewController(h, Payload("em_2", "kund@example.com", ["svar+12@samhallsinformation.se"]), svixId: "msg_2", logger: logg).ResendInbound();
+
+        var antal = logg.Entries.Where(e => e.Message.Contains("authentication saknas")).Select(e => e.Message).ToList();
+        Assert.Equal(2, antal.Count);
+        Assert.Contains("sådana sedan uppstart", antal[1]);   // räknaren ingår i loggraden
+    }
+
+    [Fact]
+    public async Task Svar_MejlSomInteKanHamtasAlls_SparasFortfarandeIngenting()
+    {
+        // Utan hämtat mejl finns ingen text att spara — kill-switchen/null-regeln gäller bara själva utfallet.
+        using var db = TestDb.Create();
+        var h = NewHarness(db, requireAuth: false);
+        AddTicket(db, 12, "kund@example.com");
+        h.Email.GetReceivedEmailAsync("em_1").Returns((ReceivedEmail?)null);
+
+        await NewController(h, Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"])).ResendInbound();
+
+        Assert.Empty(db.SupportTicketMessages);
+    }
+
+    // ---- Kill-switch SUPPORT_REPLY_REQUIRE_AUTH ----
+
+    [Fact]
+    public async Task Svar_RequireAuthAv_ForfalskatMejlAccepterasMenLoggas()
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db, requireAuth: false);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Tack", new ReceivedEmailAuthentication("fail", "fail", "fail"));
+        var body = Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]);
+        var logg = new LogCapture();
+
+        await NewController(h, body, logger: logg).ResendInbound();
+
+        var message = Assert.Single(db.SupportTicketMessages);
+        Assert.Equal("user", message.SenderType);
+        Assert.False(message.IsInternal);
+        Assert.Contains(logg.Entries, e => e.Level == LogLevel.Warning && e.Message.Contains("SUPPORT_REPLY_REQUIRE_AUTH=false") && e.Message.Contains("spf=fail"));
+    }
+
+    [Fact]
+    public async Task Svar_RequireAuthPa_ForfalskatMejlFlaggasFortfarande()
+    {
+        // Default (true) är oförändrat: objektet finns men varken dmarc eller dkim är pass -> flaggad anteckning.
+        using var db = TestDb.Create();
+        var h = NewHarness(db, requireAuth: true);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Falskt", new ReceivedEmailAuthentication("fail", "fail", "fail"));
+
+        await NewController(h, Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"])).ResendInbound();
 
         Assert.DoesNotContain(db.SupportTicketMessages, m => m.SenderType == "user");
         Assert.Single(db.SupportTicketMessages, m => m.IsInternal);
+    }
+
+    [Fact]
+    public async Task Svar_RequireAuthAv_PaverkarInteTokenkravet()
+    {
+        // Kill-switchen gäller bara SPF/DKIM/DMARC — fel token avvisas fortfarande.
+        using var db = TestDb.Create();
+        var h = NewHarness(db, requireAuth: false);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Hej");
+
+        await NewController(h, Payload("em_1", "kund@example.com", ["svar+12-00000000@samhallsinformation.se"])).ResendInbound();
+
+        Assert.Empty(db.SupportTicketMessages);
     }
 
     [Theory]
