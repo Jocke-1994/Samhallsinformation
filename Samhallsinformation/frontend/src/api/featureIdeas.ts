@@ -1,4 +1,5 @@
 import { adminFetch } from './adminFetch'
+import { felFranSvar } from './hamta'
 
 export type IdeaStage = 'brainstorm' | 'triage' | 'byggs' | 'testas' | 'lanseringsklar' | 'lanserad' | 'avfärdad'
 
@@ -51,7 +52,7 @@ export interface CreateFeatureIdeaRequest {
 export async function fetchFeatureIdeas(stage?: string): Promise<FeatureIdeaListItemDto[]> {
   const qs = stage ? `?stage=${encodeURIComponent(stage)}` : ''
   const res = await adminFetch(`/api/admin/feature-ideas${qs}`)
-  if (!res.ok) throw new Error(`fetchFeatureIdeas: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchFeatureIdeas')
   return res.json()
 }
 
@@ -60,13 +61,13 @@ export async function createFeatureIdea(req: CreateFeatureIdeaRequest): Promise<
     method: 'POST',
     body: JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`createFeatureIdea: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'createFeatureIdea')
   return res.json()
 }
 
 export async function fetchFeatureIdea(id: string): Promise<FeatureIdeaDetailDto> {
   const res = await adminFetch(`/api/admin/feature-ideas/${id}`)
-  if (!res.ok) throw new Error(`fetchFeatureIdea: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchFeatureIdea')
   return res.json()
 }
 
@@ -75,7 +76,7 @@ export async function updateFeatureIdea(id: string, req: { title?: string; descr
     method: 'PUT',
     body: JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`updateFeatureIdea: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'updateFeatureIdea')
 }
 
 export async function setIdeaStage(id: string, stage: IdeaStage): Promise<void> {
@@ -83,7 +84,7 @@ export async function setIdeaStage(id: string, stage: IdeaStage): Promise<void> 
     method: 'PUT',
     body: JSON.stringify({ stage }),
   })
-  if (!res.ok) throw new Error(`setIdeaStage: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'setIdeaStage')
 }
 
 export async function setIdeaTriage(id: string, kanGoras: boolean | null, borGoras: boolean | null, motivering: string | null): Promise<void> {
@@ -91,7 +92,7 @@ export async function setIdeaTriage(id: string, kanGoras: boolean | null, borGor
     method: 'PUT',
     body: JSON.stringify({ kanGoras, borGoras, motivering }),
   })
-  if (!res.ok) throw new Error(`setIdeaTriage: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'setIdeaTriage')
 }
 
 export async function addIdeaTester(id: string, email: string): Promise<FeatureIdeaTesterDto> {
@@ -99,13 +100,13 @@ export async function addIdeaTester(id: string, email: string): Promise<FeatureI
     method: 'POST',
     body: JSON.stringify({ email }),
   })
-  if (!res.ok) throw new Error(`addIdeaTester: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'addIdeaTester')
   return res.json()
 }
 
 export async function removeIdeaTester(id: string, userId: string): Promise<void> {
   const res = await adminFetch(`/api/admin/feature-ideas/${id}/testers/${userId}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`removeIdeaTester: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'removeIdeaTester')
 }
 
 export async function addChecklistItem(id: string, label: string): Promise<{ id: string }> {
@@ -113,7 +114,7 @@ export async function addChecklistItem(id: string, label: string): Promise<{ id:
     method: 'POST',
     body: JSON.stringify({ label }),
   })
-  if (!res.ok) throw new Error(`addChecklistItem: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'addChecklistItem')
   return res.json()
 }
 
@@ -122,15 +123,15 @@ export async function toggleChecklistItem(id: string, itemId: string, done: bool
     method: 'PUT',
     body: JSON.stringify({ done }),
   })
-  if (!res.ok) throw new Error(`toggleChecklistItem: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'toggleChecklistItem')
 }
 
 export async function removeChecklistItem(id: string, itemId: string): Promise<void> {
   const res = await adminFetch(`/api/admin/feature-ideas/${id}/checklist/${itemId}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`removeChecklistItem: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'removeChecklistItem')
 }
 
 export async function deleteFeatureIdea(id: string): Promise<void> {
   const res = await adminFetch(`/api/admin/feature-ideas/${id}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`deleteFeatureIdea: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'deleteFeatureIdea')
 }

@@ -1,4 +1,5 @@
 import { adminFetch } from './adminFetch'
+import { felFranSvar } from './hamta'
 
 export type AlertSeverity = 'info' | 'warning' | 'critical'
 
@@ -23,12 +24,12 @@ export interface AdminAlertListDto {
 
 export async function fetchAdminAlerts(): Promise<AdminAlertListDto> {
   const res = await adminFetch('/api/admin/alerts')
-  if (!res.ok) throw new Error(`fetchAdminAlerts: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminAlerts')
   return res.json()
 }
 
 export async function acknowledgeAdminAlert(id: string): Promise<AdminAlertDto> {
   const res = await adminFetch(`/api/admin/alerts/${id}/acknowledge`, { method: 'POST' })
-  if (!res.ok) throw new Error(`acknowledgeAdminAlert: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'acknowledgeAdminAlert')
   return res.json()
 }

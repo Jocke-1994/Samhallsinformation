@@ -1,5 +1,6 @@
 import type { FaqKategori } from '../types'
 import { adminFetch } from './adminFetch'
+import { felFranSvar, publikFetch } from './hamta'
 
 export interface FaqItem {
   id:         string
@@ -18,17 +19,15 @@ export interface FaqRequest {
   flagKey:    string | null
 }
 
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
-
 export async function fetchFaq(): Promise<FaqItem[]> {
-  const res = await fetch(`${API_BASE}/api/faq`)
-  if (!res.ok) throw new Error(`fetchFaq: ${res.status}`)
+  const res = await publikFetch(`/api/faq`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchFaq')
   return res.json()
 }
 
 export async function fetchAdminFaq(): Promise<FaqItem[]> {
   const res = await adminFetch('/api/admin/faq')
-  if (!res.ok) throw new Error(`fetchAdminFaq: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminFaq')
   return res.json()
 }
 
@@ -37,7 +36,7 @@ export async function createFaqItem(req: FaqRequest): Promise<FaqItem> {
     method: 'POST',
     body:   JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`createFaqItem: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'createFaqItem')
   return res.json()
 }
 
@@ -46,11 +45,11 @@ export async function updateFaqItem(id: string, req: FaqRequest): Promise<FaqIte
     method: 'PUT',
     body:   JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`updateFaqItem: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'updateFaqItem')
   return res.json()
 }
 
 export async function deleteFaqItem(id: string): Promise<void> {
   const res = await adminFetch(`/api/admin/faq/${id}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`deleteFaqItem: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'deleteFaqItem')
 }

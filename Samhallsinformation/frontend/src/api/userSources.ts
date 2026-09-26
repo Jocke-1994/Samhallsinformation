@@ -1,4 +1,5 @@
 import { adminFetch } from './adminFetch'
+import { felFranSvar } from './hamta'
 
 export interface UserSourcePref {
   sourceId:  number
@@ -15,7 +16,7 @@ export interface SourcePrefUpdate {
 
 export async function fetchUserSources(): Promise<UserSourcePref[]> {
   const res = await adminFetch('/api/user/sources')
-  if (!res.ok) throw new Error(`fetchUserSources: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchUserSources')
   return res.json()
 }
 
@@ -24,5 +25,5 @@ export async function saveUserSources(updates: SourcePrefUpdate[]): Promise<void
     method: 'PUT',
     body: JSON.stringify(updates),
   })
-  if (!res.ok) throw new Error(`saveUserSources: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'saveUserSources')
 }
