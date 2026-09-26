@@ -259,6 +259,11 @@ export default function Kallhantering() {
   const deleteMutation = useMutation({
     mutationFn: deleteAdminSource,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-sources'] }),
+    onError: (err, id) => {
+      // Visa serverns text (t.ex. att dedikerade källor inte kan raderas) på källans rad — samma ruta som omsynk.
+      setResyncResultat({ id, text: err instanceof Error ? `✗ ${err.message}` : '✗ Borttagning misslyckades' })
+      setTimeout(() => setResyncResultat(null), 6000)
+    },
   })
   const resyncMutation = useMutation({
     mutationFn: resyncAdminSource,
@@ -401,7 +406,8 @@ export default function Kallhantering() {
         >
           <p>
             Det här tar bort källan <strong>{attTaBort.namn}</strong> och alla användares
-            prenumerationer på den — kan inte ångras.
+            prenumerationer på den — kan inte ångras. Källans hämtade händelser (och användares
+            sparade/delade händelser från den) tas bort samtidigt.
           </p>
         </ConfirmDialog>
       )}

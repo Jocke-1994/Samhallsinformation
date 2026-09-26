@@ -52,7 +52,11 @@ export async function updateAdminSource(id: number, req: {
 
 export async function deleteAdminSource(id: number): Promise<void> {
   const res = await adminFetch(`/api/admin/sources/${id}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`deleteAdminSource: ${res.status}`)
+  if (!res.ok) {
+    // Serverns svenska felmeddelande (t.ex. "Dedikerade källor kan inaktiveras men inte raderas …").
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? `deleteAdminSource: ${res.status}`)
+  }
 }
 
 export async function resyncAdminSource(id: number): Promise<{ inserted: number; updated: number }> {
