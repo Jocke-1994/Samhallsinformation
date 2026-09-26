@@ -6,8 +6,11 @@ import { fetchAdminHealth, type AdminHealthDto, type HälsaStatus } from '../../
 import type { AdminSource } from '../../types'
 import LarmKort from './LarmKort'
 import { MockBadge, MockBanner } from '../common/MockBadge'
+import HamtningsStatus, { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
 
-type Hälsa = 'OK' | 'Varning' | 'Nere' | 'Kontrollerar...'
+// 'Okänd' = hälso-anropet misslyckades. Det är inte samma sak som "Nere" (vi vet inget)
+// och aldrig "OK" — och inte heller en evig "Kontrollerar...".
+type Hälsa = 'OK' | 'Varning' | 'Nere' | 'Kontrollerar...' | 'Okänd'
 
 interface Tjänst {
   id:          string
@@ -45,24 +48,27 @@ const HÄLSA_MAP: Record<HälsaStatus, Hälsa> = { OK: 'OK', Varning: 'Varning',
 // gränssnittet redan renderar. Under laddning/refetch visas alla rader som
 // "Kontrollerar..." — matchar den gamla mockens ping-UX, men bakom en riktig
 // nätverksanrop nu.
-function tjänsterFrånHälsa(h: AdminHealthDto | undefined, isFetching: boolean, senastKl: string): Tjänst[] {
+function tjänsterFrånHälsa(h: AdminHealthDto | undefined, isFetching: boolean, senastKl: string, hälsoFel = false): Tjänst[] {
   const kontrollerar = isFetching || !h
-  const status = (s: HälsaStatus): Hälsa => kontrollerar ? 'Kontrollerar...' : HÄLSA_MAP[s]
+  const okänd = hälsoFel && !isFetching
+  const status = (s: HälsaStatus): Hälsa => okänd ? 'Okänd' : kontrollerar ? 'Kontrollerar...' : HÄLSA_MAP[s]
+  // Utan svar: "Okänd" om anropet misslyckats (och inget pågår), annars "Kontrollerar...".
+  const utanSvar: Hälsa = okänd ? 'Okänd' : 'Kontrollerar...'
 
   return [
     {
       id: 'api', namn: 'Backend-API', beskrivning: 'REST-API',
-      hälsa: h ? status(h.api.status) : 'Kontrollerar...',
+      hälsa: h ? status(h.api.status) : utanSvar,
       svarstid: h ? `${h.api.latencyMs} ms` : '—', senast: h ? senastKl : '—',
     },
     {
       id: 'db', namn: 'Databas', beskrivning: 'EF Core — SQLite lokalt, PostgreSQL i produktion',
-      hälsa: h ? status(h.db.status) : 'Kontrollerar...',
+      hälsa: h ? status(h.db.status) : utanSvar,
       svarstid: h ? `${h.db.latencyMs} ms` : '—', senast: h ? senastKl : '—',
     },
     {
       id: 'ingestor', namn: 'Ingestor', beskrivning: h ? `${h.ingestor.aktivaKällor - h.ingestor.källorMedFel}/${h.ingestor.aktivaKällor} aktiva källor utan fel` : 'Bakgrundstjänst — 5 min-cykel',
-      hälsa: h ? status(h.ingestor.status) : 'Kontrollerar...',
+      hälsa: h ? status(h.ingestor.status) : utanSvar,
       svarstid: '—', senast: h?.ingestor.lastFetchedAt ? new Date(h.ingestor.lastFetchedAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }) : '—',
     },
     {
@@ -71,7 +77,7 @@ function tjänsterFrånHälsa(h: AdminHealthDto | undefined, isFetching: boolean
           ? 'Inga notiser skickade senaste 24h'
           : `${h.notifieringar.totaltSenaste24h - h.notifieringar.felSenaste24h}/${h.notifieringar.totaltSenaste24h} lyckade senaste 24h`)
         : 'Push-utskick',
-      hälsa: h ? status(h.notifieringar.status) : 'Kontrollerar...',
+      hälsa: h ? status(h.notifieringar.status) : utanSvar,
       svarstid: '—', senast: h ? senastKl : '—',
     },
   ]
@@ -181,6 +187,7 @@ const HÄLSA_CLS: Record<Hälsa, { pill: string; dot: string }> = {
   'Varning':         { pill: 'bg-amber-100 text-amber-700 border border-amber-200',  dot: 'bg-amber-400'              },
   'Nere':            { pill: 'bg-red-100 text-red-700 border border-red-200',        dot: 'bg-red-500'                },
   'Kontrollerar...': { pill: 'bg-slate-100 text-slate-500 border border-slate-200',  dot: 'bg-slate-400 animate-pulse'},
+  'Okänd':           { pill: 'bg-red-100 text-red-700 border border-red-200',        dot: 'bg-slate-400'              },
 }
 
 const NIVÅ_CLS: Record<Felrad['nivå'], string> = {
@@ -268,12 +275,13 @@ function toKällKontroll(s: AdminSource): KällKontroll {
 export default function Felsökning() {
   const queryClient = useQueryClient()
 
-  const { data: apiSources = [], isLoading: källorLaddar } = useQuery({
+  const källorFråga = useQuery({
     queryKey: ['admin-sources'],
     queryFn:  fetchAdminSources,
     retry: 1,
     refetchInterval: 60_000,
   })
+  const källorLaddar = källorFråga.isLoading
 
   const updateMutation = useMutation({
     mutationFn: ({ id, req }: { id: number; req: Parameters<typeof updateAdminSource>[1] }) =>
@@ -281,14 +289,15 @@ export default function Felsökning() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-sources'] }),
   })
 
-  const källorLive: KällKontroll[] = apiSources.map(toKällKontroll)
+  const källorLive: KällKontroll[] = (källorFråga.data ?? []).map(toKällKontroll)
 
-  const { data: health, isFetching: hälsaKontrolleras, refetch: pingaAlla } = useQuery({
+  const hälsaFråga = useQuery({
     queryKey: ['admin-health'],
     queryFn:  fetchAdminHealth,
     refetchInterval: 60_000,
   })
-  const tjänster = tjänsterFrånHälsa(health, hälsaKontrolleras, new Date().toLocaleTimeString('sv-SE'))
+  const { data: health, isFetching: hälsaKontrolleras, refetch: pingaAlla } = hälsaFråga
+  const tjänster = tjänsterFrånHälsa(health, hälsaKontrolleras, new Date().toLocaleTimeString('sv-SE'), hälsaFråga.isError)
 
   const [testar, setTestar]     = useState<number | null>(null)
   const [pipeline, setPipeline] = useState<Record<number, PipelineSteg[]>>({})
@@ -320,8 +329,9 @@ export default function Felsökning() {
     }
   }
 
-  const systemOK      = tjänster.every(t => t.hälsa === 'OK')
-  const systemVarning = !systemOK && tjänster.every(t => t.hälsa !== 'Nere')
+  const hälsaOkänd    = hälsaFråga.isError && !hälsaKontrolleras
+  const systemOK      = !hälsaOkänd && tjänster.every(t => t.hälsa === 'OK')
+  const systemVarning = !hälsaOkänd && !systemOK && tjänster.every(t => t.hälsa !== 'Nere')
 
   return (
     <div className="flex flex-col gap-6">
@@ -340,9 +350,9 @@ export default function Felsökning() {
             <p className="text-xs text-slate-400 mt-0.5">Riktiga kontroller — databasanslutning, källornas senaste hämtning, notisleverans</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border ${systemOK ? 'bg-green-100 text-green-700 border-green-200' : systemVarning ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
-              <span className={`w-2 h-2 rounded-full ${systemOK ? 'bg-green-500' : systemVarning ? 'bg-amber-400' : 'bg-red-500'}`} />
-              {systemOK ? 'Alla system OK' : systemVarning ? 'Varningar finns' : 'Driftstörning'}
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border ${hälsaOkänd ? 'bg-slate-100 text-slate-600 border-slate-200' : systemOK ? 'bg-green-100 text-green-700 border-green-200' : systemVarning ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+              <span className={`w-2 h-2 rounded-full ${hälsaOkänd ? 'bg-slate-400' : systemOK ? 'bg-green-500' : systemVarning ? 'bg-amber-400' : 'bg-red-500'}`} />
+              {hälsaOkänd ? 'Status okänd' : systemOK ? 'Alla system OK' : systemVarning ? 'Varningar finns' : 'Driftstörning'}
             </div>
             <button
               onClick={() => pingaAlla()}
@@ -353,6 +363,15 @@ export default function Felsökning() {
             </button>
           </div>
         </div>
+        {hälsaOkänd && (
+          <HamtningsFel
+            fel={hälsaFråga.error}
+            reserv="Kunde inte hämta systemhälsan. Statusen är okänd, det betyder inte att allt fungerar."
+            onForsokIgen={() => { void pingaAlla() }}
+            arIgang={hälsaKontrolleras}
+            className="px-6 py-4 border-b border-slate-100 bg-red-50"
+          />
+        )}
         <div className="divide-y divide-slate-50">
           {tjänster.map(t => {
             const cls = HÄLSA_CLS[t.hälsa]
@@ -383,15 +402,24 @@ export default function Felsökning() {
             <p className="text-xs text-slate-400 mt-0.5">
               {källorLaddar
                 ? 'Hämtar källor...'
-                : `${källorLive.length} källor · ${källorLive.filter(k => k.aktiv).length} aktiva`
+                : källorFråga.data === undefined
+                  ? 'Källor okända'
+                  : `${källorLive.length} källor · ${källorLive.filter(k => k.aktiv).length} aktiva`
               }
             </p>
           </div>
         </div>
 
-        {källorLaddar ? (
-          <div className="px-6 py-10 text-center text-sm text-slate-400">Laddar källdata...</div>
-        ) : (
+        <MutationFel fel={updateMutation.error} reserv="Kunde inte ändra källans status. Försök igen." className="px-6 py-3" />
+
+        <HamtningsStatus
+          fraga={källorFråga}
+          felText="Kunde inte hämta källorna."
+          tomt={källorLive.length === 0}
+          tomtText="Inga källor finns."
+          laddarText="Laddar källdata..."
+          className="px-6 py-10"
+        >
           <div className="divide-y divide-slate-50">
             {källorLive.map(k => {
               const cls   = HÄLSA_CLS[k.hälsa]
@@ -471,7 +499,7 @@ export default function Felsökning() {
               )
             })}
           </div>
-        )}
+        </HamtningsStatus>
       </div>
 
       {/* Kommande kontroller */}
