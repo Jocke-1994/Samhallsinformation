@@ -207,6 +207,7 @@ builder.Services.AddHostedService<SupportScheduledActionService>();
 builder.Services.AddHostedService<UserDeletionBackgroundService>();
 builder.Services.AddHostedService<ScheduledReleaseBackgroundService>();
 builder.Services.AddHostedService<MonitoringService>();
+builder.Services.AddHostedService<RetentionService>();
 
 // Controllers
 builder.Services.AddControllers();
