@@ -12,18 +12,18 @@ public class JwtTokenService : ITokenService
 {
     private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromMinutes(15);
 
-    private readonly string _jwtSecret;
+    private readonly JwtSettings _jwt;
 
-    public JwtTokenService(IConfiguration config)
+    // Hemligheten kommer från den delade JwtSettings (samma instans som Program.cs
+    // bygger validerings-parametrarna av) — läses inte längre separat här.
+    public JwtTokenService(JwtSettings jwt)
     {
-        _jwtSecret = config["JWT_SECRET"]
-            ?? Environment.GetEnvironmentVariable("JWT_SECRET")
-            ?? "dev-secret-change-in-production-at-least-32-chars";
+        _jwt = jwt;
     }
 
     public string GenerateAccessToken(User user)
     {
-        var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
+        var key   = _jwt.CreateSigningKey();
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
