@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
+using Samhallsinformation.Application.Faq;
 using Samhallsinformation.Application.Monitoring;
 using Samhallsinformation.Application.RateLimiting;
 using Samhallsinformation.Application.Sources;
@@ -1187,6 +1188,23 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        // AppliedSeeds — markörer för redan körda seeds/engångsuppdateringar (V3-19, FaqSeeder).
+        // Ny tabell med korrekta PostgreSQL-typer (timestamptz), samma mönster som AddAdminAlerts.
+        if (pendingMigrations.Contains("20260926015514_AddAppliedSeeds"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""AppliedSeeds"" (
+                    ""Key""       text NOT NULL,
+                    ""AppliedAt"" timestamptz NOT NULL,
+                    CONSTRAINT ""PK_AppliedSeeds"" PRIMARY KEY (""Key"")
+                );
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260926015514_AddAppliedSeeds', '10.0.12')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
     await db.Database.MigrateAsync();
 
@@ -1350,113 +1368,18 @@ using (var scope = app.Services.CreateScope())
         await db.SaveChangesAsync();
     }
 
-    // Seed FAQ — bara vid tomt bord, admin äger innehållet därefter (samma
-    // startvärden som tidigare låg i frontendens faqStorage.ts).
-    if (!db.FaqItems.Any())
+    // FAQ-seed (V3-19): seedar bara frågor som ALDRIG seedats förut (stabil seed-nyckel i AppliedSeeds,
+    // inte frågetexten), kör engångsuppdateringarna en gång och skriver aldrig över adminens ändringar.
+    // Befintlig produktionsdata (FAQ-rader utan markörer) får bara en baslinje — inga rader rörs. Får aldrig
+    // stoppa uppstarten — se FaqSeeder.
+    try
     {
-        db.FaqItems.AddRange(
-            new FaqItem { Kategori = "Konto",         Publicerad = false, Fraga = "Varför fick jag ingen push-notis?",                 Svar = "Kontrollera att push-notiser är aktiverat under Konto → Push-notiser, och att kategorin Ny händelse är påslagen. Se också till att källan finns under Mina källor, och att din webbläsare/enhet tillåter notiser från sidan." },
-            new FaqItem { Kategori = "Konto",         Publicerad = false, Fraga = "Hur aktiverar jag push-notiser?",                    Svar = "Gå till Konto → Push-notiser och slå på Ny händelse för att få en notis när dina källor i Mitt flöde publicerar något nytt. Ingen separat \"aktivera push\"-knapp behövs — att slå på kategorin startar prenumerationen automatiskt." },
-            new FaqItem { Kategori = "Konto",         Publicerad = false, Fraga = "Kan jag pausa notiser tillfälligt?",                 Svar = "Ja, stäng av Ny händelse under Konto → Push-notiser. Webbläsarens push-prenumeration avslutas automatiskt, och startas om nästa gång du slår på den igen." },
-            new FaqItem { Kategori = "Mina källor",   Publicerad = true,  Fraga = "Hur lägger jag till fler källor?",                   Svar = "Gå till Mina källor i profilmenyn. Där kan du söka efter och lägga till de myndigheter som finns tillgängliga." },
-            new FaqItem { Kategori = "Mina källor",   Publicerad = true,  Fraga = "Kan jag följa flera myndigheter samtidigt?",         Svar = "Ja, du kan lägga till hur många källor du vill i Mina källor. Alla visas i ditt nyhetsflöde." },
-            new FaqItem { Kategori = "Konto",         Publicerad = false, Fraga = "Hur tar jag bort mitt konto?",                       Svar = "Gå till Konto → Datahantering och välj Radera konto. Åtgärden är permanent och kan inte ångras." },
-            new FaqItem { Kategori = "Konto",         Publicerad = false, Fraga = "Hur laddar jag ner min data?",                       Svar = "Gå till Konto → Datahantering och klicka på Ladda ner. Du får en JSON-fil med all data vi har om dig (GDPR art. 20)." },
-            new FaqItem { Kategori = "Uppdateringar", Publicerad = false, Fraga = "Hur ser jag vad som är nytt i senaste versionen?",   Svar = "Gå till Uppdateringar i profilmenyn. Under Senaste version ser du alla ändringar sedan förra uppdateringen." },
-            new FaqItem { Kategori = "Uppdateringar", Publicerad = true,  Fraga = "Hur rapporterar jag ett fel?",                       Svar = "Klicka på Feedback-knappen längst ner i sidomenyn och beskriv vad som hänt. Meddelandet skickas till oss, och du kan ange din e-post om du vill ha svar." }
-        );
-        await db.SaveChangesAsync();
+        var faqSeedLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("FaqSeeder");
+        await FaqSeeder.SeedAsync(db, faqSeedLogger);
     }
-
-    // Kompletterande FAQ-frågor inför öppen registrering (session 43) — tabellen
-    // har redan rader sedan tidigare, så varje fråga läggs till enskilt och
-    // idempotent (kollar på frågetexten) istället för villkoret ovan. Bara
-    // funktioner som faktiskt är påslagna i produktion nämns — push-notiser,
-    // Polisen-bevakningar, radera konto/GDPR-export och tvåfaktor ligger
-    // fortfarande bakom avstängda flaggor och beskrivs medvetet inte.
-    var nyaFaqFragor = new[]
+    catch (Exception ex)
     {
-        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = "konto_losenord", Fraga = "Hur byter jag lösenord?",
-            Svar = "Gå till Konto → Lösenordsbyte, ange ditt nuvarande lösenord och sedan det nya. Har du skapat kontot med Google finns inget lösenord att byta — logga in via Google-knappen istället." },
-        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = "konto_info", Fraga = "Hur ändrar jag min e-postadress eller mitt namn?",
-            Svar = "Gå till Konto → Kontoinformation. Ändrar du e-postadress skickar vi en bekräftelselänk till den nya adressen — bytet gäller först när du klickat på länken, och du loggas ut ur eventuella andra inloggade enheter av säkerhetsskäl." },
-        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = null, Fraga = "Kan jag logga in med Google?",
-            Svar = "Ja. Välj \"Fortsätt med Google\" på inloggnings- eller registreringssidan — det fungerar både för att skapa ett nytt konto och för att logga in på ett befintligt." },
-        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = "konto_epost_paminnelse", Fraga = "Varför ber ni mig bekräfta min e-postadress?",
-            Svar = "En banderoll påminner dig om att klicka på bekräftelselänken vi skickade när du registrerade dig. Det bevisar att adressen faktiskt är din — du kan fortsätta använda tjänsten som vanligt under tiden, inget låses." },
-        new FaqItem { Kategori = "Mina källor", Publicerad = true, FlagKey = "kallor_alla", Fraga = "Vad är skillnaden på Alla källor och Mina källor?",
-            Svar = "Mina källor visar de myndigheter du redan följer och som syns i ditt flöde. Alla källor är den fullständiga listan att välja bland — där lägger du till fler." },
-        new FaqItem { Kategori = "Uppdateringar", Publicerad = true, FlagKey = null, Fraga = "Var ser jag vad som är nytt i tjänsten?",
-            Svar = "Klicka på Nyheter i sidomenyn om du är utloggad, eller Uppdateringar i profilmenyn om du är inloggad, för en lista över de senaste ändringarna." },
-        new FaqItem { Kategori = "Konto", Publicerad = true, FlagKey = "konto_datahantering", Fraga = "Kan jag ångra en radering av mitt konto?",
-            Svar = "Ja, under de första 24 timmarna. Så fort du begär radering skickar vi ett mejl med en \"Avbryt raderingen\"-länk — klicka på den så återaktiveras kontot direkt, ingen inloggning krävs. Efter 24 timmar är kontot anonymiserat och går inte att återställa." },
-    };
-    foreach (var fraga in nyaFaqFragor)
-    {
-        if (!db.FaqItems.Any(f => f.Fraga == fraga.Fraga))
-        {
-            db.FaqItems.Add(fraga);
-        }
-    }
-    await db.SaveChangesAsync();
-
-    // Aktiverar och uppdaterar de två GDPR-frågorna (radera konto,
-    // exportera data) nu när konto_datahantering slogs på (2026-09-11,
-    // PR #566) — de låg redan i den ursprungliga seed-datan men
-    // avpublicerade eftersom funktionen då var dold. Kopplas till flaggan
-    // så de följer den automatiskt framöver, och raderingssvaret
-    // uppdateras med den nya ångra-länken (PR för DeletionCancelToken).
-    var raderaKontoFaq = await db.FaqItems.FirstOrDefaultAsync(f => f.Fraga == "Hur tar jag bort mitt konto?");
-    if (raderaKontoFaq != null)
-    {
-        raderaKontoFaq.Publicerad = true;
-        raderaKontoFaq.FlagKey    = "konto_datahantering";
-        raderaKontoFaq.Svar       = "Gå till Konto → Datahantering och välj Radera konto. Kontot spärras direkt, men raderas inte förrän 24 timmar senare — vi skickar ett mejl med en länk du kan klicka för att ångra dig när som helst under de 24 timmarna.";
-    }
-    var exporteraDataFaq = await db.FaqItems.FirstOrDefaultAsync(f => f.Fraga == "Hur laddar jag ner min data?");
-    if (exporteraDataFaq != null)
-    {
-        exporteraDataFaq.Publicerad = true;
-        exporteraDataFaq.FlagKey    = "konto_datahantering";
-    }
-    await db.SaveChangesAsync();
-
-    // Ny FAQ-fråga om skräppost (session 49) — flera redan live mejlflöden
-    // (bekräftelselänk vid registrering/e-postbyte, lösenordsåterställning,
-    // ärendesvar via Resend inbound) saknade en förklaring av att mejl kan
-    // hamna i skräpposten, särskilt för Hotmail/Outlook-adresser (känt
-    // domänrykte-problem, se feedback/minnesanteckningar session 41/43 —
-    // inte fixbart med en DNS-post). FlagKey = null eftersom frågan gäller
-    // flera oberoende, redan aktiva funktioner, inte en enskild flagga.
-    if (!await db.FaqItems.AnyAsync(f => f.Fraga == "Varför hittar jag inte mejlet ni sagt att ni skickat?"))
-    {
-        db.FaqItems.Add(new FaqItem
-        {
-            Kategori   = "Konto",
-            Publicerad = true,
-            FlagKey    = null,
-            Fraga      = "Varför hittar jag inte mejlet ni sagt att ni skickat?",
-            Svar       = "Kolla din skräppost/spam-mapp — bekräftelselänkar, lösenordsåterställning och svar på supportärenden hamnar ibland där, särskilt om du har en Hotmail- eller Outlook-adress. Hittar du mejlet där, markera avsändaren som säker så hamnar framtida mejl rätt. Är det fortfarande borta efter några minuter, hör av dig via Feedback-knappen i sidomenyn.",
-        });
-        await db.SaveChangesAsync();
-    }
-
-    // Ny FAQ-fråga om Polisen-bevakningar (session 49) — kallor_polisen_filter
-    // är faktiskt AKTIVERAD i produktion (bekräftat live, session 48) men
-    // hade ingen enda FAQ-post som förklarade vad en bevakning är. FlagKey
-    // kopplad till samma flagga så frågan döljs automatiskt om den någonsin
-    // stängs av igen.
-    if (!await db.FaqItems.AnyAsync(f => f.Fraga == "Vad är en Polisen-bevakning?"))
-    {
-        db.FaqItems.Add(new FaqItem
-        {
-            Kategori   = "Mina källor",
-            Publicerad = true,
-            FlagKey    = "kallor_polisen_filter",
-            Fraga      = "Vad är en Polisen-bevakning?",
-            Svar       = "En bevakning ger dig träffar på specifika typer av händelser i ett visst område, t.ex. \"trafikolyckor i Göteborg\" eller \"alla händelser i Stenungsund\". Du hittar den under Mina källor, på Polisen-kortet — lägg till upp till 5 oberoende bevakningar samtidigt. Har du ingen bevakning skapad visas och notifieras du om alla Polisens händelser som vanligt.",
-        });
-        await db.SaveChangesAsync();
+        app.Logger.LogError(ex, "FAQ-seeden misslyckades — uppstarten fortsätter.");
     }
 
     // Seed Uppdateringar (session 49) — bara vid tomt bord, admin äger
