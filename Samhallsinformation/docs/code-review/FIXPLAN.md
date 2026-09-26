@@ -141,7 +141,7 @@ Mål: tåla dålig extern data, dubbletter och fel utan att tyst tappa data elle
 | V3-20 | **Mock-hygien** (efter D3): admin-mock märks MOCK eller döljs, medborgarmock bakom flagga tas bort/döljs, notisklockan lagas så två komponenter inte skriver över varandra | E6#6, E6#11, E6#12, E6#13, E7#5 | FE | M–L | FE | ☑ mergad (PR #646) — inga mock-flaggor var på som default |
 | V3-21 | **Redigera källa skriver inte över `isPublished` med gammal kopia** | E6#15 | FE | S | FE | ☑ mergad (PR #639) |
 | V3-22 | **Token-lagring/CSP** (efter D4) | E5#11 | FE+BE | M–L | – | ☑ mergad (PR #644) — CSP i rapportera-läge; falsklarm från Claudes egen testrapport möjligt |
-| V3-23 | **Start mot tom PostgreSQL fungerar** (schema-ordning, typläkning i rätt gren) | E2#3 | DB | M | PG-rök | ☐ |
+| V3-23 | **Start mot tom PostgreSQL fungerar** (schema-ordning, typläkning i rätt gren) | E2#3 | DB | M | PG-rök | ⏸ UPPSKJUTEN medvetet: kräver riktig PostgreSQL-testmiljö (Docker eller Testcontainers i CI) — att skriva om startlogiken för tom databas utan PG-test riskerar produktionens uppstart. Föreslås: först ett PG-rökprov i CI, sedan denna PR |
 
 ---
 
