@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Feed;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -15,7 +16,13 @@ public class UserSavedEventsController : ControllerBase
 {
     private readonly AppDbContext _db;
 
-    public UserSavedEventsController(AppDbContext db) => _db = db;
+    private readonly IUserFeedService _feed;
+
+    public UserSavedEventsController(AppDbContext db, IUserFeedService feed)
+    {
+        _db = db;
+        _feed = feed;
+    }
 
     private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -29,6 +36,16 @@ public class UserSavedEventsController : ControllerBase
             .ToListAsync();
 
         return Ok(ids);
+    }
+
+    // Själva händelserna (inte bara id:n), paginerat - så en sparad händelse syns
+    // i Sparat oavsett hur gammal den är (V3-11). GET / ovan är oförändrad och
+    // används fortsatt för bokmärkesikonerna.
+    [HttpGet("events")]
+    public async Task<IActionResult> GetEvents([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        var sida = await _feed.GetSparatAsync(CurrentUserId, page, pageSize, ct);
+        return Ok(new { total = sida.Total, page = sida.Page, pageSize = sida.PageSize, events = sida.Events, hasMore = sida.HasMore, totalExakt = sida.TotalExakt });
     }
 
     [HttpPost]

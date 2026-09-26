@@ -1,4 +1,13 @@
 import { adminFetch } from './adminFetch'
+import type { EventsResponse } from '../types'
+
+// De sparade händelserna själva (inte bara id:n), paginerat på servern — så att
+// en sparad händelse syns oavsett hur gammal den är (V3-11).
+export async function fetchSparadeHandelser(page: number, pageSize: number): Promise<EventsResponse> {
+  const res = await adminFetch(`/api/user/saved-events/events?page=${page}&pageSize=${pageSize}`)
+  if (!res.ok) throw new Error(`fetchSparadeHandelser: ${res.status}`)
+  return res.json()
+}
 
 export async function fetchSavedEventIds(): Promise<string[]> {
   const res = await adminFetch('/api/user/saved-events')
