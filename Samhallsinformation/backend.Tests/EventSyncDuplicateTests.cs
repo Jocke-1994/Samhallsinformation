@@ -63,6 +63,7 @@ public class EventSyncDuplicateTests
     public async Task SyncAsync_TwoDbRowsWithSameExternalId_DoesNotThrow_AndProcessesRestOfBatch()
     {
         using var db = TestDb.Create();
+        TestDb.DropEventsUniqueIndex(db); // databasformen före V3-2 (produktionen innan indexet skapas)
         var source = await SeedSourceAsync(db);
         db.Events.Add(Ev(source.Id, "dup", "Rad 1"));
         db.Events.Add(Ev(source.Id, "dup", "Rad 2"));
@@ -84,6 +85,7 @@ public class EventSyncDuplicateTests
     public async Task SyncAsync_TwoDbRowsWithSameExternalId_RepeatedCycles_NeverThrow()
     {
         using var db = TestDb.Create();
+        TestDb.DropEventsUniqueIndex(db);
         var source = await SeedSourceAsync(db);
         db.Events.Add(Ev(source.Id, "dup"));
         db.Events.Add(Ev(source.Id, "dup"));
@@ -102,6 +104,7 @@ public class EventSyncDuplicateTests
     public async Task SyncAsync_TwoDbRowsWithSameExternalId_LogsOneWarningWithSourceAndCount()
     {
         using var db = TestDb.Create();
+        TestDb.DropEventsUniqueIndex(db);
         var source = await SeedSourceAsync(db, "Dubblettkällan");
         db.Events.Add(Ev(source.Id, "dup"));
         db.Events.Add(Ev(source.Id, "dup"));
@@ -121,6 +124,7 @@ public class EventSyncDuplicateTests
     public async Task SyncAsync_Overwrite_WithDbDuplicates_UpdatesOldestRowOnly_Deterministically()
     {
         using var db = TestDb.Create();
+        TestDb.DropEventsUniqueIndex(db);
         var source = await SeedSourceAsync(db);
         var oldest = Ev(source.Id, "dup", "Äldst");
         oldest.IngestedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
