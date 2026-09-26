@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useLayoutEffect, useRef
 import { useQueryClient } from '@tanstack/react-query'
 import { registerAuthBridge } from '../api/authBridge'
 import { rensaAnvandardata } from '../lib/queryRensning'
+import { avregistreraPushEnhet } from '../lib/pushAvregistrering'
 import {
   MAX_REFRESH_FORSOK,
   beraknaRefreshFordrojning,
@@ -184,6 +185,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [avbrytRetry, queryClient])
 
   const clearSession = useCallback(() => {
+    // Enheten ska inte förbli registrerad för den här användarens notiser.
+    // Token fångas HÄR, före rensningen, och skickas in explicit (adminFetch
+    // hittar ingen token efteråt). Fire-and-forget och kastar aldrig — se
+    // avregistreraPushEnhet. Bara kontrollerad utloggning/sessionsslut kommer
+    // hit; tillfälliga refresh-fel (429/5xx/nät) rensar aldrig sessionen.
+    void avregistreraPushEnhet(localStorage.getItem('si_token') ?? tokenRef.current)
     localStorage.removeItem('si_token')
     localStorage.removeItem('si_refresh_token')
     localStorage.removeItem('si_logged_in')

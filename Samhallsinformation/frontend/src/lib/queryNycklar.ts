@@ -10,3 +10,4 @@ export const minaArendenNyckel = (a: Anvandare) => ['my-tickets', a] as const
 export const mittArendeNyckel = (a: Anvandare, id: string | number) => ['my-ticket', a, id] as const
 export const kontoNotiserNyckel = (a: Anvandare) => ['user-notifications', a] as const
 export const supportNotiserNyckel = (a: Anvandare) => ['support-notifications', a] as const
+export const pushInstallningarNyckel = (a: Anvandare) => ['push-settings', a] as const
