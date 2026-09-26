@@ -5,32 +5,43 @@ import ConfirmDialog from '../common/ConfirmDialog'
 import { MockBadge } from '../common/MockBadge'
 import { fetchAdminFeatureFlags, setFeatureFlagRedo } from '../../api/featureFlags'
 import { ADMIN_FLAGG_QUERY_KEY, invalideraFlaggor } from '../../lib/flaggCache'
+import type { FlaggLäge } from '../../hooks/useFeatureFlags'
+import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
 
 interface Props {
   flaggor: FlagState
   onVäxla: (key: FlagKey) => void
   onÅterställ: () => void
+  /** 'fel' = flaggornas läge gick inte att hämta; det som visas är senast känt/standard. */
+  läge?: FlaggLäge
+  /** Felet från senaste misslyckade växling/återställning. */
+  ändringsFel?: unknown
+  ändringPågår?: boolean
 }
 
-export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ }: Props) {
+export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, läge, ändringsFel, ändringPågår }: Props) {
   const [öppna, setÖppna] = useState<Set<string>>(new Set())
   const [bekräftaÅterställ, setBekräftaÅterställ] = useState(false)
   const queryClient = useQueryClient()
 
   // Redo-markeringen (schemaläggs i Uppdateringar) hör inte till den
   // publika flagg-kontexten — hämtas separat bara för den här panelen.
-  const { data: adminFlaggor = [] } = useQuery({
+  const adminFråga = useQuery({
     queryKey: ADMIN_FLAGG_QUERY_KEY,
     queryFn:  fetchAdminFeatureFlags,
   })
+  const adminFlaggor = adminFråga.data ?? []
+  // Utan hämtad lista är "redo"-markeringarna okända — inte "ingen är markerad".
+  const redoOkänt = adminFråga.data === undefined
   const redoMap: Record<string, boolean> = Object.fromEntries(
     adminFlaggor.map(f => [f.key, f.redoAttLanseras])
   )
 
-  const { mutate: växlaRedo } = useMutation({
+  const redoMutation = useMutation({
     mutationFn: ({ key, redo }: { key: string; redo: boolean }) => setFeatureFlagRedo(key, redo),
     onSuccess: () => invalideraFlaggor(queryClient),
   })
+  const växlaRedo = redoMutation.mutate
 
   function växlaGrupp(key: string) {
     setÖppna(prev => {
@@ -61,6 +72,26 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ }: 
           Återställ standardvärden för alla
         </button>
       </div>
+
+      {läge === 'fel' && (
+        <HamtningsFel
+          fel={null}
+          reserv="Kunde inte hämta flaggornas aktuella läge. Reglagen visar senast kända värden (eller standardvärden) och kan vara fel."
+          onForsokIgen={() => invalideraFlaggor(queryClient)}
+          className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4"
+        />
+      )}
+      {adminFråga.isError && redoOkänt && läge !== 'fel' && (
+        <HamtningsFel
+          fel={adminFråga.error}
+          reserv={'Kunde inte hämta "Redo att lanseras"-markeringarna. De visas som omarkerade men är okända.'}
+          onForsokIgen={() => { void adminFråga.refetch() }}
+          arIgang={adminFråga.isFetching}
+          className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4"
+        />
+      )}
+      <MutationFel fel={ändringsFel} reserv="Ändringen kunde inte sparas. Flaggan är oförändrad — försök igen." className="bg-red-50 border border-red-200 rounded-xl px-5 py-3" />
+      <MutationFel fel={redoMutation.error} reserv={'"Redo att lanseras"-markeringen kunde inte sparas. Försök igen.'} className="bg-red-50 border border-red-200 rounded-xl px-5 py-3" />
 
       {bekräftaÅterställ && (
         <ConfirmDialog
@@ -146,6 +177,7 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ }: 
                           {!aktiv && !flagga.mock && (
                             <button
                               onClick={() => växlaRedo({ key: flagga.key, redo: !redoMap[flagga.key] })}
+                              disabled={redoOkänt || redoMutation.isPending}
                               className={`text-[11px] font-medium px-2 py-1 rounded-full border transition-colors ${
                                 redoMap[flagga.key]
                                   ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
@@ -158,7 +190,8 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ }: 
                           )}
                           <button
                             onClick={() => onVäxla(flagga.key)}
-                            className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+                            disabled={ändringPågår}
+                            className={`relative w-11 h-6 rounded-full transition-colors shrink-0 disabled:opacity-60 ${
                               aktiv ? 'bg-violet-600' : 'bg-slate-300'
                             }`}
                             aria-label={`${aktiv ? 'Inaktivera' : 'Aktivera'} ${flagga.label}`}

@@ -85,7 +85,7 @@ export default function SiteSettingsAdmin() {
       </div>
 
       {isError && (
-        <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+        <div role="alert" className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-red-700">Kunde inte läsa inställningen.</p>
           <button
             onClick={() => refetch()}
@@ -98,7 +98,7 @@ export default function SiteSettingsAdmin() {
       )}
 
       {updateMutation.isError && (
-        <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+        <div role="alert" className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
           <p className="text-sm text-red-700">Ändringen kunde inte sparas. Inget har ändrats.</p>
         </div>
       )}

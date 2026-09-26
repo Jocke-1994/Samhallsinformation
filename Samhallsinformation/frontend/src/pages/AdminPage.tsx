@@ -79,7 +79,7 @@ export default function AdminPage() {
 
   usePwaIdentity(ADMIN_PWA_IDENTITET)
 
-  const { inställda: flaggor, växlaFlagg, återställ } = useFeatureFlagsAdmin()
+  const { inställda: flaggor, växlaFlagg, återställ, läge: flaggLäge, ändringsFel, ändringPågår } = useFeatureFlagsAdmin()
   const { isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushSubscription()
   const [pushBusy, setPushBusy] = useState(false)
   const [pushFel, setPushFel]   = useState('')
@@ -404,6 +404,9 @@ export default function AdminPage() {
                   flaggor={flaggor}
                   onVäxla={växlaFlagg}
                   onÅterställ={återställ}
+                  läge={flaggLäge}
+                  ändringsFel={ändringsFel}
+                  ändringPågår={ändringPågår}
                 />
               </div>
             )}
