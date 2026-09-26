@@ -55,6 +55,8 @@ export default function MinaKallor() {
         }
         return Array.from(byId.values())
       })
+      // Mitt flöde filtreras på servern efter dina aktiva källor — hämta om det.
+      void queryClient.invalidateQueries({ queryKey: ['mitt-flode'] })
     },
   })
 
