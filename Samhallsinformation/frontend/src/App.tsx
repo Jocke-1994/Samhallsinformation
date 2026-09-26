@@ -20,12 +20,11 @@ import VillkorPage from './pages/VillkorPage'
 import UppdateringarPage from './pages/UppdateringarPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ErrorBoundary from './components/common/ErrorBoundary'
+import EmailVerificationBanner from './components/common/EmailVerificationBanner'
 import { fetchSources } from './api/sources'
 import { fetchUserSources } from './api/userSources'
 import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 import { useAuth } from './context/AuthContext'
-import { useFlags } from './context/FeatureFlagsContext'
-import { resendVerification } from './api/auth'
 import { fetchMaintenanceBanners } from './api/maintenanceBanners'
 import type { Source } from './types'
 
@@ -120,66 +119,6 @@ function ImpersonationBanner() {
       >
         Avsluta session
       </button>
-    </div>
-  )
-}
-
-const VERIFY_BANNER_SNOOZE_KEY = 'si_verify_banner_snoozed_until'
-const VERIFY_BANNER_SNOOZE_MS  = 24 * 60 * 60 * 1000
-
-function EmailVerificationBanner() {
-  const { isLoggedIn, emailVerified, email } = useAuth()
-  const flaggor = useFlags()
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle')
-  // Nyckeln måste vara kontospecifik (inte en enda global nyckel) — annars
-  // slår ett snooze-klick på ETT konto igenom på VILKET konto som helst som
-  // loggar in på samma enhet inom 24h, även ett som aldrig klickat knappen.
-  const [snoozedUntil, setSnoozedUntil] = useState(0)
-
-  useEffect(() => {
-    if (!email) { setSnoozedUntil(0); return }
-    setSnoozedUntil(Number(localStorage.getItem(`${VERIFY_BANNER_SNOOZE_KEY}:${email}`) ?? 0))
-  }, [email])
-
-  if (!isLoggedIn || emailVerified || !flaggor.konto_epost_paminnelse || Date.now() < snoozedUntil) return null
-
-  async function handleResend() {
-    setStatus('sending')
-    try {
-      await resendVerification()
-      setStatus('sent')
-    } catch {
-      setStatus('idle')
-    }
-  }
-
-  function handleSnooze() {
-    if (!email) return
-    const until = Date.now() + VERIFY_BANNER_SNOOZE_MS
-    localStorage.setItem(`${VERIFY_BANNER_SNOOZE_KEY}:${email}`, String(until))
-    setSnoozedUntil(until)
-  }
-
-  return (
-    <div className="bg-violet-600 px-6 py-2.5 flex items-center justify-between gap-3 shadow-md flex-wrap">
-      <span className="text-sm text-white">
-        Bekräfta din e-postadress{email ? ` — vi har skickat en länk till ${email}` : ''}.
-      </span>
-      <div className="flex items-center gap-3 shrink-0">
-        <button
-          onClick={handleSnooze}
-          className="text-xs font-medium text-white/80 hover:text-white underline underline-offset-2 transition-colors"
-        >
-          Påminn senare
-        </button>
-        <button
-          onClick={handleResend}
-          disabled={status !== 'idle'}
-          className="text-xs font-semibold bg-white/20 hover:bg-white/30 disabled:opacity-70 text-white px-3 py-1.5 rounded-lg transition-colors shrink-0"
-        >
-          {status === 'sent' ? 'Skickat!' : status === 'sending' ? 'Skickar…' : 'Skicka igen'}
-        </button>
-      </div>
     </div>
   )
 }

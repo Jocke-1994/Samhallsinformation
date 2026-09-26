@@ -1,13 +1,15 @@
 import { type FormField, inputClass } from './kontoTypes'
 
 export default function KontoInfo({
-  namn, epost, pendingEmail, requiresPassword, emailPassword,
+  namn, epost, pendingEmail, requiresPassword, sparar = false, emailPassword,
   onUpdateNamn, onUpdateEpost, onSaveNamn, onUpdateEmailPassword, onRequestEmailChange, onCancelEmailChange,
 }: {
   namn: FormField
   epost: FormField
   pendingEmail: string | null
   requiresPassword: boolean
+  // Ett sparanrop pågår — alla knappar i kortet är låsta så inget skickas två gånger.
+  sparar?: boolean
   emailPassword: string
   onUpdateNamn: (value: string) => void
   onUpdateEpost: (value: string) => void
@@ -42,12 +44,13 @@ export default function KontoInfo({
             />
             <button
               onClick={onSaveNamn}
-              className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow w-full sm:w-auto sm:shrink-0"
+              disabled={sparar}
+              className="px-4 py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow w-full sm:w-auto sm:shrink-0"
             >
-              Spara
+              {sparar ? 'Sparar…' : 'Spara'}
             </button>
           </div>
-          {namn.error && <p className="text-xs text-red-500 font-medium">{namn.error}</p>}
+          {namn.error && <p role="alert" className="text-xs text-red-500 font-medium">{namn.error}</p>}
           {namn.saved && <p className="text-xs text-green-600 font-medium">✓ Sparat</p>}
         </div>
 
@@ -65,9 +68,10 @@ export default function KontoInfo({
             {!requiresPassword && (
               <button
                 onClick={onRequestEmailChange}
-                className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow w-full sm:w-auto sm:shrink-0"
+                disabled={sparar}
+                className="px-4 py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow w-full sm:w-auto sm:shrink-0"
               >
-                Skicka bekräftelse
+                {sparar ? 'Skickar…' : 'Skicka bekräftelse'}
               </button>
             )}
           </div>
@@ -82,16 +86,17 @@ export default function KontoInfo({
               />
               <button
                 onClick={onRequestEmailChange}
-                className="px-4 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow w-full sm:w-auto sm:shrink-0"
+                disabled={sparar}
+                className="px-4 py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow w-full sm:w-auto sm:shrink-0"
               >
-                Skicka bekräftelse
+                {sparar ? 'Skickar…' : 'Skicka bekräftelse'}
               </button>
             </div>
           )}
           {requiresPassword && (
             <p className="text-xs text-slate-400">Vi ber om ditt lösenord för att bekräfta att det är du som byter e-post.</p>
           )}
-          {epost.error && <p className="text-xs text-red-500 font-medium">{epost.error}</p>}
+          {epost.error && <p role="alert" className="text-xs text-red-500 font-medium">{epost.error}</p>}
           {pendingEmail && (
             <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <p className="text-xs text-amber-800">
@@ -99,7 +104,8 @@ export default function KontoInfo({
               </p>
               <button
                 onClick={onCancelEmailChange}
-                className="text-xs font-semibold text-amber-700 hover:text-amber-900 shrink-0"
+                disabled={sparar}
+                className="text-xs font-semibold text-amber-700 hover:text-amber-900 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
               >
                 Avbryt
               </button>

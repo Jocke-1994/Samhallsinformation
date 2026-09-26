@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { usePolisenBevakningar, MAX_BEVAKNINGAR, type Bevakning } from '../../../context/PolisenBevakningarContext'
 import { BevakningError } from '../../../api/polisenBevakningar'
+import { visaFel } from '../../../lib/felmeddelande'
 import KategoriFilterModal from './KategoriFilterModal'
 
 function sammanfatta(lista: string[] | null, allaLabel: string): string {
@@ -16,24 +17,62 @@ function sammanfatta(lista: string[] | null, allaLabel: string): string {
 export default function PolisenBevakningarLista({ kallNamn }: { kallNamn: string }) {
   const { bevakningar, lage, forsokIgen, skapa, uppdatera, taBort } = usePolisenBevakningar()
   const [redigerar, setRedigerar] = useState<Bevakning | 'ny' | null>(null)
-  const [sparfel, setSparfel] = useState<string | null>(null)
+  const [sparar, setSparar] = useState(false)
+  const [sparFel, setSparFel] = useState<string | null>(null)
+  // Id på bevakningen som håller på att tas bort (låser just den raden).
+  const [tarBortId, setTarBortId] = useState<string | null>(null)
+  const [listFel, setListFel] = useState<string | null>(null)
 
   const vidTak = bevakningar.length >= MAX_BEVAKNINGAR
 
   async function handleSpara(kategorier: string[] | null, omraden: string[] | null) {
-    setSparfel(null)
+    if (sparar) return
+    setSparar(true)
+    setSparFel(null)
     try {
       if (redigerar === 'ny') {
-        await skapa(kategorier, omraden)
+        const skapad = await skapa(kategorier, omraden)
+        if (!skapad) {
+          setSparFel(`Du har redan max ${MAX_BEVAKNINGAR} bevakningar — ta bort en först.`)
+          return
+        }
       } else if (redigerar) {
         await uppdatera(redigerar.id, kategorier, omraden)
       }
       setRedigerar(null)
     } catch (e) {
-      // Serverns text (t.ex. "Max 5 bevakningar per användare.") visas som den är;
-      // modalen står kvar öppen så valen inte går förlorade.
-      setSparfel(e instanceof BevakningError ? e.message : 'Kunde inte spara bevakningen. Försök igen.')
+      // Serverns text (BevakningError, t.ex. "Max 5 bevakningar per användare.")
+      // visas som den är; tekniska fel/nätverksfel blir en svensk reservtext.
+      // Modalen står kvar med användarens val intakta så att hen kan försöka igen.
+      setSparFel(e instanceof BevakningError ? e.message : visaFel(e, 'Bevakningen kunde inte sparas. Försök igen.'))
+    } finally {
+      setSparar(false)
     }
+  }
+
+  async function handleTaBort(id: string) {
+    if (tarBortId !== null) return
+    setTarBortId(id)
+    setListFel(null)
+    try {
+      await taBort(id)
+    } catch {
+      setListFel('Bevakningen kunde inte tas bort. Försök igen.')
+    } finally {
+      setTarBortId(null)
+    }
+  }
+
+  function oppna(vad: Bevakning | 'ny') {
+    setSparFel(null)
+    setListFel(null)
+    setRedigerar(vad)
+  }
+
+  function stang() {
+    if (sparar) return
+    setRedigerar(null)
+    setSparFel(null)
   }
 
   return (
@@ -46,12 +85,22 @@ export default function PolisenBevakningarLista({ kallNamn }: { kallNamn: string
                 {sammanfatta(b.kategorier ? [...b.kategorier] : null, 'Alla typer')} · {sammanfatta(b.omraden ? [...b.omraden] : null, 'Alla områden')}
               </span>
               <div className="flex items-center gap-2 shrink-0">
-                <button onClick={() => setRedigerar(b)} className="text-xs text-violet-600 hover:text-violet-800 font-medium">Ändra</button>
-                <button onClick={() => taBort(b.id)} className="text-xs text-slate-400 hover:text-red-500 font-medium">Ta bort</button>
+                <button onClick={() => oppna(b)} className="text-xs text-violet-600 hover:text-violet-800 font-medium">Ändra</button>
+                <button
+                  onClick={() => handleTaBort(b.id)}
+                  disabled={tarBortId !== null}
+                  className="text-xs text-slate-400 hover:text-red-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {tarBortId === b.id ? 'Tar bort…' : 'Ta bort'}
+                </button>
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {listFel && (
+        <p role="alert" className="text-xs font-medium text-red-600 mb-1.5">{listFel}</p>
       )}
 
       {lage === 'laddar' ? (
@@ -65,7 +114,7 @@ export default function PolisenBevakningarLista({ kallNamn }: { kallNamn: string
         <p className="text-xs text-slate-400">Max {MAX_BEVAKNINGAR} bevakningar nådda — ta bort en för att lägga till en ny.</p>
       ) : (
         <button
-          onClick={() => setRedigerar('ny')}
+          onClick={() => oppna('ny')}
           className="text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors"
         >
           + Ny bevakning
@@ -78,8 +127,9 @@ export default function PolisenBevakningarLista({ kallNamn }: { kallNamn: string
           initialKategorier={redigerar === 'ny' ? null : (redigerar.kategorier ? [...redigerar.kategorier] : null)}
           initialOmraden={redigerar === 'ny' ? null : (redigerar.omraden ? [...redigerar.omraden] : null)}
           onSpara={handleSpara}
-          onClose={() => { setSparfel(null); setRedigerar(null) }}
-          fel={sparfel}
+          onClose={stang}
+          sparar={sparar}
+          fel={sparFel}
         />
       )}
     </div>
