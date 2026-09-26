@@ -88,13 +88,17 @@ function OmradeVal({ valda, onToggle, onVäljFlera, onAvmarkeraFlera }: {
 // kryssrutornas skull, och konverteras tillbaka till null vid Spara om inget
 // avmarkerats (samma "fullt set = null" konvention som backend/kontexten).
 export default function KategoriFilterModal({
-  kallNamn, initialKategorier, initialOmraden, onSpara, onClose, fel,
+  kallNamn, initialKategorier, initialOmraden, onSpara, onClose, sparar = false, fel = null,
 }: {
   kallNamn:          string
   initialKategorier: string[] | null
   initialOmraden:    string[] | null
   onSpara:           (kategorier: string[] | null, omraden: string[] | null) => void
   onClose:           () => void
+  // Valfria: anroparen som skickar sparningen till servern (Mina källor) visar
+  // här att den pågår (Spara låst) och att den misslyckades (modalen står kvar
+  // med användarens val intakta). Utelämnas av anroparen som sparar synkront.
+  sparar?:           boolean
   fel?:              string | null
 }) {
   const [flik, setFlik] = useState<Flik>('typ')
@@ -199,7 +203,10 @@ export default function KategoriFilterModal({
         )}
 
         {fel && (
-          <p role="alert" className="px-6 py-2 text-xs md:text-sm text-red-600 border-t border-slate-100 shrink-0">{fel}</p>
+          <div role="alert" className="mx-6 mt-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 shrink-0">
+            <span className="text-red-500 text-sm">⚠</span>
+            <p className="text-xs md:text-sm font-medium text-red-600">{fel}</p>
+          </div>
         )}
 
         <div className="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
@@ -211,9 +218,10 @@ export default function KategoriFilterModal({
           </button>
           <button
             onClick={spara}
-            className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm md:text-base font-semibold rounded-xl transition-all"
+            disabled={sparar}
+            className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm md:text-base font-semibold rounded-xl transition-all"
           >
-            Spara
+            {sparar ? 'Sparar…' : 'Spara'}
           </button>
         </div>
       </div>
