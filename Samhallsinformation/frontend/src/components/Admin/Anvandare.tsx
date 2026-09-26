@@ -4,6 +4,7 @@ import { createActivityLogEntry } from '../../api/activityLog'
 import { useAuth } from '../../context/AuthContext'
 import { useAnvandare } from '../../hooks/useAnvandare'
 import { kontoNotiserNyckel } from '../../lib/queryNycklar'
+import { effektivAdminRoll } from '../../lib/adminNavigering'
 import {
   fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
   fetchAdminUserSavedEvents, unsaveAdminUserEvent,
@@ -540,7 +541,12 @@ interface AnvandareProps {
 }
 
 export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onDjuplänkKonsumerad, onPendingNotiser }: AnvandareProps) {
-  const { aktivVy, email: egenEpostRå } = useAuth()
+  const { aktivVy, roll, email: egenEpostRå } = useAuth()
+  // Support (och en Admin som förhandsvisar Support-vyn) LÄSER användarna — inga
+  // åtgärder: ingen avstängning/radering/mejl/"Logga in som"/bevakningar/källor/push/
+  // sparat och ingen massmarkering. Backend nekar dessa med 403 för Support (D1, V3-10),
+  // så knapparna döljs i stället för att ge en felruta.
+  const skrivskyddad = effektivAdminRoll(roll, aktivVy) === 'Support'
   const anvandare = useAnvandare()
   const egenEpost = egenEpostRå?.toLowerCase() ?? null
   const queryClient = useQueryClient()
@@ -591,7 +597,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
 
   function toggleMarkerad(e: React.MouseEvent, u: Användare) {
     e.stopPropagation()
-    if (ärEgenRad(u)) return
+    if (skrivskyddad || ärEgenRad(u)) return
     setMarkerade(prev => {
       const ny = new Set(prev)
       if (ny.has(u.id)) ny.delete(u.id)
@@ -601,6 +607,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   }
 
   function toggleAllaMarkerade() {
+    if (skrivskyddad) return
     setMarkerade(prev => {
       const ny = new Set(prev)
       if (allaMarkerade) massmarkerbara.forEach(u => ny.delete(u.id))
@@ -636,6 +643,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     queryKey: kontoNotiserNyckel(anvandare),
     queryFn:  fetchUserNotifications,
     refetchInterval: 30_000,
+    enabled:  !skrivskyddad, // kontospärr-påminnelser är ett Admin-arbetsflöde (Admin-only i backend)
   })
 
   const { data: valdsÄrenden = [] } = useQuery({
@@ -972,6 +980,13 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   return (
     <div className="flex flex-col gap-6">
 
+      {skrivskyddad && (
+        <p className="text-sm text-slate-600 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+          Skrivskyddad vy — som Support kan du titta på användarnas uppgifter men inte ändra dem.
+          Ändringar görs av en administratör.
+        </p>
+      )}
+
       {/* Modaler — bulk */}
       {modal === 'roller'   && <RollModal antal={markerade.size} onSpara={applicerapRoller} onStäng={() => setModal(null)} />}
       {modal === 'stäng-av' && (
@@ -1062,13 +1077,15 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase tracking-wide">
-              <th className="px-6 py-3 w-10">
-                <input type="checkbox" ref={rubrikCheckboxRef} checked={allaMarkerade} onChange={toggleAllaMarkerade}
-                  disabled={massmarkerbara.length === 0}
-                  aria-label="Markera alla"
-                  title="Markerar alla utom administratörer och ditt eget konto"
-                  className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer" />
-              </th>
+              {!skrivskyddad && (
+                <th className="px-6 py-3 w-10">
+                  <input type="checkbox" ref={rubrikCheckboxRef} checked={allaMarkerade} onChange={toggleAllaMarkerade}
+                    disabled={massmarkerbara.length === 0}
+                    aria-label="Markera alla"
+                    title="Markerar alla utom administratörer och ditt eget konto"
+                    className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer" />
+                </th>
+              )}
               <th className="text-left px-2 py-3 font-medium w-10">ID</th>
               <th className="text-left px-4 py-3 font-medium">Användare</th>
               <th className="text-left px-4 py-3 font-medium">Roller</th>
@@ -1083,13 +1100,15 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               <tr key={u.id}
                 className={`hover:bg-slate-50 transition-colors cursor-pointer ${markerade.has(u.id) ? 'bg-violet-50' : ''}`}
                 onClick={() => öppnaDetalj(u)}>
-                <td className="px-6 py-3" onClick={e => toggleMarkerad(e, u)}>
-                  <input type="checkbox" checked={markerade.has(u.id)} readOnly
-                    disabled={ärEgenRad(u)}
-                    aria-label={`Markera ${u.namn}`}
-                    title={ärEgenRad(u) ? 'Du kan inte massmarkera ditt eget konto' : undefined}
-                    className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
-                </td>
+                {!skrivskyddad && (
+                  <td className="px-6 py-3" onClick={e => toggleMarkerad(e, u)}>
+                    <input type="checkbox" checked={markerade.has(u.id)} readOnly
+                      disabled={ärEgenRad(u)}
+                      aria-label={`Markera ${u.namn}`}
+                      title={ärEgenRad(u) ? 'Du kan inte massmarkera ditt eget konto' : undefined}
+                      className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                  </td>
+                )}
                 <td className="px-2 py-3 text-xs text-slate-400 font-mono cursor-help" title={`GUID: ${u.id}`}>#{u.joinNr}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
@@ -1123,13 +1142,13 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               </tr>
             ))}
             {laddar && (
-              <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-slate-400">Laddar användare…</td></tr>
+              <tr><td colSpan={skrivskyddad ? 7 : 8} className="px-6 py-10 text-center text-sm text-slate-400">Laddar användare…</td></tr>
             )}
             {laddningFel && (
-              <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-red-500">Kunde inte hämta användarlistan. Försök ladda om sidan.</td></tr>
+              <tr><td colSpan={skrivskyddad ? 7 : 8} className="px-6 py-10 text-center text-sm text-red-500">Kunde inte hämta användarlistan. Försök ladda om sidan.</td></tr>
             )}
             {!laddar && !laddningFel && filtrerade.length === 0 && (
-              <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-slate-400">Inga användare matchar filtret.</td></tr>
+              <tr><td colSpan={skrivskyddad ? 7 : 8} className="px-6 py-10 text-center text-sm text-slate-400">Inga användare matchar filtret.</td></tr>
             )}
           </tbody>
         </table>
@@ -1165,7 +1184,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setImpersonationMål(vald)} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white transition-colors">Logga in som</button>
+              {!skrivskyddad && (
+                <button onClick={() => setImpersonationMål(vald)} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white transition-colors">Logga in som</button>
+              )}
               <button onClick={() => setVald(null)} className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none">✕</button>
             </div>
           </div>
@@ -1191,7 +1212,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
 
           {/* ── Översikt ── */}
           {detaljFlik === 'oversikt' && (
-            <div className="px-6 py-5 grid grid-cols-2 gap-8">
+            <div className={`px-6 py-5 grid gap-8 ${skrivskyddad ? 'grid-cols-1' : 'grid-cols-2'}`}>
 
               <div className="flex flex-col gap-5">
 
@@ -1260,10 +1281,12 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                                       : <span className="text-xs text-slate-400">Alla</span>}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <button onClick={() => setRedigerarBevakning(b)} className="text-xs text-violet-600 hover:text-violet-800 font-medium">Ändra</button>
-                                  <button onClick={() => taBortBevakningMutation.mutate(b.id)} className="text-xs text-slate-400 hover:text-red-500 font-medium">Ta bort</button>
-                                </div>
+                                {!skrivskyddad && (
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <button onClick={() => setRedigerarBevakning(b)} className="text-xs text-violet-600 hover:text-violet-800 font-medium">Ändra</button>
+                                    <button onClick={() => taBortBevakningMutation.mutate(b.id)} className="text-xs text-slate-400 hover:text-red-500 font-medium">Ta bort</button>
+                                  </div>
+                                )}
                               </div>
                               <div>
                                 <p className="text-xs text-slate-400 mb-1">Områden</p>
@@ -1277,12 +1300,14 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                           ))}
                         </div>
                       )}
-                      <button onClick={() => setRedigerarBevakning('ny')} className="text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors">
-                        + Ny bevakning
-                      </button>
+                      {!skrivskyddad && (
+                        <button onClick={() => setRedigerarBevakning('ny')} className="text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors">
+                          + Ny bevakning
+                        </button>
+                      )}
                     </>
                   )}
-                  {redigerarBevakning && (
+                  {!skrivskyddad && redigerarBevakning && (
                     <KategoriFilterModal
                       kallNamn="Polisen"
                       initialKategorier={redigerarBevakning === 'ny' ? null : redigerarBevakning.kategorier}
@@ -1309,15 +1334,25 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                       {valdaKällor.map(k => (
                         <div key={k.sourceId} className="flex items-center justify-between gap-2">
                           <span className="text-sm text-slate-700">{k.name}</span>
-                          <button
-                            onClick={() => växlaKällaMutation.mutate({ sourceId: k.sourceId, isActive: !k.isActive })}
-                            disabled={växlaKällaMutation.isPending}
-                            className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors disabled:opacity-50 ${
-                              k.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                            }`}
-                          >
-                            {k.isActive ? 'Aktiv' : 'Inaktiv'}
-                          </button>
+                          {skrivskyddad ? (
+                            <span
+                              className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                                k.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                              }`}
+                            >
+                              {k.isActive ? 'Aktiv' : 'Inaktiv'}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => växlaKällaMutation.mutate({ sourceId: k.sourceId, isActive: !k.isActive })}
+                              disabled={växlaKällaMutation.isPending}
+                              className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors disabled:opacity-50 ${
+                                k.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                              }`}
+                            >
+                              {k.isActive ? 'Aktiv' : 'Inaktiv'}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1406,27 +1441,30 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   ) : (
                     <div className="flex flex-col gap-2">
                       <div className="flex flex-wrap gap-1.5">
-                        <button
-                          onClick={() => andraPushMutation.mutate({ pushEnabled: !pushInstallningar.pushEnabled })}
-                          disabled={andraPushMutation.isPending}
-                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${pushInstallningar.pushEnabled ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
-                        >
-                          Push {pushInstallningar.pushEnabled ? 'på' : 'av'}
-                        </button>
-                        <button
-                          onClick={() => andraPushMutation.mutate({ pushNyaHandelser: !pushInstallningar.pushNyaHandelser })}
-                          disabled={andraPushMutation.isPending}
-                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${pushInstallningar.pushNyaHandelser ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
-                        >
-                          Ny händelse {pushInstallningar.pushNyaHandelser ? 'på' : 'av'}
-                        </button>
-                        <button
-                          onClick={() => andraPushMutation.mutate({ pushNyVersion: !pushInstallningar.pushNyVersion })}
-                          disabled={andraPushMutation.isPending}
-                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${pushInstallningar.pushNyVersion ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
-                        >
-                          Ny version {pushInstallningar.pushNyVersion ? 'på' : 'av'}
-                        </button>
+                        {([
+                          { etikett: 'Push',        på: pushInstallningar.pushEnabled,       ändra: { pushEnabled: !pushInstallningar.pushEnabled } },
+                          { etikett: 'Ny händelse', på: pushInstallningar.pushNyaHandelser,  ändra: { pushNyaHandelser: !pushInstallningar.pushNyaHandelser } },
+                          { etikett: 'Ny version',  på: pushInstallningar.pushNyVersion,     ändra: { pushNyVersion: !pushInstallningar.pushNyVersion } },
+                        ]).map(t => {
+                          const text = `${t.etikett} ${t.på ? 'på' : 'av'}`
+                          return skrivskyddad ? (
+                            <span
+                              key={t.etikett}
+                              className={`text-xs font-medium px-2.5 py-1 rounded-full border ${t.på ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
+                            >
+                              {text}
+                            </span>
+                          ) : (
+                            <button
+                              key={t.etikett}
+                              onClick={() => andraPushMutation.mutate(t.ändra)}
+                              disabled={andraPushMutation.isPending}
+                              className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${t.på ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                            >
+                              {text}
+                            </button>
+                          )
+                        })}
                       </div>
                       {pushInstallningar.enheter.length === 0 ? (
                         <p className="text-xs text-slate-400">Inga registrerade enheter.</p>
@@ -1472,12 +1510,14 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                             )}
                             <p className="text-xs text-slate-400">{h.sourceName} · sparad {new Date(h.savedAt).toLocaleDateString('sv-SE')}</p>
                           </div>
-                          <button
-                            onClick={() => taBortSparad(h.eventId)}
-                            className="shrink-0 text-xs text-slate-400 hover:text-red-500 transition-colors"
-                          >
-                            Ta bort
-                          </button>
+                          {!skrivskyddad && (
+                            <button
+                              onClick={() => taBortSparad(h.eventId)}
+                              className="shrink-0 text-xs text-slate-400 hover:text-red-500 transition-colors"
+                            >
+                              Ta bort
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1497,63 +1537,67 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     <p className="text-xs font-medium text-red-700">🗑 Raderas (anonymiseras) automatiskt {vald.raderasVid}</p>
                     <p className="text-xs text-red-600">Går att ångra fram till dess — därefter permanent.</p>
                     {raderaFel && <p className="text-xs text-red-700 bg-red-100 rounded-lg px-2.5 py-1.5">{raderaFel}</p>}
-                    <button
-                      onClick={() => angraRadering(vald)}
-                      disabled={raderar}
-                      className="self-start text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-red-300 text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors">
-                      {raderar ? 'Ångrar…' : 'Ångra radering'}
-                    </button>
+                    {!skrivskyddad && (
+                      <button
+                        onClick={() => angraRadering(vald)}
+                        disabled={raderar}
+                        className="self-start text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-red-300 text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors">
+                        {raderar ? 'Ångrar…' : 'Ångra radering'}
+                      </button>
+                    )}
                   </div>
                 )}
 
               </div>
 
               {/* Åtgärder */}
-              <div className="flex flex-col gap-3">
-                <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">Åtgärder</p>
-                <button disabled title="Inte kopplat mot backend än — ingen endpoint för att ändra roll"
-                  className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-300 cursor-not-allowed">
-                  Ändra roller
-                </button>
-                <button
-                  onClick={() => skickaLösenordsåterställning(vald)}
-                  disabled={skickarLösenordsåterställning}
-                  className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition-colors">
-                  {skickarLösenordsåterställning ? 'Skickar…' : 'Skicka lösenordsåterställning'}
-                </button>
-                {vald.kontaktuppgifter.some(k => !k.verifierad) && (
+              {!skrivskyddad && (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">Åtgärder</p>
+                  <button disabled title="Inte kopplat mot backend än — ingen endpoint för att ändra roll"
+                    className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-300 cursor-not-allowed">
+                    Ändra roller
+                  </button>
                   <button
-                    onClick={() => skickaVerifieringsmail(vald)}
-                    disabled={skickarVerifieringsmail}
+                    onClick={() => skickaLösenordsåterställning(vald)}
+                    disabled={skickarLösenordsåterställning}
                     className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition-colors">
-                    {skickarVerifieringsmail ? 'Skickar…' : 'Skicka verifieringsmail'}
+                    {skickarLösenordsåterställning ? 'Skickar…' : 'Skicka lösenordsåterställning'}
                   </button>
-                )}
-                {mejlFeedback && <p className="text-xs text-slate-500">{mejlFeedback}</p>}
-                {vald.status === 'Avstängd' && (
-                  <button onClick={() => aktiveraEnkild(vald)}
-                    className="text-left px-4 py-2.5 rounded-xl border border-green-200 text-sm text-green-700 hover:bg-green-50 transition-colors">
-                    Aktivera konto
+                  {vald.kontaktuppgifter.some(k => !k.verifierad) && (
+                    <button
+                      onClick={() => skickaVerifieringsmail(vald)}
+                      disabled={skickarVerifieringsmail}
+                      className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition-colors">
+                      {skickarVerifieringsmail ? 'Skickar…' : 'Skicka verifieringsmail'}
+                    </button>
+                  )}
+                  {mejlFeedback && <p className="text-xs text-slate-500">{mejlFeedback}</p>}
+                  {vald.status === 'Avstängd' && (
+                    <button onClick={() => aktiveraEnkild(vald)}
+                      className="text-left px-4 py-2.5 rounded-xl border border-green-200 text-sm text-green-700 hover:bg-green-50 transition-colors">
+                      Aktivera konto
+                    </button>
+                  )}
+                  {vald.status === 'Aktiv' && (
+                    <button onClick={() => setEnkildStängAv(vald)}
+                      className="text-left px-4 py-2.5 rounded-xl border border-amber-200 text-sm text-amber-700 hover:bg-amber-50 transition-colors">
+                      Stäng av konto
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setEnkildRadera(vald)}
+                    disabled={vald.status === 'Raderat' || vald.status === 'Raderas snart'}
+                    title={
+                      vald.status === 'Raderat' ? 'Kontot är redan raderat'
+                        : vald.status === 'Raderas snart' ? 'Radering är redan schemalagd — se panelen ovan'
+                        : undefined
+                    }
+                    className="text-left px-4 py-2.5 rounded-xl border border-red-200 text-sm text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors">
+                    Radera konto (GDPR)
                   </button>
-                )}
-                {vald.status === 'Aktiv' && (
-                  <button onClick={() => setEnkildStängAv(vald)}
-                    className="text-left px-4 py-2.5 rounded-xl border border-amber-200 text-sm text-amber-700 hover:bg-amber-50 transition-colors">
-                    Stäng av konto
-                  </button>
-                )}
-                <button
-                  onClick={() => setEnkildRadera(vald)}
-                  disabled={vald.status === 'Raderat' || vald.status === 'Raderas snart'}
-                  title={
-                    vald.status === 'Raderat' ? 'Kontot är redan raderat'
-                      : vald.status === 'Raderas snart' ? 'Radering är redan schemalagd — se panelen ovan'
-                      : undefined
-                  }
-                  className="text-left px-4 py-2.5 rounded-xl border border-red-200 text-sm text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors">
-                  Radera konto (GDPR)
-                </button>
-              </div>
+                </div>
+              )}
 
             </div>
           )}
