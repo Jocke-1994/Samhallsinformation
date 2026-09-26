@@ -3,7 +3,8 @@ import { act, render, screen } from '@testing-library/react'
 import { adminFetch } from '../api/adminFetch'
 import { registerAuthBridge } from '../api/authBridge'
 import { changePassword } from '../api/auth'
-import { AuthProvider, useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext'
+import { AuthMedQuery } from './authMedQuery'
 
 // Regressionstester för V1-8 (E5#4): adminFetch förnyar sessionen EN gång vid
 // 401 (delad single-flight-refresh) och gör om anropet EN gång. Ingen loop, ingen
@@ -175,7 +176,7 @@ describe('adminFetch + AuthProvider — en gemensam refresh', () => {
       return auth(init) === `Bearer ${fornyad}` ? svar(200) : svar(401)
     })
 
-    render(<AuthProvider><Sond onAuth={() => {}} /></AuthProvider>)
+    render(<AuthMedQuery><Sond onAuth={() => {}} /></AuthMedQuery>)
     await screen.findByText('ok')
 
     const [a, b, c] = await act(async () =>

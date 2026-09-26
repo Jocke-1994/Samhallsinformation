@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchMe, updateDisplayName } from '../../../api/auth'
 import { inputClass } from './kontoTypes'
+import { useAnvandare } from '../../../hooks/useAnvandare'
+import { meNyckel } from '../../../lib/queryNycklar'
 import { visaFel } from '../../../lib/felmeddelande'
 
 // Bara relevant för Admin/Support — vanliga användare svarar aldrig på
@@ -10,7 +12,8 @@ import { visaFel } from '../../../lib/felmeddelande'
 // SupportController.GetMyTicket) — avslöjar aldrig kontots riktiga Name.
 export default function SupportVisningsnamnKort() {
   const queryClient = useQueryClient()
-  const { data: me } = useQuery({ queryKey: ['me'], queryFn: fetchMe })
+  const anvandare = useAnvandare()
+  const { data: me } = useQuery({ queryKey: meNyckel(anvandare), queryFn: fetchMe })
   const [värde, setVärde] = useState('')
   const [sparat, setSparat] = useState(false)
 

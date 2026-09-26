@@ -8,6 +8,8 @@ import AktivaKallorKort from './AktivaKallorKort'
 import RekommenderadeKallorKort from './RekommenderadeKallorKort'
 import AllaKallorKort from './AllaKallorKort'
 import { useFlags } from '../../../context/FeatureFlagsContext'
+import { useAnvandare } from '../../../hooks/useAnvandare'
+import { anvandarKallorNyckel } from '../../../lib/queryNycklar'
 import type { Source } from '../../../types'
 
 export default function MinaKallor() {
@@ -15,6 +17,8 @@ export default function MinaKallor() {
   const [highlightId, setHighlightId] = useState<string | null>(location.state?.highlightId ?? null)
   const flaggor = useFlags()
   const queryClient = useQueryClient()
+  const anvandare = useAnvandare()
+  const kallorNyckel = anvandarKallorNyckel(anvandare)
 
   useEffect(() => {
     if (!highlightId) return
@@ -28,7 +32,7 @@ export default function MinaKallor() {
   })
 
   const { data: prefs = [] } = useQuery({
-    queryKey: ['user-sources'],
+    queryKey: kallorNyckel,
     queryFn:  fetchUserSources,
   })
 
@@ -39,7 +43,7 @@ export default function MinaKallor() {
   const mutation = useMutation({
     mutationFn: saveUserSources,
     onSuccess: (_data, variables) => {
-      queryClient.setQueryData<UserSourcePref[]>(['user-sources'], (old = []) => {
+      queryClient.setQueryData<UserSourcePref[]>(kallorNyckel, (old = []) => {
         const byId = new Map(old.map(p => [p.sourceId, p]))
         for (const v of variables) {
           byId.set(v.sourceId, {

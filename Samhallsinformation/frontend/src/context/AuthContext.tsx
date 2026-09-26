@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { registerAuthBridge } from '../api/authBridge'
+import { rensaAnvandardata } from '../lib/queryRensning'
 import {
   MAX_REFRESH_FORSOK,
   beraknaRefreshFordrojning,
@@ -39,6 +41,9 @@ interface TokenPair {
 const AuthContext = createContext<AuthContextType | null>(null)
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
+
+// localStorage-nycklar som bär sessionen och som andra flikar kan ändra.
+const SESSIONSNYCKLAR = ['si_token', 'si_refresh_token', 'si_logged_in']
 
 function decodePayload(token: string): Record<string, unknown> | null {
   try {
@@ -92,9 +97,51 @@ async function authRequest(url: string, body: object): Promise<TokenPair & { rol
   return res.json()
 }
 
+interface RefreshSvar {
+  data: TokenPair | null
+  status: number | null
+  retryAfter: string | null
+}
+
+// Ett anrop mot /refresh. status === null = fetch kastade (nätverksfel).
+async function hamtaNyaTokens(refreshToken: string): Promise<RefreshSvar> {
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ refreshToken }),
+    })
+    if (res.ok) return { data: await res.json(), status: res.status, retryAfter: null }
+    return { data: null, status: res.status, retryAfter: res.headers.get('Retry-After') }
+  } catch {
+    return { data: null, status: null, retryAfter: null }
+  }
+}
+
+// Refresh roterar refresh-token (den gamla spärras), så bara EN flik/PWA-instans
+// får refresha åt gången. Web Locks delas mellan alla flikar av samma origin;
+// finns de inte (äldre webbläsare) körs refreshen utan lås — då tar
+// storage-synken och 401-adoptionen hand om det som ändå kolliderar.
+async function medRefreshLas<T>(fn: () => Promise<T>): Promise<T> {
+  const las = typeof navigator !== 'undefined' ? navigator.locks : undefined
+  if (!las || typeof las.request !== 'function') return fn()
+  return await las.request('si-refresh', fn)
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient()
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('si_token'))
+  const tokenRef = useRef<string | null>(token)
   const refreshTokenRef = useRef<string | null>(localStorage.getItem('si_refresh_token'))
+
+  // Enda vägen att byta access-token: byter token utan utloggning däremellan
+  // (annan användare loggar in direkt) rensas den förra användarens cache.
+  const sattToken = useCallback((ny: string | null) => {
+    const forra = tokenRef.current
+    if (forra && ny && parseEmail(forra) !== parseEmail(ny)) rensaAnvandardata(queryClient)
+    tokenRef.current = ny
+    setToken(ny)
+  }, [queryClient])
 
   const isLoggedIn    = token !== null
   const roll          = token ? parseRole(token) : 'Användare'
@@ -123,16 +170,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => avbrytRetry, [avbrytRetry])
 
-  const clearSession = useCallback(() => {
+  // Avslutar sessionen i DEN HÄR fliken utan att röra localStorage eller servern.
+  // Används direkt när en annan flik redan loggat ut (lagringen är då tom och
+  // refresh-token spärrad), annars via clearSession. Rensar även cachen så nästa
+  // användare på enheten inte ser den förras data.
+  const lokalUtloggning = useCallback(() => {
     avbrytRetry()
     refreshTokenRef.current = null
+    tokenRef.current = null
+    setToken(null)
+    setAktivVy('Användare')
+    rensaAnvandardata(queryClient)
+  }, [avbrytRetry, queryClient])
+
+  const clearSession = useCallback(() => {
     localStorage.removeItem('si_token')
     localStorage.removeItem('si_refresh_token')
     localStorage.removeItem('si_logged_in')
     localStorage.removeItem('si_aktiv_vy')
-    setToken(null)
-    setAktivVy('Användare')
-  }, [avbrytRetry])
+    lokalUtloggning()
+  }, [lokalUtloggning])
+
+  // Tar över sessionen som en annan flik skrivit till den delade localStorage
+  // (nya tokens efter refresh/login) — utan nätanrop. Är lagringen tom har en
+  // annan flik loggat ut: logga ut lokalt, utan nytt /logout-anrop.
+  const adopteraFranLagring = useCallback(() => {
+    const lagratToken = localStorage.getItem('si_token')
+    const lagratRefresh = localStorage.getItem('si_refresh_token')
+    if (!lagratToken && !lagratRefresh) { lokalUtloggning(); return }
+    if (lagratToken === tokenRef.current && lagratRefresh === refreshTokenRef.current) return
+
+    avbrytRetry()
+    if (lagratRefresh) refreshTokenRef.current = lagratRefresh
+    if (lagratToken) {
+      tokenErhallenRef.current = Date.now()
+      setAktivVy((localStorage.getItem('si_aktiv_vy') as SystemRoll | null) ?? parseRole(lagratToken))
+      sattToken(lagratToken)
+    }
+  }, [avbrytRetry, lokalUtloggning, sattToken])
+
+  useEffect(() => {
+    function vidStorage(e: StorageEvent) {
+      if (e.storageArea && e.storageArea !== localStorage) return
+      // key === null: localStorage.clear() i en annan flik.
+      if (e.key !== null && !SESSIONSNYCKLAR.includes(e.key)) return
+      adopteraFranLagring()
+    }
+    window.addEventListener('storage', vidStorage)
+    return () => window.removeEventListener('storage', vidStorage)
+  }, [adopteraFranLagring])
 
   const applyTokens = useCallback((data: TokenPair) => {
     localStorage.setItem('si_token', data.accessToken)
@@ -143,8 +229,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const newRoll = parseRole(data.accessToken)
     localStorage.setItem('si_aktiv_vy', newRoll)
     setAktivVy(newRoll)
-    setToken(data.accessToken)
-  }, [])
+    sattToken(data.accessToken)
+  }, [sattToken])
 
   // Sessionen avslutas ENDAST när servern avvisar refresh-token (401/403).
   // 429, 5xx och nätverksfel är tillfälliga: refresh-token är fortfarande giltig
@@ -152,38 +238,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const forsokRefresh = useCallback((forsok: number): Promise<void> => {
     if (refreshPagaendeRef.current) return refreshPagaendeRef.current
     avbrytRetry()
-    const rt = refreshTokenRef.current
-    if (!rt) { clearSession(); return Promise.resolve() }
+    const rtVidBegaran = refreshTokenRef.current
+    if (!rtVidBegaran) { clearSession(); return Promise.resolve() }
 
-    const anrop = (async () => {
-      let status: number | null = null
-      let retryAfter: string | null = null
-      try {
-        const res = await fetch(`${API_BASE}/api/auth/refresh`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ refreshToken: rt }),
-        })
-        // Användaren har loggat ut (eller loggat in på nytt) medan anropet pågick
-        if (refreshTokenRef.current !== rt) return
-        if (res.ok) { applyTokens(await res.json()); return }
-        status = res.status
-        retryAfter = res.headers.get('Retry-After')
-      } catch {
-        status = null
+    const anrop = medRefreshLas(async () => {
+      // Lagringen läses om EFTER att låset erhållits: har en annan flik hunnit
+      // förnya (eller logga ut) medan vi väntade ska vi ta över dess resultat
+      // i stället för att skicka vår gamla, nu spärrade refresh-token. Jämförs
+      // mot token vi hade när refreshen begärdes, inte mot minnet — storage-
+      // synken kan redan ha uppdaterat minnet, och då vore ett nytt anrop
+      // bara en onödig rotation.
+      if (localStorage.getItem('si_refresh_token') !== rtVidBegaran) {
+        adopteraFranLagring()
+        return
       }
 
-      if (beslutaAtgardVidFel(status) === 'loggaUt') { clearSession(); return }
-      if (forsok >= MAX_REFRESH_FORSOK) return
-      retryTimerRef.current = setTimeout(
-        () => { void forsokRefreshRef.current?.(forsok + 1) },
-        beraknaRetryFordrojning(forsok, retryAfter),
-      )
-    })().finally(() => { refreshPagaendeRef.current = null })
+      let rt = rtVidBegaran
+      let harAdopterat = false
+      for (;;) {
+        const svar = await hamtaNyaTokens(rt)
+        // Användaren har loggat ut (eller loggat in på nytt) medan anropet pågick
+        if (refreshTokenRef.current !== rt) return
+        if (svar.data) { applyTokens(svar.data); return }
+
+        // 401 men lagringen har en ANNAN refresh-token: en annan flik hann före
+        // och roterade. Rensa inte den delade lagringen — ta över och försök en gång till.
+        if (svar.status === 401 && !harAdopterat) {
+          const lagrad = localStorage.getItem('si_refresh_token')
+          if (lagrad && lagrad !== rt) {
+            harAdopterat = true
+            adopteraFranLagring()
+            rt = lagrad
+            continue
+          }
+        }
+
+        if (beslutaAtgardVidFel(svar.status) === 'loggaUt') { clearSession(); return }
+        if (forsok >= MAX_REFRESH_FORSOK) return
+        retryTimerRef.current = setTimeout(
+          () => { void forsokRefreshRef.current?.(forsok + 1) },
+          beraknaRetryFordrojning(forsok, svar.retryAfter),
+        )
+        return
+      }
+    }).finally(() => { refreshPagaendeRef.current = null })
 
     refreshPagaendeRef.current = anrop
     return anrop
-  }, [applyTokens, clearSession, avbrytRetry])
+  }, [applyTokens, clearSession, avbrytRetry, adopteraFranLagring])
 
   // Omförsöket anropar forsokRefresh via en ref (en useCallback får inte referera sig själv).
   useEffect(() => { forsokRefreshRef.current = forsokRefresh }, [forsokRefresh])
@@ -255,7 +357,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   function setAccessToken(newToken: string) {
     localStorage.setItem('si_token', newToken)
     tokenErhallenRef.current = Date.now()
-    setToken(newToken)
+    sattToken(newToken)
   }
 
   return (

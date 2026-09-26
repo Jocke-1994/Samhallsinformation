@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createTicket, TicketError, fetchMyTicket, fetchMyTickets, replyToTicket, type MyTicketDto } from '../../../api/support'
 import { BETA } from '../../../betaConfig'
+import { useAnvandare } from '../../../hooks/useAnvandare'
+import { minaArendenNyckel, mittArendeNyckel } from '../../../lib/queryNycklar'
 
 type SortField = 'status' | 'skapat' | 'uppdaterat' | null
 type SortDir = 'asc' | 'desc'
@@ -67,10 +69,11 @@ function ArendeRad({
 }) {
   const [svar, setSvar] = useState('')
   const queryClient = useQueryClient()
+  const anvandare = useAnvandare()
   const kanSvara = ticket.status === 'Öppet' || ticket.status === 'Under behandling'
 
   const { data: detail, isLoading } = useQuery({
-    queryKey: ['my-ticket', ticket.id],
+    queryKey: mittArendeNyckel(anvandare, ticket.id),
     queryFn: () => fetchMyTicket(ticket.id),
     enabled: expanded,
   })
@@ -191,7 +194,8 @@ function ArendeRad({
 
 export default function ArendehanteringKort() {
   const queryClient = useQueryClient()
-  const { data: tickets = [] } = useQuery({ queryKey: ['my-tickets'], queryFn: fetchMyTickets })
+  const anvandare = useAnvandare()
+  const { data: tickets = [] } = useQuery({ queryKey: minaArendenNyckel(anvandare), queryFn: fetchMyTickets })
 
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set())

@@ -15,6 +15,7 @@ vi.mock('../api/support', async importOriginal => {
   const faktisk = await importOriginal<typeof import('../api/support')>()
   return { ...faktisk, createTicket: vi.fn(), fetchMyTickets: vi.fn(), fetchMyTicket: vi.fn(), replyToTicket: vi.fn() }
 })
+vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }) }))
 vi.mock('../betaConfig', () => ({ BETA: { aktiv: true, sokesFor: 'x', beskrivning: 'x', mall: 'BETAMALL: beskriv vad du testade' } }))
 
 const api = vi.mocked(supportApi)

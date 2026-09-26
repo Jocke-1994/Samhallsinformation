@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
-import { AuthProvider, useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext'
+import { AuthMedQuery } from './authMedQuery'
 
 // Regressionstester för V1-4 (E5#2, E5#8): refresh får bara logga ut användaren
 // när servern avvisar refresh-token (401/403), och schemaläggningen får aldrig
@@ -30,7 +31,7 @@ function Status() {
 function renderaInloggad(minuter = 15) {
   localStorage.setItem('si_token', skapaJwt(NU + minuter * 60_000))
   localStorage.setItem('si_refresh_token', 'refresh-1')
-  return render(<AuthProvider><Status /></AuthProvider>)
+  return render(<AuthMedQuery><Status /></AuthMedQuery>)
 }
 
 const status = () => screen.getByTestId('status').textContent
@@ -177,7 +178,7 @@ describe('AuthContext — refresh-felhantering', () => {
     }
     localStorage.setItem('si_token', skapaJwt(NU + 15 * 60_000))
     localStorage.setItem('si_refresh_token', 'refresh-1')
-    render(<AuthProvider><Status /><MedLogout /></AuthProvider>)
+    render(<AuthMedQuery><Status /><MedLogout /></AuthMedQuery>)
 
     await spolaTillRefresh() // refresh är nu "på väg"
     act(() => { screen.getByText('ut').click() })
@@ -207,7 +208,7 @@ describe('AuthContext — schemaläggning (klockskillnad)', () => {
     fetchMock.mockResolvedValue(tokenSvar(skapaJwt(NU + 15 * 60_000), 'refresh-2'))
     localStorage.setItem('si_token', skapaJwt(NU - 5 * 60_000))
     localStorage.setItem('si_refresh_token', 'refresh-1')
-    render(<AuthProvider><Status /></AuthProvider>)
+    render(<AuthMedQuery><Status /></AuthMedQuery>)
 
     await act(async () => { await vi.advanceTimersByTimeAsync(0) })
 
@@ -219,7 +220,7 @@ describe('AuthContext — schemaläggning (klockskillnad)', () => {
     fetchMock.mockResolvedValue(tokenSvar(skapaJwt(NU + 15 * 60_000), 'refresh-2'))
     localStorage.setItem('si_token', skapaJwt(NU + 60_000))
     localStorage.setItem('si_refresh_token', 'refresh-1')
-    render(<AuthProvider><Status /></AuthProvider>)
+    render(<AuthMedQuery><Status /></AuthMedQuery>)
 
     await act(async () => { await vi.advanceTimersByTimeAsync(0) })
 
@@ -239,7 +240,7 @@ describe('AuthContext — schemaläggning (klockskillnad)', () => {
       const { login } = useAuth()
       return <button onClick={() => { void login('a@b.se', 'x') }}>in</button>
     }
-    render(<AuthProvider><Status /><MedLogin /></AuthProvider>)
+    render(<AuthMedQuery><Status /><MedLogin /></AuthMedQuery>)
 
     await act(async () => { screen.getByText('in').click() })
     expect(status()).toBe('inloggad')
@@ -257,7 +258,7 @@ describe('AuthContext — schemaläggning (klockskillnad)', () => {
     fetchMock.mockImplementation(() => Promise.resolve(tokenSvar(skapaJwt(Date.now() - 6 * 60_000), 'refresh-x')))
     localStorage.setItem('si_token', skapaJwt(NU - 5 * 60_000))
     localStorage.setItem('si_refresh_token', 'refresh-1')
-    render(<AuthProvider><Status /></AuthProvider>)
+    render(<AuthMedQuery><Status /></AuthMedQuery>)
 
     // En act per steg: React kör om effekten (och planerar nästa refresh) först när act avslutas.
     for (let i = 0; i < 10; i++) {

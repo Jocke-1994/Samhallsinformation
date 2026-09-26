@@ -25,12 +25,15 @@ import { fetchSources } from './api/sources'
 import { fetchUserSources } from './api/userSources'
 import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 import { useAuth } from './context/AuthContext'
+import { useAnvandare } from './hooks/useAnvandare'
+import { anvandarKallorNyckel } from './lib/queryNycklar'
 import { fetchMaintenanceBanners } from './api/maintenanceBanners'
 import type { Source } from './types'
 
 function HomePage() {
   const location = useLocation()
   const { isLoggedIn } = useAuth()
+  const anvandare = useAnvandare()
   const [selectedShortName, setSelectedShortName] = useState<string | null>(
     (location.state as { shortName?: string } | null)?.shortName ?? null
   )
@@ -51,7 +54,7 @@ function HomePage() {
   })
 
   const { data: userSources = [] } = useQuery({
-    queryKey: ['user-sources'],
+    queryKey: anvandarKallorNyckel(anvandare),
     queryFn: fetchUserSources,
     enabled: isLoggedIn,
   })
