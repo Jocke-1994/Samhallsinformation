@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchAdminActivityLog, undoActivityLogEntry, type LoggPost, type ÅngraData, type AktörTyp } from '../../api/activityLog'
 import { saveAdminUserEvent, unsaveAdminUserEvent } from '../../api/adminUsers'
+import { visaFel } from '../../lib/felmeddelande'
+import HamtningsStatus from '../common/HamtningsStatus'
 
 export type LoggTyp =
   | 'Ingestor' | 'Notis' | 'Fel' | 'Kontoåtgärd'
@@ -123,7 +125,7 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
   // 'Notis' finns inte i backend (ingen global notislista) — filtret ger då inga rader.
   const serverTyp = typFilter === 'Alla' || typFilter === 'Notis' ? undefined : typFilter
 
-  const { data, isLoading } = useQuery({
+  const loggFråga = useQuery({
     queryKey: ['admin-activity-log', aktörFilter, serverTyp, tidsFilter, sökning, gräns],
     queryFn: () => fetchAdminActivityLog({
       aktörTyp: aktörFilter === 'Alla' ? undefined : aktörFilter,
@@ -133,6 +135,8 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
       gräns,
     }),
   })
+
+  const { data } = loggFråga
 
   const undoMutation = useMutation({
     mutationFn: undoActivityLogEntry,
@@ -156,17 +160,55 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
     setGräns(SIDA_STORLEK)
   }
 
+  // Ångra består av två steg: (1) den riktiga ändringen mot användaren, (2) att markera
+  // loggraden som ångrad. V3-8 (E6#19): en lås (ref, inte state — två klick i samma
+  // tick ser annars båda "ledigt") stoppar dubbelklick, fel visas vid raden, och lyckas
+  // steg 1 men inte steg 2 sägs det tydligt vad som gjorts — steg 1 körs då aldrig om.
+  const ångraLås = useRef(false)
+  const [ångrarId, setÅngrarId] = useState<string | null>(null)
+  const [ångraFel, setÅngraFel] = useState<{ id: string; text: string } | null>(null)
+  // Rader där ändringen är genomförd men loggraden inte hunnit markeras som ångrad.
+  const [halvÅngrade, setHalvÅngrade] = useState<Set<string>>(new Set())
+
   async function ångra(rad: LoggRad) {
-    if (!rad.ångraData) return
-    if (väntarÅngra !== rad.id) {
+    if (!rad.ångraData || ångraLås.current) return
+    const halvt = halvÅngrade.has(rad.id)
+    if (väntarÅngra !== rad.id && !halvt) {
       setVäntarÅngra(rad.id)
       return
     }
-    const { anvandareId, handelse, undoAction } = rad.ångraData
-    if (undoAction === 'lägg-till') await saveAdminUserEvent(anvandareId, handelse.eventId)
-    else await unsaveAdminUserEvent(anvandareId, handelse.eventId)
-    await undoMutation.mutateAsync(rad.id)
-    setVäntarÅngra(null)
+    ångraLås.current = true
+    setÅngrarId(rad.id)
+    setÅngraFel(null)
+    try {
+      if (!halvt) {
+        const { anvandareId, handelse, undoAction } = rad.ångraData
+        try {
+          if (undoAction === 'lägg-till') await saveAdminUserEvent(anvandareId, handelse.eventId)
+          else await unsaveAdminUserEvent(anvandareId, handelse.eventId)
+        } catch (fel) {
+          setÅngraFel({
+            id: rad.id,
+            text: `${visaFel(fel, 'Kunde inte ångra.')} Ingenting har ändrats — försök igen.`,
+          })
+          return
+        }
+        setHalvÅngrade(prev => new Set(prev).add(rad.id))
+      }
+      try {
+        await undoMutation.mutateAsync(rad.id)
+        setHalvÅngrade(prev => { const ny = new Set(prev); ny.delete(rad.id); return ny })
+        setVäntarÅngra(null)
+      } catch (fel) {
+        setÅngraFel({
+          id: rad.id,
+          text: `${visaFel(fel, 'Kunde inte markera raden som ångrad.')} Själva ändringen är redan gjord (${rad.ångraData.undoAction === 'lägg-till' ? 'händelsen är sparad hos användaren igen' : 'händelsen är borttagen från användarens sparade'}), men raden är inte markerad som ångrad. Klicka på "Markera som ångrad" — ångra inte på nytt.`,
+        })
+      }
+    } finally {
+      ångraLås.current = false
+      setÅngrarId(null)
+    }
   }
 
   const filterAktivt = aktörFilter !== 'Alla' || typFilter !== 'Alla' || tidsFilter !== 'Alla' || sökning !== ''
@@ -198,10 +240,11 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
       {/* Sammanfattning */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Ingestor-körningar', value: data?.sammanfattning.ingestor ?? 0,  color: 'text-sky-600',    ikon: '⚙️' },
+          // "—" (okänt) i stället för 0 när loggen inte hämtats — 0 fel får aldrig betyda "vet ej".
+          { label: 'Ingestor-körningar', value: data ? data.sammanfattning.ingestor : '—',  color: 'text-sky-600',    ikon: '⚙️' },
           { label: 'Skickade notiser (ej kopplat)', value: '—',                color: 'text-slate-300',  ikon: '🔔' },
-          { label: 'Fel',                value: data?.sammanfattning.fel ?? 0,       color: 'text-red-500',    ikon: '❌' },
-          { label: 'Varningar',          value: data?.sammanfattning.varningar ?? 0, color: 'text-amber-500',  ikon: '⚠️' },
+          { label: 'Fel',                value: data ? data.sammanfattning.fel : '—',       color: 'text-red-500',    ikon: '❌' },
+          { label: 'Varningar',          value: data ? data.sammanfattning.varningar : '—', color: 'text-amber-500',  ikon: '⚠️' },
         ].map(k => (
           <div key={k.label} className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-5 flex flex-col gap-1 items-center text-center">
             <span className="text-xl">{k.ikon}</span>
@@ -285,19 +328,21 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
         </div>
 
         {/* Rader */}
-        {isLoading ? (
-          <div className="px-6 py-16 text-center">
-            <p className="text-sm text-slate-400">Laddar...</p>
-          </div>
-        ) : visade.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <p className="text-2xl mb-2">🔍</p>
-            <p className="text-sm text-slate-500">Inga poster matchar filtret.</p>
-            <button onClick={nollställFilter} className="mt-3 text-xs text-violet-600 hover:text-violet-800 transition-colors">
-              Rensa filter
-            </button>
-          </div>
-        ) : (
+        <HamtningsStatus
+          fraga={loggFråga}
+          felText="Kunde inte hämta aktivitetsloggen. Loggen kan innehålla poster — det här är inte samma sak som en tom logg."
+          tomt={visade.length === 0}
+          className="px-6 py-16"
+          tomtText={
+            <>
+              <p className="text-2xl mb-2">🔍</p>
+              <p className="text-sm text-slate-500">Inga poster matchar filtret.</p>
+              <button onClick={nollställFilter} className="mt-3 text-xs text-violet-600 hover:text-violet-800 transition-colors">
+                Rensa filter
+              </button>
+            </>
+          }
+        >
           <>
             <div className="divide-y divide-slate-50">
               {visade.map(rad => (
@@ -347,16 +392,22 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
                         <div className="mt-2 flex items-center gap-2">
                           <button
                             onClick={() => ångra(rad)}
-                            disabled={rad.ångrad}
+                            disabled={rad.ångrad || ångrarId !== null}
                             className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
                               väntarÅngra === rad.id
                                 ? 'border-red-200 text-red-700 hover:bg-red-50'
                                 : 'border-violet-200 text-violet-700 hover:bg-violet-50'
                             }`}
                           >
-                            {rad.ångrad ? 'Redan ångrad' : väntarÅngra === rad.id ? 'Bekräfta ångra?' : '↩ Ångra'}
+                            {rad.ångrad
+                              ? 'Redan ångrad'
+                              : ångrarId === rad.id
+                                ? 'Ångrar...'
+                                : halvÅngrade.has(rad.id)
+                                  ? 'Markera som ångrad'
+                                  : väntarÅngra === rad.id ? 'Bekräfta ångra?' : '↩ Ångra'}
                           </button>
-                          {väntarÅngra === rad.id && !rad.ångrad && (
+                          {väntarÅngra === rad.id && !rad.ångrad && !halvÅngrade.has(rad.id) && ångrarId === null && (
                             <button
                               onClick={() => setVäntarÅngra(null)}
                               className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
@@ -365,6 +416,9 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
                             </button>
                           )}
                         </div>
+                      )}
+                      {ångraFel?.id === rad.id && (
+                        <p role="alert" className="mt-2 text-xs text-red-600 leading-relaxed">{ångraFel.text}</p>
                       )}
                     </div>
                   )}
@@ -383,7 +437,7 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
               </div>
             )}
           </>
-        )}
+        </HamtningsStatus>
 
       </div>
     </div>
