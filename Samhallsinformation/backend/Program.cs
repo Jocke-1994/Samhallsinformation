@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
+using Samhallsinformation.Application.Events;
 using Samhallsinformation.Application.Faq;
 using Samhallsinformation.Application.Monitoring;
 using Samhallsinformation.Application.RateLimiting;
@@ -1205,8 +1206,39 @@ using (var scope = app.Services.CreateScope())
                 ON CONFLICT DO NOTHING;
             ");
         }
+
+        // Unikt index på Events(SourceId, ExternalId) + index på SourceId (V3-2). Till skillnad från de andra
+        // blocken skapas INTE indexet här utan i EventsUniqueIndex.EnsureAsync efter MigrateAsync (körs varje start,
+        // idempotent, i try/catch) — och migreringen markeras ALLTID som tillämpad. Skälet: kan dubbletter inte
+        // rensas skulle en omarkerad migrering låta MigrateAsync köra Up() (CREATE UNIQUE INDEX) mot databasen och
+        // krascha uppstarten. Migreringen ändrar inga kolumntyper, så det finns ingen typ-snapshot att kringgå.
+        if (pendingMigrations.Contains("20260926022021_AddEventsUniqueIndex"))
+        {
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync(@"
+                    INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                    VALUES ('20260926022021_AddEventsUniqueIndex', '10.0.12')
+                    ON CONFLICT DO NOTHING;
+                ");
+            }
+            catch (Exception ex)
+            {
+                app.Logger.LogError(ex, "Kunde inte markera AddEventsUniqueIndex som tillämpad — uppstarten fortsätter.");
+            }
+        }
     }
+
+    // Rensa dubbletter av (SourceId, ExternalId) i Events INNAN det unika indexet skapas (V3-2). Gäller både
+    // PostgreSQL och SQLite (lokalt kör MigrateAsync migreringens CREATE UNIQUE INDEX, som kräver att dubbletter
+    // är borta). Kastar aldrig — misslyckas den loggas Error och indexet försöks inte (nästa start försöker igen).
+    var eventsIndexLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("EventsUniqueIndex");
+    var eventsDedupeOk = await EventsUniqueIndex.PrepareAsync(db, eventsIndexLogger);
+
     await db.Database.MigrateAsync();
+
+    if (eventsDedupeOk)
+        await EventsUniqueIndex.EnsureAsync(db, eventsIndexLogger);
 
     // Fix Users.PushNyaHandelser/PushNyVersion — det första deployet av
     // AddPushNotifKategorier gick via ren MigrateAsync() (glömde lägga till

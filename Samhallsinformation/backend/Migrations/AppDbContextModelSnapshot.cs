@@ -224,6 +224,12 @@ namespace Samhallsinformation.Migrations
 
                     b.HasIndex("PublishedAt");
 
+                    b.HasIndex("SourceId");
+
+                    b.HasIndex("SourceId", "ExternalId")
+                        .IsUnique()
+                        .HasFilter("\"ExternalId\" IS NOT NULL AND \"ExternalId\" <> ''");
+
                     b.ToTable("Events");
                 });
 
