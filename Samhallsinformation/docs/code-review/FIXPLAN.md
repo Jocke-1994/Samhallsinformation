@@ -120,7 +120,7 @@ Mål: tåla dålig extern data, dubbletter och fel utan att tyst tappa data elle
 | PR | Innehåll | Fynd | Lager | Storlek | Test | Status |
 |---|---|---|---|---|---|---|
 | V3-1 | **`EventSync` tål dubbletter** (GroupBy/first i stället för `ToDictionary`) | E3#1 | BE | S–M | enhet (SQLite) | ☑ mergad (PR #625) |
-| V3-2 | **Unikt index `Events(SourceId, ExternalId)` + index på SourceId + FK**, dedupera befintliga rader före migrering. Efter V3-1. | E2#7 | DB | M | SQLite + PG-rök | ◐ pågår |
+| V3-2 | **Unikt index `Events(SourceId, ExternalId)` + index på SourceId + FK**, dedupera befintliga rader före migrering. Efter V3-1. | E2#7 | DB | M | SQLite + PG-rök | ☑ mergad (PR #645) — produktionens ~6 980 händelser hade 0 dubbletter före indexet |
 | V3-3 | **Ingest med isolerad `DbContext` per källa;** trasig källa skriver `LastFetchError` och fäller inte batchen | E3#3 | BE | M | enhet (SQLite) | ☑ mergad (PR #630) |
 | V3-4 | **Push-dedup på riktigt** (claim före utskick, atomärt, ej fail-open) + timeout och parallellism i utskick. Ändrar testet `Claim_UnknownClaimId_FailsOpenAsClaimed` avsiktligt. | E3#4, E3#11 | BE | M | enhet | ☑ mergad (PR #627) |
 | V3-5 | **Krisinformation:** ogiltigt `Published` hoppar över posten, fäller inte källan | E3#7 | BE | S | enhet + fejk-HTTP | ☑ mergad (PR #632) |
