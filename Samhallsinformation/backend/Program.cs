@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
+using Samhallsinformation.Application.Csp;
 using Samhallsinformation.Application.Faq;
 using Samhallsinformation.Application.Monitoring;
 using Samhallsinformation.Application.RateLimiting;
@@ -123,6 +124,10 @@ builder.Services.AddRateLimiter(options =>
     // Se SupportTicketRateLimit för tak och motivering.
     options.AddPolicy(SupportTicketRateLimit.PolicyName, SupportTicketRateLimit.GetPartition);
 
+    // POST /api/csp-report — anonym mottagare för CSP-rapporter (V3-22), 30/min per IP.
+    // Se CspReportRateLimit.
+    options.AddPolicy(CspReportRateLimit.PolicyName, CspReportRateLimit.GetPartition);
+
     options.OnRejected = async (context, ct) =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
@@ -177,6 +182,9 @@ builder.Services.AddSingleton<LoginThrottle>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAktivitetsloggService, AktivitetsloggService>();
 
+// CSP i rapportera-läge (V3-22, D4 alt B): mottagare för webbläsarnas överträdelserapporter.
+builder.Services.AddScoped<ICspReportService, CspReportService>();
+
 // Gemensam leverans av agentsvar (spara + mejla + logga) — delas av AdminSupportController.Reply
 // och schemalagda svar (SupportScheduledActionService)
 builder.Services.AddScoped<ISupportReplyDelivery, SupportReplyDelivery>();
@@ -188,6 +196,7 @@ builder.Services.AddSingleton(sp => MonitoringOptions.FromConfiguration(sp.GetRe
 builder.Services.AddScoped<IMonitoringRule, UsersThresholdRule>();
 builder.Services.AddScoped<IMonitoringRule, SourceFailingRule>();
 builder.Services.AddScoped<IMonitoringRule, PushFailuresRule>();
+builder.Services.AddScoped<IMonitoringRule, CspViolationRule>();
 builder.Services.AddScoped<AdminAlertCycle>();
 
 // Background service
