@@ -126,7 +126,7 @@ Mål: tåla dålig extern data, dubbletter och fel utan att tyst tappa data elle
 | V3-5 | **Krisinformation:** ogiltigt `Published` hoppar över posten, fäller inte källan | E3#7 | BE | S | enhet + fejk-HTTP | ☑ mergad (PR #632) |
 | V3-6 | **UTC vid skrivning:** normalisera `DateTime.Kind` (converter/`EnsureUtcKind`) och tidsfilter i aktivitetsloggen; `DbCommandInterceptor`-test | E2#4, E4#2 | BE | M | interceptor + PG-rök | ☑ mergad (PR #629) |
 | V3-7 | **`ErrorBoundary` runt appen och per sida + catch-all-route** | E7#8 (+ stödjer E6#9) | FE | S–M | Vitest | ☑ mergad (PR #628) |
-| V3-8 | **Admin: fel visas som fel** (inte tomt/0/"100 % frisk"), `onError` i mutationer, formulär stänger först vid lyckat svar, Ångra/mass-spara med felhantering | E6#8, E6#10, E6#19, E6#20 | FE | L | FE | ☐ |
+| V3-8 | **Admin: fel visas som fel** (inte tomt/0/"100 % frisk"), `onError` i mutationer, formulär stänger först vid lyckat svar, Ångra/mass-spara med felhantering | E6#8, E6#10, E6#19, E6#20 | FE | L | FE | ◐ pågår |
 | V3-9 | **Medborgarsidans mutationer visar fel;** supportformuläret behåller text vid kategoribyte | E7#9 | FE | M | FE | ☑ mergad (PR #635) |
 | V3-10 | **Support-rollens behörighet** (efter D1): backend-policy + frontend-menyer i synk. Ändrar testet `AdminSupportController_RequiresAdminRole` avsiktligt. | E4#7, E6#7 | BE+FE | M | enhet | ☑ mergad (PR #641) |
 | V3-11 | **Mitt flöde filtreras på servern** (efter D2); ersätter klientfiltret över 50 händelser; gäller även Sparat | E5#1 | BE+FE | L | enhet+FE | ◐ pågår (avbröts av usage-gräns, återupptas) |
@@ -138,10 +138,10 @@ Mål: tåla dålig extern data, dubbletter och fel utan att tyst tappa data elle
 | V3-17 | **Polisen-bevakningar:** gränser för antal och längd per konto | E4#6 | BE | S | enhet | ☑ mergad (PR #633) |
 | V3-18 | **`DeleteSource`:** hantera händelser och seedade källor (soft-delete/`IsActive=false`) | E4#12 | BE | S | enhet | ☑ mergad (PR #638) |
 | V3-19 | **FAQ-seed skriver aldrig över adminens ändringar** och återskapar inte raderade frågor | E2#1 | BE | S | enhet | ☑ mergad (PR #640) |
-| V3-20 | **Mock-hygien** (efter D3): admin-mock märks MOCK eller döljs, medborgarmock bakom flagga tas bort/döljs, notisklockan lagas så två komponenter inte skriver över varandra | E6#6, E6#11, E6#12, E6#13, E7#5 | FE | M–L | FE | ◐ pågår |
+| V3-20 | **Mock-hygien** (efter D3): admin-mock märks MOCK eller döljs, medborgarmock bakom flagga tas bort/döljs, notisklockan lagas så två komponenter inte skriver över varandra | E6#6, E6#11, E6#12, E6#13, E7#5 | FE | M–L | FE | ☑ mergad (PR #646) — inga mock-flaggor var på som default |
 | V3-21 | **Redigera källa skriver inte över `isPublished` med gammal kopia** | E6#15 | FE | S | FE | ☑ mergad (PR #639) |
 | V3-22 | **Token-lagring/CSP** (efter D4) | E5#11 | FE+BE | M–L | – | ☑ mergad (PR #644) — CSP i rapportera-läge; falsklarm från Claudes egen testrapport möjligt |
-| V3-23 | **Start mot tom PostgreSQL fungerar** (schema-ordning, typläkning i rätt gren) | E2#3 | DB | M | PG-rök | ☐ |
+| V3-23 | **Start mot tom PostgreSQL fungerar** (schema-ordning, typläkning i rätt gren) | E2#3 | DB | M | PG-rök | ⏸ UPPSKJUTEN medvetet: kräver riktig PostgreSQL-testmiljö (Docker eller Testcontainers i CI) — att skriva om startlogiken för tom databas utan PG-test riskerar produktionens uppstart. Föreslås: först ett PG-rökprov i CI, sedan denna PR |
 
 ---
 

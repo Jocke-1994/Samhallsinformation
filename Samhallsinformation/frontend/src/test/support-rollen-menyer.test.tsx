@@ -77,7 +77,7 @@ const auth = vi.hoisted(() => ({
 }))
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth.värde }))
 vi.mock('../context/FeatureFlagsContext', () => ({
-  useFeatureFlagsAdmin: () => ({ flaggor: {}, växlaFlagg: () => {}, återställ: () => {} }),
+  useFeatureFlagsAdmin: () => ({ flaggor: {}, inställda: {}, växlaFlagg: () => {}, återställ: () => {} }),
 }))
 vi.mock('../hooks/usePwaIdentity', () => ({ usePwaIdentity: () => {}, ADMIN_PWA_IDENTITET: {} }))
 vi.mock('../hooks/usePushSubscription', () => ({
@@ -89,7 +89,11 @@ vi.mock('../api/push', () => ({
   savePushSettings: async () => {},
 }))
 const hämtaÄrendenFörBadge = vi.fn()
-vi.mock('../api/support', () => ({ fetchAdminTickets: () => hämtaÄrendenFörBadge() }))
+vi.mock('../api/support', () => ({
+  fetchAdminTickets: () => hämtaÄrendenFörBadge(),
+  fetchSupportNotifications: async () => [],
+}))
+vi.mock('../api/adminUsers', () => ({ fetchUserNotifications: async () => [] }))
 
 // Sektionerna är tunga och testas för sig — här räcker en stub som visar vilken som renderats.
 function stub(namn: string) {

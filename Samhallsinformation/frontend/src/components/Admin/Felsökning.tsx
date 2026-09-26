@@ -5,6 +5,7 @@ import { dryRunSource } from '../../api/testing'
 import { fetchAdminHealth, type AdminHealthDto, type HälsaStatus } from '../../api/health'
 import type { AdminSource } from '../../types'
 import LarmKort from './LarmKort'
+import { MockBadge, MockBanner } from '../common/MockBadge'
 
 type Hälsa = 'OK' | 'Varning' | 'Nere' | 'Kontrollerar...'
 
@@ -27,6 +28,8 @@ interface KällKontroll {
   aktiv:          boolean
   senastHämtad:   string
   färskhetStatus: FärskhetStatus
+  /** SourceType: 0 = RSS, 1 = WebAPI, 2 = CAP. Torrkörningen läser alltid källan som RSS. */
+  typ:            number
 }
 
 interface Felrad {
@@ -122,7 +125,7 @@ function KommandeKontroller() {
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-slate-900">Kommande kontroller</h3>
+          <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">Kommande kontroller <MockBadge /></h3>
           <p className="text-xs text-slate-400 mt-0.5">Schemalagda och köade körningar</p>
         </div>
         <div className="flex gap-1">
@@ -138,6 +141,9 @@ function KommandeKontroller() {
             </button>
           ))}
         </div>
+      </div>
+      <div className="px-6 py-3 border-b border-slate-100">
+        <MockBanner>Påhittad lista — det finns ingen körschemaläggning att läsa. Ingestorn körs var 5:e minut i bakgrunden.</MockBanner>
       </div>
       <div className="divide-y divide-slate-50">
         {visade.map(k => (
@@ -230,6 +236,8 @@ const RESULTAT_CLS: Record<HistorikRad['resultat'], string> = {
   'Fel':     'bg-red-100 text-red-700 border border-red-200',
 }
 
+const ärRss = (k: KällKontroll) => k.typ === 0
+
 function toKällKontroll(s: AdminSource): KällKontroll {
   let hälsa: Hälsa = 'Varning'
   let färskhetStatus: FärskhetStatus = 'OK'
@@ -253,6 +261,7 @@ function toKällKontroll(s: AdminSource): KällKontroll {
     aktiv:          s.isActive,
     senastHämtad,
     färskhetStatus,
+    typ:            s.type,
   }
 }
 
@@ -283,57 +292,29 @@ export default function Felsökning() {
 
   const [testar, setTestar]     = useState<number | null>(null)
   const [pipeline, setPipeline] = useState<Record<number, PipelineSteg[]>>({})
-  const [kör, setKör]           = useState<number | null>(null)
   const [loggFilter, setLoggFilter] = useState<Felrad['nivå'] | 'Alla'>('Alla')
 
   function toggleAktiv(k: KällKontroll) {
     updateMutation.mutate({ id: k.id, req: { isActive: !k.aktiv } })
   }
 
-  function körNu(id: number) {
-    setKör(id)
-    setTimeout(() => setKör(null), 2000)
-  }
-
   async function testaAnslutning(k: KällKontroll) {
+    if (!ärRss(k)) return
     setTestar(k.id)
-
-    const init: PipelineSteg[] = [
-      { namn: 'Anslutning',                status: 'väntar' },
-      { namn: 'RSS/XML-parsing',           status: 'väntar' },
-      { namn: 'Mappning → CanonicalEvent', status: 'väntar' },
-      { namn: 'Deduplicering',             status: 'väntar' },
-      { namn: 'Databas-skrivning',         status: 'väntar' },
-    ]
-    setPipeline(prev => ({ ...prev, [k.id]: init }))
-
-    const uppdatera = (index: number, status: StegStatus, detalj?: string) => {
+    setPipeline(prev => ({ ...prev, [k.id]: [{ namn: 'Torrkörning (RSS)', status: 'kör' }] }))
+    try {
+      // Ett enda anrop: servern hämtar flödet och parsar det, inget sparas. Bara det som
+      // faktiskt uppmättes visas — inga påhittade steg för mappning, deduplicering eller skrivning.
+      const result = await dryRunSource(k.url, k.namn)
       setPipeline(prev => ({
         ...prev,
-        [k.id]: prev[k.id].map((s, i) => i === index ? { ...s, status, detalj } : s),
+        [k.id]: [{ namn: 'Hämtning och parsning (torrkörning)', status: result.count > 0 ? 'OK' : 'Varning', detalj: `${result.count} poster lästes — inget sparades` }],
       }))
-    }
-    const vänta = (ms: number) => new Promise(res => setTimeout(res, ms))
-
-    uppdatera(0, 'kör')
-    try {
-      const result = await dryRunSource(k.url, k.namn)
-      await vänta(250)
-      uppdatera(0, 'OK', 'HTTP 200')
-      uppdatera(1, 'kör')
-      await vänta(250)
-      uppdatera(1, 'OK', `${result.count} poster hittade`)
-      uppdatera(2, 'kör')
-      await vänta(250)
-      uppdatera(2, 'OK', `${result.count}/${result.count} mappade korrekt`)
-      uppdatera(3, 'kör')
-      await vänta(250)
-      uppdatera(3, 'OK', 'Deduplicering klar')
-      uppdatera(4, 'kör')
-      await vänta(250)
-      uppdatera(4, 'OK', `${result.count} händelser inlästa`)
     } catch (err) {
-      uppdatera(0, 'Fel', err instanceof Error ? err.message : 'Timeout eller nätverksfel')
+      setPipeline(prev => ({
+        ...prev,
+        [k.id]: [{ namn: 'Hämtning och parsning (torrkörning)', status: 'Fel', detalj: err instanceof Error ? err.message : 'Timeout eller nätverksfel' }],
+      }))
     } finally {
       setTestar(null)
     }
@@ -448,22 +429,23 @@ export default function Felsökning() {
                       </button>
                     </div>
 
-                    {/* Kör nu */}
+                    {/* Kör nu — ingen endpoint finns, så knappen är avstängd i stället för att låtsas */}
                     <button
-                      onClick={() => körNu(k.id)}
-                      disabled={kör === k.id || !k.aktiv}
-                      className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 border-slate-200 text-slate-600 hover:border-violet-200 hover:text-violet-600 hover:bg-violet-50"
+                      disabled
+                      title="Inte kopplat — det finns ingen endpoint som startar en hämtning; ingestorn kör var 5:e minut"
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 cursor-not-allowed"
                     >
-                      {kör === k.id ? 'Kör...' : 'Kör nu'}
+                      Kör nu
                     </button>
 
-                    {/* Testa anslutning — kör riktig dryRun */}
+                    {/* Torrkörning — endast RSS-källor (servern läser URL:en som RSS) */}
                     <button
                       onClick={() => testaAnslutning(k)}
-                      disabled={pågår}
-                      className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 border-slate-200 text-slate-600 hover:border-sky-200 hover:text-sky-600 hover:bg-sky-50"
+                      disabled={pågår || !ärRss(k)}
+                      title={ärRss(k) ? 'Hämtar RSS-flödet och räknar poster, sparar inget' : 'Torrkörningen läser bara RSS — den här källan är ett API och kan inte testas här'}
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-slate-200 text-slate-600 hover:border-sky-200 hover:text-sky-600 hover:bg-sky-50"
                     >
-                      {pågår ? 'Testar...' : 'Testa'}
+                      {pågår ? 'Testar...' : 'Torrkör RSS'}
                     </button>
                   </div>
 
@@ -498,8 +480,11 @@ export default function Felsökning() {
       {/* Kontrollhistorik */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-base font-semibold text-slate-900">Kontrollhistorik</h3>
+          <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">Kontrollhistorik <MockBadge /></h3>
           <p className="text-xs text-slate-400 mt-0.5">Senast genomförda kontroller</p>
+        </div>
+        <div className="px-6 py-3 border-b border-slate-100">
+          <MockBanner>Påhittad historik — inga kontroller sparas. Riktiga ingestor-körningar finns i Aktivitetslogg och Rapporter.</MockBanner>
         </div>
         <div className="divide-y divide-slate-50">
           {HISTORIK.map(h => (
@@ -518,8 +503,8 @@ export default function Felsökning() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Felloggar</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Senaste 24 timmarna</p>
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">Felloggar <MockBadge /></h3>
+            <p className="text-xs text-slate-400 mt-0.5">Exempelrader — inte riktiga fel</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex gap-1">
@@ -535,10 +520,17 @@ export default function Felsökning() {
                 </button>
               ))}
             </div>
-            <button className="text-xs font-medium text-slate-400 hover:text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg transition-colors">
+            <button
+              disabled
+              title="Inte kopplat — ingen riktig fellogg att exportera"
+              className="text-xs font-medium text-slate-300 border border-slate-200 px-3 py-1.5 rounded-lg cursor-not-allowed"
+            >
               Exportera
             </button>
           </div>
+        </div>
+        <div className="px-6 py-3 border-b border-slate-100">
+          <MockBanner>Påhittade felrader (bl.a. exception och SMS-utskick som aldrig hänt). Riktiga fel: Rapporter → Fel i datainsamling och Aktivitetslogg.</MockBanner>
         </div>
         <div className="divide-y divide-slate-50">
           {FELLOGGAR.filter(f => loggFilter === 'Alla' || f.nivå === loggFilter).map((f, i) => (

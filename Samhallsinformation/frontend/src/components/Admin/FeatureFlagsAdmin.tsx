@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FLAG_GRUPPER, FLAG_DEFINITIONER, type FlagKey, type FlagState } from '../../lib/featureFlags'
 import ConfirmDialog from '../common/ConfirmDialog'
+import { MockBadge } from '../common/MockBadge'
 import { fetchAdminFeatureFlags, setFeatureFlagRedo } from '../../api/featureFlags'
 import { ADMIN_FLAGG_QUERY_KEY, invalideraFlaggor } from '../../lib/flaggCache'
 
@@ -130,11 +131,19 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ }: 
                         }`}
                       >
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-sm font-medium text-slate-700">{flagga.label}</span>
+                          <span className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                            {flagga.label}
+                            {flagga.mock && <MockBadge />}
+                          </span>
                           <span className="text-xs text-slate-400">{flagga.beskrivning}</span>
+                          {flagga.mock && (
+                            <span className="text-xs text-amber-700">
+                              Mock-UI utan backend — visas aldrig för användare i produktion, inte ens när flaggan är på.
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-3 shrink-0 ml-6">
-                          {!aktiv && (
+                          {!aktiv && !flagga.mock && (
                             <button
                               onClick={() => växlaRedo({ key: flagga.key, redo: !redoMap[flagga.key] })}
                               className={`text-[11px] font-medium px-2 py-1 rounded-full border transition-colors ${
