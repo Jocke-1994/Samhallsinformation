@@ -35,6 +35,19 @@ export async function unsubscribeDevice(endpoint: string): Promise<void> {
   if (!res.ok) throw new Error(`unsubscribeDevice: ${res.status}`)
 }
 
+// Avregistrerar en enhet med en EXPLICIT token, utan adminFetch: används vid
+// utloggning/sessionsslut, när sessionen redan är (eller just blivit) rensad
+// och ett 401 inte ska trigga någon förnyelse. Kastar vid fel — anroparen
+// avgör att det är best effort.
+export async function unsubscribeDeviceMedToken(endpoint: string, token: string): Promise<void> {
+  const res = await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/push/subscribe`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ endpoint }),
+  })
+  if (!res.ok) throw new Error(`unsubscribeDeviceMedToken: ${res.status}`)
+}
+
 export async function fetchPushSettings(): Promise<PushSettingsDto> {
   const res = await adminFetch('/api/push/settings')
   if (!res.ok) throw new Error(`fetchPushSettings: ${res.status}`)
