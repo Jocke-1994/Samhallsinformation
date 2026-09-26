@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import AdminSidebar from '../components/Admin/AdminSidebar'
@@ -22,6 +22,7 @@ import Handelsesok from '../components/Admin/Handelsesok'
 import { useAuth, type SystemRoll } from '../context/AuthContext'
 import { useFeatureFlagsAdmin } from '../context/FeatureFlagsContext'
 import { useAdminDjuplank } from '../hooks/useAdminDjuplank'
+import { useAdminNotiser } from '../hooks/useAdminNotiser'
 import { usePwaIdentity, ADMIN_PWA_IDENTITET } from '../hooks/usePwaIdentity'
 import { usePushSubscription, isPushSupported } from '../hooks/usePushSubscription'
 import { fetchPushSettings, savePushSettings } from '../api/push'
@@ -78,7 +79,7 @@ export default function AdminPage() {
 
   usePwaIdentity(ADMIN_PWA_IDENTITET)
 
-  const { flaggor, växlaFlagg, återställ } = useFeatureFlagsAdmin()
+  const { inställda: flaggor, växlaFlagg, återställ } = useFeatureFlagsAdmin()
   const { isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushSubscription()
   const [pushBusy, setPushBusy] = useState(false)
   const [pushFel, setPushFel]   = useState('')
@@ -115,7 +116,9 @@ export default function AdminPage() {
   // till Admin-vyn är man på den sektionen igen.
   const aktivSektion: AdminSection = tillåtnaSektioner(adminRoll).includes(section) ? section : startSektion(adminRoll)
   const [sidebarOpen, setSidebarOpen]     = useState(false)
-  const [notiser, setNotiser]             = useState<PendingNotis[]>([])
+  // Klockans lista har EN källa (V3-20, E6#11): båda notisfrågorna ägs här, inte av
+  // sektionerna, så listan är komplett oavsett vilken flik som är öppen.
+  const notiser = useAdminNotiser(isLoggedIn && (roll === 'Admin' || roll === 'Support'), adminRoll)
   const [notisDropdown, setNotisDropdown] = useState(false)
   const [avatarDropdown, setAvatarDropdown] = useState(false)
   const {
@@ -124,10 +127,6 @@ export default function AdminPage() {
   } = useAdminDjuplank(aktivSektion)
   const [lästaNyckar, setLästaNyckar]     = useState<Set<string>>(new Set())
   const [borttagnaNyckar, setBorttagnaNyckar] = useState<Set<string>>(new Set())
-
-  const handlePendingNotiser = useCallback((items: PendingNotis[]) => {
-    setNotiser(items)
-  }, [])
 
   // Alla hooks ovan måste köras oavsett inloggningsläge (Rules of Hooks) —
   // därför kommer det villkorliga returnet först här, efter samtliga.
@@ -367,19 +366,17 @@ export default function AdminPage() {
                   öppnaInboxÄrende(id)
                   setSection('support-inbox')
                 }}
-                onPendingNotiser={handlePendingNotiser}
                 defaultÖppnaEpost={användarMål?.epost}
-                defaultFlik={användarMål?.flik ?? 'notifinstallningar'}
+                defaultFlik={användarMål?.flik ?? 'oversikt'}
                 onDjuplänkKonsumerad={konsumeraAnvändare}
               />
             )}
             {aktivSektion === 'support-inbox' && (
               <SupportInbox
-                onPendingNotiser={handlePendingNotiser}
                 defaultOpenId={inboxÄrendeId}
                 onDjuplänkKonsumerad={konsumeraInboxÄrende}
                 onÖppnaAnvändare={epost => {
-                  öppnaAnvändare(epost, 'notifinstallningar')
+                  öppnaAnvändare(epost, 'oversikt')
                   setSection('anvandare')
                 }}
               />

@@ -1,13 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
 import { BETA } from '../betaConfig'
-import { useQuery } from '@tanstack/react-query'
 import { type ProfileSection } from '../types'
-import { fetchSources } from '../api/sources'
-import { useUnreadSourceIds } from '../hooks/useUnreadSourceIds'
-import type { Source } from '../types'
 import { useFlags } from '../context/FeatureFlagsContext'
 import { isSektionSynlig } from '../lib/featureFlags'
+import { searchIndex } from '../lib/profilSok'
 
 const NAV_CARDS: {
   id: ProfileSection
@@ -59,56 +55,9 @@ const NAV_CARDS: {
   },
 ]
 
-interface SearchItem {
-  section: ProfileSection
-  sectionLabel: string
-  label: string
-  keywords: string[]
-}
-
-const SEARCH_INDEX: SearchItem[] = [
-  // Mina källor
-  { section: 'mina-kallor', sectionLabel: 'Mina källor', label: 'Hämta källor via SPAR', keywords: ['spar', 'adress', 'folkbokföring', 'automatisk', 'förslag'] },
-  { section: 'mina-kallor', sectionLabel: 'Mina källor', label: 'Lägg till källa manuellt', keywords: ['sök', 'källa', 'lägg till', 'myndighet', 'organisation'] },
-  { section: 'mina-kallor', sectionLabel: 'Mina källor', label: 'Aktiva källor', keywords: ['aktiv', 'källa', 'ta bort', 'radera'] },
-  // Notifieringar
-  { section: 'notifieringar', sectionLabel: 'Notifieringar', label: 'Obligatoriska källor', keywords: ['msb', 'polisen', 'obligatorisk', 'alltid', 'kris'] },
-  { section: 'notifieringar', sectionLabel: 'Notifieringar', label: 'Globala inställningar', keywords: ['sms', 'e-post', 'mail', 'frekvens', 'kanal', 'tyst läge', 'push', 'notis'] },
-  { section: 'notifieringar', sectionLabel: 'Notifieringar', label: 'Per källa-inställningar', keywords: ['källa', 'notis', 'toggle', 'aktivera', 'inaktivera'] },
-  { section: 'notifieringar', sectionLabel: 'Notifieringar', label: 'Geografifilter', keywords: ['geo', 'geografi', 'stad', 'län', 'lokal', 'region', 'plats'] },
-  // Konto
-  { section: 'konto', sectionLabel: 'Konto', label: 'Kontouppgifter', keywords: ['namn', 'e-post', 'mail', 'uppgifter', 'profil', 'användare'] },
-  { section: 'konto', sectionLabel: 'Konto', label: 'Byt lösenord', keywords: ['lösenord', 'password', 'byt', 'säkerhet', 'ändra'] },
-  { section: 'konto', sectionLabel: 'Konto', label: 'Exportera persondata', keywords: ['gdpr', 'export', 'data', 'ladda ner', 'personuppgifter'] },
-  { section: 'konto', sectionLabel: 'Konto', label: 'Radera konto', keywords: ['radera', 'ta bort', 'konto', 'gdpr', 'permanent'] },
-  // Uppdateringar
-  { section: 'uppdateringar', sectionLabel: 'Uppdateringar', label: 'Senaste version', keywords: ['version', 'release', 'ny', 'senaste', 'uppdatering'] },
-  { section: 'uppdateringar', sectionLabel: 'Uppdateringar', label: 'Kända buggar', keywords: ['bugg', 'fel', 'problem', 'issue', 'känd'] },
-  { section: 'uppdateringar', sectionLabel: 'Uppdateringar', label: 'Versionshistorik', keywords: ['historik', 'changelog', 'tidigare', 'version'] },
-  // Support
-  { section: 'support', sectionLabel: 'Support', label: 'Mina ärenden', keywords: ['ärende', 'ticket', 'support', 'hjälp', 'kontakt'] },
-  { section: 'support', sectionLabel: 'Support', label: 'Systemstatus', keywords: ['status', 'drift', 'nere', 'system', 'driftstatus'] },
-  { section: 'support', sectionLabel: 'Support', label: 'FAQ', keywords: ['faq', 'frågor', 'vanliga', 'svar', 'hjälp'] },
-  { section: 'support', sectionLabel: 'Support', label: 'Skapa nytt ärende', keywords: ['nytt ärende', 'skicka', 'kontakta', 'meddelande', 'formulär'] },
-]
-
-function searchIndex(query: string): Map<ProfileSection, SearchItem[]> {
-  const q = query.toLowerCase().trim()
-  const results = SEARCH_INDEX.filter(item =>
-    item.label.toLowerCase().includes(q) ||
-    item.sectionLabel.toLowerCase().includes(q) ||
-    item.keywords.some(k => k.includes(q))
-  )
-  const grouped = new Map<ProfileSection, SearchItem[]>()
-  for (const item of results) {
-    if (!grouped.has(item.section)) grouped.set(item.section, [])
-    grouped.get(item.section)!.push(item)
-  }
-  return grouped
-}
-
 function SearchResults({ query, onSelect }: { query: string; onSelect: (s: ProfileSection) => void }) {
-  const results = searchIndex(query)
+  const flaggor = useFlags()
+  const results = searchIndex(query, flaggor)
   if (results.size === 0) {
     return (
       <p className="text-sm text-slate-400 text-center mt-2">Inga resultat för "{query}"</p>
@@ -191,78 +140,11 @@ function BetatestareModal({ onClose, onAnmal }: { onClose: () => void; onAnmal: 
   )
 }
 
-function UnreadSourcesSection({ onSelectSource }: { onSelectSource: (id: number) => void }) {
-  const { data: sources = [] } = useQuery<Source[]>({
-    queryKey: ['sources'],
-    queryFn: fetchSources,
-  })
-
-  const unreadSourceIds = useUnreadSourceIds(sources)
-
-  const unreadSources = sources.filter(s => unreadSourceIds.has(s.id))
-
-  if (unreadSources.length === 0) return null
-
-  const regional = unreadSources.filter(s => s.scope === 'regional')
-  const national = unreadSources.filter(s => s.scope === 'nationell')
-
-  return (
-    <div className="mt-12">
-      <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-5">Nytt sedan sist</h2>
-
-      {regional.length > 0 && (
-        <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
-            Regionalt för dig
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {regional.map(source => (
-              <button
-                key={source.id}
-                onClick={() => onSelectSource(source.id)}
-                className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 text-sm font-medium text-slate-800 hover:text-violet-700"
-              >
-                <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
-                {source.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {national.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
-            Nationellt
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {national.map(source => (
-              <button
-                key={source.id}
-                onClick={() => onSelectSource(source.id)}
-                className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 text-sm font-medium text-slate-800 hover:text-violet-700"
-              >
-                <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
-                {source.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
 export default function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSection) => void }) {
-  const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const flaggor = useFlags()
   const synligaKort = NAV_CARDS.filter(card => isSektionSynlig(card.id, flaggor))
-
-  function handleSelectSource(sourceId: number) {
-    navigate('/', { state: { sourceId } })
-  }
 
   function handleAnmal() {
     setModalOpen(false)
@@ -331,7 +213,6 @@ export default function ProfileLanding({ onSelect }: { onSelect: (s: ProfileSect
               </button>
             ))}
           </div>
-          <UnreadSourcesSection onSelectSource={handleSelectSource} />
         </div>
 
       </div>
