@@ -49,6 +49,13 @@ public static class TestDb
     }
 
     /// <summary>
+    /// Tar bort det unika indexet på Events(SourceId, ExternalId) (V3-2) så att ett test kan bygga upp
+    /// dubblettdata som den riktiga produktionsdatabasen innehåller innan indexet skapas.
+    /// </summary>
+    public static void DropEventsUniqueIndex(AppDbContext db) =>
+        db.Database.ExecuteSqlRaw(@"DROP INDEX IF EXISTS ""IX_Events_SourceId_ExternalId""");
+
+    /// <summary>
     /// En andra kontext mot SAMMA databas (delar anslutning) men med tom change tracker.
     /// Användbart för att bevisa vad som faktiskt skrevs till databasen, inte vad den första
     /// kontexten har i minnet. Den nya kontexten äger inte anslutningen — disponera den första sist.

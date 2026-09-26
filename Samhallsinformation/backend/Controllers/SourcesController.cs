@@ -3,6 +3,7 @@ namespace Samhallsinformation.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Events;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Sources;
 using Samhallsinformation.Data;
@@ -154,6 +155,14 @@ public class SourcesController : ControllerBase
                 AktörTyper.Admin, LoggTyper.Konfiguration,
                 $"Källa omsynkad — {source.Name}", $"{inserted} nya, {updated} uppdaterade");
             return Ok(new { inserted, updated });
+        }
+        catch (DbUpdateException ex) when (EventsUniqueIndex.IsEventDuplicateViolation(ex))
+        {
+            // Unikt index på Events(SourceId, ExternalId) (V3-2): bakgrundsingesten hann spara samma händelse.
+            // Inget källfel — ingenting sparades (SaveChanges rullades tillbaka), inget LastFetchError.
+            _db.ChangeTracker.Clear();
+            _logger?.LogWarning("Resync av {SourceId}: samtidig körning hann spara samma händelse(r) (unikt index på Events)", id);
+            return Conflict(new { error = "En samtidig körning hann spara samma händelser. Försök igen om en stund." });
         }
         catch (Exception ex)
         {

@@ -1,6 +1,7 @@
 namespace Samhallsinformation.Services;
 
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Events;
 using Samhallsinformation.Data;
 using Samhallsinformation.Ingestors;
 using Samhallsinformation.Models;
@@ -163,6 +164,15 @@ public class IngestorBackgroundService : BackgroundService
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             throw;
+        }
+        catch (DbUpdateException ex) when (EventsUniqueIndex.IsEventDuplicateViolation(ex))
+        {
+            // Unikt index på Events(SourceId, ExternalId) (V3-2): en samtidig körning (t.ex. adminens "kör nu")
+            // hann spara samma händelse. Inget källfel — hela SaveChanges rullades tillbaka och händelserna finns
+            // redan eller sparas vid nästa cykel. Varken LastFetchError, körlogg med fel eller larm.
+            _logger.LogWarning(
+                "Samtidig körning hann spara samma händelse(r) för {Source} (unikt index på Events) — synkas om nästa cykel",
+                sourceName);
         }
         catch (Exception ex)
         {
