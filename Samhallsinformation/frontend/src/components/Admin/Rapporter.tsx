@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { AdminSection } from './AdminSidebar'
 import { fetchAdminStats } from '../../api/stats'
 import { fetchAdminUsers } from '../../api/adminUsers'
+import { MockBadge } from '../common/MockBadge'
 import { fetchIngestorLogSummary, fetchIngestorLogRecent } from '../../api/ingestorLog'
 
 const DAGAR_KORT = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
@@ -30,10 +31,6 @@ const SEVERITY_CONFIG: Record<string, { text: string; färg: string; bg: string;
   'Kritisk':      { text: 'text-red-700',    färg: 'bg-red-500',    bg: 'bg-red-50',    bar: 'bg-red-500'    },
   'Viktigt':      { text: 'text-orange-700', färg: 'bg-orange-400', bg: 'bg-orange-50', bar: 'bg-orange-400' },
   'Bra att veta': { text: 'text-sky-700',    färg: 'bg-sky-400',    bg: 'bg-sky-50',    bar: 'bg-sky-400'    },
-}
-
-function MockBadge() {
-  return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">MOCK</span>
 }
 
 function LiveBadge() {

@@ -23,16 +23,8 @@ interface LoggRad {
   relateratÄrendeId?: string | null
 }
 
-// Notis-raderna är fortfarande mock — kräver en egen global lista över
-// NotificationDeliveryLog (utöver den redan per-användare-skopade
-// GetNotificationLog i AdminUserDetailsController), inte del av #491 wave 1
-// (som bara omfattar admin/system-händelser, se AktivitetsloggService).
-const NOTIS_MOCK: LoggRad[] = [
-  { id: 'm2',  tid: '09:50', datum: '2026-05-18', typ: 'Notis', rubrik: 'Notis skickad — Polisen', detalj: 'E-post till anna.svensson@mail.se — "Trafikolycka E4 Södertälje"',      status: 'OK' },
-  { id: 'm3',  tid: '09:48', datum: '2026-05-18', typ: 'Notis', rubrik: 'Notis skickad — SMHI',    detalj: 'Push till 3 mottagare — "Gul varning: kraftigt regn Västra Götaland"', status: 'OK' },
-  { id: 'm8',  tid: '22:14', datum: '2026-05-17', typ: 'Notis', rubrik: 'Notis skickad — MSB',     detalj: 'E-post till 12 mottagare — "VIKTIGT: Röd varning storm"',               status: 'OK' },
-  { id: 'm12', tid: '14:22', datum: '2026-05-17', typ: 'Notis', rubrik: 'Notis misslyckad — E-post', detalj: 'SMTP-fel vid leverans till erik.lindgren@example.com',                status: 'Fel' },
-]
+// Skickade notiser saknar en global lista i backend (bara per användare, i Användare →
+// Notishistorik) — därför visas inga notisrader här. Tidigare mockrader borttagna (V3-20).
 
 const SIDA_STORLEK = 8
 
@@ -72,8 +64,7 @@ export const STATUS_PRICK: Record<LoggStatus, string> = {
   Fel:     'bg-red-500',
 }
 
-// Används både för de riktiga raderna (skickas till backend som `från`) och
-// för att filtrera NOTIS_MOCK client-side (backend känner inte till mocken).
+// Skickas till backend som `från`.
 function datumGräns(filter: TidsFilter): string | null {
   if (filter === 'Alla') return null
   const d = new Date()
@@ -81,19 +72,6 @@ function datumGräns(filter: TidsFilter): string | null {
   if (filter === '7 dagar') { d.setDate(d.getDate() - 7);  return d.toISOString().slice(0, 10) }
   if (filter === '30 dagar'){ d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10) }
   return null
-}
-
-function notisMatchar(m: LoggRad, aktörFilter: AktörTyp | 'Alla', typFilter: LoggTyp | 'Alla', tidsFilter: TidsFilter, sökning: string): boolean {
-  // Notiser (push/mejl) skickas av systemet, inte av en admin — döljs helt
-  // om Aktör-filtret smalnats av till just Admin.
-  if (aktörFilter === 'Admin') return false
-  if (typFilter !== 'Alla' && typFilter !== 'Notis') return false
-  const gräns = datumGräns(tidsFilter)
-  if (gräns && tidsFilter === 'Idag'    && m.datum !== gräns) return false
-  if (gräns && tidsFilter !== 'Idag'    && m.datum < gräns)   return false
-  const s = sökning.toLowerCase()
-  if (s && !m.rubrik.toLowerCase().includes(s) && !m.detalj.toLowerCase().includes(s)) return false
-  return true
 }
 
 function postTillRad(p: LoggPost): LoggRad {
@@ -140,9 +118,7 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
   const [väntarÅngra, setVäntarÅngra] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
-  // Notis är den enda kvarvarande mock-typen (#491 wave 1 omfattar bara
-  // admin/system) — filtreras bort som ett riktigt Typ-val server-side
-  // eftersom backend inte känner till den, matchas client-side istället.
+  // 'Notis' finns inte i backend (ingen global notislista) — filtret ger då inga rader.
   const serverTyp = typFilter === 'Alla' || typFilter === 'Notis' ? undefined : typFilter
 
   const { data, isLoading } = useQuery({
@@ -162,17 +138,12 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
   })
 
   const serverRader = useMemo(() => (data?.rader ?? []).map(postTillRad), [data])
-  const notisRader   = useMemo(
-    () => NOTIS_MOCK.filter(m => notisMatchar(m, aktörFilter, typFilter, tidsFilter, sökning)),
-    [aktörFilter, typFilter, tidsFilter, sökning],
-  )
-
   const visade  = useMemo(
-    () => [...serverRader, ...notisRader].sort((a, b) => (b.datum + b.tid).localeCompare(a.datum + a.tid)),
-    [serverRader, notisRader],
+    () => (typFilter === 'Notis' ? [] : [...serverRader]).sort((a, b) => (b.datum + b.tid).localeCompare(a.datum + a.tid)),
+    [serverRader, typFilter],
   )
 
-  const totalt  = (data?.totalt ?? 0) + notisRader.length
+  const totalt  = typFilter === 'Notis' ? 0 : (data?.totalt ?? 0)
   const harFler = (data?.totalt ?? 0) > gräns
 
   function nollställFilter() {
@@ -205,10 +176,9 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
         <div>
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             Aktivitetslogg
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200" title="Notis-raderna är fortfarande mockdata, resten är live">MOCK + LIVE</span>
           </h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Komplett sanningskälla för admin/system-händelser — konfiguration, kontolivscykel, ärenden, push, ingestor-körningar och registreringar. Skickade notiser fortfarande mock.
+            Komplett sanningskälla för admin/system-händelser — konfiguration, kontolivscykel, ärenden, push, ingestor-körningar och registreringar. Skickade notiser loggas inte här än.
           </p>
         </div>
         <button
@@ -227,7 +197,7 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Ingestor-körningar', value: data?.sammanfattning.ingestor ?? 0,  color: 'text-sky-600',    ikon: '⚙️' },
-          { label: 'Skickade notiser',   value: NOTIS_MOCK.length,                   color: 'text-violet-600', ikon: '🔔' },
+          { label: 'Skickade notiser (ej kopplat)', value: '—',                color: 'text-slate-300',  ikon: '🔔' },
           { label: 'Fel',                value: data?.sammanfattning.fel ?? 0,       color: 'text-red-500',    ikon: '❌' },
           { label: 'Varningar',          value: data?.sammanfattning.varningar ?? 0, color: 'text-amber-500',  ikon: '⚠️' },
         ].map(k => (

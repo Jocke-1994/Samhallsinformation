@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { Routes, Route, useLocation, useSearchParams } from 'react-router'
+import { Routes, Route, useLocation } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSwipeable } from 'react-swipeable'
 import Sidebar from './components/Sidebar/Sidebar'
@@ -103,29 +103,6 @@ function HomePage() {
   )
 }
 
-function ImpersonationBanner() {
-  const [params] = useSearchParams()
-  const namn = params.get('namn')
-  if (!params.has('impersonating') || !namn) return null
-
-  return (
-    <div className="bg-amber-500 px-6 py-2.5 flex items-center justify-between shadow-md">
-      <div className="flex items-center gap-2.5">
-        <span className="text-base">🎭</span>
-        <span className="text-sm font-medium text-white">
-          Du är inloggad som <strong>{namn}</strong> — adminläge
-        </span>
-      </div>
-      <button
-        onClick={() => window.close()}
-        className="text-xs font-semibold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg transition-colors"
-      >
-        Avsluta session
-      </button>
-    </div>
-  )
-}
-
 const MAINTENANCE_DISMISS_PREFIX = 'si_maintenance_dismissed_'
 
 // Global driftmeddelande-banderoll för planerade drifttillfällen (t.ex.
@@ -198,7 +175,6 @@ export default function App() {
   return (
     <div className="h-dvh flex flex-col">
       <div className="flex flex-col shrink-0">
-        <ImpersonationBanner />
         <MaintenanceBanners />
         <EmailVerificationBanner />
       </div>

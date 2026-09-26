@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
-import { useAnvandare } from '../../hooks/useAnvandare'
+import { useSupportNotiser } from '../../hooks/useAdminNotiser'
 import { effektivAdminRoll } from '../../lib/adminNavigering'
-import { supportNotiserNyckel } from '../../lib/queryNycklar'
 import {
-  fetchAdminTickets, fetchAdminTicket, fetchAgents, fetchSupportNotifications,
+  fetchAdminTickets, fetchAdminTicket, fetchAgents,
   replyAsAgent, setTicketStatus, assignTicket, setTicketReminder, setTicketArchived,
   addScheduledAction, cancelScheduledAction,
   type AdminTicketListItemDto, type AdminScheduledActionDto, type AdminAgentDto,
@@ -571,7 +570,6 @@ function ArendeModal({
 // ---------------------------------------------------------------------------
 
 interface Props {
-  onPendingNotiser?:  (items: PendingNotis[]) => void
   defaultOpenId?:     string
   /** Anropas när djuplänken öppnat sitt ärende, så föräldern nollställer den (V2-16). */
   onDjuplänkKonsumerad?: () => void
@@ -592,7 +590,7 @@ function StatChip({ label, value, color }: { label: string; value: number; color
   )
 }
 
-export default function SupportInbox({ onPendingNotiser, defaultOpenId, onDjuplänkKonsumerad, onÖppnaAnvändare }: Props) {
+export default function SupportInbox({ defaultOpenId, onDjuplänkKonsumerad, onÖppnaAnvändare }: Props) {
   const [öppetId, setÖppetId]           = useState<string | null>(defaultOpenId ?? null)
 
   // Djuplänken konsumeras en gång (V2-16): öppna ärendet och be föräldern
@@ -616,18 +614,9 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onDjupl�
     queryFn: () => fetchAdminTickets(),
     refetchInterval: 30_000,
   })
-  const anvandare = useAnvandare()
   const { data: agents = [] } = useQuery({ queryKey: ['support-agents'], queryFn: fetchAgents })
-  const { data: notiser = [] } = useQuery({
-    queryKey: supportNotiserNyckel(anvandare),
-    queryFn: fetchSupportNotifications,
-    refetchInterval: 30_000,
-  })
-
-  useEffect(() => {
-    if (!onPendingNotiser) return
-    onPendingNotiser(notiser.map(n => ({ arendeId: n.ticketId, amne: n.amne, typ: n.typ, notering: n.notering })))
-  }, [notiser, onPendingNotiser])
+  // Samma query som klockan i AdminPage (delad cache) — här bara för röd prick per ärende.
+  const { data: notiser = [] } = useSupportNotiser()
 
   const aktiva    = ärenden.filter(a => !a.isArchived)
   const totalt    = aktiva.length

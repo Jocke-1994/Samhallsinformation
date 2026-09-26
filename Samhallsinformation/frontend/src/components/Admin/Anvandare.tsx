@@ -2,11 +2,9 @@ import { useState, useEffect, Fragment } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createActivityLogEntry } from '../../api/activityLog'
 import { useAuth } from '../../context/AuthContext'
-import { useAnvandare } from '../../hooks/useAnvandare'
-import { kontoNotiserNyckel } from '../../lib/queryNycklar'
 import { effektivAdminRoll } from '../../lib/adminNavigering'
 import {
-  fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
+  fetchAdminUsers, setAdminUserStatus, deleteAdminUser, cancelUserDeletion,
   fetchAdminUserSavedEvents, unsaveAdminUserEvent,
   fetchAdminUserPolisenBevakningar, fetchAdminUserNotificationLog, fetchAdminUserSettingLog, type AdminUserDto,
   createAdminUserPolisenBevakning, updateAdminUserPolisenBevakning, deleteAdminUserPolisenBevakning,
@@ -18,7 +16,6 @@ import {
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import { checkEventLinkStatus } from '../../api/events'
 import { searchEvents, type AdminSearchEvent } from '../../api/eventSearch'
-import type { PendingNotis } from '../../types/adminNotis'
 import KategoriFilterModal from '../Profile/MinaKallor/KategoriFilterModal'
 import { IngetKopplatAn } from '../common/MockBadge'
 
@@ -421,17 +418,15 @@ interface AnvandareProps {
   defaultFlik?:       DetaljFlik
   /** Anropas när djuplänken öppnat sin användare, så föräldern nollställer den (V2-16). */
   onDjuplänkKonsumerad?: () => void
-  onPendingNotiser?:  (items: PendingNotis[]) => void
 }
 
-export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onDjuplänkKonsumerad, onPendingNotiser }: AnvandareProps) {
+export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onDjuplänkKonsumerad }: AnvandareProps) {
   const { aktivVy, roll, email: egenEpostRå } = useAuth()
   // Support (och en Admin som förhandsvisar Support-vyn) LÄSER användarna — inga
   // åtgärder: ingen avstängning/radering/mejl/bevakningar/källor/push/
   // sparat och ingen massmarkering. Backend nekar dessa med 403 för Support (D1, V3-10),
   // så knapparna döljs i stället för att ge en felruta.
   const skrivskyddad = effektivAdminRoll(roll, aktivVy) === 'Support'
-  const anvandare = useAnvandare()
   const egenEpost = egenEpostRå?.toLowerCase() ?? null
   const queryClient = useQueryClient()
   const { data: adminUsers, isLoading: laddar, isError: laddningFel, refetch } = useQuery({
@@ -522,25 +517,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     })
   }, [användare])
 
-  const { data: kontoNotiser = [] } = useQuery({
-    queryKey: kontoNotiserNyckel(anvandare),
-    queryFn:  fetchUserNotifications,
-    refetchInterval: 30_000,
-    enabled:  !skrivskyddad, // kontospärr-påminnelser är ett Admin-arbetsflöde (Admin-only i backend)
-  })
-
   const { data: valdsÄrenden = [] } = useQuery({
     queryKey: ['admin-tickets-for-user', vald?.id],
     queryFn:  () => fetchAdminTickets({ userId: vald!.id }),
     enabled:  !!vald,
   })
-
-  useEffect(() => {
-    if (!onPendingNotiser) return
-    onPendingNotiser(kontoNotiser.map(n => ({
-      arendeId: n.userId, amne: n.namn, typ: 'kontospärrning' as const, notering: n.notering, epost: n.epost,
-    })))
-  }, [kontoNotiser, onPendingNotiser])
 
   const { data: polisenBevakningar = [], isLoading: bevakningarLaddar } = useQuery({
     queryKey: ['admin-polisen-bevakningar', vald?.id],
