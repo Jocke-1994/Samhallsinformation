@@ -128,18 +128,18 @@ Mål: tåla dålig extern data, dubbletter och fel utan att tyst tappa data elle
 | V3-7 | **`ErrorBoundary` runt appen och per sida + catch-all-route** | E7#8 (+ stödjer E6#9) | FE | S–M | Vitest | ☑ mergad (PR #628) |
 | V3-8 | **Admin: fel visas som fel** (inte tomt/0/"100 % frisk"), `onError` i mutationer, formulär stänger först vid lyckat svar, Ångra/mass-spara med felhantering | E6#8, E6#10, E6#19, E6#20 | FE | L | FE | ☐ |
 | V3-9 | **Medborgarsidans mutationer visar fel;** supportformuläret behåller text vid kategoribyte | E7#9 | FE | M | FE | ☑ mergad (PR #635) |
-| V3-10 | **Support-rollens behörighet** (efter D1): backend-policy + frontend-menyer i synk. Ändrar testet `AdminSupportController_RequiresAdminRole` avsiktligt. | E4#7, E6#7 | BE+FE | M | enhet | ☐ |
+| V3-10 | **Support-rollens behörighet** (efter D1): backend-policy + frontend-menyer i synk. Ändrar testet `AdminSupportController_RequiresAdminRole` avsiktligt. | E4#7, E6#7 | BE+FE | M | enhet | ◐ pågår |
 | V3-11 | **Mitt flöde filtreras på servern** (efter D2); ersätter klientfiltret över 50 händelser; gäller även Sparat | E5#1 | BE+FE | L | enhet+FE | ☐ |
-| V3-12 | **Sessioner mellan flikar/PWA:** `storage`-synk av refresh-token, react-query-cachen töms vid logout, användar-id i user-specifika query-nycklar | E5#3, E5#7 | FE | M | Vitest | ◐ PR #636 öppen, konflikt löses |
-| V3-13 | **Push-prenumeration knuten till inloggad användare;** utloggning avregistrerar enheten; push-kortet visar riktig enhetsstatus utan att skriva över kontots inställningar | E5#9, E7#6 | FE(+BE) | M | FE+enhet | ☐ |
+| V3-12 | **Sessioner mellan flikar/PWA:** `storage`-synk av refresh-token, react-query-cachen töms vid logout, användar-id i user-specifika query-nycklar | E5#3, E5#7 | FE | M | Vitest | ☑ mergad (PR #636) |
+| V3-13 | **Push-prenumeration knuten till inloggad användare;** utloggning avregistrerar enheten; push-kortet visar riktig enhetsstatus utan att skriva över kontots inställningar | E5#9, E7#6 | FE(+BE) | M | FE+enhet | ◐ pågår |
 | V3-14 | **Feature-flaggor:** ingen tyst `defaultAktiv`-fallback vid fel, invalidera båda mutationsvägarna | E5#10 | FE | S | Vitest | ☑ mergad (PR #631) |
-| V3-15 | **Fail-fast på saknade hemligheter** (`JWT_SECRET`, `VAPID_PRIVATE_KEY`) i icke-Development; ta bort hårdkodad privat VAPID-nyckel; enda källa för JWT-hemligheten | E1#2 | BE | S | enhet | ◐ pågår |
-| V3-16 | **Ärendesvar via mejl:** kräv SPF/DKIM-utfall från Resend-payload (verifiera först vad payload innehåller), icke-gissningsbara ticket-referenser | E1#10 | BE | M | enhet | ☐ |
+| V3-15 | **Fail-fast på saknade hemligheter** (`JWT_SECRET`, `VAPID_PRIVATE_KEY`) i icke-Development; ta bort hårdkodad privat VAPID-nyckel; enda källa för JWT-hemligheten | E1#2 | BE | S | enhet | ☑ mergad (PR #637) |
+| V3-16 | **Ärendesvar via mejl:** kräv SPF/DKIM-utfall från Resend-payload (verifiera först vad payload innehåller), icke-gissningsbara ticket-referenser | E1#10 | BE | M | enhet | ◐ pågår |
 | V3-17 | **Polisen-bevakningar:** gränser för antal och längd per konto | E4#6 | BE | S | enhet | ☑ mergad (PR #633) |
-| V3-18 | **`DeleteSource`:** hantera händelser och seedade källor (soft-delete/`IsActive=false`) | E4#12 | BE | S | enhet | ◐ pågår |
-| V3-19 | **FAQ-seed skriver aldrig över adminens ändringar** och återskapar inte raderade frågor | E2#1 | BE | S | enhet | ☐ |
+| V3-18 | **`DeleteSource`:** hantera händelser och seedade källor (soft-delete/`IsActive=false`) | E4#12 | BE | S | enhet | ☑ mergad (PR #638) |
+| V3-19 | **FAQ-seed skriver aldrig över adminens ändringar** och återskapar inte raderade frågor | E2#1 | BE | S | enhet | ☑ mergad (PR #640) |
 | V3-20 | **Mock-hygien** (efter D3): admin-mock märks MOCK eller döljs, medborgarmock bakom flagga tas bort/döljs, notisklockan lagas så två komponenter inte skriver över varandra | E6#6, E6#11, E6#12, E6#13, E7#5 | FE | M–L | FE | ☐ |
-| V3-21 | **Redigera källa skriver inte över `isPublished` med gammal kopia** | E6#15 | FE | S | FE | ☐ |
+| V3-21 | **Redigera källa skriver inte över `isPublished` med gammal kopia** | E6#15 | FE | S | FE | ☑ mergad (PR #639) |
 | V3-22 | **Token-lagring/CSP** (efter D4) | E5#11 | FE+BE | M–L | – | ☐ |
 | V3-23 | **Start mot tom PostgreSQL fungerar** (schema-ordning, typläkning i rätt gren) | E2#3 | DB | M | PG-rök | ☐ |
 
