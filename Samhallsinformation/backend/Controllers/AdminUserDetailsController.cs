@@ -5,18 +5,20 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
+using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Models;
 using Samhallsinformation.Services;
 
-// Läsvyer (och, för Sparat, skrivvyer) på en enskild användares konto, till
-// Anvandare.tsx-detaljpanelen. Egen controller (inte AdminUsersController,
-// som är Admin-only) eftersom Anvandare-sidan är Support-åtkomlig i UI:t
-// (AdminPage.SUPPORT_SEKTIONER) — ett klassattribut kan inte "luckras upp"
-// på metodnivå i ASP.NET Core, attributen är kumulativa (AND), inte en
-// override.
+// Vyer på en enskild användares konto, till Anvandare.tsx-detaljpanelen.
+// Läsvyerna är öppna för Admin ELLER Support (Användarlistan är skrivskyddad
+// för Support, beslut D1, V3-10). Varje action som SKRIVER (Polisen-bevakningar,
+// aktiva källor, push-inställningar, Sparat) är uttryckligen märkt
+// [Authorize(Roles = Admin)] — attributen ANDas, så metodattributet smalnar av
+// klassens roller. En ny skrivande action här måste få samma märkning;
+// SupportRollBehorighetTests fäller bygget om en sådan blir öppen för Support.
 [ApiController]
 [Route("api/admin/users")]
-[Authorize(Roles = "Admin,Support")]
+[Authorize(Roles = AdminRoller.AdminEllerSupport)]
 public class AdminUserDetailsController : ControllerBase
 {
     private readonly AppDbContext _db;
@@ -42,6 +44,7 @@ public class AdminUserDetailsController : ControllerBase
     // UserPolisenBevakningController exakt, fast skopat mot {id} istället för
     // CurrentUserId, och ChangedBy="admin" i stället för "user" i loggen.
     [HttpPost("{id}/polisen-bevakningar")]
+    [Authorize(Roles = AdminRoller.Admin)]
     [RequestSizeLimit(UserPolisenBevakningController.MaxRequestBytes)]
     public async Task<IActionResult> CreatePolisenBevakning(Guid id, [FromBody] BevakningRequest req)
     {
@@ -70,6 +73,7 @@ public class AdminUserDetailsController : ControllerBase
     }
 
     [HttpPut("{id}/polisen-bevakningar/{bevakningId}")]
+    [Authorize(Roles = AdminRoller.Admin)]
     [RequestSizeLimit(UserPolisenBevakningController.MaxRequestBytes)]
     public async Task<IActionResult> UpdatePolisenBevakning(Guid id, Guid bevakningId, [FromBody] BevakningRequest req)
     {
@@ -94,6 +98,7 @@ public class AdminUserDetailsController : ControllerBase
     }
 
     [HttpDelete("{id}/polisen-bevakningar/{bevakningId}")]
+    [Authorize(Roles = AdminRoller.Admin)]
     public async Task<IActionResult> DeletePolisenBevakning(Guid id, Guid bevakningId)
     {
         var bevakning = await _db.PolisenBevakningar.FirstOrDefaultAsync(b => b.Id == bevakningId && b.UserId == id);
@@ -144,6 +149,7 @@ public class AdminUserDetailsController : ControllerBase
     }
 
     [HttpPut("{id}/sources/{sourceId:int}")]
+    [Authorize(Roles = AdminRoller.Admin)]
     public async Task<IActionResult> SetUserSourceActive(Guid id, int sourceId, [FromBody] SetSourceActiveRequest req)
     {
         var pref = await _db.UserSourcePreferences.FirstOrDefaultAsync(p => p.UserId == id && p.SourceId == sourceId);
@@ -252,6 +258,7 @@ public class AdminUserDetailsController : ControllerBase
     // definierar PushSettingsRequest. Policy, inte teknik: ska bara
     // användas när ANVÄNDAREN SJÄLV bett om ändringen — se Rutiner.
     [HttpPut("{id}/push-settings")]
+    [Authorize(Roles = AdminRoller.Admin)]
     public async Task<IActionResult> SetPushSettings(Guid id, [FromBody] PushSettingsRequest req)
     {
         var user = await _db.Users.FindAsync(id);
@@ -313,6 +320,7 @@ public class AdminUserDetailsController : ControllerBase
     // användare att hitta något igen). Samma unikhetsskydd (UserId, EventId)
     // som self-service-vägen.
     [HttpPost("{id}/saved-events")]
+    [Authorize(Roles = AdminRoller.Admin)]
     public async Task<IActionResult> SaveEvent(Guid id, [FromBody] AdminSaveEventRequest req)
     {
         var exists = await _db.UserSavedEvents.AnyAsync(s => s.UserId == id && s.EventId == req.EventId);
@@ -325,6 +333,7 @@ public class AdminUserDetailsController : ControllerBase
     }
 
     [HttpDelete("{id}/saved-events/{eventId}")]
+    [Authorize(Roles = AdminRoller.Admin)]
     public async Task<IActionResult> UnsaveEvent(Guid id, Guid eventId)
     {
         var existing = await _db.UserSavedEvents.FirstOrDefaultAsync(s => s.UserId == id && s.EventId == eventId);

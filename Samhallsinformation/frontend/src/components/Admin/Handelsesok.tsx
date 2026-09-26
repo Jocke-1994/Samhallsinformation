@@ -5,6 +5,7 @@ import NewsItem from '../NewsFeed/NewsItem'
 import { fetchAdminUsers, saveAdminUserEvent, fetchSavedEventsByEvent, type AdminUserDto } from '../../api/adminUsers'
 import { createActivityLogEntry } from '../../api/activityLog'
 import { useAuth } from '../../context/AuthContext'
+import { effektivAdminRoll } from '../../lib/adminNavigering'
 
 const SIDA_STORLEK = 20
 
@@ -79,6 +80,12 @@ interface HandelsesokProps {
 }
 
 export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
+  // Support får söka men inte spara händelser åt en användare (skrivåtgärden är
+  // Admin-only i backend, D1/V3-10): ingen markering, ingen "Spara till användare",
+  // och användarlistan behövs inte (den hämtades bara till spara-väljaren).
+  const { roll, aktivVy } = useAuth()
+  const skrivskyddad = effektivAdminRoll(roll, aktivVy) === 'Support'
+
   const [sourceId, setSourceId]   = useState<string>('')
   const [geography, setGeography] = useState('')
   const [eventType, setEventType] = useState('')
@@ -93,6 +100,7 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
   const { data: adminAnvändare = [] } = useQuery({
     queryKey: ['admin-users'],
     queryFn:  fetchAdminUsers,
+    enabled:  !skrivskyddad,
   })
 
   function toggleMarkerad(id: string) {
@@ -176,7 +184,9 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
       <p className="text-sm text-slate-500 mb-6">
         Sök bakåt i tiden bland alla ingestade händelser (oavsett publiceringsstatus) — sökord (titel/innehåll), källa, typ, plats och datumintervall.
         Typ-filtret kräver att källan fått sina händelsetyper extraherade (idag bara Polisen).
-        Hittar du något en användare frågar om kan du spara det direkt till deras konto.
+        {skrivskyddad
+          ? 'Som Support kan du söka och läsa — att spara en händelse till en användares konto görs av en administratör.'
+          : 'Hittar du något en användare frågar om kan du spara det direkt till deras konto.'}
       </p>
 
       {/* Filter */}
@@ -296,14 +306,16 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
         ) : (
           <>
             <div className="flex items-center gap-3 mb-3 min-h-[28px]">
-              <input
-                type="checkbox"
-                checked={allaPåSidanMarkerade}
-                onChange={toggleAllaPåSidan}
-                title="Markera alla på sidan"
-                className="shrink-0 rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer"
-              />
-              {markerade.size > 0 ? (
+              {!skrivskyddad && (
+                <input
+                  type="checkbox"
+                  checked={allaPåSidanMarkerade}
+                  onChange={toggleAllaPåSidan}
+                  title="Markera alla på sidan"
+                  className="shrink-0 rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer"
+                />
+              )}
+              {!skrivskyddad && markerade.size > 0 ? (
                 <>
                   <span className="text-xs font-medium text-violet-700">{markerade.size} markerade</span>
                   <BulkSparaKnapp
@@ -331,7 +343,7 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
                       event={e}
                       isRead
                       sourceName={e.sourceName}
-                      checkbox={{ checked: markerade.has(e.id), onChange: () => toggleMarkerad(e.id) }}
+                      checkbox={skrivskyddad ? undefined : { checked: markerade.has(e.id), onChange: () => toggleMarkerad(e.id) }}
                     />
                     {sparadTill && (
                       <p className="text-xs text-slate-400 px-1">

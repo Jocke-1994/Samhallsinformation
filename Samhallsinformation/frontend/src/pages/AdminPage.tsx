@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import AdminSidebar, { type AdminSection, type AdminRoll } from '../components/Admin/AdminSidebar'
+import AdminSidebar from '../components/Admin/AdminSidebar'
+import { effektivAdminRoll, startSektion, tillåtnaSektioner, type AdminSection, type AdminRoll } from '../lib/adminNavigering'
 import Oversikt from '../components/Admin/Oversikt'
 import Kallhantering from '../components/Admin/Kallhantering'
 import Felsökning from '../components/Admin/Felsökning'
@@ -60,11 +61,12 @@ const TILLÅTNA_VYN: Record<SystemRoll, SystemRoll[]> = {
   'Användare': ['Användare'],
 }
 
-const SUPPORT_SEKTIONER: AdminSection[] = ['anvandare', 'support-inbox', 'handelsesok']
-
 export default function AdminPage() {
   const navigate = useNavigate()
   const { isLoggedIn, roll, aktivVy, name, byttVy } = useAuth()
+  // Ett riktigt Support-konto är alltid Support (även med en gammal si_aktiv_vy i
+  // localStorage); en Admin i Support-vyn förhandsvisar Support-rollen.
+  const adminRoll: AdminRoll = effektivAdminRoll(roll, aktivVy)
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -106,9 +108,12 @@ export default function AdminPage() {
     (!a.lastViewedAt || new Date(a.lastUserMessageAt) > new Date(a.lastViewedAt))
   ).length
 
-  const [section, setSection]             = useState<AdminSection>(
-    aktivVy === 'Support' ? 'support-inbox' : 'oversikt'
-  )
+  const [section, setSection]             = useState<AdminSection>(startSektion(adminRoll))
+  // Sektionsvakt (härledd, ingen effekt): en sektion rollen inte får se renderas
+  // aldrig, inte ens en frame — byter en Admin till Support-vyn på t.ex. Källhantering
+  // hamnar den direkt i Support-inbox i stället för att ge 403-anrop. Byter man tillbaka
+  // till Admin-vyn är man på den sektionen igen.
+  const aktivSektion: AdminSection = tillåtnaSektioner(adminRoll).includes(section) ? section : startSektion(adminRoll)
   const [sidebarOpen, setSidebarOpen]     = useState(false)
   const [notiser, setNotiser]             = useState<PendingNotis[]>([])
   const [notisDropdown, setNotisDropdown] = useState(false)
@@ -116,16 +121,9 @@ export default function AdminPage() {
   const {
     användarMål, inboxÄrendeId,
     öppnaAnvändare, öppnaInboxÄrende, konsumeraAnvändare, konsumeraInboxÄrende,
-  } = useAdminDjuplank(section)
+  } = useAdminDjuplank(aktivSektion)
   const [lästaNyckar, setLästaNyckar]     = useState<Set<string>>(new Set())
   const [borttagnaNyckar, setBorttagnaNyckar] = useState<Set<string>>(new Set())
-
-  // Falla tillbaka till support-inbox om man byter till Support-vy på en admin-only sektion
-  useEffect(() => {
-    if (aktivVy === 'Support' && !SUPPORT_SEKTIONER.includes(section)) {
-      setSection('support-inbox')
-    }
-  }, [aktivVy, section])
 
   const handlePendingNotiser = useCallback((items: PendingNotis[]) => {
     setNotiser(items)
@@ -134,8 +132,6 @@ export default function AdminPage() {
   // Alla hooks ovan måste köras oavsett inloggningsläge (Rules of Hooks) —
   // därför kommer det villkorliga returnet först här, efter samtliga.
   if (!isLoggedIn || (roll !== 'Admin' && roll !== 'Support')) return null
-
-  const adminRoll: AdminRoll = aktivVy === 'Support' ? 'Support' : 'Admin'
 
   function notisNyckel(n: PendingNotis) { return `${n.arendeId}-${n.typ}` }
   function markeraLäst(n: PendingNotis) { setLästaNyckar(prev => new Set([...prev, notisNyckel(n)])) }
@@ -196,7 +192,7 @@ export default function AdminPage() {
     <div className="flex h-full bg-slate-100 overflow-hidden">
 
       <AdminSidebar
-        active={section}
+        active={aktivSektion}
         onSelect={setSection}
         roll={adminRoll}
         isOpen={sidebarOpen}
@@ -218,7 +214,7 @@ export default function AdminPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="text-lg font-semibold text-slate-900 truncate">{SECTION_LABELS[section]}</h1>
+            <h1 className="text-lg font-semibold text-slate-900 truncate">{SECTION_LABELS[aktivSektion]}</h1>
           </div>
           <div className="flex items-center gap-3">
 
@@ -361,11 +357,11 @@ export default function AdminPage() {
         <div className="flex-1 overflow-y-auto" style={{ padding: '2rem 3rem' }}>
           <div style={{ maxWidth: '1100px' }}>
 
-            {section === 'oversikt'    && <Oversikt onNavigate={setSection} onÖppnaÄrende={öppnaÄrende} />}
-            {section === 'kallor'      && <Kallhantering />}
-            {section === 'sandlada'    && <Sandlada />}
-            {section === 'felsökning'  && <Felsökning />}
-            {section === 'anvandare' && (
+            {aktivSektion === 'oversikt'    && <Oversikt onNavigate={setSection} onÖppnaÄrende={öppnaÄrende} />}
+            {aktivSektion === 'kallor'      && <Kallhantering />}
+            {aktivSektion === 'sandlada'    && <Sandlada />}
+            {aktivSektion === 'felsökning'  && <Felsökning />}
+            {aktivSektion === 'anvandare' && (
               <Anvandare
                 onÖppnaÄrende={id => {
                   öppnaInboxÄrende(id)
@@ -377,7 +373,7 @@ export default function AdminPage() {
                 onDjuplänkKonsumerad={konsumeraAnvändare}
               />
             )}
-            {section === 'support-inbox' && (
+            {aktivSektion === 'support-inbox' && (
               <SupportInbox
                 onPendingNotiser={handlePendingNotiser}
                 defaultOpenId={inboxÄrendeId}
@@ -389,7 +385,7 @@ export default function AdminPage() {
               />
             )}
 
-            {section === 'handelsesok' && (
+            {aktivSektion === 'handelsesok' && (
               <Handelsesok
                 onÖppnaAnvändare={epost => {
                   öppnaAnvändare(epost, 'oversikt')
@@ -398,12 +394,12 @@ export default function AdminPage() {
               />
             )}
 
-            {section === 'uppdateringar'  && <AdminUppdateringar />}
-            {section === 'faq'            && <AdminFaq />}
-            {section === 'rapporter'      && <Rapporter onNavigate={setSection} />}
-            {section === 'aktivitetslogg' && <Aktivitetslogg onÖppnaÄrende={öppnaÄrende} />}
-            {section === 'impersonation'  && <Impersonation onNavigate={setSection} />}
-            {section === 'feature-flags'  && (
+            {aktivSektion === 'uppdateringar'  && <AdminUppdateringar />}
+            {aktivSektion === 'faq'            && <AdminFaq />}
+            {aktivSektion === 'rapporter'      && <Rapporter onNavigate={setSection} />}
+            {aktivSektion === 'aktivitetslogg' && <Aktivitetslogg onÖppnaÄrende={öppnaÄrende} />}
+            {aktivSektion === 'impersonation'  && <Impersonation onNavigate={setSection} />}
+            {aktivSektion === 'feature-flags'  && (
               <div className="flex flex-col gap-6">
                 <SiteSettingsAdmin />
                 <MaintenanceBannerAdmin />
@@ -414,12 +410,12 @@ export default function AdminPage() {
                 />
               </div>
             )}
-            {section === 'funktionsideer' && <FunktionsIdePipeline onÖppnaÄrende={öppnaÄrende} />}
+            {aktivSektion === 'funktionsideer' && <FunktionsIdePipeline onÖppnaÄrende={öppnaÄrende} />}
 
-            {section !== 'oversikt' && section !== 'kallor' && section !== 'sandlada' && section !== 'uppdateringar' && section !== 'faq' && section !== 'felsökning' && section !== 'anvandare' && section !== 'support-inbox' && section !== 'handelsesok' && section !== 'rapporter' && section !== 'aktivitetslogg' && section !== 'impersonation' && section !== 'feature-flags' && section !== 'funktionsideer' && (
+            {aktivSektion !== 'oversikt' && aktivSektion !== 'kallor' && aktivSektion !== 'sandlada' && aktivSektion !== 'uppdateringar' && aktivSektion !== 'faq' && aktivSektion !== 'felsökning' && aktivSektion !== 'anvandare' && aktivSektion !== 'support-inbox' && aktivSektion !== 'handelsesok' && aktivSektion !== 'rapporter' && aktivSektion !== 'aktivitetslogg' && aktivSektion !== 'impersonation' && aktivSektion !== 'feature-flags' && aktivSektion !== 'funktionsideer' && (
               <div className="flex flex-col items-center justify-center py-32 text-center">
                 <p className="text-4xl mb-4">🚧</p>
-                <p className="text-lg font-semibold text-slate-700">{SECTION_LABELS[section]}</p>
+                <p className="text-lg font-semibold text-slate-700">{SECTION_LABELS[aktivSektion]}</p>
                 <p className="text-sm text-slate-400 mt-1">Kommer byggas ut i nästa steg.</p>
               </div>
             )}

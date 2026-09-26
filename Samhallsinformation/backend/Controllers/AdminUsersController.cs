@@ -10,9 +10,15 @@ using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
 using Samhallsinformation.Services;
 
+// Användarlistan är skrivskyddad för Support (beslut D1, V3-10): klassen tillåter
+// Admin ELLER Support, och varje action som ändrar något eller läcker
+// admin-arbetsflöden (status, radering, mejl, spärr-notiser) är uttryckligen
+// märkt [Authorize(Roles = Admin)]. [Authorize]-attribut ANDas, så metodattributet
+// smalnar av klassens roller. En ny action här utan eget attribut blir öppen
+// för Support — SupportRollBehorighetTests fäller då bygget.
 [ApiController]
 [Route("api/admin/users")]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = AdminRoller.AdminEllerSupport)]
 public class AdminUsersController : ControllerBase
 {
     private readonly AppDbContext _db;
@@ -78,6 +84,7 @@ public class AdminUsersController : ControllerBase
     }
 
     [HttpPut("{id}/status")]
+    [Authorize(Roles = AdminRoller.Admin)]
     public async Task<IActionResult> SetStatus(Guid id, [FromBody] SetUserStatusRequest req)
     {
         var user = await _db.Users.FindAsync(id);
@@ -134,6 +141,7 @@ public class AdminUsersController : ControllerBase
     // UserDeletionBackgroundService kör igenom DeletionScheduledAt. Fram tills dess
     // kan raderingen ångras via CancelDeletion.
     [HttpDelete("{id}")]
+    [Authorize(Roles = AdminRoller.Admin)]
     public async Task<IActionResult> Delete(Guid id)
     {
         if (id == CurrentUserId)
@@ -177,6 +185,7 @@ public class AdminUsersController : ControllerBase
     // Ångrar en schemalagd (ännu ej verkställd) radering — återaktiverar kontot.
     // Går inte att ångra efter att UserDeletionBackgroundService redan anonymiserat.
     [HttpPost("{id}/cancel-deletion")]
+    [Authorize(Roles = AdminRoller.Admin)]
     public async Task<IActionResult> CancelDeletion(Guid id)
     {
         var user = await _db.Users.FindAsync(id);
@@ -210,6 +219,7 @@ public class AdminUsersController : ControllerBase
     // "Glömt lösenord" (AuthService.RequestPasswordResetAsync) — admin skickar
     // bara länken å användarens vägnar, ingen separat adminspecifik logik.
     [HttpPost("{id}/send-password-reset")]
+    [Authorize(Roles = AdminRoller.Admin)]
     public async Task<IActionResult> SendPasswordReset(Guid id)
     {
         var user = await _db.Users.FindAsync(id);
@@ -226,6 +236,7 @@ public class AdminUsersController : ControllerBase
     // Samma resonemang som ovan — återanvänder självbetjäningens
     // AuthService.ResendVerificationAsync.
     [HttpPost("{id}/resend-verification")]
+    [Authorize(Roles = AdminRoller.Admin)]
     public async Task<IActionResult> ResendVerification(Guid id)
     {
         var user = await _db.Users.FindAsync(id);
@@ -246,6 +257,7 @@ public class AdminUsersController : ControllerBase
     // för ärendepåminnelser. Kontospärrning är inte tilldelad en specifik admin, så alla
     // admins ser samma förfallna påminnelser (till skillnad från ärenden).
     [HttpGet("notifications")]
+    [Authorize(Roles = AdminRoller.Admin)]
     public async Task<IActionResult> GetNotifications()
     {
         var now = DateTime.UtcNow;

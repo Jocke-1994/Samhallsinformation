@@ -163,11 +163,14 @@ public class SupportControllerTests
         Assert.Equal([null, "Nova", "Support"], names);
     }
 
+    // Ändrat avsiktligt i V3-10 (beslut D1): testet låste tidigare fast buggen att Support-inboxen
+    // (Support-rollens startsida) var Admin-only och gav 403 för riktiga Support-konton. Nu ska
+    // klassen tillåta Admin ELLER Support. Hela behörighetsytan bevisas i SupportRollBehorighetTests.
     [Fact]
-    public void AdminSupportController_RequiresAdminRole()
+    public void AdminSupportController_AllowsAdminAndSupportRoles()
     {
         var attr = typeof(AdminSupportController).GetCustomAttribute<AuthorizeAttribute>();
         Assert.NotNull(attr);
-        Assert.Equal("Admin", attr!.Roles);
+        Assert.Equal("Admin,Support", attr!.Roles);
     }
 }

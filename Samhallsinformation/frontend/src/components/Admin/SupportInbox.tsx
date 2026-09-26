@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '../../context/AuthContext'
 import { useAnvandare } from '../../hooks/useAnvandare'
+import { effektivAdminRoll } from '../../lib/adminNavigering'
 import { supportNotiserNyckel } from '../../lib/queryNycklar'
 import {
   fetchAdminTickets, fetchAdminTicket, fetchAgents, fetchSupportNotifications,
@@ -106,6 +108,10 @@ function ArendeModal({
   onÖppnaAnvändare?:   (epost: string) => void
 }) {
   const queryClient = useQueryClient()
+  // Funktionsidéer är Admin-only (AdminFeatureIdeaController) — Support ser inte knappen
+  // (annars 403 vid klick). Allt annat i ärendet är öppet för Support.
+  const { roll, aktivVy } = useAuth()
+  const kanSkapaIdé = effektivAdminRoll(roll, aktivVy) === 'Admin'
   const { data } = useQuery({
     queryKey: ['admin-ticket', ticketId],
     queryFn: () => fetchAdminTicket(ticketId),
@@ -332,7 +338,7 @@ function ArendeModal({
                   Notifieringsinställningar →
                 </button>
               )}
-              {idéSkapad ? (
+              {!kanSkapaIdé ? null : idéSkapad ? (
                 <p className="mt-3 text-xs text-green-600 font-medium">✓ Idé skapad</p>
               ) : (
                 <button
