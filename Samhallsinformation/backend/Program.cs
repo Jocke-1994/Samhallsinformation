@@ -10,6 +10,7 @@ using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Application.Monitoring;
 using Samhallsinformation.Application.RateLimiting;
+using Samhallsinformation.Application.Sources;
 using Samhallsinformation.Application.Support;
 using Samhallsinformation.Data;
 using Samhallsinformation.Infrastructure;
@@ -1285,14 +1286,14 @@ using (var scope = app.Services.CreateScope())
     await db.SaveChangesAsync();
 
     // Seed SMHI Nyheter — RSS-komplement till SmhiApiIngestor (varningar)
-    if (!db.Sources.Any(s => s.Url == "https://www.smhi.se/rss/nyheter-fran-smhi"))
+    if (!db.Sources.Any(s => s.Url == SeededSources.SmhiNyheterUrl))
     {
         db.Sources.Add(new Source
         {
             Name        = "SMHI Nyheter",
             ShortName   = "SMHI",
             BaseUrl     = "https://www.smhi.se",
-            Url         = "https://www.smhi.se/rss/nyheter-fran-smhi",
+            Url         = SeededSources.SmhiNyheterUrl,
             Category    = "Väder",
             Type        = SourceType.RSS,
             IsActive    = true,
@@ -1306,14 +1307,14 @@ using (var scope = app.Services.CreateScope())
     // filtrerat delmängd av händelseflödet. Samma ShortName ("Polisen") grupperar
     // den under samma sidebar-knapp (multi-feed-mönstret från session 15).
     // IsPublished=false tills flödet är verifierat att faktiskt leverera data.
-    if (!db.Sources.Any(s => s.Url == "https://polisen.se/aktuellt/rss/hela-landet/hjalp-polisen-rss/"))
+    if (!db.Sources.Any(s => s.Url == SeededSources.PolisenEfterlysningarUrl))
     {
         db.Sources.Add(new Source
         {
             Name        = "Polisen Efterlysningar",
             ShortName   = "Polisen",
             BaseUrl     = "https://polisen.se",
-            Url         = "https://polisen.se/aktuellt/rss/hela-landet/hjalp-polisen-rss/",
+            Url         = SeededSources.PolisenEfterlysningarUrl,
             Category    = "Nationell",
             Type        = SourceType.RSS,
             IsActive    = true,

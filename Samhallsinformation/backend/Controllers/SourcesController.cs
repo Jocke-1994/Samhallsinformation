@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Sources;
 using Samhallsinformation.Data;
 using Samhallsinformation.Ingestors;
 using Samhallsinformation.Models;
@@ -172,12 +173,18 @@ public class SourcesController : ControllerBase
         var source = await _db.Sources.FindAsync(id);
         if (source == null) return NotFound();
 
+        // Seedade/dedikerade källor återskapas av Program.cs vid varje start — radering vore inte varaktig
+        // (och den återskapade dedikerade källan blir IsPublished=true med alla gamla händelser synliga).
+        if (SeededSources.IsSeeded(source, _dedicatedIngestors))
+            return BadRequest(new { error = "Dedikerade källor kan inaktiveras men inte raderas — sätt dem som inaktiva i stället." });
+
         var namn = source.Name;
-        _db.Sources.Remove(source);
-        await _db.SaveChangesAsync();
+        var r = await SourceDeletion.DeleteAsync(_db, id);
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Konfiguration,
-            $"Källa borttagen — {namn}", $"Id {id}");
+            $"Källa borttagen — {namn}",
+            $"Id {id}. Borttaget: {r.Events} händelser, {r.Subscriptions} prenumerationer, " +
+            $"{r.SavedEvents} sparade händelser, {r.ShareLogs} delningsloggar, {r.RunLogs} körloggar");
         return NoContent();
     }
 }
