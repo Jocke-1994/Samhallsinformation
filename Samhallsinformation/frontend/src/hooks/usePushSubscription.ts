@@ -53,9 +53,11 @@ export function usePushSubscription() {
   const unsubscribe = useCallback(async () => {
     if (!subscription) return
     const endpoint = subscription.endpoint
+    // Webbläsarens prenumeration är borta efter första steget oavsett hur
+    // serveranropet går, så lokalt läge uppdateras innan det kan kasta.
     await subscription.unsubscribe()
-    await unsubscribeDevice(endpoint)
     setSubscription(null)
+    await unsubscribeDevice(endpoint)
   }, [subscription])
 
   return {
