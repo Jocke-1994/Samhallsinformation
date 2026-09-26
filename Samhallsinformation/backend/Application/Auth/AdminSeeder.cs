@@ -12,14 +12,27 @@ using Samhallsinformation.Models;
 /// </summary>
 public static class AdminSeeder
 {
-    public static async Task<bool> EnsureAdminAsync(AppDbContext db, string? email, string? password, string name)
+    public static async Task<bool> EnsureAdminAsync(
+        AppDbContext db, string? email, string? password, string name, ILogger? logger = null)
     {
         var normalized = EmailNormalizer.Normalize(email);
         if (string.IsNullOrEmpty(normalized) || string.IsNullOrEmpty(password))
             return false;
 
-        if (await db.Users.AnyAsync(u => u.Email.ToLower() == normalized))
+        var existingRole = await db.Users
+            .Where(u => u.Email.ToLower() == normalized)
+            .Select(u => u.Role)
+            .FirstOrDefaultAsync();
+        if (existingRole != null)
+        {
+            // V4-1a (E2#8): kontot finns redan (t.ex. registrerat före första start i en ny miljö). Rollen ändras
+            // ALDRIG automatiskt — men tyst är fel: då fungerar inloggningen som vanlig användare utan att någon ser varför.
+            if (existingRole != "Admin")
+                logger?.LogWarning(
+                    "ADMIN_EMAIL pekar på ett konto utan Admin-roll (rollen är \"{Role}\") — ingen admin skapad/uppgraderad. " +
+                    "Ändra rollen manuellt om kontot ska vara admin.", existingRole);
             return false;
+        }
 
         var admin = new User
         {

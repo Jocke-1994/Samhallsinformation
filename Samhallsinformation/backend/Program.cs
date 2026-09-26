@@ -1527,7 +1527,8 @@ using (var scope = app.Services.CreateScope())
         db,
         Environment.GetEnvironmentVariable("ADMIN_EMAIL"),
         Environment.GetEnvironmentVariable("ADMIN_PASSWORD"),
-        Environment.GetEnvironmentVariable("ADMIN_NAME") ?? "Joakim Rehn");
+        Environment.GetEnvironmentVariable("ADMIN_NAME") ?? "Joakim Rehn",
+        scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("AdminSeeder"));
 }
 
 app.MapControllers();
