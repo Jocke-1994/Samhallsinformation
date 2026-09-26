@@ -9,12 +9,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 using Samhallsinformation.Services;
 
 // Tar emot Resends inbound-webhook (event "email.received") — antingen ett
-// svar på ett ärendesvar-mejl (svar+{ticketNumber}@samhallsinformation.se, se
+// svar på ett ärendesvar-mejl (svar+{ticketNumber}-{token}@samhallsinformation.se, se TicketReplyAddress och
 // ResendEmailService.SendTicketReplyAsync) eller ett helt nytt mejl till
 // info@samhallsinformation.se, som öppnar ett nytt ärende. Resends inbound-
 // mottagning är kopplad på hela domänen (MX-nivå) — info@ landar redan här
@@ -32,8 +33,11 @@ using Samhallsinformation.Services;
 [AllowAnonymous]
 public class WebhooksController : ControllerBase
 {
-    private static readonly Regex TicketAdressMönster = new(@"^svar\+(\d+)@", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    // svar+{ticketnummer}@ (äldre adresser, redan utskickade) eller svar+{ticketnummer}-{token}@ (E1#10).
+    // Grupp 2 är bara "lyckad" när ett bindestreck fanns — då måste token vara giltig, även om den är tom eller skräp.
+    private static readonly Regex TicketAdressMönster = new(@"^svar\+(\d+)(?:-([^@]*))?@", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private const string InfoAdress = "info@samhallsinformation.se";
+    private const string OverifieratPrefix = "Ej verifierat mejl";
 
     // Högst 9 siffror i ärendenumret — alltid inom int-intervallet (int.MaxValue har 10).
     private const int MaxTicketSiffror = 9;
@@ -54,15 +58,17 @@ public class WebhooksController : ControllerBase
     private readonly IConfiguration _config;
     private readonly IAktivitetsloggService _aktivitetslogg;
     private readonly IPushNotificationService _push;
+    private readonly TicketReplyAddress _replyAddress;
     private readonly ILogger<WebhooksController> _logger;
 
-    public WebhooksController(AppDbContext db, IEmailService email, IConfiguration config, IAktivitetsloggService aktivitetslogg, IPushNotificationService push, ILogger<WebhooksController> logger)
+    public WebhooksController(AppDbContext db, IEmailService email, IConfiguration config, IAktivitetsloggService aktivitetslogg, IPushNotificationService push, TicketReplyAddress replyAddress, ILogger<WebhooksController> logger)
     {
         _db = db;
         _email = email;
         _config = config;
         _aktivitetslogg = aktivitetslogg;
         _push = push;
+        _replyAddress = replyAddress;
         _logger = logger;
     }
 
@@ -95,7 +101,8 @@ public class WebhooksController : ControllerBase
         var ticketAdress = toAdresser.FirstOrDefault(a => TicketAdressMönster.IsMatch(a));
         if (ticketAdress != null)
         {
-            var siffror = TicketAdressMönster.Match(ticketAdress).Groups[1].Value;
+            var träff = TicketAdressMönster.Match(ticketAdress);
+            var siffror = träff.Groups[1].Value;
             if (siffror.Length > MaxTicketSiffror || !int.TryParse(siffror, out var ticketNumber))
             {
                 _logger.LogWarning(
@@ -103,6 +110,35 @@ public class WebhooksController : ControllerBase
                     emailId);
                 return Ok();
             }
+
+            // Icke-gissningsbar komponent (E1#10): en adress MED token måste ha en giltig sådan. Kontrollen är ren
+            // beräkning — ogiltiga försök avvisas innan något slås upp i databasen eller hämtas från Resend.
+            // Adresser utan token är mejl som redan skickats innan token infördes och tillåts tills vidare
+            // (de skyddas då bara av avsändarmatchningen och SPF/DKIM-kontrollen nedan) men flaggas i loggen.
+            var harToken = träff.Groups[2].Success;
+            if (harToken && !_replyAddress.IsValid(ticketNumber, träff.Groups[2].Value))
+            {
+                _logger.LogWarning(
+                    "Resend-webhook: ogiltig token i svarsadressen för ärende {TicketNumber}, email_id {EmailId} — avvisat.",
+                    ticketNumber, emailId);
+                return Ok();
+            }
+            if (!harToken)
+            {
+                // SUPPORT_REPLY_ACCEPT_LEGACY=false stänger äldre adresser när de utskickade mejlen "gått ut" —
+                // först då ger token ett faktiskt skydd (annars kan en angripare bara utelämna den).
+                if (string.Equals(_config["SUPPORT_REPLY_ACCEPT_LEGACY"], "false", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(
+                        "Resend-webhook: svarsadress utan token för ärende {TicketNumber} (email_id {EmailId}) — äldre adresser är avstängda, avvisat.",
+                        ticketNumber, emailId);
+                    return Ok();
+                }
+                _logger.LogWarning(
+                    "Resend-webhook: svar på ärende {TicketNumber} kom till en äldre svarsadress utan token (email_id {EmailId}) — ej token-verifierad.",
+                    ticketNumber, emailId);
+            }
+
             await HanteraSvarPåBefintligtÄrendeAsync(emailId, fromRaw, ticketNumber);
             return Ok();
         }
@@ -175,10 +211,11 @@ public class WebhooksController : ControllerBase
             .FirstOrDefaultAsync(t => t.TicketNumber == ticketNumber);
         if (ticket == null) return;
 
-        // Spoofing-skydd: bara den redan registrerade kontaktadressen för
-        // ärendet får lägga till meddelanden via mejl.
-        var kändEpost = ticket.ContactEmail ?? ticket.CreatedByUser?.Email;
-        if (string.IsNullOrEmpty(kändEpost) || !string.Equals(kändEpost, fromEpost, StringComparison.OrdinalIgnoreCase))
+        // Spoofing-skydd, steg 1: bara den redan registrerade kontaktadressen för
+        // ärendet får lägga till meddelanden via mejl. Jämförs normaliserat (skiftlägesokänsligt).
+        // Enbart detta räcker inte — From-headern kan förfalskas — därför steg 2 nedan.
+        var kändEpost = EmailNormalizer.Normalize(ticket.ContactEmail ?? ticket.CreatedByUser?.Email);
+        if (kändEpost.Length == 0 || kändEpost != EmailNormalizer.Normalize(fromEpost))
         {
             _logger.LogWarning(
                 "Resend-webhook: avsändare {From} matchar inte ärende {TicketNumber}s registrerade adress — avvisat.",
@@ -186,12 +223,22 @@ public class WebhooksController : ControllerBase
             return;
         }
 
-        var text = await _email.GetReceivedEmailTextAsync(emailId);
-        if (string.IsNullOrWhiteSpace(text))
+        var mejl = await _email.GetReceivedEmailAsync(emailId);
+        if (mejl == null || string.IsNullOrWhiteSpace(mejl.Text))
         {
             _logger.LogWarning(
                 "Resend-webhook: inget text/html-innehåll kunde hämtas för email_id {EmailId}, ärende {TicketNumber} — inget svar sparat.",
                 emailId, ticketNumber);
+            return;
+        }
+        var text = mejl.Text;
+
+        // Spoofing-skydd, steg 2 (E1#10): avsändarens From-domän måste ha klarat DMARC eller DKIM hos Resends
+        // mottagande server. Annars läggs mejlet INTE in som kundens meddelande (ingen push, ingen oläst-markering,
+        // ärendets status/tidsstämplar rörs inte) utan som en tydligt märkt intern anteckning som support kan bedöma.
+        if (mejl.Authentication?.IsSenderVerified != true)
+        {
+            await SparaOverifieratMejlSomInternAnteckningAsync(ticket, emailId, fromEpost, text, mejl.Authentication);
             return;
         }
 
@@ -257,6 +304,46 @@ public class WebhooksController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Kunde inte skicka push för inbound-svar på ärende {TicketNumber}", ticket.TicketNumber);
+        }
+    }
+
+    // Ett svar vars avsändare Resend inte kunde autentisera (E1#10) sparas som en intern anteckning
+    // (osynlig för kunden) i stället för som kundens meddelande. Ingen push, inget LastUserMessageAt/UpdatedAt —
+    // en angripare ska inte kunna väcka support eller flytta ärendet. Högst en sådan anteckning per ärende och
+    // timme (samma fönster som dubblettskyddet), så förfalskade mejl inte kan fylla tråden med skräp.
+    private async Task SparaOverifieratMejlSomInternAnteckningAsync(
+        SupportTicket ticket, string emailId, string fromEpost, string text, ReceivedEmailAuthentication? auth)
+    {
+        var utfall = auth?.ToString() ?? "utfall saknas";
+        _logger.LogWarning(
+            "Resend-webhook: avsändaren {From} för ärende {TicketNumber} kunde inte autentiseras ({Utfall}), email_id {EmailId} — sparas inte som kundsvar.",
+            fromEpost, ticket.TicketNumber, utfall, emailId);
+
+        var förhandsvisning = KlippBortCiterat(text);
+        if (förhandsvisning.Length > 500) förhandsvisning = förhandsvisning[..500] + "…";
+
+        await _bearbetningsLås.WaitAsync();
+        try
+        {
+            var gräns = DateTime.UtcNow - DubblettFönster;
+            var redanFlaggat = await _db.SupportTicketMessages.AnyAsync(m =>
+                m.TicketId == ticket.Id && m.IsInternal && m.Text.StartsWith(OverifieratPrefix) && m.CreatedAt >= gräns);
+            if (redanFlaggat) return;
+
+            _db.SupportTicketMessages.Add(new SupportTicketMessage
+            {
+                TicketId   = ticket.Id,
+                SenderType = "agent",
+                IsInternal = true,
+                Text       = $"{OverifieratPrefix} — avsändaren ({fromEpost}) kunde inte autentiseras (SPF/DKIM/DMARC: {utfall}). " +
+                             $"Mejlet har INTE lagts in som kundens svar och ingen notis har skickats. Bedöm avsändaren innan du agerar. " +
+                             $"[email_id {emailId}] Innehåll (klippt): {förhandsvisning}",
+            });
+            await _db.SaveChangesAsync();
+        }
+        finally
+        {
+            _bearbetningsLås.Release();
         }
     }
 

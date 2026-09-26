@@ -9,21 +9,23 @@ public class ResendEmailService : IEmailService
 {
     private readonly HttpClient _http;
     private readonly ILogger<ResendEmailService> _logger;
+    private readonly TicketReplyAddress _replyAddress;
     private readonly string _fromNoreply = "noreply@samhallsinformation.se";
     private readonly string _fromSupport = "support@samhallsinformation.se";
 
-    public ResendEmailService(IConfiguration config, ILogger<ResendEmailService> logger)
-        : this(CreateClient(config), logger)
+    public ResendEmailService(IConfiguration config, TicketReplyAddress replyAddress, ILogger<ResendEmailService> logger)
+        : this(CreateClient(config), logger, replyAddress)
     {
     }
 
     // Test-seam: låter tester injicera en HttpClient med en fejkad handler
     // för att fånga den utgående mejlkroppen. Internal så DI:n bara ser den
     // publika konstruktorn.
-    internal ResendEmailService(HttpClient http, ILogger<ResendEmailService> logger)
+    internal ResendEmailService(HttpClient http, ILogger<ResendEmailService> logger, TicketReplyAddress replyAddress)
     {
         _http = http;
         _logger = logger;
+        _replyAddress = replyAddress;
     }
 
     private static HttpClient CreateClient(IConfiguration config)
@@ -150,7 +152,7 @@ public class ResendEmailService : IEmailService
 
     public async Task SendTicketReplyAsync(string toEmail, int ticketNumber, string subject, string replyText, string? fromAddress = null)
     {
-        var replyTo = $"svar+{ticketNumber}@samhallsinformation.se";
+        var replyTo = _replyAddress.Build(ticketNumber);
         var html = $"""
             <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
               <h2 style="color:#7c3aed;margin-bottom:8px">Svar på ditt ärende — {EmailHtml.EncodeSingleLine(subject)}</h2>
@@ -206,9 +208,12 @@ public class ResendEmailService : IEmailService
         await SendAsync(_fromNoreply, toEmail, subject, html);
     }
 
-    public async Task<string?> GetReceivedEmailTextAsync(string emailId)
+    public async Task<string?> GetReceivedEmailTextAsync(string emailId) =>
+        (await GetReceivedEmailAsync(emailId))?.Text;
+
+    public async Task<ReceivedEmail?> GetReceivedEmailAsync(string emailId)
     {
-        var res = await _http.GetAsync($"/emails/receiving/{emailId}");
+        var res = await _http.GetAsync($"/emails/receiving/{Uri.EscapeDataString(emailId)}");
         var body = await res.Content.ReadAsStringAsync();
         if (!res.IsSuccessStatusCode)
         {
@@ -219,21 +224,35 @@ public class ResendEmailService : IEmailService
         }
 
         using var doc = JsonDocument.Parse(body);
-        var text = doc.RootElement.TryGetProperty("text", out var textEl) ? textEl.GetString() : null;
-        if (!string.IsNullOrWhiteSpace(text)) return text;
+        var root = doc.RootElement;
+        var authentication = ParseraAutentisering(root);
+
+        var text = HämtaSträng(root, "text");
+        if (!string.IsNullOrWhiteSpace(text)) return new ReceivedEmail(text, authentication);
 
         // Resends "text"-fält är null om mejlet saknar en text/plain-del —
         // vanligt för svar skickade från Outlook/Hotmails webbklient (bara
         // HTML). Faller tillbaka på html-fältet istället för att tyst tappa
         // svaret helt.
-        var html = doc.RootElement.TryGetProperty("html", out var htmlEl) ? htmlEl.GetString() : null;
-        if (!string.IsNullOrWhiteSpace(html)) return HtmlTillText(html);
+        var html = HämtaSträng(root, "html");
+        if (!string.IsNullOrWhiteSpace(html)) return new ReceivedEmail(HtmlTillText(html), authentication);
 
         _logger.LogWarning(
             "Resend: GET /emails/receiving/{EmailId} gav 200 men både text och html var tomma — {Body}",
             emailId, body.Length > 300 ? body[..300] : body);
-        return null;
+        return new ReceivedEmail(null, authentication);
     }
+
+    // "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" } — eller null/saknas (äldre mejl).
+    // Okända former behandlas som "ingen autentisering" (fail-closed hos anroparen), aldrig som ett fel.
+    private static ReceivedEmailAuthentication? ParseraAutentisering(JsonElement root)
+    {
+        if (!root.TryGetProperty("authentication", out var auth) || auth.ValueKind != JsonValueKind.Object) return null;
+        return new ReceivedEmailAuthentication(HämtaSträng(auth, "spf"), HämtaSträng(auth, "dkim"), HämtaSträng(auth, "dmarc"));
+    }
+
+    private static string? HämtaSträng(JsonElement obj, string namn) =>
+        obj.TryGetProperty(namn, out var el) && el.ValueKind == JsonValueKind.String ? el.GetString() : null;
 
     private static string HtmlTillText(string html)
     {

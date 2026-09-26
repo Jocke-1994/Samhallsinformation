@@ -33,7 +33,7 @@ public class AdminAlertEmailTests
     {
         var handler = new CapturingHandler();
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://api.resend.com") };
-        return (new ResendEmailService(http, NullLogger<ResendEmailService>.Instance), handler);
+        return (new ResendEmailService(http, NullLogger<ResendEmailService>.Instance, new TicketReplyAddress("test-secret-0123456789")), handler);
     }
 
     [Fact]

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Samhallsinformation.Application.Aktivitetslogg;
@@ -25,6 +26,13 @@ public class WebhooksControllerTests
     private static readonly byte[] SecretBytes = Encoding.UTF8.GetBytes("test-webhook-secret-bytes-0123456789");
     private static readonly string Secret = "whsec_" + Convert.ToBase64String(SecretBytes);
 
+    private static readonly TicketReplyAddress ReplyAddress = new("test-jwt-secret-for-reply-token-0123456789");
+    private static readonly ReceivedEmailAuthentication Verifierad = new("pass", "pass", "pass");
+
+    // Ett svar på ett ärende hämtas via GetReceivedEmailAsync (text + SPF/DKIM/DMARC). Default: verifierad avsändare.
+    private static void Verifierat(Harness h, string emailId, string text, ReceivedEmailAuthentication? auth = null) =>
+        h.Email.GetReceivedEmailAsync(emailId).Returns(new ReceivedEmail(text, auth ?? Verifierad));
+
     private sealed class Harness
     {
         public required AppDbContext Db { get; init; }
@@ -34,10 +42,11 @@ public class WebhooksControllerTests
         public required IConfiguration Config { get; init; }
     }
 
-    private static Harness NewHarness(AppDbContext db, string? secret = null, bool withSecret = true)
+    private static Harness NewHarness(AppDbContext db, string? secret = null, bool withSecret = true, bool acceptLegacy = true)
     {
         var values = new Dictionary<string, string?>();
         if (withSecret) values["RESEND_WEBHOOK_SECRET"] = secret ?? Secret;
+        if (!acceptLegacy) values["SUPPORT_REPLY_ACCEPT_LEGACY"] = "false";
         return new Harness
         {
             Db = db,
@@ -50,7 +59,7 @@ public class WebhooksControllerTests
 
     // Skapar en ny controller-instans med en färsk HttpContext för ett enskilt anrop.
     private static WebhooksController NewController(Harness h, string body, string svixId = "msg_1",
-        long? timestamp = null, string? signatureOverride = null, bool includeHeaders = true)
+        long? timestamp = null, string? signatureOverride = null, bool includeHeaders = true, ILogger<WebhooksController>? logger = null)
     {
         var ts = (timestamp ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds()).ToString();
         var ctx = new DefaultHttpContext();
@@ -61,7 +70,7 @@ public class WebhooksControllerTests
             ctx.Request.Headers["svix-timestamp"] = ts;
             ctx.Request.Headers["svix-signature"] = signatureOverride ?? "v1," + Sign(svixId, ts, body);
         }
-        return new WebhooksController(h.Db, h.Email, h.Config, h.Aktivitetslogg, h.Push, NullLogger<WebhooksController>.Instance)
+        return new WebhooksController(h.Db, h.Email, h.Config, h.Aktivitetslogg, h.Push, ReplyAddress, logger ?? NullLogger<WebhooksController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = ctx },
         };
@@ -181,6 +190,7 @@ public class WebhooksControllerTests
         Assert.Empty(db.SupportTicketMessages);
         Assert.Single(db.SupportTickets);
         await h.Email.DidNotReceiveWithAnyArgs().GetReceivedEmailTextAsync(default!);
+        await h.Email.DidNotReceiveWithAnyArgs().GetReceivedEmailAsync(default!);
     }
 
     [Fact]
@@ -219,6 +229,7 @@ public class WebhooksControllerTests
         using var db = TestDb.Create();
         var h = NewHarness(db);
         h.Email.GetReceivedEmailTextAsync(Arg.Any<string>()).Returns("Hej, ett svar");
+        h.Email.GetReceivedEmailAsync(Arg.Any<string>()).Returns(new ReceivedEmail("Hej, ett svar", Verifierad));
 
         var result = await NewController(h, body).ResendInbound();
 
@@ -268,7 +279,7 @@ public class WebhooksControllerTests
         using var db = TestDb.Create();
         var h = NewHarness(db);
         var ticket = AddTicket(db, 12, "kund@example.com");
-        h.Email.GetReceivedEmailTextAsync("em_1").Returns("Tack för svaret\n> citat");
+        Verifierat(h, "em_1", "Tack för svaret\n> citat");
         var body = Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]);
 
         var result = await NewController(h, body).ResendInbound();
@@ -285,7 +296,7 @@ public class WebhooksControllerTests
         using var db = TestDb.Create();
         var h = NewHarness(db);
         AddTicket(db, 12, "kund@example.com");
-        h.Email.GetReceivedEmailTextAsync("em_1").Returns("Jag låtsas vara kunden");
+        Verifierat(h, "em_1", "Jag låtsas vara kunden");
         var body = Payload("em_1", "angripare@example.com", ["svar+12@samhallsinformation.se"]);
 
         var result = await NewController(h, body).ResendInbound();
@@ -320,7 +331,7 @@ public class WebhooksControllerTests
         using var db = TestDb.Create();
         var h = NewHarness(db);
         AddTicket(db, 12, "kund@example.com");
-        h.Email.GetReceivedEmailTextAsync("em_1").Returns("Tack för svaret");
+        Verifierat(h, "em_1", "Tack för svaret");
         var body = Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]);
 
         await NewController(h, body, svixId: "msg_1").ResendInbound();
@@ -346,7 +357,7 @@ public class WebhooksControllerTests
             CreatedAt = DateTime.UtcNow.AddHours(-5),
         });
         db.SaveChanges();
-        h.Email.GetReceivedEmailTextAsync("em_2").Returns("Tack!");
+        Verifierat(h, "em_2", "Tack!");
         var body = Payload("em_2", "kund@example.com", ["svar+12@samhallsinformation.se"]);
 
         await NewController(h, body, svixId: "msg_2").ResendInbound();
@@ -360,8 +371,8 @@ public class WebhooksControllerTests
         using var db = TestDb.Create();
         var h = NewHarness(db);
         AddTicket(db, 12, "kund@example.com");
-        h.Email.GetReceivedEmailTextAsync("em_1").Returns("Första svaret");
-        h.Email.GetReceivedEmailTextAsync("em_2").Returns("Andra svaret");
+        Verifierat(h, "em_1", "Första svaret");
+        Verifierat(h, "em_2", "Andra svaret");
 
         await NewController(h, Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]), svixId: "msg_1").ResendInbound();
         await NewController(h, Payload("em_2", "kund@example.com", ["svar+12@samhallsinformation.se"]), svixId: "msg_2").ResendInbound();
@@ -377,7 +388,7 @@ public class WebhooksControllerTests
         using var db = TestDb.Create();
         var h = NewHarness(db);
         AddTicket(db, 12, "kund@example.com");
-        h.Email.GetReceivedEmailTextAsync("em_1").Returns("Tack för svaret");
+        Verifierat(h, "em_1", "Tack för svaret");
         h.Aktivitetslogg
             .LogAsync(default!, default!, default!, default!, default, default, default, default)
             .ReturnsForAnyArgs<Task>(_ => throw new InvalidOperationException("loggen nere"));
@@ -387,5 +398,362 @@ public class WebhooksControllerTests
 
         Assert.IsType<OkResult>(result);
         Assert.Single(db.SupportTicketMessages);
+    }
+
+    // ---- E1#10 / V3-16: avsändarautentisering (SPF/DKIM/DMARC från Resend) ----
+
+    private static string TokenAdress(int ticket) => ReplyAddress.Build(ticket);
+
+    [Fact]
+    public async Task Svar_ForfalskadAvsandare_UtanAutentisering_LaggsInteInSomKundsvar()
+    {
+        // Angriparen känner ärendenumret (svar+12@) och kundens adress och skriver den som From.
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        var ticket = AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Jag är kunden, skicka pengar", new ReceivedEmailAuthentication("fail", "fail", "fail"));
+        var body = Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]);
+
+        var result = await NewController(h, body).ResendInbound();
+
+        Assert.IsType<OkResult>(result);
+        Assert.DoesNotContain(db.SupportTicketMessages, m => m.SenderType == "user");
+        var uppdaterad = db.SupportTickets.Single(t => t.Id == ticket.Id);
+        Assert.Null(uppdaterad.LastUserMessageAt);   // ingen "oläst" hos support
+        Assert.Empty(h.Aktivitetslogg.ReceivedCalls());
+        Assert.Empty(h.Push.ReceivedCalls());
+    }
+
+    [Fact]
+    public async Task Svar_ForfalskadAvsandare_SparasSomFlaggadInternAnteckning()
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        var ticket = AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_forged", "Falskt innehåll", new ReceivedEmailAuthentication("fail", "gray", "fail"));
+        var body = Payload("em_forged", "kund@example.com", ["svar+12@samhallsinformation.se"]);
+
+        await NewController(h, body).ResendInbound();
+
+        var note = Assert.Single(db.SupportTicketMessages);
+        Assert.Equal(ticket.Id, note.TicketId);
+        Assert.True(note.IsInternal);                    // syns aldrig för kunden
+        Assert.NotEqual("user", note.SenderType);
+        Assert.StartsWith("Ej verifierat mejl", note.Text);
+        Assert.Contains("kunde inte autentiseras", note.Text);
+        Assert.Contains("em_forged", note.Text);
+        Assert.Contains("spf=fail", note.Text);
+        Assert.Contains("Falskt innehåll", note.Text);
+    }
+
+    [Fact]
+    public async Task Svar_AutentiseringSaknasHelt_BehandlasSomOverifierat()
+    {
+        // "authentication": null (äldre mejl) eller fältet saknas -> fail-closed.
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        h.Email.GetReceivedEmailAsync("em_1").Returns(new ReceivedEmail("Hej", null));
+        var body = Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]);
+
+        await NewController(h, body).ResendInbound();
+
+        Assert.DoesNotContain(db.SupportTicketMessages, m => m.SenderType == "user");
+        Assert.Single(db.SupportTicketMessages, m => m.IsInternal);
+    }
+
+    [Theory]
+    [InlineData("pass", "gray", "gray")]               // enbart SPF: envelope-from kan vara angriparens egen domän
+    [InlineData("pass", "fail", "fail")]
+    [InlineData("gray", "gray", "gray")]               // osignerat, ingen DMARC-policy
+    [InlineData("unknown", "unknown", "unknown")]
+    [InlineData("processing_failed", "processing_failed", "processing_failed")]
+    [InlineData(null, null, null)]
+    public async Task Svar_OtillrackligtAutentiseringsutfall_LaggsInteInSomKundsvar(string? spf, string? dkim, string? dmarc)
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Hej", new ReceivedEmailAuthentication(spf, dkim, dmarc));
+        var body = Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]);
+
+        await NewController(h, body).ResendInbound();
+
+        Assert.DoesNotContain(db.SupportTicketMessages, m => m.SenderType == "user");
+    }
+
+    [Theory]
+    [InlineData("pass", "pass", "pass")]
+    [InlineData("pass", "gray", "pass")]               // DMARC pass räcker
+    [InlineData("gray", "pass", "gray")]               // Gmail: DKIM pass i linje med From, DMARC gray (p=none)
+    [InlineData("fail", "pass", "gray")]
+    [InlineData("gray", "gray", "PASS")]               // skiftlägesokänsligt
+    public async Task Svar_KorrektAvsandareMedGiltigtUtfall_LaggsInSomKundsvar(string spf, string dkim, string dmarc)
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        var ticket = AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Tack för svaret", new ReceivedEmailAuthentication(spf, dkim, dmarc));
+        var body = Payload("em_1", "kund@example.com", [TokenAdress(12)]);
+
+        await NewController(h, body).ResendInbound();
+
+        var message = Assert.Single(db.SupportTicketMessages);
+        Assert.Equal("user", message.SenderType);
+        Assert.False(message.IsInternal);
+        Assert.Equal("Tack för svaret", message.Text);
+        Assert.NotNull(db.SupportTickets.Single(t => t.Id == ticket.Id).LastUserMessageAt);
+    }
+
+    [Fact]
+    public async Task Svar_OverifieradeMejlFlaggasHogstEnGangPerTimmePerArende()
+    {
+        // Förfalskade mejl får inte fylla tråden med skräp.
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        var ingen = new ReceivedEmailAuthentication("fail", "fail", "fail");
+        Verifierat(h, "em_1", "Skräp 1", ingen);
+        Verifierat(h, "em_2", "Skräp 2", ingen);
+
+        await NewController(h, Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]), svixId: "msg_1").ResendInbound();
+        await NewController(h, Payload("em_2", "kund@example.com", ["svar+12@samhallsinformation.se"]), svixId: "msg_2").ResendInbound();
+
+        Assert.Single(db.SupportTicketMessages);
+    }
+
+    [Fact]
+    public async Task Svar_MejlKanInteHamtas_SparasIngenting()
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        h.Email.GetReceivedEmailAsync("em_1").Returns((ReceivedEmail?)null);
+        var body = Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]);
+
+        var result = await NewController(h, body).ResendInbound();
+
+        Assert.IsType<OkResult>(result);
+        Assert.Empty(db.SupportTicketMessages);
+    }
+
+    // ---- Avsändarmatchning (a) ----
+
+    [Theory]
+    [InlineData("Kund@Example.COM", "kund@example.com")]        // From med versaler mot lagrad gemen adress
+    [InlineData("kund@example.com", "Kund@Example.com")]        // lagrad adress med versaler (äldre rader)
+    [InlineData("Kund Kundsson <kund@example.com>", "kund@example.com")]
+    public async Task Svar_AvsandarmatchningArSkiftlagesokanslig(string from, string lagrad)
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, lagrad);
+        Verifierat(h, "em_1", "Tack");
+        var body = Payload("em_1", from, [TokenAdress(12)]);
+
+        await NewController(h, body).ResendInbound();
+
+        Assert.Single(db.SupportTicketMessages, m => m.SenderType == "user");
+    }
+
+    [Fact]
+    public async Task Svar_AnnanAvsandare_AvvisasAvenMedGiltigTokenOchAutentisering()
+    {
+        // Ett vidarebefordrat mejl med token, skickat från en annan (äkta) adress, ska inte kunna skriva i ärendet.
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Hej");
+        var body = Payload("em_1", "annan@example.com", [TokenAdress(12)]);
+
+        await NewController(h, body).ResendInbound();
+
+        Assert.Empty(db.SupportTicketMessages);
+        await h.Email.DidNotReceiveWithAnyArgs().GetReceivedEmailAsync(default!);
+    }
+
+    // ---- Icke-gissningsbar ärendereferens (b) ----
+
+    [Fact]
+    public async Task Svar_GiltigToken_LaggsIn()
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Tack");
+        var body = Payload("em_1", "kund@example.com", [TokenAdress(12)]);
+
+        await NewController(h, body).ResendInbound();
+
+        Assert.Single(db.SupportTicketMessages, m => m.SenderType == "user");
+    }
+
+    [Fact]
+    public async Task Svar_GiltigTokenIVersaler_LaggsIn()
+    {
+        // En mejlserver kan ändra skiftläge på adressen.
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Tack");
+        var versaler = $"svar+12-{ReplyAddress.ComputeToken(12).ToUpperInvariant()}@samhallsinformation.se";
+        var body = Payload("em_1", "kund@example.com", [versaler]);
+
+        await NewController(h, body).ResendInbound();
+
+        Assert.Single(db.SupportTicketMessages, m => m.SenderType == "user");
+    }
+
+    [Theory]
+    [InlineData("svar+12-00000000@samhallsinformation.se")]   // fel token
+    [InlineData("svar+12-@samhallsinformation.se")]           // tom token
+    [InlineData("svar+12-abc@samhallsinformation.se")]        // för kort
+    [InlineData("svar+12-zzzzzzzz@samhallsinformation.se")]   // inte hex
+    [InlineData("svar+12--@samhallsinformation.se")]
+    public async Task Svar_FelToken_AvvisasUtanAttHamtaMejlEllerSlaUppArendet(string adress)
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Hej");
+        var body = Payload("em_1", "kund@example.com", [adress]);
+
+        var result = await NewController(h, body).ResendInbound();
+
+        Assert.IsType<OkResult>(result);
+        Assert.Empty(db.SupportTicketMessages);          // varken kundsvar eller flaggad anteckning
+        await h.Email.DidNotReceiveWithAnyArgs().GetReceivedEmailAsync(default!);
+    }
+
+    [Fact]
+    public async Task Svar_TokenFranAnnatArende_AvvisasDaTokenBaraGallerSittEttArendenummer()
+    {
+        // Icke gissningsbart: token för ärende 12 fungerar inte på ärende 13.
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        AddTicket(db, 13, "kund@example.com");
+        Verifierat(h, "em_1", "Hej");
+        var token12 = ReplyAddress.ComputeToken(12);
+        var body = Payload("em_1", "kund@example.com", [$"svar+13-{token12}@samhallsinformation.se"]);
+
+        await NewController(h, body).ResendInbound();
+
+        Assert.Empty(db.SupportTicketMessages);
+    }
+
+    [Fact]
+    public async Task Svar_TokenFranAnnanHemlighet_Avvisas()
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Hej");
+        var annanHemlighet = new TicketReplyAddress("en-helt-annan-hemlighet-0123456789abc");
+        var body = Payload("em_1", "kund@example.com", [annanHemlighet.Build(12)]);
+
+        await NewController(h, body).ResendInbound();
+
+        Assert.Empty(db.SupportTicketMessages);
+    }
+
+    // ---- Bakåtkompatibilitet: äldre adresser utan token ----
+
+    private sealed class LogCapture : ILogger<WebhooksController>
+    {
+        public List<(LogLevel Level, string Message)> Entries { get; } = new();
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Entries.Add((logLevel, formatter(state, exception)));
+    }
+
+    [Fact]
+    public async Task Svar_AldreAdressUtanToken_FungerarMenLoggasSomEjTokenVerifierad()
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Tack för svaret");
+        var body = Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]);
+        var logg = new LogCapture();
+
+        await NewController(h, body, logger: logg).ResendInbound();
+
+        Assert.Single(db.SupportTicketMessages, m => m.SenderType == "user");
+        Assert.Contains(logg.Entries, e => e.Level == LogLevel.Warning && e.Message.Contains("ej token-verifierad") && e.Message.Contains("12"));
+    }
+
+    [Fact]
+    public async Task Svar_TokenverifieradAdress_LoggasInteSomEjTokenVerifierad()
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Tack");
+        var body = Payload("em_1", "kund@example.com", [TokenAdress(12)]);
+        var logg = new LogCapture();
+
+        await NewController(h, body, logger: logg).ResendInbound();
+
+        Assert.DoesNotContain(logg.Entries, e => e.Message.Contains("ej token-verifierad"));
+    }
+
+    [Fact]
+    public async Task Svar_AldreAdressUtanToken_MedForfalskadAvsandare_AvvisasFortfarandeAvAutentiseringen()
+    {
+        // Utan token är autentiseringen ensam skyddet — den får inte kringgås genom att utelämna token.
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Falskt", new ReceivedEmailAuthentication("fail", "fail", "fail"));
+        var body = Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]);
+
+        await NewController(h, body).ResendInbound();
+
+        Assert.DoesNotContain(db.SupportTicketMessages, m => m.SenderType == "user");
+    }
+
+    [Fact]
+    public async Task Svar_AldreAdressUtanToken_AvvisasNarAldreAdresserArAvstangda()
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db, acceptLegacy: false);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Tack");
+        var body = Payload("em_1", "kund@example.com", ["svar+12@samhallsinformation.se"]);
+
+        await NewController(h, body).ResendInbound();
+
+        Assert.Empty(db.SupportTicketMessages);
+        await h.Email.DidNotReceiveWithAnyArgs().GetReceivedEmailAsync(default!);
+    }
+
+    [Fact]
+    public async Task Svar_TokenAdress_FungerarNarAldreAdresserArAvstangda()
+    {
+        using var db = TestDb.Create();
+        var h = NewHarness(db, acceptLegacy: false);
+        AddTicket(db, 12, "kund@example.com");
+        Verifierat(h, "em_1", "Tack");
+        var body = Payload("em_1", "kund@example.com", [TokenAdress(12)]);
+
+        await NewController(h, body).ResendInbound();
+
+        Assert.Single(db.SupportTicketMessages, m => m.SenderType == "user");
+    }
+
+    [Fact]
+    public async Task InfoMejl_HamtasFortfarandeViaTextmetoden_OchPaverkasInteAvAutentiseringskravet()
+    {
+        // Nya ärenden via info@ berörs inte av E1#10 (ingen befintlig tråd att injicera i).
+        using var db = TestDb.Create();
+        var h = NewHarness(db);
+        h.Email.GetReceivedEmailTextAsync("em_1").Returns("Hej, jag har en fråga");
+        var body = Payload("em_1", "anna@example.com", ["info@samhallsinformation.se"], "Fråga");
+
+        await NewController(h, body).ResendInbound();
+
+        Assert.Single(db.SupportTickets);
     }
 }

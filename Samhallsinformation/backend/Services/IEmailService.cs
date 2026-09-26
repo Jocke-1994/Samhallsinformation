@@ -20,7 +20,7 @@ public interface IEmailService
     Task SendAccountDeletionScheduledAsync(string toEmail, string toName, string cancelLink, DateTime deletionScheduledAtUtc);
 
     // Agentsvar på ett supportärende. reply_to sätts till en plus-adress
-    // (svar+{ticketNumber}@...) — svarar mottagaren på mejlet landar det via
+    // (svar+{ticketNumber}-{token}@..., se TicketReplyAddress) — svarar mottagaren på mejlet landar det via
     // Resends inbound-webhook tillbaka i samma ärendetråd. fromAddress låter
     // svaret gå ut från samma adress ärendet kom in på (t.ex. info@) istället
     // för standard support@.
@@ -29,6 +29,11 @@ public interface IEmailService
     // Hämtar textinnehållet för ett inkommet mejl — webhooken levererar bara
     // metadata (avsändare/mottagare/id), själva texten hämtas separat.
     Task<string?> GetReceivedEmailTextAsync(string emailId);
+
+    // Som ovan men även SPF/DKIM/DMARC-utfallet från Resends mottagande server (E1#10) —
+    // används för att avgöra om avsändaren av ett svar på ett ärende går att lita på.
+    // Null om mejlet inte kunde hämtas.
+    Task<ReceivedEmail?> GetReceivedEmailAsync(string emailId);
 
     // Driftlarm från övervakningen (V1-9) till en admin. Ett mejl kan innehålla flera larm
     // (alla som blev nya/återöppnade i samma cykel) så en bred driftstörning inte ger ett mejl per källa.

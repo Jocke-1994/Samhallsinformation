@@ -160,6 +160,8 @@ builder.Services.AddHttpClient("linkcheck", c =>
 });
 
 // E-posttjänst
+// Svarsadress med icke-gissningsbar token (E1#10) — nyckeln härleds ur JWT-hemligheten med egen kontext-sträng.
+builder.Services.AddSingleton(new TicketReplyAddress(jwtSettings.Secret));
 builder.Services.AddSingleton<IEmailService, ResendEmailService>();
 
 // Push-notiser (Web Push/VAPID)
