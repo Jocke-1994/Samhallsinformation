@@ -237,6 +237,20 @@ function toKälla(s: AdminSource): Källa {
   }
 }
 
+// Fält som redigeringsformuläret äger. Bara det användaren faktiskt rört sparas i utkastet.
+export type KällUtkast = Partial<Pick<Källa, 'namn' | 'url' | 'kategori' | 'publicerad'>>
+
+// Delta mot källans AKTUELLA läge (inte en kopia från när formuläret öppnades): bara ändrade fält
+// skickas, och aldrig isActive — så att en ändring gjord någon annanstans under tiden
+// (snabbknapp, annan flik, annan admin) inte skrivs över med ett föråldrat värde.
+export function beräknaKällDelta(aktuell: Källa, utkast: KällUtkast): Parameters<typeof updateAdminSource>[1] {
+  const delta: Parameters<typeof updateAdminSource>[1] = {}
+  if (utkast.namn       !== undefined && utkast.namn       !== aktuell.namn)       delta.name        = utkast.namn
+  if (utkast.url        !== undefined && utkast.url        !== aktuell.url)        delta.url         = utkast.url
+  if (utkast.kategori   !== undefined && utkast.kategori   !== aktuell.kategori)   delta.category    = utkast.kategori
+  if (utkast.publicerad !== undefined && utkast.publicerad !== aktuell.publicerad) delta.isPublished = utkast.publicerad
+  return delta
+}
 
 export default function Kallhantering() {
   const queryClient = useQueryClient()
@@ -282,7 +296,12 @@ export default function Kallhantering() {
 
   const [sök,         setSök]         = useState('')
   const [filterKat,   setFilterKat]   = useState<Kategori | ''>('')
-  const [redigerar,   setRedigerar]   = useState<Källa | null>(null)
+  // Redigering: bara vilken källa som är öppen + det användaren ändrat. Övriga fält läses live
+  // från serverns senaste läge (query-cachen), så formuläret aldrig håller en gammal kopia.
+  const [redigerarId, setRedigerarId] = useState<number | null>(null)
+  const [utkast,      setUtkast]      = useState<KällUtkast>({})
+  const aktuellRedigerad = redigerarId != null ? kallor.find(k => k.id === redigerarId) : undefined
+  const redigerar: Källa | null = aktuellRedigerad ? { ...aktuellRedigerad, ...utkast } : null
   const [attTaBort,   setAttTaBort]   = useState<{ id: number; namn: string } | null>(null)
   const [visaForm,    setVisaForm]    = useState(false)
   const [aktiverar,   setAktiverar]   = useState<Set<string>>(new Set())
@@ -312,14 +331,19 @@ export default function Kallhantering() {
     flashSparad(k.id)
   }
 
+  function öppnaRedigering(id: number | null) {
+    setRedigerarId(id)
+    setUtkast({})
+  }
+
   function sparaRedigering() {
-    if (!redigerar) return
-    updateMutation.mutate({
-      id: redigerar.id,
-      req: { name: redigerar.namn, url: redigerar.url, category: redigerar.kategori, isPublished: redigerar.publicerad },
-    })
-    flashSparad(redigerar.id)
-    setRedigerar(null)
+    if (!aktuellRedigerad) return
+    const delta = beräknaKällDelta(aktuellRedigerad, utkast)
+    if (Object.keys(delta).length > 0) {
+      updateMutation.mutate({ id: aktuellRedigerad.id, req: delta })
+      flashSparad(aktuellRedigerad.id)
+    }
+    öppnaRedigering(null)
   }
 
   function aktiveraKälla(k: KureradKälla) {
@@ -351,7 +375,7 @@ export default function Kallhantering() {
   function taBort(id: number) {
     setAttTaBort(null)
     deleteMutation.mutate(id)
-    if (redigerar?.id === id) setRedigerar(null)
+    if (redigerarId === id) öppnaRedigering(null)
   }
 
   function kontrolleraFlöde(id: number) {
@@ -424,7 +448,7 @@ export default function Kallhantering() {
           </p>
         </div>
         <button
-          onClick={() => { setVisaForm(true); setRedigerar(null) }}
+          onClick={() => { setVisaForm(true); öppnaRedigering(null) }}
           className="bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
         >
           + Lägg till källa
@@ -598,7 +622,7 @@ export default function Kallhantering() {
                         {resyncMutation.isPending && resyncMutation.variables === k.id ? 'Synkar...' : 'Synka om'}
                       </button>
                       <button
-                        onClick={() => setRedigerar(redigerar?.id === k.id ? null : { ...k })}
+                        onClick={() => öppnaRedigering(redigerarId === k.id ? null : k.id)}
                         className="text-xs text-violet-600 hover:text-violet-800 font-medium [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
                       >
                         Redigera
@@ -630,22 +654,22 @@ export default function Kallhantering() {
                       <div className="grid grid-cols-3 gap-4">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-medium text-slate-500">Namn</label>
-                          <input type="text" value={redigerar.namn} onChange={e => setRedigerar(p => p ? { ...p, namn: e.target.value } : p)} className={inputCls} />
+                          <input type="text" value={redigerar.namn} onChange={e => setUtkast(u => ({ ...u, namn: e.target.value }))} className={inputCls} />
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-medium text-slate-500">URL</label>
-                          <input type="url" value={redigerar.url} onChange={e => setRedigerar(p => p ? { ...p, url: e.target.value } : p)} className={inputCls} />
+                          <input type="url" value={redigerar.url} onChange={e => setUtkast(u => ({ ...u, url: e.target.value }))} className={inputCls} />
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-medium text-slate-500">Kategori</label>
-                          <select value={redigerar.kategori} onChange={e => setRedigerar(p => p ? { ...p, kategori: e.target.value as Kategori } : p)} className={selectCls}>
+                          <select value={redigerar.kategori} onChange={e => setUtkast(u => ({ ...u, kategori: e.target.value as Kategori }))} className={selectCls}>
                             {KATEGORIER.map(kat => <option key={kat} value={kat}>{kat}</option>)}
                           </select>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-3">
                         <button
-                          onClick={() => setRedigerar(p => p ? { ...p, publicerad: !p.publicerad } : p)}
+                          onClick={() => setUtkast(u => ({ ...u, publicerad: !redigerar.publicerad }))}
                           className={`w-10 h-5 rounded-full relative transition-colors shrink-0 ${redigerar.publicerad ? 'bg-green-500' : 'bg-slate-200'}`}
                         >
                           <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${redigerar.publicerad ? 'left-5' : 'left-0.5'}`} />
@@ -665,7 +689,7 @@ export default function Kallhantering() {
                         >
                           {updateMutation.isPending ? 'Sparar...' : 'Spara'}
                         </button>
-                        <button onClick={() => setRedigerar(null)} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">Avbryt</button>
+                        <button onClick={() => öppnaRedigering(null)} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">Avbryt</button>
                       </div>
                     </td>
                   </tr>
