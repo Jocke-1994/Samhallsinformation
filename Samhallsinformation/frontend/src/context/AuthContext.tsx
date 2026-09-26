@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { registerAuthBridge } from '../api/authBridge'
 import { rensaAnvandardata } from '../lib/queryRensning'
 import { avregistreraPushEnhet } from '../lib/pushAvregistrering'
+import { valjAktivVy } from '../lib/aktivVy'
 import {
   MAX_REFRESH_FORSOK,
   beraknaRefreshFordrojning,
@@ -151,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const emailVerified = token ? parseEmailVerified(token) : false
 
   const [aktivVy, setAktivVy] = useState<SystemRoll>(
-    () => (localStorage.getItem('si_aktiv_vy') as SystemRoll) ?? roll
+    () => valjAktivVy(localStorage.getItem('si_aktiv_vy'), roll)
   )
 
   // Väntande omförsök efter ett tillfälligt refresh-fel, och pågående anrop
@@ -233,9 +234,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('si_logged_in', 'true')
     refreshTokenRef.current = data.refreshToken
     tokenErhallenRef.current = Date.now()
+    // Startvyn väljs bara när den saknas eller inte längre gäller för rollen, eller
+    // när en ANNAN användare loggar in: en tokenförnyelse (var ~13:e minut) ska
+    // inte flytta en admin som valt Support-vyn tillbaka till Admin.
     const newRoll = parseRole(data.accessToken)
-    localStorage.setItem('si_aktiv_vy', newRoll)
-    setAktivVy(newRoll)
+    const forraToken = tokenRef.current
+    const annanAnvandare = forraToken !== null && parseEmail(forraToken) !== parseEmail(data.accessToken)
+    const vy = annanAnvandare ? newRoll : valjAktivVy(localStorage.getItem('si_aktiv_vy'), newRoll)
+    localStorage.setItem('si_aktiv_vy', vy)
+    setAktivVy(vy)
     sattToken(data.accessToken)
   }, [sattToken])
 
