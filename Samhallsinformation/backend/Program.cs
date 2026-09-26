@@ -12,6 +12,7 @@ using Samhallsinformation.Application.Monitoring;
 using Samhallsinformation.Application.RateLimiting;
 using Samhallsinformation.Application.Support;
 using Samhallsinformation.Data;
+using Samhallsinformation.Infrastructure;
 using Samhallsinformation.Infrastructure.Auth;
 using Samhallsinformation.Ingestors;
 using Samhallsinformation.Models;
@@ -20,6 +21,17 @@ using Samhallsinformation.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+
+// Fail-fast på hemligheter (E1#2): utanför Development startar inte appen om JWT_SECRET/VAPID-nycklar
+// saknas eller är de kända dev-värdena. I Development ges dev-fallbacks (JWT-strängen, nygenererat VAPID-par).
+JwtSettings jwtSettings;
+using (var startupLogFactory = LoggerFactory.Create(l => l.AddSimpleConsole()))
+{
+    var startupLogger = startupLogFactory.CreateLogger("Startup");
+    StartupSecretsGuard.Validate(builder.Configuration, builder.Environment, startupLogger);
+    StartupSecretsGuard.ApplyDevelopmentFallbacks(builder.Configuration, builder.Environment, startupLogger);
+    jwtSettings = JwtSettings.FromConfiguration(builder.Configuration, builder.Environment);
+}
 
 // Database — PostgreSQL på Railway (via DATABASE_URL eller PGHOST), SQLite lokalt
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
@@ -62,25 +74,16 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
         policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
 
-// JWT-autentisering
-var jwtSecret = builder.Configuration["JWT_SECRET"]
-    ?? Environment.GetEnvironmentVariable("JWT_SECRET")
-    ?? "dev-secret-change-in-production-at-least-32-chars";
-
+// JWT-autentisering. Hemligheten läses på ETT ställe (JwtSettings) och delas med
+// JwtTokenService via DI, så signering och validering alltid använder samma värde.
+builder.Services.AddSingleton(jwtSettings);
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         // Förhindrar att JsonWebTokenHandler remappar "role" till ClaimTypes.Role URI.
         // Utan detta matchar inte RoleClaimType = "role" mot [Authorize(Roles = "Admin")] → 403.
         options.MapInboundClaims = false;
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-            ValidateIssuer           = false,
-            ValidateAudience         = false,
-            RoleClaimType            = "role",
-        };
+        options.TokenValidationParameters = jwtSettings.CreateValidationParameters();
     });
 builder.Services.AddAuthorization();
 
@@ -129,10 +132,9 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-// VAPID-nycklar för Web Push — dev-nycklar som fallback, samma mönster som
-// JWT_SECRET. MÅSTE sättas som riktiga env vars i Railway för produktion.
-builder.Configuration["VAPID_PUBLIC_KEY"]  ??= "BK2R_L5jWNIL18xz26s9jNiZ3wh5utgTgjjzaLUlXDcT55R2UPSm36Qn5t0LmQLbeUUoNzDsRXEFDy5qqOW7wRk";
-builder.Configuration["VAPID_PRIVATE_KEY"] ??= "qyZcpirOyAymG5l8fbpPQ5hYP3UzrZglMgQ9u3gWVi0";
+// VAPID-nycklar för Web Push: kommer från env vars (VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY).
+// Inget nyckelmaterial finns i källkoden — i Development genereras ett nytt par vid start
+// (se StartupSecretsGuard.ApplyDevelopmentFallbacks överst), utanför Development stoppar vakten uppstarten om de saknas.
 
 // HTTP client for ingestors
 builder.Services.AddHttpClient<PolisenRssIngestor>();
