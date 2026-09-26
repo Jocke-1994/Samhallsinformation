@@ -1325,25 +1325,15 @@ using (var scope = app.Services.CreateScope())
         ");
     }
 
-    foreach (var ingestor in ingestors)
-    {
-        var source = ingestor.Source;
-        var existing = db.Sources.Find(source.Id);
-        if (existing == null)
-            db.Sources.Add(source);
-        else
-        {
-            existing.Name      = source.Name;
-            existing.ShortName = source.ShortName;
-            existing.BaseUrl   = source.BaseUrl;
-            existing.Type      = source.Type;
-            existing.Url       = source.Url;
-            // IsPublished uppdateras INTE — admin-ändringar ska överleva restarts
-            if (source.Category != null) existing.Category = source.Category;
-        }
-    }
+    // Ingestor-källornas fasta ID:n (1/4/5/10). Kollisionsvakten (V4-1a, E2#5) skriver INTE över en källa med
+    // annan identitet som råkat få ett ingestor-ID — den loggar Warning och hoppar över posten.
+    var sourceSeedLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("IngestorSourceSeeder");
+    await IngestorSourceSeeder.SeedAsync(db, ingestors.Select(i => i.Source), sourceSeedLogger);
 
-    await db.SaveChangesAsync();
+    // PostgreSQL: seeden ovan infogar explicita ID:n utan att avancera Sources-sekvensen — flytta den till
+    // MAX(Id) så en ny admin-skapad källa aldrig får ett ID som en (framtida) ingestor redan är hårdkodad på
+    // (V4-1a, E2#5). Körs bara mot Npgsql, kastar aldrig (loggar Error, uppstarten fortsätter).
+    await SourceIdSequence.EnsureAsync(db, sourceSeedLogger);
 
     // Seed SMHI Nyheter — RSS-komplement till SmhiApiIngestor (varningar)
     if (!db.Sources.Any(s => s.Url == SeededSources.SmhiNyheterUrl))
