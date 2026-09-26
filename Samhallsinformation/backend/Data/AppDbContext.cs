@@ -40,6 +40,7 @@ public class AppDbContext : DbContext
     public DbSet<Uppdatering>                Uppdateringar             => Set<Uppdatering>();
     public DbSet<UppdateringsPunkt>          UppdateringsPunkter       => Set<UppdateringsPunkt>();
     public DbSet<AdminAlert>                 AdminAlerts               => Set<AdminAlert>();
+    public DbSet<AppliedSeed>                AppliedSeeds              => Set<AppliedSeed>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -132,6 +133,11 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Token).IsUnique();
             entity.HasIndex(e => e.UserId);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AppliedSeed>(entity =>
+        {
+            entity.HasKey(e => e.Key);
         });
 
         modelBuilder.Entity<AdminAlert>(entity =>

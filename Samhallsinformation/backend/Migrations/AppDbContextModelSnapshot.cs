@@ -155,6 +155,19 @@ namespace Samhallsinformation.Migrations
                     b.ToTable("AdminAlerts");
                 });
 
+            modelBuilder.Entity("Samhallsinformation.Models.AppliedSeed", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("AppliedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("AppliedSeeds");
+                });
+
             modelBuilder.Entity("Samhallsinformation.Models.CanonicalEvent", b =>
                 {
                     b.Property<Guid>("Id")
