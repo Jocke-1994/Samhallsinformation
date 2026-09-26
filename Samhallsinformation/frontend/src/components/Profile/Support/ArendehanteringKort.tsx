@@ -160,9 +160,14 @@ function ArendeRad({
                         placeholder="Skriv ditt svar..."
                         className="bg-white text-slate-900 text-sm px-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-violet-500 placeholder-slate-400 resize-none"
                       />
+                      {replyMutation.isError && (
+                        <p role="alert" className="text-xs text-red-500">
+                          Ditt svar kunde inte skickas. Texten finns kvar — försök igen.
+                        </p>
+                      )}
                       <div className="flex items-center gap-3">
                         <button
-                          onClick={() => { if (svar.trim()) replyMutation.mutate() }}
+                          onClick={() => { if (svar.trim() && !replyMutation.isPending) replyMutation.mutate() }}
                           disabled={replyMutation.isPending}
                           className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
                         >
@@ -290,8 +295,11 @@ export default function ArendehanteringKort() {
                 const val = e.target.value
                 setKategori(val)
                 setError('')
-                if (val === 'Testare' && BETA.mall) setMeddelande(BETA.mall)
-                else if (val !== 'Testare') setMeddelande('')
+                // Kategorin får aldrig radera det användaren skrivit: betamallen
+                // fylls bara i i ett tomt fält, och tas bara bort igen om den
+                // fortfarande är orörd (ämne och e-post rörs aldrig här).
+                if (val === 'Testare' && BETA.mall && meddelande.trim() === '') setMeddelande(BETA.mall)
+                else if (val !== 'Testare' && BETA.mall && meddelande === BETA.mall) setMeddelande('')
               }}
               className="bg-white text-slate-900 text-sm px-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-violet-500"
             >
@@ -321,7 +329,7 @@ export default function ArendehanteringKort() {
               className="bg-white text-slate-900 text-sm px-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-violet-500 placeholder-slate-400 resize-none"
             />
           </div>
-          {(error || createMutation.error) && <p className="text-xs text-red-500">{error || (createMutation.error instanceof TicketError ? createMutation.error.message : "Något gick fel. Försök igen senare.")}</p>}
+          {(error || createMutation.error) && <p role="alert" className="text-xs text-red-500">{error || (createMutation.error instanceof TicketError ? createMutation.error.message : "Något gick fel. Försök igen senare.")}</p>}
         </div>
         <div className="flex justify-center py-5">
           <button

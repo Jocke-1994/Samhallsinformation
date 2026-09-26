@@ -42,8 +42,12 @@ public class AdminUserDetailsController : ControllerBase
     // UserPolisenBevakningController exakt, fast skopat mot {id} istället för
     // CurrentUserId, och ChangedBy="admin" i stället för "user" i loggen.
     [HttpPost("{id}/polisen-bevakningar")]
+    [RequestSizeLimit(UserPolisenBevakningController.MaxRequestBytes)]
     public async Task<IActionResult> CreatePolisenBevakning(Guid id, [FromBody] BevakningRequest req)
     {
+        var validering = PolisenBevakningValidator.Validera(req.Kategorier, req.Omraden);
+        if (!validering.Ok) return BadRequest(validering.Fel);
+
         var antal = await _db.PolisenBevakningar.CountAsync(b => b.UserId == id);
         if (antal >= UserPolisenBevakningController.MaxBevakningar)
             return BadRequest($"Max {UserPolisenBevakningController.MaxBevakningar} bevakningar per användare.");
@@ -51,14 +55,14 @@ public class AdminUserDetailsController : ControllerBase
         var bevakning = new PolisenBevakning
         {
             UserId         = id,
-            KategorierJson = req.Kategorier == null ? null : JsonSerializer.Serialize(req.Kategorier),
-            OmradenJson    = req.Omraden    == null ? null : JsonSerializer.Serialize(req.Omraden),
+            KategorierJson = validering.Kategorier == null ? null : JsonSerializer.Serialize(validering.Kategorier),
+            OmradenJson    = validering.Omraden    == null ? null : JsonSerializer.Serialize(validering.Omraden),
         };
         _db.PolisenBevakningar.Add(bevakning);
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
             UserId = id, Setting = "polisen_bevakning_skapad", OldValue = null,
-            NewValue = $"{req.Kategorier?.Count ?? 0} kategorier, {req.Omraden?.Count ?? 0} områden", ChangedBy = "admin",
+            NewValue = $"{validering.Kategorier?.Count ?? 0} kategorier, {validering.Omraden?.Count ?? 0} områden", ChangedBy = "admin",
         });
         await _db.SaveChangesAsync();
 
@@ -66,14 +70,18 @@ public class AdminUserDetailsController : ControllerBase
     }
 
     [HttpPut("{id}/polisen-bevakningar/{bevakningId}")]
+    [RequestSizeLimit(UserPolisenBevakningController.MaxRequestBytes)]
     public async Task<IActionResult> UpdatePolisenBevakning(Guid id, Guid bevakningId, [FromBody] BevakningRequest req)
     {
+        var validering = PolisenBevakningValidator.Validera(req.Kategorier, req.Omraden);
+        if (!validering.Ok) return BadRequest(validering.Fel);
+
         var bevakning = await _db.PolisenBevakningar.FirstOrDefaultAsync(b => b.Id == bevakningId && b.UserId == id);
         if (bevakning == null) return NotFound();
 
         var gammaltVärde = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}";
-        bevakning.KategorierJson = req.Kategorier == null ? null : JsonSerializer.Serialize(req.Kategorier);
-        bevakning.OmradenJson    = req.Omraden    == null ? null : JsonSerializer.Serialize(req.Omraden);
+        bevakning.KategorierJson = validering.Kategorier == null ? null : JsonSerializer.Serialize(validering.Kategorier);
+        bevakning.OmradenJson    = validering.Omraden    == null ? null : JsonSerializer.Serialize(validering.Omraden);
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
             UserId = id, Setting = "polisen_bevakning_ändrad",

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Toggle from '../../common/Toggle'
 import { fetchPushSettings, savePushSettings } from '../../../api/push'
 import { isPushSupported, usePushSubscription } from '../../../hooks/usePushSubscription'
+import { visaFel } from '../../../lib/felmeddelande'
 
 // "Nytt ärende" är medvetet inte med här — kategorin finns i tanken men
 // hålls dold tills vidare. Ingen separat "Aktivera push"-knapp — att slå på
@@ -17,6 +18,7 @@ export default function PushKort() {
   const { isSubscribed, loading, subscribe, unsubscribe } = usePushSubscription()
   const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [fel, setFel] = useState('')
+  const [sparar, setSparar] = useState(false)
   const [notistyper, setNotistyper] = useState<Record<NotisKategori, boolean>>({ pushNyaHandelser: false, pushNyVersion: false })
 
   useEffect(() => {
@@ -29,6 +31,11 @@ export default function PushKort() {
   }, [loading, isSubscribed])
 
   async function toggleKategori(key: NotisKategori, next: boolean) {
+    // En växling i taget: en andra under pågående anrop räknas mot ett ännu
+    // obekräftat läge. Reglaget visar hela tiden det SPARADE läget och byter
+    // först när servern svarat, så ett misslyckande lämnar det som det var.
+    if (sparar) return
+    setSparar(true)
     setFel('')
     const nextState = { ...notistyper, [key]: next }
     const någonAktiv = nextState.pushNyaHandelser || nextState.pushNyVersion
@@ -42,7 +49,9 @@ export default function PushKort() {
       await savePushSettings(nextState)
       setNotistyper(nextState)
     } catch (err) {
-      setFel(err instanceof Error ? err.message : 'Något gick fel')
+      setFel(visaFel(err, 'Notisinställningen kunde inte sparas. Försök igen.'))
+    } finally {
+      setSparar(false)
     }
   }
 
@@ -71,11 +80,11 @@ export default function PushKort() {
               <p className="text-sm font-medium text-slate-700">{n.label}</p>
               <p className="text-xs text-slate-400 mt-0.5">{n.beskrivning}</p>
             </div>
-            <Toggle on={notistyper[n.key]} onChange={next => toggleKategori(n.key, next)} />
+            <Toggle on={notistyper[n.key]} onChange={next => toggleKategori(n.key, next)} disabled={sparar} />
           </div>
         ))}
 
-        {fel && <p className="text-xs text-red-500 pb-4">{fel}</p>}
+        {fel && <p role="alert" className="text-xs text-red-500 pb-4">{fel}</p>}
       </div>
     </div>
   )

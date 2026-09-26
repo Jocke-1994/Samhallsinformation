@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
+using Samhallsinformation.Services;
 
 // Bevakningar (FAS 4-uppföljning) — ersätter det gamla UserPolisenFilter
 // (en rad, en AND-kombination) med flera oberoende regler per användare,
@@ -18,6 +19,7 @@ using Samhallsinformation.Models;
 public class UserPolisenBevakningController : ControllerBase
 {
     public const int MaxBevakningar = 5;
+    public const int MaxRequestBytes = 64 * 1024;
 
     private readonly AppDbContext _db;
 
@@ -36,9 +38,15 @@ public class UserPolisenBevakningController : ControllerBase
         return Ok(bevakningar.Select(ToDto));
     }
 
+    // Kroppsgräns (V3-17): en giltig request är några KB (högst 290 kommuner +
+    // 16 kategorier); allt över 64 KB avvisas med 413 innan JSON:en parsas.
     [HttpPost]
+    [RequestSizeLimit(MaxRequestBytes)]
     public async Task<IActionResult> Create([FromBody] BevakningRequest req)
     {
+        var validering = PolisenBevakningValidator.Validera(req.Kategorier, req.Omraden);
+        if (!validering.Ok) return BadRequest(validering.Fel);
+
         var userId = CurrentUserId;
         var antal = await _db.PolisenBevakningar.CountAsync(b => b.UserId == userId);
         if (antal >= MaxBevakningar)
@@ -47,14 +55,14 @@ public class UserPolisenBevakningController : ControllerBase
         var bevakning = new PolisenBevakning
         {
             UserId         = userId,
-            KategorierJson = req.Kategorier == null ? null : JsonSerializer.Serialize(req.Kategorier),
-            OmradenJson    = req.Omraden    == null ? null : JsonSerializer.Serialize(req.Omraden),
+            KategorierJson = validering.Kategorier == null ? null : JsonSerializer.Serialize(validering.Kategorier),
+            OmradenJson    = validering.Omraden    == null ? null : JsonSerializer.Serialize(validering.Omraden),
         };
         _db.PolisenBevakningar.Add(bevakning);
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
             UserId = userId, Setting = "polisen_bevakning_skapad", OldValue = null,
-            NewValue = $"{req.Kategorier?.Count ?? 0} kategorier, {req.Omraden?.Count ?? 0} områden", ChangedBy = "user",
+            NewValue = $"{validering.Kategorier?.Count ?? 0} kategorier, {validering.Omraden?.Count ?? 0} områden", ChangedBy = "user",
         });
         await _db.SaveChangesAsync();
 
@@ -62,14 +70,18 @@ public class UserPolisenBevakningController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [RequestSizeLimit(MaxRequestBytes)]
     public async Task<IActionResult> Update(Guid id, [FromBody] BevakningRequest req)
     {
+        var validering = PolisenBevakningValidator.Validera(req.Kategorier, req.Omraden);
+        if (!validering.Ok) return BadRequest(validering.Fel);
+
         var bevakning = await _db.PolisenBevakningar.FirstOrDefaultAsync(b => b.Id == id && b.UserId == CurrentUserId);
         if (bevakning == null) return NotFound();
 
         var gammaltVärde = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}";
-        bevakning.KategorierJson = req.Kategorier == null ? null : JsonSerializer.Serialize(req.Kategorier);
-        bevakning.OmradenJson    = req.Omraden    == null ? null : JsonSerializer.Serialize(req.Omraden);
+        bevakning.KategorierJson = validering.Kategorier == null ? null : JsonSerializer.Serialize(validering.Kategorier);
+        bevakning.OmradenJson    = validering.Omraden    == null ? null : JsonSerializer.Serialize(validering.Omraden);
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
             UserId = CurrentUserId, Setting = "polisen_bevakning_ändrad",

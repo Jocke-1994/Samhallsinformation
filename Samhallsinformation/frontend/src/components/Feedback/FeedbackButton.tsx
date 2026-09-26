@@ -23,6 +23,7 @@ export function FeedbackModal({ open, onClose }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (status === 'sending') return
     setStatus('sending')
     try {
       await createTicket({
@@ -149,7 +150,7 @@ export function FeedbackModal({ open, onClose }: Props) {
             )}
 
             {status === 'error' && (
-              <p className="text-xs text-red-500">{errorMessage}</p>
+              <p role="alert" className="text-xs text-red-500">{errorMessage}</p>
             )}
 
             <button

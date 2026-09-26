@@ -8,6 +8,7 @@ import AllaKallorKort from '../components/Profile/MinaKallor/AllaKallorKort'
 import GoogleSignInButton from '../components/Auth/GoogleSignInButton'
 import BetaBadge from '../components/common/BetaBadge'
 import type { Source } from '../types'
+import { visaFel } from '../lib/felmeddelande'
 
 type Steg = 'konto' | 'kallor' | 'klart'
 const STEG_ORDNING: Steg[] = ['konto', 'kallor', 'klart']
@@ -89,7 +90,7 @@ export default function OnboardingPage() {
         setKontoSkapat(true)
       } catch (err) {
         setSkapar(false)
-        setSlutFel(err instanceof Error ? err.message : 'Något gick fel')
+        setSlutFel(visaFel(err, 'Kontot kunde inte skapas just nu. Kontrollera anslutningen och försök igen.'))
         return
       }
     }

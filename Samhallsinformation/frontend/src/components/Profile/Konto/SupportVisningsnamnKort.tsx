@@ -4,6 +4,7 @@ import { fetchMe, updateDisplayName } from '../../../api/auth'
 import { inputClass } from './kontoTypes'
 import { useAnvandare } from '../../../hooks/useAnvandare'
 import { meNyckel } from '../../../lib/queryNycklar'
+import { visaFel } from '../../../lib/felmeddelande'
 
 // Bara relevant för Admin/Support — vanliga användare svarar aldrig på
 // ärenden och har inget att sätta här. Visningsnamnet ersätter den
@@ -63,7 +64,9 @@ export default function SupportVisningsnamnKort() {
           Lämna tomt för att visa den generiska etiketten "Support" istället. Ditt riktiga namn visas aldrig för användaren.
         </p>
         {mutation.isError && (
-          <p className="text-xs text-red-500 font-medium">{(mutation.error as Error).message}</p>
+          <p role="alert" className="text-xs text-red-500 font-medium">
+            {visaFel(mutation.error, 'Visningsnamnet kunde inte sparas. Försök igen.')}
+          </p>
         )}
         {sparat && <p className="text-xs text-green-600 font-medium">✓ Sparat</p>}
       </div>
