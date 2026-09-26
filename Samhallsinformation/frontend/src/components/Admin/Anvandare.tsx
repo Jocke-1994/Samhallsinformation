@@ -18,6 +18,8 @@ import { checkEventLinkStatus } from '../../api/events'
 import { searchEvents, type AdminSearchEvent } from '../../api/eventSearch'
 import KategoriFilterModal from '../Profile/MinaKallor/KategoriFilterModal'
 import { IngetKopplatAn } from '../common/MockBadge'
+import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
+import { visaFel } from '../../lib/felmeddelande'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd' | 'Raderas snart' | 'Raderat'
@@ -296,9 +298,10 @@ const PÅMINNELSE_VAL: { label: string; dagar: number | null }[] = [
   { label: 'Ingen påminnelse', dagar: null },
 ]
 
-function StängAvModal({ antal, arbetar, resultat, onSpara, onStäng }: {
+function StängAvModal({ antal, arbetar, fel, resultat, onSpara, onStäng }: {
   antal: number
   arbetar?: boolean
+  fel?: string | null
   resultat?: MassResultat | null
   onSpara: (anledning: string, paminnelseOm: number | null) => void
   onStäng: () => void
@@ -350,6 +353,7 @@ function StängAvModal({ antal, arbetar, resultat, onSpara, onStäng }: {
               ? 'Kontot förblir avstängt tills en admin aktiverar det manuellt — men klockan i adminpanelen påminner om att titta på fallet igen.'
               : 'Kontot förblir avstängt tills en admin aktiverar det manuellt. Ingen påminnelse sätts.'}
           </p>
+          {fel && <p role="alert" className="text-sm text-red-600">{fel}</p>}
           <button onClick={() => onSpara(anledning, paminnelseDagar)} disabled={arbetar}
             className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors">
             {arbetar ? 'Stänger av…' : 'Stäng av'}
@@ -445,6 +449,8 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   const [enkildRadera, setEnkildRadera]         = useState<Användare | null>(null)
   const [raderar, setRaderar]                   = useState(false)
   const [raderaFel, setRaderaFel]               = useState<string | null>(null)
+  const [stängerAv, setStängerAv]               = useState(false)
+  const [stängAvFel, setStängAvFel]             = useState<string | null>(null)
   const [massArbetar, setMassArbetar]           = useState(false)
   const [massResultat, setMassResultat]         = useState<MassResultat | null>(null)
   const [enkildRollÄndring, setEnkildRollÄndring] = useState<Användare | null>(null)
@@ -517,17 +523,22 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     })
   }, [användare])
 
-  const { data: valdsÄrenden = [] } = useQuery({
+  // V3-8: varje flik i detaljpanelen skiljer laddar / fel (med Försök igen) / tomt — ett
+  // misslyckat anrop får inte se ut som "Inga bevakningar" eller "Ingen historik".
+  const ärendeFråga = useQuery({
     queryKey: ['admin-tickets-for-user', vald?.id],
     queryFn:  () => fetchAdminTickets({ userId: vald!.id }),
     enabled:  !!vald,
   })
+  const valdsÄrenden = ärendeFråga.data ?? []
 
-  const { data: polisenBevakningar = [], isLoading: bevakningarLaddar } = useQuery({
+  const bevakningFråga = useQuery({
     queryKey: ['admin-polisen-bevakningar', vald?.id],
     queryFn:  () => fetchAdminUserPolisenBevakningar(vald!.id),
     enabled:  !!vald,
   })
+  const polisenBevakningar = bevakningFråga.data ?? []
+  const bevakningarLaddar = bevakningFråga.isLoading
   const [redigerarBevakning, setRedigerarBevakning] = useState<AdminPolisenBevakningDto | 'ny' | null>(null)
 
   function invalideraBevakningar() {
@@ -550,26 +561,34 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     onSuccess: invalideraBevakningar,
   })
 
-  async function sparaBevakning(kategorier: string[] | null, omraden: string[] | null) {
+  // Modalen stängs först när servern bekräftat; vid fel visas felet i modalen och valen finns kvar.
+  function sparaBevakning(kategorier: string[] | null, omraden: string[] | null) {
+    if (skapaBevakningMutation.isPending || uppdateraBevakningMutation.isPending) return
+    const stäng = { onSuccess: () => setRedigerarBevakning(null) }
     if (redigerarBevakning === 'ny') {
-      await skapaBevakningMutation.mutateAsync({ kategorier, omraden })
+      skapaBevakningMutation.mutate({ kategorier, omraden }, stäng)
     } else if (redigerarBevakning) {
-      await uppdateraBevakningMutation.mutateAsync({ bevakningId: redigerarBevakning.id, kategorier, omraden })
+      uppdateraBevakningMutation.mutate({ bevakningId: redigerarBevakning.id, kategorier, omraden }, stäng)
     }
-    setRedigerarBevakning(null)
   }
+  const bevakningSparFel = skapaBevakningMutation.error ?? uppdateraBevakningMutation.error
+  const bevakningSparFelText = bevakningSparFel ? visaFel(bevakningSparFel, 'Bevakningen kunde inte sparas. Försök igen.') : null
 
-  const { data: valdaKällor = [], isLoading: källorLaddar } = useQuery({
+  const källFråga = useQuery({
     queryKey: ['admin-user-sources', vald?.id],
     queryFn:  () => fetchAdminUserSources(vald!.id),
     enabled:  !!vald,
   })
+  const valdaKällor = källFråga.data ?? []
+  const källorLaddar = källFråga.isLoading
 
-  const { data: pushInstallningar, isLoading: pushLaddar } = useQuery({
+  const pushFråga = useQuery({
     queryKey: ['admin-user-push-settings', vald?.id],
     queryFn:  () => fetchAdminUserPushSettings(vald!.id),
     enabled:  !!vald,
   })
+  const pushInstallningar = pushFråga.data
+  const pushLaddar = pushFråga.isLoading
 
   const andraPushMutation = useMutation({
     mutationFn: (req: { pushEnabled?: boolean; pushNyaHandelser?: boolean; pushNyVersion?: boolean }) =>
@@ -601,15 +620,22 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   const [forklaratEvent, setForklaratEvent] = useState<AdminSearchEvent | null>(null)
   const [forklaring, setForklaring] = useState<AdminExplainEventDto | null>(null)
   const [forklaringLaddar, setForklaringLaddar] = useState(false)
+  const [forklaraFel, setForklaraFel] = useState<string | null>(null)
+  const [sparatFel, setSparatFel] = useState<string | null>(null)
 
   async function sokForklaraHandelse() {
     if (!forklaraSokord.trim()) return
     setForklaraSoker(true)
     setForklaratEvent(null)
     setForklaring(null)
+    setForklaraFel(null)
     try {
       const resultat = await searchEvents({ sokord: forklaraSokord.trim(), pageSize: 5 })
       setForklaraTraffar(resultat.events)
+    } catch (fel) {
+      // Ett fel är inte "inga träffar".
+      setForklaraTraffar([])
+      setForklaraFel(visaFel(fel, 'Sökningen misslyckades. Försök igen.'))
     } finally {
       setForklaraSoker(false)
     }
@@ -620,24 +646,31 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     setForklaratEvent(ev)
     setForklaring(null)
     setForklaringLaddar(true)
+    setForklaraFel(null)
     try {
       setForklaring(await explainAdminUserEvent(vald.id, ev.id))
+    } catch (fel) {
+      setForklaraFel(visaFel(fel, 'Kunde inte hämta förklaringen. Försök igen.'))
     } finally {
       setForklaringLaddar(false)
     }
   }
 
-  const { data: notishistorik = [], isLoading: notishistorikLaddar } = useQuery({
+  const notisFråga = useQuery({
     queryKey: ['admin-notification-log', vald?.id],
     queryFn:  () => fetchAdminUserNotificationLog(vald!.id),
     enabled:  !!vald,
   })
+  const notishistorik = notisFråga.data ?? []
+  const notishistorikLaddar = notisFråga.isLoading
 
-  const { data: installningshistorik = [], isLoading: installningshistorikLaddar } = useQuery({
+  const histFråga = useQuery({
     queryKey: ['admin-setting-log', vald?.id],
     queryFn:  () => fetchAdminUserSettingLog(vald!.id),
     enabled:  !!vald,
   })
+  const installningshistorik = histFråga.data ?? []
+  const installningshistorikLaddar = histFråga.isLoading
 
   // Djuplänken konsumeras EN gång: så fort användaren hittats öppnas panelen
   // och föräldern nollställer defaultÖppnaEpost. Därefter gör en refetch av
@@ -686,11 +719,13 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     }
   }
 
-  const { data: sparadeHändelser = [], refetch: refetchSparat } = useQuery({
+  const sparatFråga = useQuery({
     queryKey: ['admin-saved-events', vald?.id],
     queryFn:  () => fetchAdminUserSavedEvents(vald!.id),
     enabled:  !!vald,
   })
+  const sparadeHändelser = sparatFråga.data ?? []
+  const refetchSparat = sparatFråga.refetch
 
   const [dödaLänkar, setDödaLänkar] = useState<Set<string>>(new Set())
 
@@ -706,10 +741,17 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   async function taBortSparad(eventId: string) {
     if (!vald) return
     const handelse = sparadeHändelser.find(h => h.eventId === eventId)
-    await unsaveAdminUserEvent(vald.id, eventId)
+    setSparatFel(null)
+    try {
+      await unsaveAdminUserEvent(vald.id, eventId)
+    } catch (fel) {
+      setSparatFel(visaFel(fel, 'Händelsen kunde inte tas bort. Försök igen.'))
+      return
+    }
     await refetchSparat()
     if (handelse) {
-      await createActivityLogEntry({
+      try {
+        await createActivityLogEntry({
         typ:     'Kontoåtgärd',
         rubrik:  `Tog bort sparad händelse från ${vald.namn}`,
         detalj:  `"${handelse.title}" (${handelse.sourceName}) borttagen från ${vald.namn}s konto.`,
@@ -720,6 +762,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           undoAction: 'lägg-till',
         },
       })
+      } catch {
+        setSparatFel('Händelsen togs bort, men kunde inte loggas i aktivitetsloggen.')
+      }
     }
   }
 
@@ -817,15 +862,29 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     }
   }
 
+  // V3-8: modalen stängs först när servern bekräftat; vid fel visas felet och anledningen finns kvar.
   async function stängAvEnkild(u: Användare, anledning: string, påminnelseOm: number | null) {
-    await setAdminUserStatus(u.id, false, anledning || undefined, beräknaPåminnelse(påminnelseOm))
-    await refetch()
-    setEnkildStängAv(null)
+    if (stängerAv) return
+    setStängerAv(true); setStängAvFel(null)
+    try {
+      await setAdminUserStatus(u.id, false, anledning || undefined, beräknaPåminnelse(påminnelseOm))
+      await refetch()
+      setEnkildStängAv(null)
+    } catch (fel) {
+      setStängAvFel(visaFel(fel, 'Kontot kunde inte stängas av. Försök igen.'))
+    } finally {
+      setStängerAv(false)
+    }
   }
 
   async function aktiveraEnkild(u: Användare) {
-    await setAdminUserStatus(u.id, true)
-    await refetch()
+    setMejlFeedback(null)
+    try {
+      await setAdminUserStatus(u.id, true)
+      await refetch()
+    } catch (fel) {
+      setMejlFeedback(visaFel(fel, 'Kontot kunde inte aktiveras. Försök igen.'))
+    }
   }
 
   const antal = {
@@ -869,7 +928,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           onStäng={() => setEnkildRollÄndring(null)} />
       )}
       {enkildStängAv && (
-        <StängAvModal antal={1} onSpara={(anledning, påminnelseOm) => stängAvEnkild(enkildStängAv, anledning, påminnelseOm)} onStäng={() => setEnkildStängAv(null)} />
+        <StängAvModal antal={1} arbetar={stängerAv} fel={stängAvFel} onSpara={(anledning, påminnelseOm) => stängAvEnkild(enkildStängAv, anledning, påminnelseOm)} onStäng={() => { setStängAvFel(null); setEnkildStängAv(null) }} />
       )}
       {enkildRadera && (
         <RaderaModal antal={1} namn={enkildRadera.namn} fel={raderaFel} raderar={raderar}
@@ -1115,6 +1174,8 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Polisen-bevakningar</p>
                   {bevakningarLaddar ? (
                     <p className="text-sm text-slate-400">Laddar...</p>
+                  ) : bevakningFråga.isError && bevakningFråga.data === undefined ? (
+                    <HamtningsFel fel={bevakningFråga.error} reserv="Kunde inte hämta bevakningarna. Det är inte samma sak som att det inte finns några." onForsokIgen={() => { void bevakningFråga.refetch() }} arIgang={bevakningFråga.isFetching} className="items-start text-left" />
                   ) : (
                     <>
                       {polisenBevakningar.length === 0 ? (
@@ -1135,7 +1196,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                                 {!skrivskyddad && (
                                   <div className="flex items-center gap-2 shrink-0">
                                     <button onClick={() => setRedigerarBevakning(b)} className="text-xs text-violet-600 hover:text-violet-800 font-medium">Ändra</button>
-                                    <button onClick={() => taBortBevakningMutation.mutate(b.id)} className="text-xs text-slate-400 hover:text-red-500 font-medium">Ta bort</button>
+                                    <button onClick={() => taBortBevakningMutation.mutate(b.id)} disabled={taBortBevakningMutation.isPending} className="text-xs text-slate-400 hover:text-red-500 font-medium disabled:opacity-50">Ta bort</button>
                                   </div>
                                 )}
                               </div>
@@ -1158,8 +1219,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                       )}
                     </>
                   )}
+                  <MutationFel fel={taBortBevakningMutation.error} reserv="Bevakningen kunde inte tas bort. Försök igen." className="mb-2" />
                   {!skrivskyddad && redigerarBevakning && (
                     <KategoriFilterModal
+                      sparar={skapaBevakningMutation.isPending || uppdateraBevakningMutation.isPending}
+                      fel={bevakningSparFelText}
                       kallNamn="Polisen"
                       initialKategorier={redigerarBevakning === 'ny' ? null : redigerarBevakning.kategorier}
                       initialOmraden={redigerarBevakning === 'ny' ? null : redigerarBevakning.omraden}
@@ -1176,8 +1240,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     drag-och-släpp i Mina källor). */}
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Aktiva källor</p>
+                  <MutationFel fel={växlaKällaMutation.error} reserv="Källan kunde inte ändras. Försök igen." className="mb-2" />
                   {källorLaddar ? (
                     <p className="text-sm text-slate-400">Laddar...</p>
+                  ) : källFråga.isError && källFråga.data === undefined ? (
+                    <HamtningsFel fel={källFråga.error} reserv="Kunde inte hämta källorna. Det är inte samma sak som att inga finns." onForsokIgen={() => { void källFråga.refetch() }} arIgang={källFråga.isFetching} className="items-start text-left" />
                   ) : valdaKällor.length === 0 ? (
                     <p className="text-sm text-slate-500">Inga källor tillagda.</p>
                   ) : (
@@ -1237,6 +1304,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     </button>
                   </div>
 
+                  {forklaraFel && <p role="alert" className="text-xs text-red-600 mb-2">{forklaraFel}</p>}
                   {forklaraTraffar.length > 0 && !forklaratEvent && (
                     <div className="flex flex-col gap-1 mb-2">
                       {forklaraTraffar.map(ev => (
@@ -1285,10 +1353,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">
                     Push-notiser <span className="normal-case text-slate-300 font-normal">— ändra bara om användaren själv bett om det</span>
                   </p>
+                  <MutationFel fel={andraPushMutation.error} reserv="Push-inställningen kunde inte ändras. Försök igen." className="mb-2" />
                   {pushLaddar ? (
                     <p className="text-sm text-slate-400">Laddar...</p>
                   ) : !pushInstallningar ? (
-                    <p className="text-sm text-slate-500">Kunde inte hämtas.</p>
+                    <HamtningsFel fel={pushFråga.error} reserv="Kunde inte hämta push-inställningarna." onForsokIgen={() => { void pushFråga.refetch() }} arIgang={pushFråga.isFetching} className="items-start text-left" />
                   ) : (
                     <div className="flex flex-col gap-2">
                       <div className="flex flex-wrap gap-1.5">
@@ -1337,7 +1406,10 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     (UserSavedEvent-tabellen). Skrivs från Händelsesök */}
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Sparat</p>
-                  {sparadeHändelser.length === 0 ? (
+                  {sparatFel && <p role="alert" className="text-xs text-red-600 mb-2">{sparatFel}</p>}
+                  {sparatFråga.isError && sparatFråga.data === undefined ? (
+                    <HamtningsFel fel={sparatFråga.error} reserv="Kunde inte hämta sparade händelser. Det är inte samma sak som att inga finns." onForsokIgen={() => { void sparatFråga.refetch() }} arIgang={sparatFråga.isFetching} className="items-start text-left" />
+                  ) : sparadeHändelser.length === 0 ? (
                     <p className="text-sm text-slate-400">Inga sparade händelser.</p>
                   ) : (
                     <div className="flex flex-col gap-2">
@@ -1476,6 +1548,8 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
             <div>
               {notishistorikLaddar ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Laddar...</p>
+              ) : notisFråga.isError && notisFråga.data === undefined ? (
+                <HamtningsFel fel={notisFråga.error} reserv="Kunde inte hämta notishistoriken. Det är inte samma sak som att inga notiser skickats." onForsokIgen={() => { void notisFråga.refetch() }} arIgang={notisFråga.isFetching} className="px-6 py-10" />
               ) : notishistorik.length === 0 ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Inga notiser skickade till den här användaren.</p>
               ) : (
@@ -1533,6 +1607,8 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
             <div>
               {installningshistorikLaddar ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Laddar...</p>
+              ) : histFråga.isError && histFråga.data === undefined ? (
+                <HamtningsFel fel={histFråga.error} reserv="Kunde inte hämta inställningshistoriken. Det är inte samma sak som ingen historik." onForsokIgen={() => { void histFråga.refetch() }} arIgang={histFråga.isFetching} className="px-6 py-10" />
               ) : installningshistorik.length === 0 ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Ingen inställningshistorik för den här användaren.</p>
               ) : (
@@ -1565,7 +1641,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           {/* ── Supportärenden ── */}
           {detaljFlik === 'ärenden' && (
             <div>
-              {valdsÄrenden.length === 0 ? (
+              {ärendeFråga.isLoading ? (
+                <p className="px-6 py-10 text-center text-sm text-slate-400">Laddar...</p>
+              ) : ärendeFråga.isError && ärendeFråga.data === undefined ? (
+                <HamtningsFel fel={ärendeFråga.error} reserv="Kunde inte hämta ärendena. Det är inte samma sak som att inga finns." onForsokIgen={() => { void ärendeFråga.refetch() }} arIgang={ärendeFråga.isFetching} className="px-6 py-10" />
+              ) : valdsÄrenden.length === 0 ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Inga supportärenden kopplade till den här användaren.</p>
               ) : (
                 <table className="w-full text-sm">
