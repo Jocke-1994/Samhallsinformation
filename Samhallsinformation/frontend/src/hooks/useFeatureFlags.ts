@@ -70,5 +70,10 @@ export function useFeatureFlags() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return { flaggor, inställda, läge, laddat: läge !== 'laddar', växlaFlagg, återställ }
+  // V3-8: en misslyckad växling/återställning får inte se ut som att ingenting hände —
+  // Feature flags-vyn visar felet (flaggan är då oförändrad) och låser reglagen under anropet.
+  const ändringsFel: unknown = toggleMutation.error ?? resetMutation.error
+  const ändringPågår = toggleMutation.isPending || resetMutation.isPending
+
+  return { flaggor, inställda, läge, laddat: läge !== 'laddar', växlaFlagg, återställ, ändringsFel, ändringPågår }
 }

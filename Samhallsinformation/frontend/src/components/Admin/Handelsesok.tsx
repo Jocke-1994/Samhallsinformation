@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchSearchableSources, fetchEventTypes, searchEvents, type SearchParams, type AdminSearchEvent } from '../../api/eventSearch'
 import NewsItem from '../NewsFeed/NewsItem'
@@ -6,37 +6,84 @@ import { fetchAdminUsers, saveAdminUserEvent, fetchSavedEventsByEvent, type Admi
 import { createActivityLogEntry } from '../../api/activityLog'
 import { useAuth } from '../../context/AuthContext'
 import { effektivAdminRoll } from '../../lib/adminNavigering'
+import { visaFel } from '../../lib/felmeddelande'
+import { HamtningsFel } from '../common/HamtningsStatus'
 
 const SIDA_STORLEK = 20
 
-function BulkSparaKnapp({ handelser, användare, onKlar }: { handelser: AdminSearchEvent[]; användare: AdminUserDto[]; onKlar: () => void }) {
+// Resultat av en massparning (V3-8, E6#20): samma per-rad-mönster som körMassåtgärd i
+// Användare — varje händelse sparas för sig (allSettled), och sammanfattningen säger
+// exakt hur många som lyckades och vilka som inte gjorde det.
+interface SparaResultat {
+  totalt: number
+  lyckade: string[]          // eventId som sparades
+  fel: { id: string; titel: string; orsak: string }[]
+  loggFel: number            // sparade, men aktivitetsloggen kunde inte skrivas
+  användare: string
+}
+
+function sparaSammanfattning(r: SparaResultat): string {
+  const delar = [`${r.lyckade.length} av ${r.totalt} händelser sparades till ${r.användare}.`]
+  if (r.fel.length > 0) delar.push(`Misslyckades: ${r.fel.map(f => `"${f.titel}" (${f.orsak})`).join(', ')}.`)
+  if (r.loggFel > 0) delar.push(`${r.loggFel} sparades men kunde inte loggas i aktivitetsloggen.`)
+  return delar.join(' ')
+}
+
+interface BulkSparaProps {
+  handelser: AdminSearchEvent[]
+  användare: AdminUserDto[]
+  /** Användarlistan kunde inte hämtas — "inga användare" får inte visas som om listan var tom. */
+  användareFel?: { fel: unknown; försökIgen: () => void } | null
+  onKlar: (resultat: SparaResultat) => void
+}
+
+function BulkSparaKnapp({ handelser, användare, användareFel, onKlar }: BulkSparaProps) {
   const [öppen, setÖppen]   = useState(false)
   const [sparar, setSparar] = useState(false)
+  const lås = useRef(false)   // ref: två klick i samma tick får inte båda starta en körning
   const { aktivVy } = useAuth()
 
   async function spara(anvandareId: string, anvandareNamn: string) {
+    if (lås.current) return
+    lås.current = true
     setSparar(true)
     const nuIso = new Date().toISOString()
     try {
-      await Promise.all(handelser.map(async h => {
+      const utfall = await Promise.allSettled(handelser.map(async h => {
         await saveAdminUserEvent(anvandareId, h.id)
-        await createActivityLogEntry({
-          typ:     'Kontoåtgärd',
-          rubrik:  `Sparade händelse till ${anvandareNamn}`,
-          detalj:  `"${h.title}" (${h.sourceName}) kopplad till ${anvandareNamn}s konto.`,
-          aktivVy,
-          ångraData: {
-            anvandareId,
-            handelse: { eventId: h.id, title: h.title, sourceName: h.sourceName, publishedAt: h.publishedAt, sparadDatum: nuIso },
-            undoAction: 'ta-bort',
-          },
-        })
+        // Sparningen är gjord; ett loggfel ska inte få den att se misslyckad ut.
+        try {
+          await createActivityLogEntry({
+            typ:     'Kontoåtgärd',
+            rubrik:  `Sparade händelse till ${anvandareNamn}`,
+            detalj:  `"${h.title}" (${h.sourceName}) kopplad till ${anvandareNamn}s konto.`,
+            aktivVy,
+            ångraData: {
+              anvandareId,
+              handelse: { eventId: h.id, title: h.title, sourceName: h.sourceName, publishedAt: h.publishedAt, sparadDatum: nuIso },
+              undoAction: 'ta-bort',
+            },
+          })
+          return true
+        } catch {
+          return false
+        }
       }))
+      const resultat: SparaResultat = { totalt: handelser.length, lyckade: [], fel: [], loggFel: 0, användare: anvandareNamn }
+      utfall.forEach((r, i) => {
+        if (r.status === 'fulfilled') {
+          resultat.lyckade.push(handelser[i].id)
+          if (!r.value) resultat.loggFel++
+        } else {
+          resultat.fel.push({ id: handelser[i].id, titel: handelser[i].title, orsak: visaFel(r.reason, 'okänt fel') })
+        }
+      })
+      setÖppen(false)
+      onKlar(resultat)
     } finally {
+      lås.current = false
       setSparar(false)
     }
-    setÖppen(false)
-    onKlar()
   }
 
   return (
@@ -53,7 +100,11 @@ function BulkSparaKnapp({ handelser, användare, onKlar }: { handelser: AdminSea
           <div className="fixed inset-0 z-30" onClick={() => setÖppen(false)} />
           <div className="absolute left-0 top-8 z-40 w-56 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
             <ul className="max-h-64 overflow-y-auto py-1">
-              {användare.length === 0 ? (
+              {användareFel ? (
+                <li className="px-3 py-2">
+                  <HamtningsFel fel={användareFel.fel} reserv="Kunde inte hämta användarlistan." onForsokIgen={användareFel.försökIgen} />
+                </li>
+              ) : användare.length === 0 ? (
                 <li className="px-3 py-2 text-xs text-slate-400">Inga användare hittades</li>
               ) : användare.map(u => (
                 <li key={u.id}>
@@ -97,11 +148,18 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
 
   const [activeParams, setActiveParams] = useState<SearchParams>({ page: 1, pageSize: SIDA_STORLEK })
 
-  const { data: adminAnvändare = [] } = useQuery({
+  const [sparaResultat, setSparaResultat] = useState<SparaResultat | null>(null)
+
+  const användareFråga = useQuery({
     queryKey: ['admin-users'],
     queryFn:  fetchAdminUsers,
     enabled:  !skrivskyddad,
   })
+  const adminAnvändare = användareFråga.data ?? []
+  // Ett hämtfel får inte visas som "Inga användare hittades" i väljaren.
+  const användareFel = användareFråga.isError && användareFråga.data === undefined
+    ? { fel: användareFråga.error, försökIgen: () => { void användareFråga.refetch() } }
+    : null
 
   function toggleMarkerad(id: string) {
     setMarkerade(prev => {
@@ -112,17 +170,19 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
     })
   }
 
-  const { data: sources } = useQuery({
+  const källFråga = useQuery({
     queryKey: ['admin-event-search-sources'],
     queryFn:  fetchSearchableSources,
   })
+  const sources = källFråga.data
 
-  const { data: types } = useQuery({
+  const typFråga = useQuery({
     queryKey: ['admin-event-search-types', sourceId],
     queryFn:  () => fetchEventTypes(sourceId ? Number(sourceId) : undefined),
   })
+  const types = typFråga.data
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['admin-event-search', activeParams],
     queryFn:  () => searchEvents(activeParams),
   })
@@ -131,15 +191,18 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
   // rent informativ badge, hindrar inte att samma händelse sparas till fler.
   // Skopad till händelserna på aktuell sida.
   const eventIds = data?.events.map(e => e.id) ?? []
-  const { data: sparadeAvKarta = {}, refetch: refetchSparade } = useQuery({
+  const sparadeFråga = useQuery({
     queryKey: ['saved-events-by-event', eventIds],
     queryFn:  () => fetchSavedEventsByEvent(eventIds),
     enabled:  eventIds.length > 0,
   })
+  const sparadeAvKarta = sparadeFråga.data ?? {}
+  const refetchSparade = sparadeFråga.refetch
 
   function sök(nyPage = 1) {
     setPage(nyPage)
     setMarkerade(new Set())
+    setSparaResultat(null)
     setActiveParams({
       sourceId:  sourceId ? Number(sourceId) : undefined,
       geography: geography.trim() || undefined,
@@ -161,6 +224,7 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
     setTo('')
     setPage(1)
     setMarkerade(new Set())
+    setSparaResultat(null)
     setActiveParams({ page: 1, pageSize: SIDA_STORLEK })
   }
 
@@ -291,10 +355,39 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
       )}
 
       {isError && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-          Kunde inte hämta sökresultat.{' '}
-          <button onClick={() => refetch()} className="underline font-medium">Försök igen</button>
-        </div>
+        <HamtningsFel
+          fel={error}
+          reserv="Kunde inte hämta sökresultat. Det här är inte samma sak som inga träffar."
+          onForsokIgen={() => { void refetch() }}
+          className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"
+        />
+      )}
+
+      {(källFråga.isError || typFråga.isError) && (
+        <p role="alert" className="text-xs text-red-600 mb-3">
+          {källFråga.isError ? 'Källistan kunde inte hämtas' : 'Händelsetyperna kunde inte hämtas'} — filtret ovan är ofullständigt.{' '}
+          <button onClick={() => { void (källFråga.isError ? källFråga.refetch() : typFråga.refetch()) }} className="underline font-medium">Försök igen</button>
+        </p>
+      )}
+
+      {sparaResultat && (
+        <p
+          role={sparaResultat.fel.length > 0 || sparaResultat.loggFel > 0 ? 'alert' : 'status'}
+          className={`text-sm rounded-xl px-4 py-3 mb-3 border ${
+            sparaResultat.fel.length > 0 || sparaResultat.loggFel > 0
+              ? 'text-red-700 bg-red-50 border-red-200'
+              : 'text-green-700 bg-green-50 border-green-200'
+          }`}
+        >
+          {sparaSammanfattning(sparaResultat)}
+        </p>
+      )}
+
+      {sparadeFråga.isError && (
+        <p role="alert" className="text-xs text-red-600 mb-3">
+          Kunde inte kontrollera vilka händelser som redan är sparade hos användare — märkningen "Sparad till" kan saknas.{' '}
+          <button onClick={() => { void sparadeFråga.refetch() }} className="underline font-medium">Försök igen</button>
+        </p>
       )}
 
       {data && !isLoading && !isError && (
@@ -321,7 +414,15 @@ export default function Handelsesok({ onÖppnaAnvändare }: HandelsesokProps) {
                   <BulkSparaKnapp
                     handelser={data.events.filter(e => markerade.has(e.id))}
                     användare={adminAnvändare}
-                    onKlar={() => { refetchSparade(); setMarkerade(new Set()) }}
+                    användareFel={användareFel}
+                    onKlar={resultat => {
+                      // Hämta alltid om (även vid delvis fel) och avmarkera bara de som sparades —
+                      // de som misslyckades förblir markerade så att admin kan försöka igen.
+                      void refetchSparade()
+                      const lyckade = new Set(resultat.lyckade)
+                      setMarkerade(prev => new Set([...prev].filter(id => !lyckade.has(id))))
+                      setSparaResultat(resultat)
+                    }}
                   />
                   <button
                     onClick={() => setMarkerade(new Set())}

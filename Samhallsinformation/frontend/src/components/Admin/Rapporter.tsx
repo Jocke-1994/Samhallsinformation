@@ -5,6 +5,7 @@ import { fetchAdminStats } from '../../api/stats'
 import { fetchAdminUsers } from '../../api/adminUsers'
 import { MockBadge } from '../common/MockBadge'
 import { fetchIngestorLogSummary, fetchIngestorLogRecent } from '../../api/ingestorLog'
+import { HamtningsFel } from '../common/HamtningsStatus'
 
 const DAGAR_KORT = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
 
@@ -87,25 +88,40 @@ function Kort({ titel, sub, badge, children }: { titel: string; sub?: string; ba
 export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection) => void }) {
   const [felModalÖppen, setFelModalÖppen] = useState(false)
 
-  const { data: stats, isLoading } = useQuery({
+  // V3-8: en misslyckad hämtning får inte bli "0" — kortet visar "—" och en ruta överst
+  // säger vilka uppgifter som saknas, med Försök igen.
+  const statsFråga = useQuery({
     queryKey: ['admin-stats'],
     queryFn: fetchAdminStats,
   })
+  const stats = statsFråga.data
+  const isLoading = statsFråga.isLoading
 
-  const { data: adminUsers = [] } = useQuery({
+  const användarFråga = useQuery({
     queryKey: ['admin-users'],
     queryFn:  fetchAdminUsers,
   })
+  const adminUsers = användarFråga.data ?? []
 
-  const { data: felSummary } = useQuery({
+  const felFråga = useQuery({
     queryKey: ['admin-ingestor-log-summary'],
     queryFn:  () => fetchIngestorLogSummary(7),
   })
+  const felSummary = felFråga.data
 
-  const { data: senasteFel = [] } = useQuery({
+  const senasteFelFråga = useQuery({
     queryKey: ['admin-ingestor-log-recent-errors'],
     queryFn:  () => fetchIngestorLogRecent({ limit: 5, onlyErrors: true }),
   })
+  const senasteFel = senasteFelFråga.data ?? []
+
+  const saknade = [
+    statsFråga.isError && stats === undefined ? statsFråga : null,
+    användarFråga.isError && användarFråga.data === undefined ? användarFråga : null,
+    felFråga.isError && felSummary === undefined ? felFråga : null,
+  ].filter((f): f is NonNullable<typeof f> => f !== null)
+  const statsOkänd = statsFråga.isError && stats === undefined
+  const användareOkända = användarFråga.isError && användarFråga.data === undefined
 
   const felPerDag = felSummary?.perDag.map(d => ({
     label: DAGAR_KORT[new Date(d.date + 'T12:00:00').getDay()],
@@ -152,6 +168,16 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
         <p className="text-sm text-slate-500 mt-0.5">Systemstatistik och nyckeltal — uppdateras vid sidladdning.</p>
       </div>
 
+      {saknade.length > 0 && (
+        <HamtningsFel
+          fel={saknade[0].error}
+          reserv="Kunde inte hämta all statistik. Siffror och diagram som saknas är okända, inte noll."
+          onForsokIgen={() => { saknade.forEach(f => { void f.refetch() }) }}
+          arIgang={saknade.some(f => f.isFetching)}
+          className="bg-red-50 border border-red-200 rounded-2xl px-6 py-4"
+        />
+      )}
+
       {/* Nyckeltal */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
@@ -162,8 +188,8 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
             <span className="text-2xl">👥</span>
             <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Registrerade användare</span>
           </div>
-          <p className="text-4xl font-bold text-violet-600">{riktigaAnvändare.length.toLocaleString('sv-SE')}</p>
-          <p className="text-xs text-slate-400">+{nyaSenasteVeckan} denna vecka</p>
+          <p className="text-4xl font-bold text-violet-600">{användareOkända ? '—' : riktigaAnvändare.length.toLocaleString('sv-SE')}</p>
+          <p className="text-xs text-slate-400">{användareOkända ? 'Kunde inte hämtas' : `+${nyaSenasteVeckan} denna vecka`}</p>
         </div>
 
         {/* LIVE */}
@@ -177,10 +203,10 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
             <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Händelser i databasen</span>
           </div>
           <p className="text-4xl font-bold text-sky-600">
-            {isLoading ? '…' : (stats?.totalEvents ?? 0).toLocaleString('sv-SE')}
+            {isLoading ? '…' : statsOkänd ? '—' : (stats?.totalEvents ?? 0).toLocaleString('sv-SE')}
           </p>
           <p className="text-xs text-slate-400">
-            {isLoading ? '…' : `${(stats?.eventsLast24h ?? 0).toLocaleString('sv-SE')} senaste 24 h`}
+            {isLoading ? '…' : statsOkänd ? 'Kunde inte hämtas' : `${(stats?.eventsLast24h ?? 0).toLocaleString('sv-SE')} senaste 24 h`}
           </p>
           <p className="text-xs text-violet-500 mt-1">Gå till Felsökning →</p>
         </button>
@@ -192,8 +218,8 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
             <span className="text-2xl">🔔</span>
             <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Notifieringar skickade</span>
           </div>
-          <p className="text-4xl font-bold text-green-600">{notisTotal.toLocaleString('sv-SE')}</p>
-          <p className="text-xs text-slate-400">totalt sedan start</p>
+          <p className="text-4xl font-bold text-green-600">{statsOkänd ? '—' : notisTotal.toLocaleString('sv-SE')}</p>
+          <p className="text-xs text-slate-400">{statsOkänd ? 'Kunde inte hämtas' : 'totalt sedan start'}</p>
         </div>
 
         {/* LIVE */}
@@ -212,7 +238,7 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
             <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Fel senaste 7 dagarna</span>
           </div>
           <p className="text-4xl font-bold text-red-500">{felSummary?.totaltFel ?? '—'}</p>
-          <p className="text-xs text-slate-400">{felSummary?.kritiska ?? 0} kritiska</p>
+          <p className="text-xs text-slate-400">{felSummary ? `${felSummary.kritiska} kritiska` : felFråga.isError ? 'Kunde inte hämtas' : '…'}</p>
           <p className="text-xs text-violet-500 mt-1">Visa detaljer →</p>
         </button>
 
@@ -227,7 +253,7 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
               <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                 <div>
                   <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">Fel senaste 7 dagarna <LiveBadge /></h3>
-                  <p className="text-xs text-slate-400 mt-0.5">{senasteFel.length === 0 ? 'Inga felhändelser registrerade' : `${senasteFel.length} senaste felhändelser`}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{senasteFelFråga.isError && senasteFelFråga.data === undefined ? 'Felhändelserna kunde inte hämtas' : senasteFel.length === 0 ? 'Inga felhändelser registrerade' : `${senasteFel.length} senaste felhändelser`}</p>
                 </div>
                 <button onClick={() => setFelModalÖppen(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors text-lg">✕</button>
               </div>

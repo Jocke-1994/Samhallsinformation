@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { FaqKategori } from '../../types'
 import { type FaqItem, fetchAdminFaq, createFaqItem, updateFaqItem, deleteFaqItem, type FaqRequest } from '../../api/faq'
 import { FLAG_DEFINITIONER, type FlagKey } from '../../lib/featureFlags'
 import { useFeatureFlagsAdmin } from '../../context/FeatureFlagsContext'
+import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
 
 const KATEGORIER: FaqKategori[] = ['Notifieringar', 'Mina källor', 'Konto', 'Uppdateringar']
 
@@ -18,8 +19,8 @@ const KAT_FÄRG: Record<FaqKategori, string> = {
 // Ta bort-modal
 // ---------------------------------------------------------------------------
 
-function TaBortModal({ fråga, onBekräfta, onStäng }: {
-  fråga: string; onBekräfta: () => void; onStäng: () => void
+function TaBortModal({ fråga, onBekräfta, onStäng, fel, arIgang }: {
+  fråga: string; onBekräfta: () => void; onStäng: () => void; fel?: unknown; arIgang?: boolean
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
@@ -32,9 +33,10 @@ function TaBortModal({ fråga, onBekräfta, onStäng }: {
           <p className="text-sm text-slate-600">
             <strong className="text-slate-800">"{fråga}"</strong> tas bort permanent. Åtgärden kan inte ångras.
           </p>
+          <MutationFel fel={fel} reserv="Frågan kunde inte tas bort. Försök igen." />
           <div className="flex gap-3">
             <button onClick={onStäng}      className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Avbryt</button>
-            <button onClick={onBekräfta}   className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-xl transition-colors">Ta bort</button>
+            <button onClick={onBekräfta} disabled={arIgang} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors">{arIgang ? 'Tar bort...' : 'Ta bort'}</button>
           </div>
         </div>
       </div>
@@ -46,10 +48,12 @@ function TaBortModal({ fråga, onBekräfta, onStäng }: {
 // Formulärpanel
 // ---------------------------------------------------------------------------
 
-function FormPanel({ redigerar, onSpara, onStäng }: {
+function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   redigerar: FaqItem | null
   onSpara:   (fråga: string, svar: string, kategori: FaqKategori, flagKey: string | null) => void
   onStäng:   () => void
+  sparar?:   boolean
+  fel?:      unknown
 }) {
   const [fråga,    setFråga]    = useState(redigerar?.fraga    ?? '')
   const [svar,     setSvar]     = useState(redigerar?.svar     ?? '')
@@ -135,17 +139,20 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
-          <button onClick={onStäng} className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
-            Avbryt
-          </button>
-          <button
-            onClick={() => kanSpara && onSpara(fråga.trim(), svar.trim(), kategori, flagKey)}
-            disabled={!kanSpara}
-            className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
-          >
-            {redigerar ? 'Spara ändringar' : 'Skapa fråga'}
-          </button>
+        <div className="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 shrink-0">
+          <MutationFel fel={fel} reserv="Frågan kunde inte sparas. Din text finns kvar — försök igen." />
+          <div className="flex gap-3">
+            <button onClick={onStäng} className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+              Avbryt
+            </button>
+            <button
+              onClick={() => kanSpara && !sparar && onSpara(fråga.trim(), svar.trim(), kategori, flagKey)}
+              disabled={!kanSpara || sparar}
+              className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              {sparar ? 'Sparar...' : redigerar ? 'Spara ändringar' : 'Skapa fråga'}
+            </button>
+          </div>
         </div>
 
       </div>
@@ -160,10 +167,12 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
 export default function AdminFaq() {
   const queryClient = useQueryClient()
   const { flaggor } = useFeatureFlagsAdmin()
-  const { data: frågor = [] } = useQuery({
+  const frågeFråga = useQuery({
     queryKey: ['admin-faq'],
     queryFn:  fetchAdminFaq,
   })
+  const frågor = frågeFråga.data ?? []
+  const frågorOkända = frågeFråga.data === undefined
 
   const [katFilter,   setKatFilter]   = useState<FaqKategori | 'alla'>('alla')
   const [sökning,     setSökning]     = useState('')
@@ -190,20 +199,30 @@ export default function AdminFaq() {
     return katMatch && sökMatch
   })
 
-  function öppnaSkapa()              { setRedigerar(null); setPanelÖppen(true) }
-  function öppnaRedigera(f: FaqItem) { setRedigerar(f);     setPanelÖppen(true) }
+  function öppnaSkapa()              { createMutation.reset(); updateMutation.reset(); setRedigerar(null); setPanelÖppen(true) }
+  function öppnaRedigera(f: FaqItem) { createMutation.reset(); updateMutation.reset(); setRedigerar(f);     setPanelÖppen(true) }
   function stängPanel()              { setPanelÖppen(false); setRedigerar(null) }
 
+  // Panelen stängs först när servern bekräftat (V3-8) — vid fel finns texten kvar och felet visas.
+  // Lås i en ref: react-query meddelar komponenten asynkront, så isPending hinner inte
+  // stoppa två klick i samma tick.
+  const sparaLås = useRef(false)
   function spara(fråga: string, svar: string, kategori: FaqKategori, flagKey: string | null) {
+    if (sparaLås.current) return
+    sparaLås.current = true
+    const villkor = { onSuccess: stängPanel, onSettled: () => { sparaLås.current = false } }
     if (redigerar) {
-      updateMutation.mutate({ id: redigerar.id, req: { kategori, fraga: fråga, svar, publicerad: redigerar.publicerad, flagKey } })
+      updateMutation.mutate(
+        { id: redigerar.id, req: { kategori, fraga: fråga, svar, publicerad: redigerar.publicerad, flagKey } },
+        villkor,
+      )
     } else {
-      createMutation.mutate({ kategori, fraga: fråga, svar, publicerad: true, flagKey })
+      createMutation.mutate({ kategori, fraga: fråga, svar, publicerad: true, flagKey }, villkor)
     }
-    stängPanel()
   }
 
   function togglePublicerad(f: FaqItem) {
+    if (updateMutation.isPending) return
     updateMutation.mutate({ id: f.id, req: { kategori: f.kategori, fraga: f.fraga, svar: f.svar, publicerad: !f.publicerad, flagKey: f.flagKey } })
   }
 
@@ -226,13 +245,26 @@ export default function AdminFaq() {
       {taBort && (
         <TaBortModal
           fråga={taBort.fraga}
-          onBekräfta={() => { deleteMutation.mutate(taBort.id); setTaBort(null) }}
-          onStäng={() => setTaBort(null)}
+          onBekräfta={() => { if (!deleteMutation.isPending) deleteMutation.mutate(taBort.id, { onSuccess: () => setTaBort(null) }) }}
+          onStäng={() => { deleteMutation.reset(); setTaBort(null) }}
+          fel={deleteMutation.error}
+          arIgang={deleteMutation.isPending}
         />
       )}
 
       {panelÖppen && (
-        <FormPanel redigerar={redigerar} onSpara={spara} onStäng={stängPanel} />
+        <FormPanel
+          redigerar={redigerar}
+          onSpara={spara}
+          onStäng={stängPanel}
+          sparar={createMutation.isPending || updateMutation.isPending}
+          fel={redigerar ? updateMutation.error : createMutation.error}
+        />
+      )}
+
+      {/* Misslyckad publicera/dölj-växling (panelen visar sitt eget fel) */}
+      {!panelÖppen && !taBort && (
+        <MutationFel fel={updateMutation.error} reserv="Ändringen kunde inte sparas. Försök igen." className="bg-red-50 border border-red-200 rounded-2xl px-5 py-3" />
       )}
 
       {/* Stat-kort */}
@@ -246,7 +278,7 @@ export default function AdminFaq() {
           { label: 'Uppdateringar', värde: antal.uppdateringar, färg: 'text-emerald-600' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-5 text-center">
-            <p className={`text-3xl font-bold ${s.färg}`}>{s.värde}</p>
+            <p className={`text-3xl font-bold ${frågorOkända ? 'text-slate-300' : s.färg}`}>{frågorOkända ? '—' : s.värde}</p>
             <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-medium">{s.label}</p>
           </div>
         ))}
@@ -363,7 +395,21 @@ export default function AdminFaq() {
                 </td>
               </tr>
             ))}
-            {filtrerade.length === 0 && (
+            {frågeFråga.isLoading && (
+              <tr><td colSpan={5} className="px-6 py-10 text-center text-sm text-slate-400">Laddar frågor...</td></tr>
+            )}
+            {frågeFråga.isError && (
+              <tr><td colSpan={5} className="p-0">
+                <HamtningsFel
+                  fel={frågeFråga.error}
+                  reserv={frågorOkända ? 'Kunde inte hämta frågorna. Det här är inte samma sak som att inga frågor finns.' : 'Kunde inte uppdatera listan. Den kan vara inaktuell.'}
+                  onForsokIgen={() => { void frågeFråga.refetch() }}
+                  arIgang={frågeFråga.isFetching}
+                  className="py-10"
+                />
+              </td></tr>
+            )}
+            {!frågeFråga.isLoading && !frågorOkända && filtrerade.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-400">
                   {sökning ? <>Inga frågor matchade <strong className="text-slate-500">"{sökning}"</strong>.</> : 'Inga frågor i den här kategorin.'}

@@ -11,6 +11,9 @@ interface FeatureFlagsContextValue {
   laddat: boolean
   växlaFlagg: (key: FlagKey) => void
   återställ: () => void
+  /** Felet från senaste misslyckade växling/återställning (annars null/undefined). */
+  ändringsFel: unknown
+  ändringPågår: boolean
 }
 
 const FeatureFlagsContext = createContext<FeatureFlagsContextValue | null>(null)
