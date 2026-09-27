@@ -126,7 +126,7 @@ Mål: tåla dålig extern data, dubbletter och fel utan att tyst tappa data elle
 | V3-5 | **Krisinformation:** ogiltigt `Published` hoppar över posten, fäller inte källan | E3#7 | BE | S | enhet + fejk-HTTP | ☑ mergad (PR #632) |
 | V3-6 | **UTC vid skrivning:** normalisera `DateTime.Kind` (converter/`EnsureUtcKind`) och tidsfilter i aktivitetsloggen; `DbCommandInterceptor`-test | E2#4, E4#2 | BE | M | interceptor + PG-rök | ☑ mergad (PR #629) |
 | V3-7 | **`ErrorBoundary` runt appen och per sida + catch-all-route** | E7#8 (+ stödjer E6#9) | FE | S–M | Vitest | ☑ mergad (PR #628) |
-| V3-8 | **Admin: fel visas som fel** (inte tomt/0/"100 % frisk"), `onError` i mutationer, formulär stänger först vid lyckat svar, Ångra/mass-spara med felhantering | E6#8, E6#10, E6#19, E6#20 | FE | L | FE | ◐ pågår |
+| V3-8 | **Admin: fel visas som fel** (inte tomt/0/"100 % frisk"), `onError` i mutationer, formulär stänger först vid lyckat svar, Ångra/mass-spara med felhantering | E6#8, E6#10, E6#19, E6#20 | FE | L | FE | ☑ mergad (PR #650) |
 | V3-9 | **Medborgarsidans mutationer visar fel;** supportformuläret behåller text vid kategoribyte | E7#9 | FE | M | FE | ☑ mergad (PR #635) |
 | V3-10 | **Support-rollens behörighet** (efter D1): backend-policy + frontend-menyer i synk. Ändrar testet `AdminSupportController_RequiresAdminRole` avsiktligt. | E4#7, E6#7 | BE+FE | M | enhet | ☑ mergad (PR #641) |
 | V3-11 | **Mitt flöde filtreras på servern** (efter D2); ersätter klientfiltret över 50 händelser; gäller även Sparat | E5#1 | BE+FE | L | enhet+FE | ☑ mergad (PR #647) — verifierat live: Mitt flöde visade 2 händelser före, nu flera dygn tillbaka |
