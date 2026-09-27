@@ -5,6 +5,7 @@ import { fetchAdminStats } from '../../api/stats'
 import { fetchAdminUsers } from '../../api/adminUsers'
 import { MockBadge } from '../common/MockBadge'
 import { fetchIngestorLogSummary, fetchIngestorLogRecent } from '../../api/ingestorLog'
+import { HamtningsFel } from '../common/HamtningsStatus'
 
 const DAGAR_KORT = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
 
