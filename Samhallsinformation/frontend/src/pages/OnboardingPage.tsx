@@ -41,7 +41,20 @@ export default function OnboardingPage() {
   const [confirm, setConfirm]   = useState('')
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [kontoFel, setKontoFel] = useState<string | null>(null)
+  const [epostFel, setEpostFel] = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
+
+  // Tidig formatkontroll av e-post (på blur, inte varje tangenttryck) — ingen
+  // billig "finns adressen redan"-endpoint finns i backend (se PR-texten),
+  // så den riktiga upptagen-kontrollen sker fortfarande först i handleKontoNasta
+  // (idag facto i sista steget via register()). Det här ger i alla fall
+  // omedelbar feedback på ett felstavat format, i stället för att vänta till
+  // "Nästa" eller sista steget.
+  function hanteraEpostBlur() {
+    if (!email) return setEpostFel(null)
+    const giltigt = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    setEpostFel(giltigt ? null : 'Ange en giltig e-postadress')
+  }
 
   // Steg 2 — bara lokalt state, inget konto finns att spara mot än
   const [valdaKällor, setValdaKällor] = useState<Set<number>>(new Set())
@@ -59,9 +72,16 @@ export default function OnboardingPage() {
     e.preventDefault()
     setKontoFel(null)
     if (!name.trim()) return setKontoFel('Ange ditt namn')
-    if (password !== confirm) return setKontoFel('Lösenorden matchar inte')
-    if (password.length < 8) return setKontoFel('Lösenordet måste vara minst 8 tecken')
-    if (!acceptedTerms) return setKontoFel('Du måste godkänna användarvillkoren')
+    // Ett Google-skapat konto (kontoSkapat=true) har redan lösenord/villkor
+    // hanterat av OAuth-flödet — ett "Tillbaka" hit (för att t.ex. rätta
+    // namnet) ska inte plötsligt kräva att man hittar på ett lösenord som
+    // ändå kastas (se steg='konto'-grenen nedan, som inte ens visar fälten).
+    if (!kontoSkapat) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setKontoFel('Ange en giltig e-postadress')
+      if (password !== confirm) return setKontoFel('Lösenorden matchar inte')
+      if (password.length < 8) return setKontoFel('Lösenordet måste vara minst 8 tecken')
+      if (!acceptedTerms) return setKontoFel('Du måste godkänna användarvillkoren')
+    }
     setSteg('kallor')
   }
 
@@ -153,42 +173,58 @@ export default function OnboardingPage() {
                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">E-post</label>
-                  <input
-                    type="email" value={email} onChange={e => setEmail(e.target.value)}
-                    placeholder="din@epost.se" required
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Lösenord</label>
-                  <input
-                    type="password" value={password} onChange={e => setPassword(e.target.value)}
-                    placeholder="Minst 8 tecken" required
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Bekräfta lösenord</label>
-                  <input
-                    type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
-                    placeholder="••••••••" required
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                  />
-                </div>
-                <label className="flex items-start gap-2.5 text-sm text-slate-600">
-                  <input
-                    type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)}
-                    className="mt-0.5 rounded border-slate-300 text-violet-600 focus:ring-violet-400 shrink-0"
-                  />
-                  <span>
-                    Jag godkänner{' '}
-                    <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:text-violet-500 font-medium">
-                      användarvillkoren och integritetspolicyn
-                    </Link>
-                  </span>
-                </label>
+                {kontoSkapat ? (
+                  // Kontot är redan skapat via Google (man klickade "Tillbaka" från
+                  // Källor-steget) — inget lösenord/villkor att fylla i igen, bara
+                  // ett bekräftande av vilket konto det gäller.
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">E-post</label>
+                    <p className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 text-sm">
+                      {email} · inloggad via Google
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">E-post</label>
+                      <input
+                        type="email" value={email} onChange={e => setEmail(e.target.value)}
+                        onBlur={hanteraEpostBlur}
+                        placeholder="din@epost.se" required
+                        className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      />
+                      {epostFel && <p className="text-xs text-red-600 mt-1">{epostFel}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Lösenord</label>
+                      <input
+                        type="password" value={password} onChange={e => setPassword(e.target.value)}
+                        placeholder="Minst 8 tecken" required
+                        className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Bekräfta lösenord</label>
+                      <input
+                        type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
+                        placeholder="••••••••" required
+                        className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      />
+                    </div>
+                    <label className="flex items-start gap-2.5 text-sm text-slate-600">
+                      <input
+                        type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)}
+                        className="mt-0.5 rounded border-slate-300 text-violet-600 focus:ring-violet-400 shrink-0"
+                      />
+                      <span>
+                        Jag godkänner{' '}
+                        <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:text-violet-500 font-medium">
+                          användarvillkoren och integritetspolicyn
+                        </Link>
+                      </span>
+                    </label>
+                  </>
+                )}
                 {kontoFel && (
                   <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3.5 py-2.5">{kontoFel}</p>
                 )}
@@ -207,36 +243,40 @@ export default function OnboardingPage() {
                 </button>
               </form>
 
-              <div className="mt-5">
-                <GoogleSignInButton
-                  onStart={() => { setKontoFel(null); setGoogleLoading(true) }}
-                  onError={message => { setKontoFel(message); setGoogleLoading(false) }}
-                  onSuccess={(profile, isNewUser) => {
-                    if (!isNewUser) {
-                      // Redan ett befintligt konto (lösenords- eller Google-
-                      // baserat) — det här var i praktiken en inloggning, inte
-                      // en registrering. Hoppa förbi hela guiden precis som
-                      // /login redan gör, annars riskerar Källor-steget att
-                      // skriva över redan sparade källval på ett riktigt konto.
-                      navigate(redirect, { replace: true })
-                      return
-                    }
-                    setName(profile.name)
-                    setEmail(profile.email)
-                    setKontoSkapat(true)
-                    setGoogleLoading(false)
-                    setSteg('kallor')
-                  }}
-                />
-                {googleLoading && <p className="text-center text-xs text-slate-400 mt-2">Loggar in…</p>}
-              </div>
+              {!kontoSkapat && (
+                <div className="mt-5">
+                  <GoogleSignInButton
+                    onStart={() => { setKontoFel(null); setGoogleLoading(true) }}
+                    onError={message => { setKontoFel(message); setGoogleLoading(false) }}
+                    onSuccess={(profile, isNewUser) => {
+                      if (!isNewUser) {
+                        // Redan ett befintligt konto (lösenords- eller Google-
+                        // baserat) — det här var i praktiken en inloggning, inte
+                        // en registrering. Hoppa förbi hela guiden precis som
+                        // /login redan gör, annars riskerar Källor-steget att
+                        // skriva över redan sparade källval på ett riktigt konto.
+                        navigate(redirect, { replace: true })
+                        return
+                      }
+                      setName(profile.name)
+                      setEmail(profile.email)
+                      setKontoSkapat(true)
+                      setGoogleLoading(false)
+                      setSteg('kallor')
+                    }}
+                  />
+                  {googleLoading && <p className="text-center text-xs text-slate-400 mt-2">Loggar in…</p>}
+                </div>
+              )}
 
-              <p className="text-center text-sm text-slate-500 mt-5">
-                Har du redan ett konto?{' '}
-                <Link to={`/login${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`} className="text-violet-600 hover:text-violet-500 font-medium">
-                  Logga in här
-                </Link>
-              </p>
+              {!kontoSkapat && (
+                <p className="text-center text-sm text-slate-500 mt-5">
+                  Har du redan ett konto?{' '}
+                  <Link to={`/login${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`} className="text-violet-600 hover:text-violet-500 font-medium">
+                    Logga in här
+                  </Link>
+                </p>
+              )}
             </div>
           )}
 
