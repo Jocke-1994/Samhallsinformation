@@ -55,7 +55,6 @@ function rendera(props: { viewMode?: 'Allt' | 'Mitt' } = {}) {
         sources={KALLOR}
         viewMode={props.viewMode ?? 'Mitt'}
         onViewModeChange={vi.fn()}
-        onReadStatusChange={vi.fn()}
         onOpenSidebar={vi.fn()}
       />
     </QueryClientProvider>,

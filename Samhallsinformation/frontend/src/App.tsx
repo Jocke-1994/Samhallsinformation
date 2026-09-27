@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, useLocation } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSwipeable } from 'react-swipeable'
@@ -22,7 +22,6 @@ import NotFoundPage from './pages/NotFoundPage'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import EmailVerificationBanner from './components/common/EmailVerificationBanner'
 import { fetchSources } from './api/sources'
-import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 import { useAuth } from './context/AuthContext'
 import { fetchMaintenanceBanners } from './api/maintenanceBanners'
 import type { Source } from './types'
@@ -36,7 +35,6 @@ function HomePage() {
   const [viewMode, setViewMode] = useState<'Allt' | 'Mitt'>(
     (location.state as { viewMode?: 'Allt' | 'Mitt' } | null)?.viewMode ?? 'Allt'
   )
-  const [readTrigger, setReadTrigger] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Allt/Mitt är bara meningsfullt i det kombinerade flödet för inloggade —
@@ -48,12 +46,6 @@ function HomePage() {
     queryKey: ['sources'],
     queryFn: fetchSources,
   })
-
-  const unreadSourceIds = useUnreadSourceIds(sources, readTrigger)
-
-  const handleReadStatusChange = useCallback(() => {
-    setReadTrigger(n => n + 1)
-  }, [])
 
   const swipeHandlers = useSwipeable({
     onSwipedRight: (e) => { if (e.initial[0] < 30) setSidebarOpen(true) },
@@ -69,7 +61,6 @@ function HomePage() {
         onSelectSource={setSelectedShortName}
         viewMode={viewMode}
         onSelectViewMode={setViewMode}
-        unreadSourceIds={unreadSourceIds}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -79,7 +70,6 @@ function HomePage() {
           sources={sources}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
-          onReadStatusChange={handleReadStatusChange}
           onOpenSidebar={() => setSidebarOpen(true)}
         />
       </main>

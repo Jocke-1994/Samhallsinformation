@@ -46,7 +46,6 @@ export default function UppdateringarPage() {
         onSelectSource={() => {}}
         viewMode="Allt"
         onSelectViewMode={() => {}}
-        unreadSourceIds={new Set()}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

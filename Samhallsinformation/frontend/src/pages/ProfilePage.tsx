@@ -57,7 +57,7 @@ export default function ProfilePage() {
   if (!isLoggedIn) {
     return (
       <div className="flex h-full bg-slate-50">
-        <Sidebar selectedShortName={null} onSelectSource={() => {}} viewMode="Allt" onSelectViewMode={() => {}} unreadSourceIds={new Set()} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar selectedShortName={null} onSelectSource={() => {}} viewMode="Allt" onSelectViewMode={() => {}} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className="flex flex-1 overflow-hidden" {...swipeHandlers}>
           <div className="flex-1 overflow-y-auto">
             <MobilTopBar onOpenSidebar={() => setSidebarOpen(true)} />
@@ -75,7 +75,6 @@ export default function ProfilePage() {
         onSelectSource={() => {}}
         viewMode="Allt"
         onSelectViewMode={() => {}}
-        unreadSourceIds={new Set()}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

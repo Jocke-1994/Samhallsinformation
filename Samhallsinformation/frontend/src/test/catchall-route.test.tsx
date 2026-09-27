@@ -21,7 +21,6 @@ vi.mock('../api/sources', () => ({ fetchSources: async () => [] }))
 vi.mock('../api/userSources', () => ({ fetchUserSources: async () => [] }))
 vi.mock('../api/auth', () => ({ resendVerification: vi.fn() }))
 vi.mock('../api/maintenanceBanners', () => ({ fetchMaintenanceBanners: async () => [] }))
-vi.mock('../hooks/useUnreadSourceIds', () => ({ useUnreadSourceIds: () => new Set() }))
 
 vi.mock('../components/Sidebar/Sidebar', () => ({ default: () => <nav>Sidomeny</nav> }))
 vi.mock('../components/NewsFeed/NewsFeed', () => ({ default: () => <p>Nyhetsflödet</p> }))
