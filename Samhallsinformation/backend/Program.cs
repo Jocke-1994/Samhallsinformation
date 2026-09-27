@@ -1238,6 +1238,21 @@ using (var scope = app.Services.CreateScope())
                 app.Logger.LogError(ex, "Kunde inte markera AddEventsUniqueIndex som tillämpad — uppstarten fortsätter.");
             }
         }
+
+        // Events.UpdatedAt (V4-1b, E3#10) — nullable, satt när EventSync uppdaterar en
+        // redan sparad rad vars innehåll ändrats (Trafikverket/SMHI m.fl.). Ingen backfill
+        // behövs: null betyder "aldrig ändrad sedan den sparades", vilket stämmer för all
+        // befintlig data.
+        if (pendingMigrations.Contains("20260927130739_AddEventUpdatedAt"))
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""Events"" ADD COLUMN IF NOT EXISTS ""UpdatedAt"" timestamptz;
+
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                VALUES ('20260927130739_AddEventUpdatedAt', '10.0.12')
+                ON CONFLICT DO NOTHING;
+            ");
+        }
     }
 
     // Rensa dubbletter av (SourceId, ExternalId) i Events INNAN det unika indexet skapas (V3-2). Gäller både
