@@ -5,6 +5,8 @@ import Sidebar from '../components/Sidebar/Sidebar'
 import MobilTopBar from '../components/common/MobilTopBar'
 import { type ProfileSection } from '../types'
 import { useAuth } from '../context/AuthContext'
+import { useFlags } from '../context/FeatureFlagsContext'
+import { isSektionSynlig } from '../lib/featureFlags'
 import GästProfil from './GästProfil'
 import MinaKallor from '../components/Profile/MinaKallor'
 import Konto from '../components/Profile/Konto'
@@ -25,11 +27,19 @@ const SECTION_LABELS: Record<ProfileSection, string> = {
 
 export default function ProfilePage() {
   const { isLoggedIn } = useAuth()
+  const flaggor = useFlags()
   const [searchParams, setSearchParams] = useSearchParams()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const sectionParam = searchParams.get('section')
-  const section = VALID_SECTIONS.includes(sectionParam as ProfileSection)
+  const requestedSection = VALID_SECTIONS.includes(sectionParam as ProfileSection)
     ? (sectionParam as ProfileSection)
+    : null
+  // En direktlänk (t.ex. Ny version-pushens /profil?section=uppdateringar) mot
+  // en sektion vars samtliga flaggor är avstängda ska inte rendera sektionen —
+  // samma spärr som redan gäller landningssidans kort och sökindexet
+  // (isSektionSynlig). Fallback: landningssidan (bara synliga kort).
+  const section = requestedSection && isSektionSynlig(requestedSection, flaggor)
+    ? requestedSection
     : null
 
   function setSection(s: ProfileSection | null) {
@@ -47,8 +57,13 @@ export default function ProfilePage() {
   if (!isLoggedIn) {
     return (
       <div className="flex h-full bg-slate-50">
-        <Sidebar selectedShortName={null} onSelectSource={() => {}} viewMode="Allt" onSelectViewMode={() => {}} unreadSourceIds={new Set()} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <GästProfil />
+        <Sidebar selectedShortName={null} onSelectSource={() => {}} viewMode="Allt" onSelectViewMode={() => {}} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex flex-1 overflow-hidden" {...swipeHandlers}>
+          <div className="flex-1 overflow-y-auto">
+            <MobilTopBar onOpenSidebar={() => setSidebarOpen(true)} />
+            <GästProfil />
+          </div>
+        </div>
       </div>
     )
   }
@@ -60,7 +75,6 @@ export default function ProfilePage() {
         onSelectSource={() => {}}
         viewMode="Allt"
         onSelectViewMode={() => {}}
-        unreadSourceIds={new Set()}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

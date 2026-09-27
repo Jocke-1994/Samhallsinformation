@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import BetaBadge from '../components/common/BetaBadge'
+import { Link } from 'react-router'
 import { useFlags } from '../context/FeatureFlagsContext'
 import { isSektionSynlig } from '../lib/featureFlags'
+import { useSiteSettings } from '../hooks/useSiteSettings'
 
 // Samma sektioner som ProfileLanding.tsx (inloggad vy) filtrerar bort med
 // isSektionSynlig — annars lovar den här listan funktioner som faktiskt är
@@ -16,117 +15,10 @@ const FEATURES = [
   { sektion: 'support',       icon: '💬', label: 'Support',        desc: 'Skicka ärenden och följ deras status' },
 ]
 
-function InloggningsModal({ onClose, onLogin, mode }: { onClose: () => void; onLogin: (email: string, password: string) => Promise<void>; mode: 'logga-in' | 'skapa-konto' }) {
-  const [epost, setEpost] = useState('')
-  const [losenord, setLosenord] = useState('')
-  const [view, setView] = useState<'logga-in' | 'skapa-konto'>(mode)
-  const [laddar, setLaddar] = useState(false)
-  const [fel, setFel] = useState<string | null>(null)
-
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', handleKey)
-    return () => document.removeEventListener('keydown', handleKey)
-  }, [onClose])
-
-  const isLogIn = view === 'logga-in'
-
-  async function hanteraLogga() {
-    if (!epost || !losenord) return
-    setFel(null)
-    setLaddar(true)
-    try {
-      await onLogin(epost, losenord)
-    } catch (e) {
-      setFel(e instanceof Error ? e.message : 'Något gick fel')
-    } finally {
-      setLaddar(false)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
-        <div className="bg-gradient-to-br from-violet-600 to-violet-800 px-6 py-6 flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-white">{isLogIn ? 'Logga in' : 'Skapa konto'}</h2>
-              <BetaBadge />
-            </div>
-            <p className="text-violet-200 text-sm mt-0.5">
-              {isLogIn ? 'Välkommen tillbaka' : 'Kom igång med Samhällsinformation'}
-            </p>
-          </div>
-          <button onClick={onClose} className="text-violet-300 hover:text-white transition-colors text-lg leading-none mt-0.5">✕</button>
-        </div>
-
-        <div className="px-6 py-5 flex flex-col gap-4">
-
-          {/* Felmeddelande */}
-          {fel && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
-              {fel}
-            </div>
-          )}
-
-          {/* E-post + lösenord */}
-          <div className="flex flex-col gap-3">
-            <input
-              type="email"
-              value={epost}
-              onChange={e => setEpost(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') hanteraLogga() }}
-              placeholder="E-postadress"
-              className="w-full px-3 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 placeholder-slate-400 text-slate-900 transition-all"
-            />
-            <div className="flex flex-col gap-1">
-              <input
-                type="password"
-                value={losenord}
-                onChange={e => setLosenord(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') hanteraLogga() }}
-                placeholder="Lösenord"
-                className="w-full px-3 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 placeholder-slate-400 text-slate-900 transition-all"
-              />
-            </div>
-            <button
-              onClick={hanteraLogga}
-              disabled={laddar || !epost || !losenord}
-              className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
-            >
-              {laddar ? 'Loggar in...' : isLogIn ? 'Logga in' : 'Skapa konto'}
-            </button>
-          </div>
-
-          {/* Byt vy */}
-          <p className="text-xs text-slate-400 text-center">
-            {isLogIn ? 'Har du inget konto?' : 'Har du redan ett konto?'}{' '}
-            <button
-              onClick={() => { setView(isLogIn ? 'skapa-konto' : 'logga-in'); setFel(null) }}
-              className="font-semibold text-violet-600 hover:text-violet-500 transition-colors"
-            >
-              {isLogIn ? 'Skapa konto' : 'Logga in'}
-            </button>
-          </p>
-
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function GästProfil() {
-  const { login } = useAuth()
   const flaggor = useFlags()
+  const { showLoginButton, showRegisterButton } = useSiteSettings()
   const synligaFeatures = FEATURES.filter(f => isSektionSynlig(f.sektion, flaggor))
-  const [modalMode, setModalMode] = useState<'logga-in' | 'skapa-konto' | null>(null)
-
-  async function hanteraLogin(email: string, password: string) {
-    await login(email, password)
-    setModalMode(null)
-  }
 
   return (
     <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-10 py-16">
@@ -145,21 +37,30 @@ export default function GästProfil() {
           </p>
         </div>
 
-        {/* Knappar */}
-        <div className="flex gap-3 w-full">
-          <button
-            onClick={() => setModalMode('logga-in')}
-            className="flex-1 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
-          >
-            Logga in
-          </button>
-          <button
-            onClick={() => setModalMode('skapa-konto')}
-            className="flex-1 py-3 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl border border-slate-200 transition-colors"
-          >
-            Skapa konto
-          </button>
-        </div>
+        {/* Knappar — riktiga länkar till /login och /register (samma sidor
+            som resten av appen använder, inkl. Google och glömt lösenord),
+            inte en modal som bara kunde logga in oavsett vilken knapp man
+            klickade på. */}
+        {(showLoginButton || showRegisterButton) && (
+          <div className="flex gap-3 w-full">
+            {showLoginButton && (
+              <Link
+                to="/login?redirect=/profil"
+                className="flex-1 py-3 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm text-center"
+              >
+                Logga in
+              </Link>
+            )}
+            {showRegisterButton && (
+              <Link
+                to="/register?redirect=/profil"
+                className="flex-1 py-3 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl border border-slate-200 transition-colors text-center"
+              >
+                Skapa konto
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* Funktionslista */}
         <div className="w-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
@@ -181,13 +82,6 @@ export default function GästProfil() {
         </div>
 
       </div>
-      {modalMode && (
-        <InloggningsModal
-          mode={modalMode}
-          onClose={() => setModalMode(null)}
-          onLogin={hanteraLogin}
-        />
-      )}
     </div>
   )
 }

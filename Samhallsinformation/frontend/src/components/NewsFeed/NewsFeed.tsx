@@ -82,11 +82,10 @@ interface Props {
   sources: Source[]
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
-  onReadStatusChange: () => void
   onOpenSidebar: () => void
 }
 
-export default function NewsFeed({ shortName, sources, viewMode, onViewModeChange, onReadStatusChange, onOpenSidebar }: Props) {
+export default function NewsFeed({ shortName, sources, viewMode, onViewModeChange, onOpenSidebar }: Props) {
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()
   const flaggor = useFlags()
@@ -127,7 +126,6 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
     const ids = basEvents.map(e => e.id)
     markAllAsRead(ids)
     setReadMap(Object.fromEntries(ids.map(id => [id, true])))
-    if (shortName) onReadStatusChange()
   }
 
   const filteredEvents = useMemo(() =>

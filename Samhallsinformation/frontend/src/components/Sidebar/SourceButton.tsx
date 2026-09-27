@@ -1,11 +1,10 @@
 interface Props {
   label: string
   active: boolean
-  hasUnread: boolean
   onClick: () => void
 }
 
-export default function SourceButton({ label, active, hasUnread, onClick }: Props) {
+export default function SourceButton({ label, active, onClick }: Props) {
   return (
     <button
       onClick={onClick}
@@ -17,11 +16,6 @@ export default function SourceButton({ label, active, hasUnread, onClick }: Prop
       `}
     >
       <span className="truncate">{label}</span>
-      {hasUnread && (
-        <span className="ml-2 shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500 text-white leading-none">
-          Nytt
-        </span>
-      )}
     </button>
   )
 }
