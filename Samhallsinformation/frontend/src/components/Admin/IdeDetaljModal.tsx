@@ -51,6 +51,11 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
   const [beskrivning, setBeskrivning] = useState('')
   const [flagKey, setFlagKey]         = useState('')
   const [motivering, setMotivering]   = useState('')
+  // E6#22a: skiljer "fältet aldrig rört" (bevara idea.triageMotivering) från
+  // "fältet aktivt tömt till en tom sträng" (spara som null). Utan den här
+  // flaggan tolkas ett tömt textfält som "inget nytt", och den gamla
+  // motiveringen går aldrig att radera.
+  const [motiveringRörd, setMotiveringRörd] = useState(false)
   const [visaTesterForm, setVisaTesterForm] = useState(false)
   const [testerEpost, setTesterEpost] = useState('')
   const [testerFel, setTesterFel]     = useState<string | null>(null)
@@ -108,7 +113,11 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
   }
 
   function sparaTriage(kanGoras: boolean | null, borGoras: boolean | null) {
-    triageMutation.mutate({ kanGoras, borGoras, motivering: motivering.trim() || idea.triageMotivering || null })
+    // Rörd: skicka exakt vad fältet innehåller (kan vara '' -> null, dvs. rensad).
+    // Orörd: bevara den befintliga motiveringen — en checkbox-ändring ska inte
+    // tyst radera en motivering som aldrig redigerats i den här sessionen.
+    const nyMotivering = motiveringRörd ? (motivering.trim() || null) : (idea.triageMotivering ?? null)
+    triageMutation.mutate({ kanGoras, borGoras, motivering: nyMotivering })
   }
 
   async function läggTillTester() {
@@ -186,11 +195,18 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
                   value={beskrivning} onChange={e => setBeskrivning(e.target.value)} rows={4}
                   className="text-sm text-slate-700 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-violet-400 resize-none"
                 />
-                <input
+                {/* E6#22b: fri text tillät en felstavad nyckel som skapade en override-rad
+                    för en flagga som inte finns — en <select> över de faktiska definitionerna
+                    (samma mönster som AdminFaq.tsx) gör en ogiltig nyckel omöjlig att skicka. */}
+                <select
                   value={flagKey} onChange={e => setFlagKey(e.target.value)}
-                  placeholder="Feature flag-nyckel (t.ex. flode_sparat), valfritt"
-                  className="text-xs font-mono text-slate-700 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-violet-400"
-                />
+                  className="text-xs font-mono text-slate-700 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-violet-400 bg-white"
+                >
+                  <option value="">Ingen koppling</option>
+                  {FLAG_DEFINITIONER.map(f => (
+                    <option key={f.key} value={f.key}>{f.key} — {f.label}</option>
+                  ))}
+                </select>
                 <MutationFel fel={updateMutation.error} reserv="Idén kunde inte sparas. Din text finns kvar — försök igen." className="text-xs" />
                 <div className="flex gap-2">
                   <button onClick={sparaRedigering} disabled={updateMutation.isPending} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors">{updateMutation.isPending ? 'Sparar...' : 'Spara'}</button>
@@ -264,7 +280,7 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
             </div>
             <textarea
               defaultValue={idea.triageMotivering ?? ''}
-              onChange={e => setMotivering(e.target.value)}
+              onChange={e => { setMotivering(e.target.value); setMotiveringRörd(true) }}
               onBlur={() => sparaTriage(idea.triageKanGoras ?? null, idea.triageBorGoras ?? null)}
               placeholder="Motivering..."
               rows={2}

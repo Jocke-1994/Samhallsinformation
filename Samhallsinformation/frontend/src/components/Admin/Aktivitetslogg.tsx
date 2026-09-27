@@ -95,10 +95,22 @@ function postTillRad(p: LoggPost): LoggRad {
   }
 }
 
-function exporteraCsv(rader: LoggRad[]) {
+// E6#16: (a) korrekt CSV-escaping — varje cell omsluts i citattecken och ett
+// citattecken i värdet dubblas (RFC 4180), så kommatecken/semikolon/radbrytningar
+// i fritext (t.ex. ärenderubriker) aldrig kan bryta kolumnstrukturen.
+// (b) formelinjektionsskydd (OWASP) — ett värde som BÖRJAR med = + - @ eller en
+// tabb/CR (t.ex. ett fritt användarnamn som "=HYPERLINK(...)") prefixas med en
+// apostrof, så Excel/Sheets aldrig tolkar cellen som en formel.
+export function escapaCsvCell(värde: string): string {
+  let v = värde ?? ''
+  if (/^[=+\-@\t\r]/.test(v)) v = `'${v}`
+  return `"${v.replace(/"/g, '""')}"`
+}
+
+export function exporteraCsv(rader: LoggRad[]) {
   const huvud  = ['Datum', 'Tid', 'Typ', 'Rubrik', 'Detalj', 'Status', 'Vem']
-  const rader_ = rader.map(r => [r.datum, r.tid, r.typ, `"${r.rubrik}"`, `"${r.detalj}"`, r.status, r.vem ?? ''])
-  const csv    = [huvud, ...rader_].map(r => r.join(';')).join('\n')
+  const rader_ = rader.map(r => [r.datum, r.tid, r.typ, r.rubrik, r.detalj, r.status, r.vem ?? ''])
+  const csv    = [huvud, ...rader_].map(r => r.map(escapaCsvCell).join(';')).join('\n')
   const blob   = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
   const url    = URL.createObjectURL(blob)
   const a      = document.createElement('a')

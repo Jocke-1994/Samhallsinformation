@@ -74,6 +74,16 @@ function combineDateTimeToIso(datum: string, tid: string): string {
   return new Date(`${datum}T${tid}:00`).toISOString()
 }
 
+// E6#18: `type="date"`/`type="time"` går att tömma helt (blir en tom sträng),
+// och `new Date('')`/`new Date('2026-01-01T:00')` är en Invalid Date vars
+// `toISOString()` kastar ett `RangeError` — utan felmeddelande gör det bara
+// knappen "död". Alla ställen som bygger en ISO-tid av två separata fält
+// validerar nu båda delarna innan `combineDateTimeToIso` anropas.
+function giltigDatumTid(datum: string, tid: string): boolean {
+  if (!datum || !tid) return false
+  return !Number.isNaN(new Date(`${datum}T${tid}:00`).getTime())
+}
+
 function isPåminnelseAktiv(reminderAt: string): boolean {
   return new Date(reminderAt) <= new Date()
 }
@@ -213,12 +223,21 @@ function ArendeModal({
     setExpandedId(null)
   }
 
-  // "Redigera" görs som nyskapa + avbryt gammal — samma slutresultat för användaren,
-  // ingen egen PUT-endpoint behövs. Ordningen (V3-8): den nya åtgärden skapas FÖRST, så
-  // ett misslyckande aldrig kan lämna ärendet utan åtgärd. Formuläret stängs bara när
-  // allt gått igenom; annars behålls inmatningen och felet visas.
+  // Redigering ska godkännas mot SAMMA regler som skapa-formuläret (E6#14): tom text
+  // för svar/intern, eller ingen vald agent för tilldela, är lika ogiltigt vid
+  // redigering som vid skapande — annars kan en tilldelning sparas som "ingen agent",
+  // vilket i praktiken avassignar ärendet.
+  function editKanSparas(å: AdminScheduledActionDto): boolean {
+    if (!giltigDatumTid(editDatum, editTid)) return false
+    return å.type === 'tilldela' ? editAgent !== '' : editText.trim() !== ''
+  }
+
+  // "Redigera" görs som nyskapa + avbryt gammal — ingen egen PUT-endpoint finns på
+  // backend (rör inte backend, V4-3). Ordningen (V3-8): den nya åtgärden skapas
+  // FÖRST, så ett misslyckande aldrig kan lämna ärendet utan åtgärd. Formuläret
+  // stängs bara när allt gått igenom; annars behålls inmatningen och felet visas.
   async function handleSparaEdit(å: AdminScheduledActionDto) {
-    if (!editDatum || redigerar) return
+    if (!editKanSparas(å) || redigerar) return
     setRedigerar(true)
     setRedigeraFel(null)
     try {
@@ -262,7 +281,7 @@ function ArendeModal({
   }
 
   function handleSparaPåminnelse() {
-    if (!påmDatum || reminderMutation.isPending || påminnelseLås.current) return
+    if (!giltigDatumTid(påmDatum, påmTid) || reminderMutation.isPending || påminnelseLås.current) return
     påminnelseLås.current = true
     reminderMutation.mutate(
       { reminderAt: combineDateTimeToIso(påmDatum, påmTid), reminderNote: påmNotering.trim() || null },
@@ -283,7 +302,7 @@ function ArendeModal({
   }
 
   function handleSpараSchema() {
-    if (!schDatum || addScheduleMutation.isPending || schemaLås.current) return
+    if (!giltigDatumTid(schDatum, schTid) || addScheduleMutation.isPending || schemaLås.current) return
     if ((schTyp === 'svar' || schTyp === 'intern') && !schText.trim()) return
     if (schTyp === 'tilldela' && !schAgent) return
     schemaLås.current = true
@@ -488,7 +507,7 @@ function ArendeModal({
                   <input type="time" value={påmTid} onChange={e => setPåmTid(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:outline-none focus:border-violet-400 bg-white w-full" />
                   <textarea value={påmNotering} onChange={e => setPåmNotering(e.target.value)} rows={2} placeholder="Vad ska kontrolleras?" className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:outline-none focus:border-violet-400 bg-white resize-none placeholder-slate-300" />
                   <div className="flex gap-2">
-                    <button onClick={handleSparaPåminnelse} disabled={!påmDatum || reminderMutation.isPending} className="flex-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors">Spara</button>
+                    <button onClick={handleSparaPåminnelse} disabled={!giltigDatumTid(påmDatum, påmTid) || reminderMutation.isPending} className="flex-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors">Spara</button>
                     <button onClick={() => setVisaPåmForm(false)} className="flex-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs rounded-lg transition-colors">Avbryt</button>
                   </div>
                 </div>
@@ -536,7 +555,7 @@ function ArendeModal({
                   <div className="flex gap-2">
                     <button
                       onClick={handleSpараSchema}
-                      disabled={!schDatum || addScheduleMutation.isPending || ((schTyp === 'svar' || schTyp === 'intern') ? !schText.trim() : !schAgent)}
+                      disabled={!giltigDatumTid(schDatum, schTid) || addScheduleMutation.isPending || ((schTyp === 'svar' || schTyp === 'intern') ? !schText.trim() : !schAgent)}
                       className="flex-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors"
                     >
                       {addScheduleMutation.isPending ? 'Sparar...' : 'Schemalägg'}
@@ -626,7 +645,7 @@ function ArendeModal({
                               </>
                             )}
                             <div className="flex gap-2">
-                              <button onClick={() => handleSparaEdit(å)} disabled={!editDatum || redigerar} className="flex-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors">{redigerar ? 'Sparar...' : 'Spara'}</button>
+                              <button onClick={() => handleSparaEdit(å)} disabled={!editKanSparas(å) || redigerar} className="flex-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors">{redigerar ? 'Sparar...' : 'Spara'}</button>
                               <button onClick={() => setEditId(null)} className="flex-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs rounded-lg transition-colors">Avbryt</button>
                             </div>
                           </div>
