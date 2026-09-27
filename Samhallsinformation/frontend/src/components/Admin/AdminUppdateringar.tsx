@@ -224,10 +224,16 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   const kanHaNollPunkter = schemalagd && valdaFlaggor.length > 0
   const harInnehåll      = punkter.length > 0 && punkter.every(p => p.text.trim() !== '')
   const rentFlaggSchema  = kanHaNollPunkter && punkter.length === 0
-  const kanSpara = titel.trim() !== '' && (harInnehåll || rentFlaggSchema) && (!schemalagd || schemaDatum !== '')
+  // E6#18: `type="date"`/`datetime-local` går att tömma helt — `new Date('')` är en
+  // Invalid Date vars `toISOString()` kastar ett `RangeError` i klickhanteraren
+  // (ingen felruta, knappen ser bara "död" ut). Både publiceringsdatumet och ett
+  // ev. schemalagt datum/tid valideras nu innan de får skickas.
+  const datumGiltigt       = datum !== '' && !Number.isNaN(new Date(datum).getTime())
+  const schemaDatumGiltigt = !schemalagd || (schemaDatum !== '' && !Number.isNaN(new Date(schemaDatum).getTime()))
+  const kanSpara = titel.trim() !== '' && datumGiltigt && schemaDatumGiltigt && (harInnehåll || rentFlaggSchema)
 
   function spara(publicera: boolean) {
-    if (sparar) return
+    if (sparar || !kanSpara) return
     onSpara({
       titel: titel.trim(),
       datum: new Date(datum).toISOString(),
