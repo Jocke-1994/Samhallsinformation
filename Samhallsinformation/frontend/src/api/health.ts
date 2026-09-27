@@ -1,4 +1,5 @@
 import { adminFetch } from './adminFetch'
+import { LANG_TIMEOUT_MS, felFranSvar } from './hamta'
 
 export type HälsaStatus = 'OK' | 'Varning' | 'Nere'
 
@@ -19,7 +20,7 @@ export interface AdminHealthDto {
 }
 
 export async function fetchAdminHealth(): Promise<AdminHealthDto> {
-  const res = await adminFetch('/api/admin/health')
-  if (!res.ok) throw new Error(`fetchAdminHealth: ${res.status}`)
+  const res = await adminFetch('/api/admin/health', { timeoutMs: LANG_TIMEOUT_MS })
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminHealth')
   return res.json()
 }

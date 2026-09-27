@@ -1,4 +1,5 @@
 import { adminFetch } from './adminFetch'
+import { felFranSvar } from './hamta'
 
 export interface IngestorLogSummaryDto {
   totaltFel: number
@@ -18,7 +19,7 @@ export interface IngestorLogRowDto {
 
 export async function fetchIngestorLogSummary(days = 7): Promise<IngestorLogSummaryDto> {
   const res = await adminFetch(`/api/admin/ingestor-log/summary?days=${days}`)
-  if (!res.ok) throw new Error(`fetchIngestorLogSummary: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchIngestorLogSummary')
   return res.json()
 }
 
@@ -28,6 +29,6 @@ export async function fetchIngestorLogRecent(params?: { limit?: number; onlyErro
   if (params?.onlyErrors) query.set('onlyErrors', 'true')
   const qs = query.toString()
   const res = await adminFetch(`/api/admin/ingestor-log/recent${qs ? `?${qs}` : ''}`)
-  if (!res.ok) throw new Error(`fetchIngestorLogRecent: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchIngestorLogRecent')
   return res.json()
 }

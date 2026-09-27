@@ -1,4 +1,5 @@
 import { adminFetch } from './adminFetch'
+import { felFranSvar } from './hamta'
 
 export interface SearchableSource {
   id: number
@@ -40,14 +41,14 @@ export interface SearchParams {
 
 export async function fetchSearchableSources(): Promise<SearchableSource[]> {
   const res = await adminFetch('/api/admin/events/sources')
-  if (!res.ok) throw new Error(`fetchSearchableSources: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchSearchableSources')
   return res.json()
 }
 
 export async function fetchEventTypes(sourceId?: number): Promise<string[]> {
   const qs = sourceId ? `?sourceId=${sourceId}` : ''
   const res = await adminFetch(`/api/admin/events/types${qs}`)
-  if (!res.ok) throw new Error(`fetchEventTypes: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchEventTypes')
   return res.json()
 }
 
@@ -63,6 +64,6 @@ export async function searchEvents(params: SearchParams): Promise<AdminSearchRes
   qs.set('pageSize', String(params.pageSize ?? 20))
 
   const res = await adminFetch(`/api/admin/events/search?${qs.toString()}`)
-  if (!res.ok) throw new Error(`searchEvents: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'searchEvents')
   return res.json()
 }
