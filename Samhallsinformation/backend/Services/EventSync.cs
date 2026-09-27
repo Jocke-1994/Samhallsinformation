@@ -8,10 +8,12 @@ using Samhallsinformation.Models;
 public static class EventSync
 {
     // Hämtar händelser från en ingestor och sparar dem. Vid overwriteExisting=false
-    // (normal bakgrundskörning) hoppas redan kända ExternalId över, precis som förut.
-    // Vid overwriteExisting=true (admin-triggad resync) skrivs befintliga rader om med
-    // den nyss hämtade datan — används för att se ingestor-ändringar slå igenom på data
-    // som redan ligger i databasen, utan att vänta på att nya händelser dyker upp.
+    // (normal bakgrundskörning) uppdateras en redan känd ExternalId bara om innehållet
+    // faktiskt skiljer sig (V4-1b, E3#10) — annars rörs raden inte. Vid
+    // overwriteExisting=true (admin-triggad resync) skrivs befintliga rader alltid om
+    // ovillkorligt med den nyss hämtade datan, inklusive PublishedAt — används för att
+    // se ingestor-ändringar slå igenom på data som redan ligger i databasen, utan att
+    // vänta på att nya händelser dyker upp.
     //
     // Tål dubbletter (V3-1): utan unikt index på (SourceId, ExternalId) kan databasen innehålla
     // flera rader med samma nyckel, och en hämtning kan innehålla samma nyckel två gånger. Inget
@@ -74,18 +76,43 @@ public static class EventSync
         {
             if (existingByExternalId.TryGetValue(incoming.ExternalId, out var current))
             {
-                if (!overwriteExisting) continue;
-
-                current.Title       = incoming.Title;
-                current.Content     = incoming.Content;
-                current.Url         = incoming.Url;
-                current.RawData     = incoming.RawData;
-                current.Geography   = incoming.Geography;
-                current.EventType   = incoming.EventType;
-                current.Severity    = incoming.Severity;
-                current.IsNational  = incoming.IsNational;
-                current.PublishedAt = incoming.PublishedAt;
-                updated++;
+                if (overwriteExisting)
+                {
+                    // Admin-triggad resync: full omskrivning, inklusive PublishedAt —
+                    // används för att se ingestor-ändringar slå igenom på redan sparad
+                    // data utan att vänta på en ny händelse.
+                    current.Title       = incoming.Title;
+                    current.Content     = incoming.Content;
+                    current.Url         = incoming.Url;
+                    current.RawData     = incoming.RawData;
+                    current.Geography   = incoming.Geography;
+                    current.EventType   = incoming.EventType;
+                    current.Severity    = incoming.Severity;
+                    current.IsNational  = incoming.IsNational;
+                    current.PublishedAt = incoming.PublishedAt;
+                    current.UpdatedAt   = DateTime.UtcNow;
+                    updated++;
+                }
+                else if (HasRelevantContentChanged(current, incoming))
+                {
+                    // V4-1b (E3#10): normal bakgrundskörning. Källor som Trafikverket/SMHI
+                    // kan skicka en ändrad version av en redan sparad post (ny text, ändrad
+                    // allvarlighetsgrad, avslutad störning) med samma ExternalId — tidigare
+                    // hoppades den bara över för alltid. PublishedAt är den ursprungliga
+                    // publiceringstiden och rörs INTE här, bara UpdatedAt sätts så en
+                    // uppdatering syns.
+                    current.Title      = incoming.Title;
+                    current.Content    = incoming.Content;
+                    current.Url        = incoming.Url;
+                    current.RawData    = incoming.RawData;
+                    current.Geography  = incoming.Geography;
+                    current.EventType  = incoming.EventType;
+                    current.Severity   = incoming.Severity;
+                    current.IsNational = incoming.IsNational;
+                    current.UpdatedAt  = DateTime.UtcNow;
+                    updated++;
+                }
+                // annars: identiskt innehåll, raden rörs inte alls.
             }
             else
             {
@@ -97,4 +124,15 @@ public static class EventSync
 
         return (inserted, updated, insertedEvents);
     }
+
+    // Jämför bara fält som faktiskt beskriver händelsens innehåll — PublishedAt är
+    // medvetet uteslutet (se ovan), och IngestedAt/UpdatedAt/Id är bokföring, inte innehåll.
+    private static bool HasRelevantContentChanged(CanonicalEvent current, CanonicalEvent incoming) =>
+        current.Title != incoming.Title
+        || current.Content != incoming.Content
+        || current.Url != incoming.Url
+        || current.Geography != incoming.Geography
+        || current.EventType != incoming.EventType
+        || current.Severity != incoming.Severity
+        || current.IsNational != incoming.IsNational;
 }
