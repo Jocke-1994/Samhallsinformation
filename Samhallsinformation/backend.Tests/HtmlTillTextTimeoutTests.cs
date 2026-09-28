@@ -23,7 +23,7 @@ public class HtmlTillTextTimeoutTests
     private static ResendEmailService Create(ILogger<ResendEmailService>? logger = null)
     {
         var http = new HttpClient(new NoopHandler()) { BaseAddress = new Uri("https://api.resend.com") };
-        return new ResendEmailService(http, logger ?? NullLogger<ResendEmailService>.Instance);
+        return new ResendEmailService(http, logger ?? NullLogger<ResendEmailService>.Instance, new TicketReplyAddress("test-secret-0123456789"));
     }
 
     // Många "<" utan matchande ">" — precis den formen enhet-3-fyndet pekar ut som
