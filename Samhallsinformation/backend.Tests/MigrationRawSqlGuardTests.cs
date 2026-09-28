@@ -85,6 +85,13 @@ public class MigrationRawSqlGuardTests
 
     private static string? _programCsCache;
 
+    // V4-6b: alla pendingMigrations.Contains(...)-raw-SQL-block flyttades ur Program.cs till
+    // Infrastructure/DatabaseBootstrapper.cs (seam b — enhet-8 G6 kräver att uppstartslogiken kan
+    // köras isolerat mot en riktig PG-container). Ren flytt, ingen logikändring — G1 måste därför
+    // läsa BÅDA filerna för att fortfarande se blocken. Testets intention (varje risk-migration har
+    // ett block, inget block pekar på ett okänt id) är oförändrad.
+    private static readonly string[] FilesToScan = ["Program.cs", "Infrastructure/DatabaseBootstrapper.cs"];
+
     private static string ProgramCsText()
     {
         if (_programCsCache != null) return _programCsCache;
@@ -94,7 +101,8 @@ public class MigrationRawSqlGuardTests
             dir = dir.Parent;
         Assert.True(dir != null, "Hittade inte backend/Program.cs genom att gå uppåt från AppContext.BaseDirectory.");
 
-        return _programCsCache = File.ReadAllText(Path.Combine(dir!.FullName, "backend", "Program.cs"));
+        return _programCsCache = string.Join('\n',
+            FilesToScan.Select(f => File.ReadAllText(Path.Combine(dir!.FullName, "backend", f.Replace('/', Path.DirectorySeparatorChar)))));
     }
 
     [Theory]
