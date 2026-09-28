@@ -6,14 +6,19 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Application.Support;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 using Samhallsinformation.Services;
 
+// Support-inboxen är Support-rollens startsida (beslut D1, V3-10): alla actions
+// här är ärendehantering och tillåter därför Admin ELLER Support. Ingen action
+// i den här controllern ska vara Admin-only — gör en action det, flytta den
+// till en egen controller så att klassattributet förblir sanningen.
 [ApiController]
 [Route("api/admin/support")]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = AdminRoller.AdminEllerSupport)]
 public class AdminSupportController : ControllerBase
 {
     private readonly AppDbContext _db;

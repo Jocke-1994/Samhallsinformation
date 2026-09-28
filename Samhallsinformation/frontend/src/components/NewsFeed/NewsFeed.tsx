@@ -7,11 +7,10 @@ import { getReadStatus, markAllAsRead } from '../../services/readState'
 import NewsItem from './NewsItem'
 import type { CanonicalEvent, Source } from '../../types'
 import { useAuth } from '../../context/AuthContext'
-import { usePolisenBevakningar } from '../../context/PolisenBevakningarContext'
 import { useSavedEvents } from '../../context/SavedEventsContext'
 import MobilTopBar from '../common/MobilTopBar'
 import { ALLA_HANDELSER_LABEL, MITT_FLODE_LABEL } from '../../lib/navLabels'
-import { extraheraPolisenTyp, extraheraPolisenOmrade, länFörGeografi } from '../Profile/MinaKallor/kallorUtils'
+import { useMittFlode, useSparatFlode, type ServerFlode } from '../../hooks/useServerFlode'
 import { useFlags } from '../../context/FeatureFlagsContext'
 
 type ViewMode = 'Allt' | 'Mitt'
@@ -61,39 +60,55 @@ function OkantListaMeddelande({ text, onForsokIgen }: { text: string; onForsokIg
   )
 }
 
+function LaddaFler({ flode }: { flode: ServerFlode }) {
+  return (
+    <div className="flex flex-col items-center gap-2 py-4">
+      {flode.merFel && (
+        <p role="alert" className="text-slate-500 text-sm">Vi kunde inte hämta fler händelser just nu.</p>
+      )}
+      <button
+        onClick={flode.hamtaFler}
+        disabled={flode.hamtarFler}
+        className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-violet-200 text-violet-600 hover:bg-violet-50 dark:hover:bg-slate-700 disabled:opacity-60 text-sm font-semibold rounded-xl transition-colors"
+      >
+        {flode.hamtarFler ? 'Hämtar...' : flode.merFel ? 'Försök igen' : 'Ladda fler'}
+      </button>
+    </div>
+  )
+}
+
 interface Props {
   shortName: string | null
   sources: Source[]
-  activeSourceIds: Set<number>
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
-  onReadStatusChange: () => void
   onOpenSidebar: () => void
 }
 
-export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode, onViewModeChange, onReadStatusChange, onOpenSidebar }: Props) {
+export default function NewsFeed({ shortName, sources, viewMode, onViewModeChange, onOpenSidebar }: Props) {
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()
   const flaggor = useFlags()
-  const { matchar, matcharLän, lage: bevakLage, forsokIgen: hamtaBevakningarIgen } = usePolisenBevakningar()
-  const { sparade, lage: sparatLage, forsokIgen: hamtaSparatIgen } = useSavedEvents()
+  const { sparade, lage: sparadeIdLage } = useSavedEvents()
   const [mittUnderflik, setMittUnderflik] = useState<MittUnderflik>('Flöde')
 
+  // "Alla"-flödet: en sida (50 senaste) av allas händelser, oförändrat. Mitt flöde
+  // och Sparat hämtas i stället filtrerade på servern (V3-11) — ingen klientfiltrering.
   const { data, isLoading, isError } = useQuery({
     queryKey: ['events', shortName ?? 'all'],
     queryFn: () => fetchEvents({ shortName: shortName ?? undefined, pageSize: 50 }),
+    enabled: viewMode === 'Allt',
   })
 
-  const events: CanonicalEvent[] = data?.events ?? []
+  const mittFlode = useMittFlode(isLoggedIn && viewMode === 'Mitt' && mittUnderflik === 'Flöde')
+  const sparatFlode = useSparatFlode(isLoggedIn && viewMode === 'Mitt' && mittUnderflik === 'Sparat')
+
+  const events: CanonicalEvent[] = useMemo(() => data?.events ?? [], [data])
 
   const [readMap, setReadMap] = useState<Record<string, boolean>>({})
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('Alla')
 
   useEffect(() => { setSeverityFilter('Alla') }, [shortName])
-
-  useEffect(() => {
-    if (events.length > 0) setReadMap(getReadStatus(events.map(e => e.id)))
-  }, [data])
 
   const sourceMap = useMemo(
     () => Object.fromEntries(sources.map(s => [s.id, s.shortName])),
@@ -108,10 +123,9 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
   }, [events, shortName])
 
   function handleMarkAllRead() {
-    const ids = sortedEvents.map(e => e.id)
+    const ids = basEvents.map(e => e.id)
     markAllAsRead(ids)
     setReadMap(Object.fromEntries(ids.map(id => [id, true])))
-    if (shortName) onReadStatusChange()
   }
 
   const filteredEvents = useMemo(() =>
@@ -119,41 +133,27 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
     [sortedEvents, severityFilter]
   )
 
-  // Mitt-flödet: bara händelser från källor du aktivt lagt till i Mina
-  // källor. Polisen-händelser filtreras dessutom mot dina bevakningar (ELLER
-  // mellan bevakningarna — matchar() returnerar true rakt av om du inte
-  // skapat någon bevakning ännu, "allt från Polisen" fortfarande standard).
-  // Polisens sammanfattningar ("Sammanfattning natt"/"kväll och natt") har
-  // ett HELT LÄN som geografi, inte en kommun — extraheraPolisenOmrade
-  // hittar dem aldrig (fel nivå), så de matchas istället läns-medvetet via
-  // matcharLän (se PolisenBevakningarContext.tsx), annars visas de från
-  // hela Sverige oavsett bevakning.
-  const mittEvents = useMemo(() =>
-    sortedEvents.filter(event => {
-      if (!activeSourceIds.has(event.sourceId)) return false
-      if (sourceMap[event.sourceId] !== 'Polisen') return true
-      const typ    = extraheraPolisenTyp(event.eventType)
-      const omrade = extraheraPolisenOmrade(event.geography)
-      if (omrade === null) {
-        const län = länFörGeografi(event.geography)
-        if (län !== null) return matcharLän(typ, län)
-      }
-      return matchar(typ, omrade)
-    }),
-    [sortedEvents, sourceMap, activeSourceIds, matchar, matcharLän]
-  )
+  // Mitt flöde: servern har redan filtrerat på dina aktiva källor och på dina
+  // Polisen-bevakningar (samma matchning som push) och sorterat nyast först.
+  const mittEvents = mittFlode.events
 
-  // Bara händelser som redan finns i det hämtade fönstret (senaste 50) kan
-  // visas här — en sparad händelse som fallit ur fönstret syns inte i listan
-  // just nu, en känd begränsning tills riktig paginering finns.
+  // Sparat: servern returnerar dina sparade händelser oavsett ålder. En händelse
+  // du just tagit bort (bokmärket) försvinner direkt ur listan, utan omhämtning.
   const sparadeEvents = useMemo(
-    () => sortedEvents.filter(e => sparade.has(e.id)),
-    [sortedEvents, sparade]
+    () => sparadeIdLage === 'klar' ? sparatFlode.events.filter(e => sparade.has(e.id)) : sparatFlode.events,
+    [sparatFlode.events, sparade, sparadeIdLage]
   )
 
   const visaEvents = viewMode === 'Allt' ? filteredEvents : mittUnderflik === 'Sparat' ? sparadeEvents : mittEvents
 
-  const hasUnread = sortedEvents.some(e => !readMap[e.id])
+  // Olästa och "markera alla som lästa" gäller den lista som visas: i Alla-läget hela
+  // hämtade fönstret (som förut), i Mitt flöde/Sparat de händelser som visas.
+  const basEvents = viewMode === 'Allt' ? sortedEvents : visaEvents
+  const hasUnread = basEvents.some(e => !readMap[e.id])
+
+  useEffect(() => {
+    if (basEvents.length > 0) setReadMap(getReadStatus(basEvents.map(e => e.id)))
+  }, [basEvents])
 
   const severityCounts = useMemo(() => ({
     'Kritisk':      sortedEvents.filter(e => e.severity === 'Kritisk').length,
@@ -186,7 +186,7 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
               onClick={handleMarkAllRead}
               className="text-xs font-semibold text-violet-600 bg-violet-50 border border-violet-200 px-2.5 py-1 rounded-full hover:bg-violet-100 transition-colors"
             >
-              {filteredEvents.filter(e => !readMap[e.id]).length} olästa
+              {visaEvents.filter(e => !readMap[e.id]).length} olästa
             </button>
             <button onClick={handleMarkAllRead} className="hidden md:block text-xs text-slate-400 hover:text-slate-700 transition-colors">
               Markera alla som lästa
@@ -262,20 +262,19 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
             </div>
           )}
 
-          {/* Bevakningarna är okända (hämtas / misslyckades): Polisen-händelser döljs
-              tills de hämtats — vi visar aldrig "allt" och säger inte heller
-              "inget matchar" när vi inte vet. */}
-          {viewMode === 'Mitt' && mittUnderflik === 'Flöde' && isLoggedIn && bevakLage === 'fel' && (
+          {/* Mitt flöde hämtas från servern. Fel är aldrig "tomt": vi säger bara att inget
+              matchar när servern faktiskt svarat med en tom lista. */}
+          {viewMode === 'Mitt' && mittUnderflik === 'Flöde' && mittFlode.lage === 'fel' && (
             <OkantListaMeddelande
-              text="Vi kunde inte hämta dina Polisen-bevakningar just nu, så Polisen-händelser visas inte i Mitt flöde."
-              onForsokIgen={hamtaBevakningarIgen}
+              text="Vi kunde inte hämta ditt flöde just nu."
+              onForsokIgen={mittFlode.forsokIgen}
             />
           )}
-          {viewMode === 'Mitt' && mittUnderflik === 'Flöde' && isLoggedIn && bevakLage === 'laddar' && mittEvents.length === 0 && (
-            <p className="text-slate-400 text-sm py-6 text-center">Hämtar dina bevakningar...</p>
+          {viewMode === 'Mitt' && mittUnderflik === 'Flöde' && mittFlode.lage === 'laddar' && (
+            <p className="text-slate-400 text-sm py-6 text-center">Hämtar ditt flöde...</p>
           )}
 
-          {viewMode === 'Mitt' && mittUnderflik === 'Flöde' && mittEvents.length === 0 && !(isLoggedIn && bevakLage !== 'klar') && (
+          {viewMode === 'Mitt' && mittUnderflik === 'Flöde' && mittFlode.lage === 'klar' && mittEvents.length === 0 && (
             <div className="flex flex-col items-center py-20 gap-4 text-center">
               <span className="text-4xl">🗂️</span>
               <p className="text-slate-700 dark:text-slate-200 font-semibold text-base">Inget matchar dina prenumerationer just nu</p>
@@ -299,17 +298,17 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
             </div>
           )}
 
-          {viewMode === 'Mitt' && mittUnderflik === 'Sparat' && sparatLage === 'fel' && (
+          {viewMode === 'Mitt' && mittUnderflik === 'Sparat' && sparatFlode.lage === 'fel' && (
             <OkantListaMeddelande
               text="Vi kunde inte hämta dina sparade händelser just nu."
-              onForsokIgen={hamtaSparatIgen}
+              onForsokIgen={sparatFlode.forsokIgen}
             />
           )}
-          {viewMode === 'Mitt' && mittUnderflik === 'Sparat' && sparatLage === 'laddar' && (
+          {viewMode === 'Mitt' && mittUnderflik === 'Sparat' && sparatFlode.lage === 'laddar' && (
             <p className="text-slate-400 text-sm py-6 text-center">Hämtar dina sparade händelser...</p>
           )}
 
-          {viewMode === 'Mitt' && mittUnderflik === 'Sparat' && sparatLage === 'klar' && sparadeEvents.length === 0 && (
+          {viewMode === 'Mitt' && mittUnderflik === 'Sparat' && sparatFlode.lage === 'klar' && sparadeEvents.length === 0 && (
             <div className="flex flex-col items-center py-20 gap-4 text-center">
               <span className="text-4xl">📑</span>
               <p className="text-slate-700 dark:text-slate-200 font-semibold text-base">Inget sparat än</p>
@@ -355,6 +354,10 @@ export default function NewsFeed({ shortName, sources, activeSourceIds, viewMode
               )
             })
           })()}
+
+          {viewMode === 'Mitt' && (mittUnderflik === 'Sparat' ? sparatFlode : mittFlode).harFler && (
+            <LaddaFler flode={mittUnderflik === 'Sparat' ? sparatFlode : mittFlode} />
+          )}
 
         </div>
       </div>

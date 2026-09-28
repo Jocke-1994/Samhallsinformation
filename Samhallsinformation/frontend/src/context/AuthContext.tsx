@@ -1,7 +1,10 @@
 import { createContext, useContext, useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { registerAuthBridge } from '../api/authBridge'
+import { fetchMedTimeout } from '../api/hamta'
 import { rensaAnvandardata } from '../lib/queryRensning'
+import { avregistreraPushEnhet } from '../lib/pushAvregistrering'
+import { valjAktivVy } from '../lib/aktivVy'
 import {
   MAX_REFRESH_FORSOK,
   beraknaRefreshFordrojning,
@@ -85,7 +88,7 @@ function parseEmailVerified(token: string): boolean {
 }
 
 async function authRequest(url: string, body: object): Promise<TokenPair & { role: string; name: string; isNewUser?: boolean }> {
-  const res = await fetch(url, {
+  const res = await fetchMedTimeout(url, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(body),
@@ -106,7 +109,10 @@ interface RefreshSvar {
 // Ett anrop mot /refresh. status === null = fetch kastade (nätverksfel).
 async function hamtaNyaTokens(refreshToken: string): Promise<RefreshSvar> {
   try {
-    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+    // Med tidsgräns: ett hängande anrop skulle annars hålla både single-flight-
+    // förnyelsen och Web Lock-låset för alla flikar. Ett timeout räknas som
+    // nätverksfel (status null) och ger samma omförsök med backoff.
+    const res = await fetchMedTimeout(`${API_BASE}/api/auth/refresh`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ refreshToken }),
@@ -150,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const emailVerified = token ? parseEmailVerified(token) : false
 
   const [aktivVy, setAktivVy] = useState<SystemRoll>(
-    () => (localStorage.getItem('si_aktiv_vy') as SystemRoll) ?? roll
+    () => valjAktivVy(localStorage.getItem('si_aktiv_vy'), roll)
   )
 
   // Väntande omförsök efter ett tillfälligt refresh-fel, och pågående anrop
@@ -184,6 +190,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [avbrytRetry, queryClient])
 
   const clearSession = useCallback(() => {
+    // Enheten ska inte förbli registrerad för den här användarens notiser.
+    // Token fångas HÄR, före rensningen, och skickas in explicit (adminFetch
+    // hittar ingen token efteråt). Fire-and-forget och kastar aldrig — se
+    // avregistreraPushEnhet. Bara kontrollerad utloggning/sessionsslut kommer
+    // hit; tillfälliga refresh-fel (429/5xx/nät) rensar aldrig sessionen.
+    void avregistreraPushEnhet(localStorage.getItem('si_token') ?? tokenRef.current)
     localStorage.removeItem('si_token')
     localStorage.removeItem('si_refresh_token')
     localStorage.removeItem('si_logged_in')
@@ -226,9 +238,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('si_logged_in', 'true')
     refreshTokenRef.current = data.refreshToken
     tokenErhallenRef.current = Date.now()
+    // Startvyn väljs bara när den saknas eller inte längre gäller för rollen, eller
+    // när en ANNAN användare loggar in: en tokenförnyelse (var ~13:e minut) ska
+    // inte flytta en admin som valt Support-vyn tillbaka till Admin.
     const newRoll = parseRole(data.accessToken)
-    localStorage.setItem('si_aktiv_vy', newRoll)
-    setAktivVy(newRoll)
+    const forraToken = tokenRef.current
+    const annanAnvandare = forraToken !== null && parseEmail(forraToken) !== parseEmail(data.accessToken)
+    const vy = annanAnvandare ? newRoll : valjAktivVy(localStorage.getItem('si_aktiv_vy'), newRoll)
+    localStorage.setItem('si_aktiv_vy', vy)
+    setAktivVy(vy)
     sattToken(data.accessToken)
   }, [sattToken])
 

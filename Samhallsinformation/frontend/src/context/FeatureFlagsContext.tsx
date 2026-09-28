@@ -3,11 +3,17 @@ import { useFeatureFlags, type FlaggLäge } from '../hooks/useFeatureFlags'
 import type { FlagKey, FlagState } from '../lib/featureFlags'
 
 interface FeatureFlagsContextValue {
+  /** Effektiva flaggor — det UI:t ska läsa (mock-flaggor avstängda i produktion). */
   flaggor: FlagState
+  /** Vad admin faktiskt ställt in — för Feature flags-vyn. */
+  inställda: FlagState
   läge: FlaggLäge
   laddat: boolean
   växlaFlagg: (key: FlagKey) => void
   återställ: () => void
+  /** Felet från senaste misslyckade växling/återställning (annars null/undefined). */
+  ändringsFel: unknown
+  ändringPågår: boolean
 }
 
 const FeatureFlagsContext = createContext<FeatureFlagsContextValue | null>(null)

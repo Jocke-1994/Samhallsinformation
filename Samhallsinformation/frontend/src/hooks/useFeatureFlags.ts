@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { type FlagKey, type FlagState, FLAG_DEFINITIONER } from '../lib/featureFlags'
+import { type FlagKey, type FlagState, FLAG_DEFINITIONER, effektivaFlaggor } from '../lib/featureFlags'
 import { fetchFeatureFlagOverrides, setFeatureFlagOverride, resetFeatureFlagOverrides } from '../api/featureFlags'
 import { FLAGG_QUERY_KEY, invalideraFlaggor, läsKändaOverrides, sparaKändaOverrides } from '../lib/flaggCache'
 
@@ -44,7 +44,11 @@ export function useFeatureFlags() {
   const läge: FlaggLäge = isError ? 'fel' : isPending ? 'laddar' : 'klar'
   const overrides = data ?? läsKändaOverrides() ?? {}
 
-  const flaggor: FlagState = { ...standardvärden(), ...overrides } as FlagState
+  // Det admin har ställt in (override eller kodens default) — visas i Feature flags-vyn
+  // och är det växlingen utgår från.
+  const inställda: FlagState = { ...standardvärden(), ...overrides } as FlagState
+  // Det UI:t faktiskt läser: mock-flaggor tvingas av utan VITE_SHOW_MOCK_UI (V3-20).
+  const flaggor: FlagState = effektivaFlaggor(inställda)
 
   const toggleMutation = useMutation({
     mutationFn: (vars: { key: FlagKey; value: boolean }) => setFeatureFlagOverride(vars.key, vars.value),
@@ -57,14 +61,19 @@ export function useFeatureFlags() {
   })
 
   const växlaFlagg = useCallback((key: FlagKey) => {
-    toggleMutation.mutate({ key, value: !flaggor[key] })
+    toggleMutation.mutate({ key, value: !inställda[key] })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flaggor])
+  }, [inställda])
 
   const återställ = useCallback(() => {
     resetMutation.mutate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return { flaggor, läge, laddat: läge !== 'laddar', växlaFlagg, återställ }
+  // V3-8: en misslyckad växling/återställning får inte se ut som att ingenting hände —
+  // Feature flags-vyn visar felet (flaggan är då oförändrad) och låser reglagen under anropet.
+  const ändringsFel: unknown = toggleMutation.error ?? resetMutation.error
+  const ändringPågår = toggleMutation.isPending || resetMutation.isPending
+
+  return { flaggor, inställda, läge, laddat: läge !== 'laddar', växlaFlagg, återställ, ändringsFel, ändringPågår }
 }

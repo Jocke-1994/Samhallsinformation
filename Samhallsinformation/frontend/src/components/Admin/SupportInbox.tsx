@@ -1,15 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useAnvandare } from '../../hooks/useAnvandare'
-import { supportNotiserNyckel } from '../../lib/queryNycklar'
+import { useAuth } from '../../context/AuthContext'
+import { useSupportNotiser } from '../../hooks/useAdminNotiser'
+import { effektivAdminRoll } from '../../lib/adminNavigering'
 import {
-  fetchAdminTickets, fetchAdminTicket, fetchAgents, fetchSupportNotifications,
+  fetchAdminTickets, fetchAdminTicket, fetchAgents,
   replyAsAgent, setTicketStatus, assignTicket, setTicketReminder, setTicketArchived,
   addScheduledAction, cancelScheduledAction,
   type AdminTicketListItemDto, type AdminScheduledActionDto, type AdminAgentDto,
 } from '../../api/support'
 import { createFeatureIdea } from '../../api/featureIdeas'
 import type { PendingNotis } from '../../types/adminNotis'
+import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
+import { visaFel } from '../../lib/felmeddelande'
 
 // ---------------------------------------------------------------------------
 // Typer
@@ -71,6 +74,16 @@ function combineDateTimeToIso(datum: string, tid: string): string {
   return new Date(`${datum}T${tid}:00`).toISOString()
 }
 
+// E6#18: `type="date"`/`type="time"` går att tömma helt (blir en tom sträng),
+// och `new Date('')`/`new Date('2026-01-01T:00')` är en Invalid Date vars
+// `toISOString()` kastar ett `RangeError` — utan felmeddelande gör det bara
+// knappen "död". Alla ställen som bygger en ISO-tid av två separata fält
+// validerar nu båda delarna innan `combineDateTimeToIso` anropas.
+function giltigDatumTid(datum: string, tid: string): boolean {
+  if (!datum || !tid) return false
+  return !Number.isNaN(new Date(`${datum}T${tid}:00`).getTime())
+}
+
 function isPåminnelseAktiv(reminderAt: string): boolean {
   return new Date(reminderAt) <= new Date()
 }
@@ -98,19 +111,26 @@ function dagText(iso: string): string {
 // ---------------------------------------------------------------------------
 
 function ArendeModal({
-  ticketId, agents, onClose, onÖppnaAnvändare,
+  ticketId, agents, agentsFel, onClose, onÖppnaAnvändare,
 }: {
   ticketId:            string
   agents:              AdminAgentDto[]
+  /** Agentlistan kunde inte hämtas — väljarna får inte se ut som att det inte finns några agenter. */
+  agentsFel?:          { fel: unknown; försökIgen: () => void } | null
   onClose:             () => void
   onÖppnaAnvändare?:   (epost: string) => void
 }) {
   const queryClient = useQueryClient()
-  const { data } = useQuery({
+  // Funktionsidéer är Admin-only (AdminFeatureIdeaController) — Support ser inte knappen
+  // (annars 403 vid klick). Allt annat i ärendet är öppet för Support.
+  const { roll, aktivVy } = useAuth()
+  const kanSkapaIdé = effektivAdminRoll(roll, aktivVy) === 'Admin'
+  const ärendeFråga = useQuery({
     queryKey: ['admin-ticket', ticketId],
     queryFn: () => fetchAdminTicket(ticketId),
     refetchInterval: 30_000, // fångar upp det bakgrundstjänsten gör åt oss
   })
+  const { data } = ärendeFråga
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['admin-ticket', ticketId] })
@@ -156,8 +176,40 @@ function ArendeModal({
   const [editTid, setEditTid]               = useState('09:00')
   const [editAgent, setEditAgent]           = useState('')
   const [editInstruktion, setEditInstruktion] = useState('')
+  const skickarLås    = useRef(false)
+  const påminnelseLås = useRef(false)
+  const schemaLås     = useRef(false)
+  const [redigerar, setRedigerar]           = useState(false)
+  const [redigeraFel, setRedigeraFel]       = useState<string | null>(null)
 
-  if (!data) return null
+  // Ett klick på en rad ska aldrig ge "ingenting": vid laddning/fel visas en modal med besked.
+  if (!data) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40"
+        onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      >
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
+          <div className="px-7 py-5 border-b border-slate-200 flex items-center justify-between">
+            <p className="text-base font-semibold text-slate-800">Ärende</p>
+            <button onClick={onClose} aria-label="Stäng" className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
+          </div>
+          <div className="px-7 py-8">
+            {ärendeFråga.isError ? (
+              <HamtningsFel
+                fel={ärendeFråga.error}
+                reserv="Kunde inte hämta ärendet."
+                onForsokIgen={() => { void ärendeFråga.refetch() }}
+                arIgang={ärendeFråga.isFetching}
+              />
+            ) : (
+              <p className="text-center text-sm text-slate-400">Laddar ärendet...</p>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
   const { ticket, messages, scheduledActions } = data
 
   function startEdit(å: AdminScheduledActionDto) {
@@ -171,55 +223,104 @@ function ArendeModal({
     setExpandedId(null)
   }
 
-  // "Redigera" görs som avbryt + nyskapa — samma slutresultat för användaren,
-  // ingen egen PUT-endpoint behövs för ett sällan använt redigeringsflöde.
-  function handleSparaEdit(å: AdminScheduledActionDto) {
-    if (!editDatum) return
-    cancelScheduleMutation.mutate(å.id)
-    addScheduleMutation.mutate({
-      type: å.type,
-      scheduledAt: combineDateTimeToIso(editDatum, editTid),
-      text: å.type !== 'tilldela' ? editText.trim() : undefined,
-      reassignToUserId: å.type === 'tilldela' ? editAgent : undefined,
-      instruction: å.type === 'tilldela' ? editInstruktion.trim() : undefined,
-    })
+  // Redigering ska godkännas mot SAMMA regler som skapa-formuläret (E6#14): tom text
+  // för svar/intern, eller ingen vald agent för tilldela, är lika ogiltigt vid
+  // redigering som vid skapande — annars kan en tilldelning sparas som "ingen agent",
+  // vilket i praktiken avassignar ärendet.
+  function editKanSparas(å: AdminScheduledActionDto): boolean {
+    if (!giltigDatumTid(editDatum, editTid)) return false
+    return å.type === 'tilldela' ? editAgent !== '' : editText.trim() !== ''
+  }
+
+  // "Redigera" görs som nyskapa + avbryt gammal — ingen egen PUT-endpoint finns på
+  // backend (rör inte backend, V4-3). Ordningen (V3-8): den nya åtgärden skapas
+  // FÖRST, så ett misslyckande aldrig kan lämna ärendet utan åtgärd. Formuläret
+  // stängs bara när allt gått igenom; annars behålls inmatningen och felet visas.
+  async function handleSparaEdit(å: AdminScheduledActionDto) {
+    if (!editKanSparas(å) || redigerar) return
+    setRedigerar(true)
+    setRedigeraFel(null)
+    try {
+      await addScheduleMutation.mutateAsync({
+        type: å.type,
+        scheduledAt: combineDateTimeToIso(editDatum, editTid),
+        text: å.type !== 'tilldela' ? editText.trim() : undefined,
+        reassignToUserId: å.type === 'tilldela' ? editAgent : undefined,
+        instruction: å.type === 'tilldela' ? editInstruktion.trim() : undefined,
+      })
+    } catch (fel) {
+      setRedigeraFel(`${visaFel(fel, 'Kunde inte spara ändringen.')} Den ursprungliga åtgärden är kvar oförändrad.`)
+      setRedigerar(false)
+      return
+    }
+    try {
+      await cancelScheduleMutation.mutateAsync(å.id)
+    } catch (fel) {
+      setRedigeraFel(`${visaFel(fel, 'Kunde inte ta bort den gamla åtgärden.')} Den nya åtgärden är sparad — ta bort den gamla (dubbletten) med ✕.`)
+      setRedigerar(false)
+      setEditId(null)
+      return
+    }
+    setRedigerar(false)
     setEditId(null)
   }
 
   const stängt = ticket.status === 'Hanterat' || ticket.status === 'Stängt'
 
+  // Svaret till medborgaren töms FÖRST när servern bekräftat (V3-8). Vid fel finns texten
+  // kvar och felet visas under rutan; knappen är låst medan anropet pågår.
+  // Lås i en ref (inte bara isPending): react-query meddelar komponenten asynkront, så två
+  // klick i samma tick skulle annars båda passera isPending-kontrollen.
   function handleSkicka() {
-    if (!text.trim()) return
-    replyMutation.mutate({ text: text.trim(), isInternal: flik === 'intern' })
-    setText('')
+    if (!text.trim() || replyMutation.isPending || skickarLås.current) return
+    skickarLås.current = true
+    replyMutation.mutate(
+      { text: text.trim(), isInternal: flik === 'intern' },
+      { onSuccess: () => setText(''), onSettled: () => { skickarLås.current = false } },
+    )
   }
 
   function handleSparaPåminnelse() {
-    if (!påmDatum) return
-    reminderMutation.mutate({ reminderAt: combineDateTimeToIso(påmDatum, påmTid), reminderNote: påmNotering.trim() || null })
-    setVisaPåmForm(false)
+    if (!giltigDatumTid(påmDatum, påmTid) || reminderMutation.isPending || påminnelseLås.current) return
+    påminnelseLås.current = true
+    reminderMutation.mutate(
+      { reminderAt: combineDateTimeToIso(påmDatum, påmTid), reminderNote: påmNotering.trim() || null },
+      { onSuccess: () => setVisaPåmForm(false), onSettled: () => { påminnelseLås.current = false } },
+    )
   }
 
   function handleTaBortPåminnelse() {
-    reminderMutation.mutate({ reminderAt: null, reminderNote: null })
-    setPåmDatum(''); setPåmTid('09:00'); setPåmNotering('')
-    setVisaPåmForm(false)
+    if (reminderMutation.isPending || påminnelseLås.current) return
+    påminnelseLås.current = true
+    reminderMutation.mutate(
+      { reminderAt: null, reminderNote: null },
+      {
+        onSuccess: () => { setPåmDatum(''); setPåmTid('09:00'); setPåmNotering(''); setVisaPåmForm(false) },
+        onSettled: () => { påminnelseLås.current = false },
+      },
+    )
   }
 
   function handleSpараSchema() {
-    if (!schDatum) return
+    if (!giltigDatumTid(schDatum, schTid) || addScheduleMutation.isPending || schemaLås.current) return
     if ((schTyp === 'svar' || schTyp === 'intern') && !schText.trim()) return
     if (schTyp === 'tilldela' && !schAgent) return
+    schemaLås.current = true
+    // Formuläret stängs och töms först när servern bekräftat — vid fel finns inmatningen kvar.
     addScheduleMutation.mutate({
       type: schTyp,
       scheduledAt: combineDateTimeToIso(schDatum, schTid),
       text: schTyp !== 'tilldela' ? schText.trim() : undefined,
       reassignToUserId: schTyp === 'tilldela' ? schAgent : undefined,
       instruction: schTyp === 'tilldela' ? schInstruktion.trim() : undefined,
+    }, {
+      onSuccess: () => {
+        setVisaSchemaForm(false)
+        setSchTyp('svar'); setSchDatum(''); setSchTid('09:00')
+        setSchText(''); setSchAgent(''); setSchInstruktion('')
+      },
+      onSettled: () => { schemaLås.current = false },
     })
-    setVisaSchemaForm(false)
-    setSchTyp('svar'); setSchDatum(''); setSchTid('09:00')
-    setSchText(''); setSchAgent(''); setSchInstruktion('')
   }
 
   const pendingSchema = scheduledActions.filter(å => !å.executed)
@@ -292,26 +393,35 @@ function ArendeModal({
                 placeholder={flik === 'svar' ? 'Skriv svar till användaren...' : 'Skriv intern anteckning (visas ej för användaren)...'}
                 className={`text-slate-900 text-sm px-3 py-2.5 rounded-lg border focus:outline-none placeholder-slate-400 resize-none ${flik === 'intern' ? 'bg-amber-50 border-amber-200 focus:border-amber-400' : 'bg-white border-slate-300 focus:border-violet-500'}`}
               />
+              <MutationFel
+                fel={replyMutation.error}
+                reserv={flik === 'intern'
+                  ? 'Anteckningen kunde inte sparas. Din text finns kvar — försök igen.'
+                  : 'Svaret kunde inte skickas. Din text finns kvar — försök igen.'}
+              />
               <div className="flex items-center gap-2 flex-wrap">
                 <button onClick={handleSkicka} disabled={!text.trim() || replyMutation.isPending}
                   className={`px-4 py-2 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors ${flik === 'intern' ? 'bg-amber-500 hover:bg-amber-400' : 'bg-violet-600 hover:bg-violet-500'}`}
                 >
-                  {flik === 'intern' ? 'Lägg till anteckning' : 'Skicka svar'}
+                  {replyMutation.isPending ? 'Skickar...' : flik === 'intern' ? 'Lägg till anteckning' : 'Skicka svar'}
                 </button>
                 {!stängt && <>
-                  <button onClick={() => statusMutation.mutate('Hanterat')} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs rounded-lg transition-colors">Markera hanterat</button>
-                  <button onClick={() => statusMutation.mutate('Stängt')} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs rounded-lg transition-colors">Stäng ärende</button>
+                  <button onClick={() => statusMutation.mutate('Hanterat')} disabled={statusMutation.isPending} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-600 text-xs rounded-lg transition-colors">Markera hanterat</button>
+                  <button onClick={() => statusMutation.mutate('Stängt')} disabled={statusMutation.isPending} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-500 text-xs rounded-lg transition-colors">Stäng ärende</button>
                 </>}
                 {stängt && (
-                  <button onClick={() => statusMutation.mutate('Öppet')} className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs rounded-lg transition-colors">Öppna igen</button>
+                  <button onClick={() => statusMutation.mutate('Öppet')} disabled={statusMutation.isPending} className="px-4 py-2 bg-blue-50 hover:bg-blue-100 disabled:opacity-40 text-blue-700 border border-blue-200 text-xs rounded-lg transition-colors">Öppna igen</button>
                 )}
                 <button
                   onClick={() => archiveMutation.mutate(!ticket.isArchived)}
-                  className="ml-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs rounded-lg transition-colors"
+                  disabled={archiveMutation.isPending}
+                  className="ml-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-500 text-xs rounded-lg transition-colors"
                 >
                   {ticket.isArchived ? '📤 Återställ från arkiv' : '📦 Arkivera'}
                 </button>
               </div>
+              <MutationFel fel={statusMutation.error} reserv="Statusen kunde inte ändras. Försök igen." />
+              <MutationFel fel={archiveMutation.error} reserv="Ärendet kunde inte arkiveras/återställas. Försök igen." />
             </div>
           </div>
 
@@ -332,7 +442,7 @@ function ArendeModal({
                   Notifieringsinställningar →
                 </button>
               )}
-              {idéSkapad ? (
+              {!kanSkapaIdé ? null : idéSkapad ? (
                 <p className="mt-3 text-xs text-green-600 font-medium">✓ Idé skapad</p>
               ) : (
                 <button
@@ -343,6 +453,7 @@ function ArendeModal({
                   💡 Skapa idé av det här ärendet
                 </button>
               )}
+              {kanSkapaIdé && !idéSkapad && <MutationFel fel={skapaIdéMutation.error} reserv="Idén kunde inte skapas. Försök igen." className="mt-1 text-xs" />}
             </div>
 
             {/* Status */}
@@ -364,6 +475,10 @@ function ArendeModal({
                 <option value="">— Ingen —</option>
                 {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
+              {agentsFel && (
+                <HamtningsFel fel={agentsFel.fel} reserv="Kunde inte hämta agentlistan." onForsokIgen={agentsFel.försökIgen} className="mt-2 text-xs" />
+              )}
+              <MutationFel fel={assignMutation.error} reserv="Ärendet kunde inte tilldelas. Försök igen." className="mt-2 text-xs" />
             </div>
 
             {/* Påminnelse */}
@@ -385,13 +500,14 @@ function ArendeModal({
                 </div>
               )}
               {!ticket.reminderAt && !visaPåmForm && <p className="text-xs text-slate-300">Ingen påminnelse satt.</p>}
+              <MutationFel fel={reminderMutation.error} reserv="Påminnelsen kunde inte sparas. Försök igen." className="mt-2 text-xs" />
               {visaPåmForm && (
                 <div className="flex flex-col gap-2">
                   <input type="date" value={påmDatum} onChange={e => setPåmDatum(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:outline-none focus:border-violet-400 bg-white w-full" />
                   <input type="time" value={påmTid} onChange={e => setPåmTid(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:outline-none focus:border-violet-400 bg-white w-full" />
                   <textarea value={påmNotering} onChange={e => setPåmNotering(e.target.value)} rows={2} placeholder="Vad ska kontrolleras?" className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:outline-none focus:border-violet-400 bg-white resize-none placeholder-slate-300" />
                   <div className="flex gap-2">
-                    <button onClick={handleSparaPåminnelse} disabled={!påmDatum} className="flex-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors">Spara</button>
+                    <button onClick={handleSparaPåminnelse} disabled={!giltigDatumTid(påmDatum, påmTid) || reminderMutation.isPending} className="flex-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors">Spara</button>
                     <button onClick={() => setVisaPåmForm(false)} className="flex-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs rounded-lg transition-colors">Avbryt</button>
                   </div>
                 </div>
@@ -439,15 +555,20 @@ function ArendeModal({
                   <div className="flex gap-2">
                     <button
                       onClick={handleSpараSchema}
-                      disabled={!schDatum || ((schTyp === 'svar' || schTyp === 'intern') ? !schText.trim() : !schAgent)}
+                      disabled={!giltigDatumTid(schDatum, schTid) || addScheduleMutation.isPending || ((schTyp === 'svar' || schTyp === 'intern') ? !schText.trim() : !schAgent)}
                       className="flex-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors"
                     >
-                      Schemalägg
+                      {addScheduleMutation.isPending ? 'Sparar...' : 'Schemalägg'}
                     </button>
                     <button onClick={() => setVisaSchemaForm(false)} className="flex-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs rounded-lg transition-colors">Avbryt</button>
                   </div>
+                  <MutationFel fel={addScheduleMutation.error} reserv="Åtgärden kunde inte schemaläggas. Din inmatning finns kvar — försök igen." className="text-xs" />
                 </div>
               )}
+              {!visaSchemaForm && editId === null && !redigeraFel && (
+                <MutationFel fel={cancelScheduleMutation.error} reserv="Åtgärden kunde inte avbrytas. Försök igen." className="mb-2 text-xs" />
+              )}
+              {redigeraFel && <p role="alert" className="mb-2 text-xs text-red-600">{redigeraFel}</p>}
 
               {/* Väntande */}
               {pendingSchema.length > 0 && (
@@ -524,7 +645,7 @@ function ArendeModal({
                               </>
                             )}
                             <div className="flex gap-2">
-                              <button onClick={() => handleSparaEdit(å)} disabled={!editDatum} className="flex-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors">Spara</button>
+                              <button onClick={() => handleSparaEdit(å)} disabled={!editKanSparas(å) || redigerar} className="flex-1 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors">{redigerar ? 'Sparar...' : 'Spara'}</button>
                               <button onClick={() => setEditId(null)} className="flex-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs rounded-lg transition-colors">Avbryt</button>
                             </div>
                           </div>
@@ -565,7 +686,6 @@ function ArendeModal({
 // ---------------------------------------------------------------------------
 
 interface Props {
-  onPendingNotiser?:  (items: PendingNotis[]) => void
   defaultOpenId?:     string
   /** Anropas när djuplänken öppnat sitt ärende, så föräldern nollställer den (V2-16). */
   onDjuplänkKonsumerad?: () => void
@@ -577,16 +697,17 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   return <span className="ml-1 text-violet-600">{dir === 'asc' ? '↑' : '↓'}</span>
 }
 
-function StatChip({ label, value, color }: { label: string; value: number; color: string }) {
+// value === null: antalet är okänt (hämtningen misslyckades) — visas som "—", aldrig som 0.
+function StatChip({ label, value, color }: { label: string; value: number | null; color: string }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-5 text-center">
-      <p className={`text-3xl font-bold ${color}`}>{value}</p>
+      <p className={`text-3xl font-bold ${value === null ? 'text-slate-300' : color}`}>{value ?? '—'}</p>
       <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-medium">{label}</p>
     </div>
   )
 }
 
-export default function SupportInbox({ onPendingNotiser, defaultOpenId, onDjuplänkKonsumerad, onÖppnaAnvändare }: Props) {
+export default function SupportInbox({ defaultOpenId, onDjuplänkKonsumerad, onÖppnaAnvändare }: Props) {
   const [öppetId, setÖppetId]           = useState<string | null>(defaultOpenId ?? null)
 
   // Djuplänken konsumeras en gång (V2-16): öppna ärendet och be föräldern
@@ -605,23 +726,20 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onDjupl�
   const [sortDir, setSortDir]           = useState<SortDir>('desc')
   const [sök, setSök]                   = useState('')
 
-  const { data: ärenden = [] } = useQuery({
+  const ärendenFråga = useQuery({
     queryKey: ['admin-tickets'],
     queryFn: () => fetchAdminTickets(),
     refetchInterval: 30_000,
   })
-  const anvandare = useAnvandare()
-  const { data: agents = [] } = useQuery({ queryKey: ['support-agents'], queryFn: fetchAgents })
-  const { data: notiser = [] } = useQuery({
-    queryKey: supportNotiserNyckel(anvandare),
-    queryFn: fetchSupportNotifications,
-    refetchInterval: 30_000,
-  })
-
-  useEffect(() => {
-    if (!onPendingNotiser) return
-    onPendingNotiser(notiser.map(n => ({ arendeId: n.ticketId, amne: n.amne, typ: n.typ, notering: n.notering })))
-  }, [notiser, onPendingNotiser])
+  const ärenden = ärendenFråga.data ?? []
+  const ärendenOkända = ärendenFråga.data === undefined
+  const agentFråga = useQuery({ queryKey: ['support-agents'], queryFn: fetchAgents })
+  const agents = agentFråga.data ?? []
+  const agentsFel = agentFråga.isError && agentFråga.data === undefined
+    ? { fel: agentFråga.error, försökIgen: () => { void agentFråga.refetch() } }
+    : null
+  // Samma query som klockan i AdminPage (delad cache) — här bara för röd prick per ärende.
+  const { data: notiser = [] } = useSupportNotiser()
 
   const aktiva    = ärenden.filter(a => !a.isArchived)
   const totalt    = aktiva.length
@@ -668,10 +786,10 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onDjupl�
     <div className="flex flex-col gap-6">
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatChip label="Totalt antal ärenden" value={totalt}    color="text-slate-800" />
-        <StatChip label="Öppna ärenden"        value={öppna}     color="text-blue-600"  />
-        <StatChip label="Under behandling"     value={pågående}  color="text-amber-600" />
-        <StatChip label="Hanterade ärenden"    value={hanterade} color="text-green-600" />
+        <StatChip label="Totalt antal ärenden" value={ärendenOkända ? null : totalt}    color="text-slate-800" />
+        <StatChip label="Öppna ärenden"        value={ärendenOkända ? null : öppna}     color="text-blue-600"  />
+        <StatChip label="Under behandling"     value={ärendenOkända ? null : pågående}  color="text-amber-600" />
+        <StatChip label="Hanterade ärenden"    value={ärendenOkända ? null : hanterade} color="text-green-600" />
       </div>
 
       {/* Kanal-flikar */}
@@ -771,7 +889,23 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onDjupl�
                   </tr>
                 )
               })}
-              {filtrerade.length === 0 && (
+              {ärendenFråga.isLoading && (
+                <tr><td colSpan={8} className="py-16 text-center text-sm text-slate-400">Laddar ärenden...</td></tr>
+              )}
+              {ärendenFråga.isError && (
+                <tr><td colSpan={8} className="p-0">
+                  <HamtningsFel
+                    fel={ärendenFråga.error}
+                    reserv={ärendenOkända
+                      ? 'Kunde inte hämta ärendena. Det här är inte samma sak som att inga ärenden finns.'
+                      : 'Kunde inte uppdatera ärendelistan. Listan kan vara inaktuell.'}
+                    onForsokIgen={() => { void ärendenFråga.refetch() }}
+                    arIgang={ärendenFråga.isFetching}
+                    className="py-10"
+                  />
+                </td></tr>
+              )}
+              {!ärendenFråga.isLoading && !ärendenOkända && filtrerade.length === 0 && (
                 <tr><td colSpan={8} className="py-16 text-center text-sm text-slate-400">Inga ärenden matchar filtret.</td></tr>
               )}
             </tbody>
@@ -783,6 +917,7 @@ export default function SupportInbox({ onPendingNotiser, defaultOpenId, onDjupl�
         <ArendeModal
           ticketId={öppetId}
           agents={agents}
+          agentsFel={agentsFel}
           onClose={() => setÖppetId(null)}
           onÖppnaAnvändare={onÖppnaAnvändare}
         />

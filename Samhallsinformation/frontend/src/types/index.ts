@@ -42,6 +42,10 @@ export interface EventsResponse {
   page: number
   pageSize: number
   events: CanonicalEvent[]
+  // Bara i serverflödena (Mitt flöde/Sparat, V3-11). hasMore är auktoritativt;
+  // total är en nedre gräns när totalExakt är false.
+  hasMore?: boolean
+  totalExakt?: boolean
 }
 
 // ProfileNav

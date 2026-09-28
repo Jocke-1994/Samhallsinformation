@@ -8,7 +8,12 @@
 // som skrivits för just den handlingen).
 const TEKNISKT_STATUSFEL = /^\w+: \d{3}$/
 
+// Anrop som inte svarat inom tidsgränsen (api/hamta.ts, eller webbläsarens egen
+// AbortSignal.timeout vars text är engelsk) visas alltid med den här texten.
+export const TIDSGRANS_TEXT = 'Servern svarade inte i tid. Försök igen.'
+
 export function visaFel(fel: unknown, reserv: string): string {
+  if (fel instanceof Error && fel.name === 'TimeoutError') return TIDSGRANS_TEXT
   if (!(fel instanceof Error) || fel instanceof TypeError) return reserv
   const text = fel.message.trim()
   if (text === '' || TEKNISKT_STATUSFEL.test(text)) return reserv

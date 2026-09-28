@@ -63,6 +63,7 @@ public class EventSyncDuplicateTests
     public async Task SyncAsync_TwoDbRowsWithSameExternalId_DoesNotThrow_AndProcessesRestOfBatch()
     {
         using var db = TestDb.Create();
+        TestDb.DropEventsUniqueIndex(db); // databasformen före V3-2 (produktionen innan indexet skapas)
         var source = await SeedSourceAsync(db);
         db.Events.Add(Ev(source.Id, "dup", "Rad 1"));
         db.Events.Add(Ev(source.Id, "dup", "Rad 2"));
@@ -75,7 +76,11 @@ public class EventSyncDuplicateTests
         var (inserted, updated) = await RunAsync(db, ingestor);
 
         Assert.Equal(2, inserted);
-        Assert.Equal(0, updated);
+        // V4-1b (E3#10): den överlevande dubblettraden ("Rad 1"/"Rad 2", vilken det nu
+        // är beror på dedupen ovan) får ett annat innehåll än den inkommande posten
+        // (default-titeln "Titel") och uppdateras därför — samma "uppdatera vid ändrat
+        // innehåll"-logik som gäller normala, icke-dubblerade rader.
+        Assert.Equal(1, updated);
         Assert.Equal(4, await db.Events.CountAsync());
         Assert.Equal(2, await db.Events.CountAsync(e => e.ExternalId == "dup"));
     }
@@ -84,6 +89,7 @@ public class EventSyncDuplicateTests
     public async Task SyncAsync_TwoDbRowsWithSameExternalId_RepeatedCycles_NeverThrow()
     {
         using var db = TestDb.Create();
+        TestDb.DropEventsUniqueIndex(db);
         var source = await SeedSourceAsync(db);
         db.Events.Add(Ev(source.Id, "dup"));
         db.Events.Add(Ev(source.Id, "dup"));
@@ -102,6 +108,7 @@ public class EventSyncDuplicateTests
     public async Task SyncAsync_TwoDbRowsWithSameExternalId_LogsOneWarningWithSourceAndCount()
     {
         using var db = TestDb.Create();
+        TestDb.DropEventsUniqueIndex(db);
         var source = await SeedSourceAsync(db, "Dubblettkällan");
         db.Events.Add(Ev(source.Id, "dup"));
         db.Events.Add(Ev(source.Id, "dup"));
@@ -121,6 +128,7 @@ public class EventSyncDuplicateTests
     public async Task SyncAsync_Overwrite_WithDbDuplicates_UpdatesOldestRowOnly_Deterministically()
     {
         using var db = TestDb.Create();
+        TestDb.DropEventsUniqueIndex(db);
         var source = await SeedSourceAsync(db);
         var oldest = Ev(source.Id, "dup", "Äldst");
         oldest.IngestedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -231,15 +239,18 @@ public class EventSyncDuplicateTests
     }
 
     [Fact]
-    public async Task SyncAsync_Normal_NewEventsCreated_ExistingRecognisedAndUntouched()
+    public async Task SyncAsync_Normal_NewEventsCreated_UnchangedExistingRowUntouched()
     {
+        // V4-1b (E3#10): identiskt innehåll (samma Title/Content/övriga fält) ska inte
+        // röra raden alls — varken UpdatedAt eller Updated-räknaren.
         using var db = TestDb.Create();
         var source = await SeedSourceAsync(db);
-        db.Events.Add(Ev(source.Id, "finns", "Gammal titel"));
+        var existing = Ev(source.Id, "finns", "Samma titel");
+        db.Events.Add(existing);
         await db.SaveChangesAsync();
         var ingestor = new FakeIngestor(source)
         {
-            Events = { Ev(source.Id, "finns", "Ny titel"), Ev(source.Id, "ny", "Helt ny") },
+            Events = { Ev(source.Id, "finns", "Samma titel"), Ev(source.Id, "ny", "Helt ny") },
         };
         var logger = new ListLogger();
 
@@ -247,9 +258,68 @@ public class EventSyncDuplicateTests
 
         Assert.Equal(1, inserted);
         Assert.Equal(0, updated);
-        Assert.Equal("Gammal titel", (await db.Events.SingleAsync(e => e.ExternalId == "finns")).Title);
+        var rad = await db.Events.SingleAsync(e => e.ExternalId == "finns");
+        Assert.Equal("Samma titel", rad.Title);
+        Assert.Null(rad.UpdatedAt);
         Assert.Equal(2, await db.Events.CountAsync());
         Assert.DoesNotContain(logger.Entries, e => e.Level == LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task SyncAsync_Normal_ChangedExistingRow_IsUpdated_PublishedAtUntouched_UpdatedAtSet()
+    {
+        // V4-1b (E3#10): Trafikverket/SMHI kan skicka en ändrad version av en redan sparad
+        // post (samma ExternalId, ny text/allvarlighetsgrad). Normal bakgrundskörning
+        // (overwrite=false) ska nu uppdatera raden istället för att hoppa över den —
+        // men PublishedAt (den ursprungliga publiceringstiden) rörs aldrig.
+        using var db = TestDb.Create();
+        var source = await SeedSourceAsync(db);
+        var originalPublishedAt = new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+        var existing = Ev(source.Id, "finns", "Gammal titel");
+        existing.PublishedAt = originalPublishedAt;
+        existing.Content = "Gammalt innehåll";
+        existing.Severity = "Bra att veta";
+        db.Events.Add(existing);
+        await db.SaveChangesAsync();
+
+        var incoming = Ev(source.Id, "finns", "Ny titel");
+        incoming.Content = "Nytt innehåll";
+        incoming.Severity = "Kritisk";
+        incoming.PublishedAt = new DateTime(2026, 3, 3, 10, 0, 0, DateTimeKind.Utc); // ska ignoreras
+        var ingestor = new FakeIngestor(source) { Events = { incoming } };
+
+        var (inserted, updated) = await RunAsync(db, ingestor);
+
+        Assert.Equal(0, inserted);
+        Assert.Equal(1, updated);
+        var rad = await db.Events.SingleAsync(e => e.ExternalId == "finns");
+        Assert.Equal("Ny titel", rad.Title);
+        Assert.Equal("Nytt innehåll", rad.Content);
+        Assert.Equal("Kritisk", rad.Severity);
+        Assert.Equal(originalPublishedAt, rad.PublishedAt);
+        Assert.NotNull(rad.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task SyncAsync_Normal_ChangedExistingRow_DoesNotAffectDedupOrInsertCounters()
+    {
+        // Ändrad-post-uppdateringen (E3#10) får inte krocka med dubblett-tåligheten (V3-1):
+        // en batch med både en ändrad känd post och en helt ny post ska ge exakt en insert
+        // och en update, ingen krasch.
+        using var db = TestDb.Create();
+        var source = await SeedSourceAsync(db);
+        db.Events.Add(Ev(source.Id, "finns", "Gammal"));
+        await db.SaveChangesAsync();
+        var ingestor = new FakeIngestor(source)
+        {
+            Events = { Ev(source.Id, "finns", "Ändrad"), Ev(source.Id, "helt-ny", "Ny post") },
+        };
+
+        var (inserted, updated) = await RunAsync(db, ingestor);
+
+        Assert.Equal(1, inserted);
+        Assert.Equal(1, updated);
+        Assert.Equal(2, await db.Events.CountAsync());
     }
 
     [Fact]

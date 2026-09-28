@@ -254,13 +254,54 @@ public class ResendEmailService : IEmailService
     private static string? HämtaSträng(JsonElement obj, string namn) =>
         obj.TryGetProperty(namn, out var el) && el.ValueKind == JsonValueKind.String ? el.GetString() : null;
 
-    private static string HtmlTillText(string html)
+    // V4-1b (E3#12): den här HTML:en kommer från Resends inbound-webhook — signaturen
+    // bevisar att Resend skickade den, men INTE att avsändaren (vem som helst som mejlar
+    // info@) skrev ofarlig HTML. Utan matchTimeout kan patologisk indata (t.ex. många
+    // oavslutade <script>/< utan matchande stängning) låsa en request-tråd i sekunder
+    // till minuter via kvadratisk körtid. matchTimeout är en parameter (inte bara en
+    // konstant) så tester kan simulera en timeout utan att bygga en riktigt patologisk
+    // sträng eller vänta på den verkliga gränsen.
+    private static readonly TimeSpan DefaultHtmlRegexTimeout = TimeSpan.FromSeconds(2);
+    private const int HtmlFallbackMaxLength = 5000;
+
+    internal string HtmlTillText(string html, TimeSpan? matchTimeout = null)
     {
-        var utanScriptStyle = Regex.Replace(html, @"<(script|style)[^>]*>[\s\S]*?</\1>", "", RegexOptions.IgnoreCase);
-        var medRadbrytningar = Regex.Replace(utanScriptStyle, @"<(br|/p|/div|/li)\s*/?>", "\n", RegexOptions.IgnoreCase);
-        var utanTaggar = Regex.Replace(medRadbrytningar, "<[^>]+>", "");
-        var avkodad = System.Net.WebUtility.HtmlDecode(utanTaggar);
-        return Regex.Replace(avkodad, @"\n{3,}", "\n\n").Trim();
+        var timeout = matchTimeout ?? DefaultHtmlRegexTimeout;
+        try
+        {
+            var utanScriptStyle = Regex.Replace(html, @"<(script|style)[^>]*>[\s\S]*?</\1>", "", RegexOptions.IgnoreCase, timeout);
+            var medRadbrytningar = Regex.Replace(utanScriptStyle, @"<(br|/p|/div|/li)\s*/?>", "\n", RegexOptions.IgnoreCase, timeout);
+            var utanTaggar = Regex.Replace(medRadbrytningar, "<[^>]+>", "", RegexOptions.None, timeout);
+            var avkodad = System.Net.WebUtility.HtmlDecode(utanTaggar);
+            return Regex.Replace(avkodad, @"\n{3,}", "\n\n", RegexOptions.None, timeout).Trim();
+        }
+        catch (RegexMatchTimeoutException ex)
+        {
+            _logger.LogWarning(ex,
+                "HtmlTillText: regex-timeout på {Length} tecken HTML — faller tillbaka på en enkel, avkortad text utan regex",
+                html.Length);
+            return StripTagsUtanRegex(html, HtmlFallbackMaxLength);
+        }
+    }
+
+    // Fallback när den vanliga vägen timeoutar: en enkel, garanterat linjär
+    // tagg-strippning (ingen bakåtspårning möjlig) plus en hård längdgräns. Mindre
+    // snygg än den vanliga vägen (ingen radbrytnings-/entitetshantering utöver
+    // HtmlDecode), men kan aldrig hänga.
+    private static string StripTagsUtanRegex(string html, int maxLength)
+    {
+        var kapad = html.Length > maxLength ? html[..maxLength] : html;
+        var sb = new StringBuilder(kapad.Length);
+        var inneITagg = false;
+        foreach (var c in kapad)
+        {
+            if (c == '<') { inneITagg = true; continue; }
+            if (c == '>') { inneITagg = false; continue; }
+            if (!inneITagg) sb.Append(c);
+        }
+
+        var text = System.Net.WebUtility.HtmlDecode(sb.ToString());
+        return (text.Length > maxLength ? text[..maxLength] : text).Trim();
     }
 
     private async Task SendAsync(string from, string to, string subject, string html, string? replyTo = null)

@@ -8,6 +8,8 @@ import {
 } from '../../api/featureIdeas'
 import { STAGE_LABELS, STAGE_ORDER } from './FunktionsIdePipeline'
 import { FLAG_DEFINITIONER } from '../../lib/featureFlags'
+import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
+import { visaFel } from '../../lib/felmeddelande'
 
 const GITHUB_REPO = 'https://github.com/Jocke-1994/Samhallsinformation'
 const VÄNTAT_VARNING_DAGAR = 21
@@ -26,7 +28,8 @@ interface Props {
 
 export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Props) {
   const queryClient = useQueryClient()
-  const { data } = useQuery({ queryKey: ['feature-idea', ideaId], queryFn: () => fetchFeatureIdea(ideaId) })
+  const ideFråga = useQuery({ queryKey: ['feature-idea', ideaId], queryFn: () => fetchFeatureIdea(ideaId) })
+  const { data } = ideFråga
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['feature-idea', ideaId] })
@@ -48,13 +51,46 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
   const [beskrivning, setBeskrivning] = useState('')
   const [flagKey, setFlagKey]         = useState('')
   const [motivering, setMotivering]   = useState('')
+  // E6#22a: skiljer "fältet aldrig rört" (bevara idea.triageMotivering) från
+  // "fältet aktivt tömt till en tom sträng" (spara som null). Utan den här
+  // flaggan tolkas ett tömt textfält som "inget nytt", och den gamla
+  // motiveringen går aldrig att radera.
+  const [motiveringRörd, setMotiveringRörd] = useState(false)
   const [visaTesterForm, setVisaTesterForm] = useState(false)
   const [testerEpost, setTesterEpost] = useState('')
   const [testerFel, setTesterFel]     = useState<string | null>(null)
   const [visaChecklistForm, setVisaChecklistForm] = useState(false)
   const [nyttChecklistItem, setNyttChecklistItem] = useState('')
 
-  if (!data) return null
+  // Ett klick på en idé ska aldrig ge "ingenting": vid laddning/fel visas en modal med besked.
+  if (!data) {
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[8500] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+        onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      >
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
+            <p className="text-base font-semibold text-slate-800">Idé</p>
+            <button onClick={onClose} aria-label="Stäng" className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
+          </div>
+          <div className="px-6 py-8">
+            {ideFråga.isError ? (
+              <HamtningsFel
+                fel={ideFråga.error}
+                reserv="Kunde inte hämta idén."
+                onForsokIgen={() => { void ideFråga.refetch() }}
+                arIgang={ideFråga.isFetching}
+              />
+            ) : (
+              <p className="text-center text-sm text-slate-400">Laddar idén...</p>
+            )}
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+  }
   const { idea, testers, checklist } = data
 
   const länkadFlagg = idea.flagKey ? FLAG_DEFINITIONER.find(f => f.key === idea.flagKey) : undefined
@@ -67,13 +103,21 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
     setRedigerar(true)
   }
 
+  // Redigeringsläget stängs först när servern bekräftat (V3-8) — vid fel finns texten kvar.
   function sparaRedigering() {
-    updateMutation.mutate({ title: titel.trim(), description: beskrivning, flagKey: flagKey.trim() || null })
-    setRedigerar(false)
+    if (updateMutation.isPending) return
+    updateMutation.mutate(
+      { title: titel.trim(), description: beskrivning, flagKey: flagKey.trim() || null },
+      { onSuccess: () => setRedigerar(false) },
+    )
   }
 
   function sparaTriage(kanGoras: boolean | null, borGoras: boolean | null) {
-    triageMutation.mutate({ kanGoras, borGoras, motivering: motivering.trim() || idea.triageMotivering || null })
+    // Rörd: skicka exakt vad fältet innehåller (kan vara '' -> null, dvs. rensad).
+    // Orörd: bevara den befintliga motiveringen — en checkbox-ändring ska inte
+    // tyst radera en motivering som aldrig redigerats i den här sessionen.
+    const nyMotivering = motiveringRörd ? (motivering.trim() || null) : (idea.triageMotivering ?? null)
+    triageMutation.mutate({ kanGoras, borGoras, motivering: nyMotivering })
   }
 
   async function läggTillTester() {
@@ -82,10 +126,15 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
       await addTesterMutation.mutateAsync(testerEpost.trim())
       setTesterEpost('')
       setVisaTesterForm(false)
-    } catch {
-      setTesterFel('Ingen användare hittades med den e-posten, eller är redan testare.')
+    } catch (fel) {
+      setTesterFel(visaFel(fel, 'Ingen användare hittades med den e-posten, eller är redan testare.'))
     }
   }
+
+  // Fel från övriga åtgärder (stadie, triage, ta bort testare, checklista, radera).
+  const åtgärdsFel = stageMutation.error ?? triageMutation.error ?? removeTesterMutation.error
+    ?? toggleChecklistMutation.error ?? removeChecklistMutation.error ?? deleteMutation.error
+  const nyttItemLås = addChecklistMutation.isPending
 
   return createPortal(
     <div
@@ -111,6 +160,8 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6">
+
+          <MutationFel fel={åtgärdsFel} reserv="Ändringen kunde inte sparas. Försök igen." className="bg-red-50 border border-red-200 rounded-xl px-4 py-3" />
 
           {/* Stadie-växlare */}
           <div>
@@ -144,13 +195,21 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
                   value={beskrivning} onChange={e => setBeskrivning(e.target.value)} rows={4}
                   className="text-sm text-slate-700 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-violet-400 resize-none"
                 />
-                <input
+                {/* E6#22b: fri text tillät en felstavad nyckel som skapade en override-rad
+                    för en flagga som inte finns — en <select> över de faktiska definitionerna
+                    (samma mönster som AdminFaq.tsx) gör en ogiltig nyckel omöjlig att skicka. */}
+                <select
                   value={flagKey} onChange={e => setFlagKey(e.target.value)}
-                  placeholder="Feature flag-nyckel (t.ex. flode_sparat), valfritt"
-                  className="text-xs font-mono text-slate-700 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-violet-400"
-                />
+                  className="text-xs font-mono text-slate-700 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-violet-400 bg-white"
+                >
+                  <option value="">Ingen koppling</option>
+                  {FLAG_DEFINITIONER.map(f => (
+                    <option key={f.key} value={f.key}>{f.key} — {f.label}</option>
+                  ))}
+                </select>
+                <MutationFel fel={updateMutation.error} reserv="Idén kunde inte sparas. Din text finns kvar — försök igen." className="text-xs" />
                 <div className="flex gap-2">
-                  <button onClick={sparaRedigering} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium rounded-lg transition-colors">Spara</button>
+                  <button onClick={sparaRedigering} disabled={updateMutation.isPending} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors">{updateMutation.isPending ? 'Sparar...' : 'Spara'}</button>
                   <button onClick={() => setRedigerar(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs rounded-lg transition-colors">Avbryt</button>
                 </div>
               </div>
@@ -221,7 +280,7 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
             </div>
             <textarea
               defaultValue={idea.triageMotivering ?? ''}
-              onChange={e => setMotivering(e.target.value)}
+              onChange={e => { setMotivering(e.target.value); setMotiveringRörd(true) }}
               onBlur={() => sparaTriage(idea.triageKanGoras ?? null, idea.triageBorGoras ?? null)}
               placeholder="Motivering..."
               rows={2}
@@ -254,9 +313,9 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
                   placeholder="E-postadress"
                   className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-violet-400"
                 />
-                {testerFel && <p className="text-xs text-red-500">{testerFel}</p>}
+                {testerFel && <p role="alert" className="text-xs text-red-500">{testerFel}</p>}
                 <div className="flex gap-2">
-                  <button onClick={läggTillTester} disabled={!testerEpost.trim()} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors">Lägg till</button>
+                  <button onClick={läggTillTester} disabled={!testerEpost.trim() || addTesterMutation.isPending} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors">Lägg till</button>
                   <button onClick={() => { setVisaTesterForm(false); setTesterFel(null) }} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs rounded-lg transition-colors">Avbryt</button>
                 </div>
               </div>
@@ -286,19 +345,28 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
               {checklist.length === 0 && <p className="text-xs text-slate-400">Ingen checklista än — läggs till automatiskt när stadiet sätts till Lanseringsklar.</p>}
             </div>
             {visaChecklistForm && (
-              <div className="flex gap-2 mt-2">
-                <input
-                  value={nyttChecklistItem} onChange={e => setNyttChecklistItem(e.target.value)}
-                  placeholder="Ny checklista-punkt"
-                  className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-violet-400"
-                />
-                <button
-                  onClick={() => { addChecklistMutation.mutate(nyttChecklistItem.trim()); setNyttChecklistItem(''); setVisaChecklistForm(false) }}
-                  disabled={!nyttChecklistItem.trim()}
-                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors"
-                >
-                  Lägg till
-                </button>
+              <div className="flex flex-col gap-2 mt-2">
+                <div className="flex gap-2">
+                  <input
+                    value={nyttChecklistItem} onChange={e => setNyttChecklistItem(e.target.value)}
+                    placeholder="Ny checklista-punkt"
+                    className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-violet-400"
+                  />
+                  <button
+                    onClick={() => {
+                      if (addChecklistMutation.isPending) return
+                      // Fältet töms och formuläret stängs först när servern bekräftat.
+                      addChecklistMutation.mutate(nyttChecklistItem.trim(), {
+                        onSuccess: () => { setNyttChecklistItem(''); setVisaChecklistForm(false) },
+                      })
+                    }}
+                    disabled={!nyttChecklistItem.trim() || nyttItemLås}
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors"
+                  >
+                    {nyttItemLås ? 'Lägger till...' : 'Lägg till'}
+                  </button>
+                </div>
+                <MutationFel fel={addChecklistMutation.error} reserv="Punkten kunde inte läggas till. Din text finns kvar — försök igen." className="text-xs" />
               </div>
             )}
           </div>

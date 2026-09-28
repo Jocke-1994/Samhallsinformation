@@ -54,6 +54,17 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.ExternalId);
+            // V3-2: samma (SourceId, ExternalId) får inte finnas två gånger — samtidiga körningar
+            // (bakgrundsingest + manuell "kör nu") gav dubbletter som inget stoppade. Partiellt index:
+            // rader utan stabilt ExternalId (tomt/NULL) är undantagna, de kan legitimt finnas flera.
+            // Filtret är standard-SQL med dubbelciterade identifierare och gäller likadant i SQLite och
+            // PostgreSQL. Ingen FK mot Sources — det finns föräldralösa händelser från raderade källor.
+            entity.HasIndex(e => new { e.SourceId, e.ExternalId })
+                  .IsUnique()
+                  .HasFilter("\"ExternalId\" IS NOT NULL AND \"ExternalId\" <> ''");
+            // Partiella index kan inte användas för frågor på enbart SourceId (EventsController m.fl.),
+            // därför ett vanligt index vid sidan av.
+            entity.HasIndex(e => e.SourceId);
             entity.HasIndex(e => e.Geography);
             entity.HasIndex(e => e.PublishedAt);
         });

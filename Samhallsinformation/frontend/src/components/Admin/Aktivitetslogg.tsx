@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchAdminActivityLog, undoActivityLogEntry, type LoggPost, type ÅngraData, type AktörTyp } from '../../api/activityLog'
 import { saveAdminUserEvent, unsaveAdminUserEvent } from '../../api/adminUsers'
+import { visaFel } from '../../lib/felmeddelande'
+import HamtningsStatus from '../common/HamtningsStatus'
 
 export type LoggTyp =
   | 'Ingestor' | 'Notis' | 'Fel' | 'Kontoåtgärd'
-  | 'Konfiguration' | 'Konto' | 'Ärende' | 'Push' | 'Registrering'
+  | 'Konfiguration' | 'Konto' | 'Ärende' | 'Push' | 'Registrering' | 'Säkerhet'
 type LoggStatus = 'OK' | 'Fel' | 'Varning'
 type TidsFilter = 'Idag' | '7 dagar' | '30 dagar' | 'Alla'
 
@@ -23,16 +25,8 @@ interface LoggRad {
   relateratÄrendeId?: string | null
 }
 
-// Notis-raderna är fortfarande mock — kräver en egen global lista över
-// NotificationDeliveryLog (utöver den redan per-användare-skopade
-// GetNotificationLog i AdminUserDetailsController), inte del av #491 wave 1
-// (som bara omfattar admin/system-händelser, se AktivitetsloggService).
-const NOTIS_MOCK: LoggRad[] = [
-  { id: 'm2',  tid: '09:50', datum: '2026-05-18', typ: 'Notis', rubrik: 'Notis skickad — Polisen', detalj: 'E-post till anna.svensson@mail.se — "Trafikolycka E4 Södertälje"',      status: 'OK' },
-  { id: 'm3',  tid: '09:48', datum: '2026-05-18', typ: 'Notis', rubrik: 'Notis skickad — SMHI',    detalj: 'Push till 3 mottagare — "Gul varning: kraftigt regn Västra Götaland"', status: 'OK' },
-  { id: 'm8',  tid: '22:14', datum: '2026-05-17', typ: 'Notis', rubrik: 'Notis skickad — MSB',     detalj: 'E-post till 12 mottagare — "VIKTIGT: Röd varning storm"',               status: 'OK' },
-  { id: 'm12', tid: '14:22', datum: '2026-05-17', typ: 'Notis', rubrik: 'Notis misslyckad — E-post', detalj: 'SMTP-fel vid leverans till erik.lindgren@example.com',                status: 'Fel' },
-]
+// Skickade notiser saknar en global lista i backend (bara per användare, i Användare →
+// Notishistorik) — därför visas inga notisrader här. Tidigare mockrader borttagna (V3-20).
 
 const SIDA_STORLEK = 8
 
@@ -46,6 +40,7 @@ export const TYP_MÄRKE: Record<LoggTyp, string> = {
   Ärende:        'bg-blue-100 text-blue-700',
   Push:          'bg-fuchsia-100 text-fuchsia-700',
   Registrering:  'bg-teal-100 text-teal-700',
+  Säkerhet:      'bg-rose-100 text-rose-700',
 }
 
 export const TYP_IKON: Record<LoggTyp, string> = {
@@ -58,6 +53,7 @@ export const TYP_IKON: Record<LoggTyp, string> = {
   Ärende:        '🎫',
   Push:          '📣',
   Registrering:  '✨',
+  Säkerhet:      '🛡️',
 }
 
 const STATUS_MÄRKE: Record<LoggStatus, string> = {
@@ -72,8 +68,7 @@ export const STATUS_PRICK: Record<LoggStatus, string> = {
   Fel:     'bg-red-500',
 }
 
-// Används både för de riktiga raderna (skickas till backend som `från`) och
-// för att filtrera NOTIS_MOCK client-side (backend känner inte till mocken).
+// Skickas till backend som `från`.
 function datumGräns(filter: TidsFilter): string | null {
   if (filter === 'Alla') return null
   const d = new Date()
@@ -81,19 +76,6 @@ function datumGräns(filter: TidsFilter): string | null {
   if (filter === '7 dagar') { d.setDate(d.getDate() - 7);  return d.toISOString().slice(0, 10) }
   if (filter === '30 dagar'){ d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10) }
   return null
-}
-
-function notisMatchar(m: LoggRad, aktörFilter: AktörTyp | 'Alla', typFilter: LoggTyp | 'Alla', tidsFilter: TidsFilter, sökning: string): boolean {
-  // Notiser (push/mejl) skickas av systemet, inte av en admin — döljs helt
-  // om Aktör-filtret smalnats av till just Admin.
-  if (aktörFilter === 'Admin') return false
-  if (typFilter !== 'Alla' && typFilter !== 'Notis') return false
-  const gräns = datumGräns(tidsFilter)
-  if (gräns && tidsFilter === 'Idag'    && m.datum !== gräns) return false
-  if (gräns && tidsFilter !== 'Idag'    && m.datum < gräns)   return false
-  const s = sökning.toLowerCase()
-  if (s && !m.rubrik.toLowerCase().includes(s) && !m.detalj.toLowerCase().includes(s)) return false
-  return true
 }
 
 function postTillRad(p: LoggPost): LoggRad {
@@ -113,10 +95,22 @@ function postTillRad(p: LoggPost): LoggRad {
   }
 }
 
-function exporteraCsv(rader: LoggRad[]) {
+// E6#16: (a) korrekt CSV-escaping — varje cell omsluts i citattecken och ett
+// citattecken i värdet dubblas (RFC 4180), så kommatecken/semikolon/radbrytningar
+// i fritext (t.ex. ärenderubriker) aldrig kan bryta kolumnstrukturen.
+// (b) formelinjektionsskydd (OWASP) — ett värde som BÖRJAR med = + - @ eller en
+// tabb/CR (t.ex. ett fritt användarnamn som "=HYPERLINK(...)") prefixas med en
+// apostrof, så Excel/Sheets aldrig tolkar cellen som en formel.
+export function escapaCsvCell(värde: string): string {
+  let v = värde ?? ''
+  if (/^[=+\-@\t\r]/.test(v)) v = `'${v}`
+  return `"${v.replace(/"/g, '""')}"`
+}
+
+export function exporteraCsv(rader: LoggRad[]) {
   const huvud  = ['Datum', 'Tid', 'Typ', 'Rubrik', 'Detalj', 'Status', 'Vem']
-  const rader_ = rader.map(r => [r.datum, r.tid, r.typ, `"${r.rubrik}"`, `"${r.detalj}"`, r.status, r.vem ?? ''])
-  const csv    = [huvud, ...rader_].map(r => r.join(';')).join('\n')
+  const rader_ = rader.map(r => [r.datum, r.tid, r.typ, r.rubrik, r.detalj, r.status, r.vem ?? ''])
+  const csv    = [huvud, ...rader_].map(r => r.map(escapaCsvCell).join(';')).join('\n')
   const blob   = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
   const url    = URL.createObjectURL(blob)
   const a      = document.createElement('a')
@@ -140,12 +134,10 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
   const [väntarÅngra, setVäntarÅngra] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
-  // Notis är den enda kvarvarande mock-typen (#491 wave 1 omfattar bara
-  // admin/system) — filtreras bort som ett riktigt Typ-val server-side
-  // eftersom backend inte känner till den, matchas client-side istället.
+  // 'Notis' finns inte i backend (ingen global notislista) — filtret ger då inga rader.
   const serverTyp = typFilter === 'Alla' || typFilter === 'Notis' ? undefined : typFilter
 
-  const { data, isLoading } = useQuery({
+  const loggFråga = useQuery({
     queryKey: ['admin-activity-log', aktörFilter, serverTyp, tidsFilter, sökning, gräns],
     queryFn: () => fetchAdminActivityLog({
       aktörTyp: aktörFilter === 'Alla' ? undefined : aktörFilter,
@@ -156,23 +148,20 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
     }),
   })
 
+  const { data } = loggFråga
+
   const undoMutation = useMutation({
     mutationFn: undoActivityLogEntry,
     onSuccess:  () => queryClient.invalidateQueries({ queryKey: ['admin-activity-log'] }),
   })
 
   const serverRader = useMemo(() => (data?.rader ?? []).map(postTillRad), [data])
-  const notisRader   = useMemo(
-    () => NOTIS_MOCK.filter(m => notisMatchar(m, aktörFilter, typFilter, tidsFilter, sökning)),
-    [aktörFilter, typFilter, tidsFilter, sökning],
-  )
-
   const visade  = useMemo(
-    () => [...serverRader, ...notisRader].sort((a, b) => (b.datum + b.tid).localeCompare(a.datum + a.tid)),
-    [serverRader, notisRader],
+    () => (typFilter === 'Notis' ? [] : [...serverRader]).sort((a, b) => (b.datum + b.tid).localeCompare(a.datum + a.tid)),
+    [serverRader, typFilter],
   )
 
-  const totalt  = (data?.totalt ?? 0) + notisRader.length
+  const totalt  = typFilter === 'Notis' ? 0 : (data?.totalt ?? 0)
   const harFler = (data?.totalt ?? 0) > gräns
 
   function nollställFilter() {
@@ -183,17 +172,55 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
     setGräns(SIDA_STORLEK)
   }
 
+  // Ångra består av två steg: (1) den riktiga ändringen mot användaren, (2) att markera
+  // loggraden som ångrad. V3-8 (E6#19): en lås (ref, inte state — två klick i samma
+  // tick ser annars båda "ledigt") stoppar dubbelklick, fel visas vid raden, och lyckas
+  // steg 1 men inte steg 2 sägs det tydligt vad som gjorts — steg 1 körs då aldrig om.
+  const ångraLås = useRef(false)
+  const [ångrarId, setÅngrarId] = useState<string | null>(null)
+  const [ångraFel, setÅngraFel] = useState<{ id: string; text: string } | null>(null)
+  // Rader där ändringen är genomförd men loggraden inte hunnit markeras som ångrad.
+  const [halvÅngrade, setHalvÅngrade] = useState<Set<string>>(new Set())
+
   async function ångra(rad: LoggRad) {
-    if (!rad.ångraData) return
-    if (väntarÅngra !== rad.id) {
+    if (!rad.ångraData || ångraLås.current) return
+    const halvt = halvÅngrade.has(rad.id)
+    if (väntarÅngra !== rad.id && !halvt) {
       setVäntarÅngra(rad.id)
       return
     }
-    const { anvandareId, handelse, undoAction } = rad.ångraData
-    if (undoAction === 'lägg-till') await saveAdminUserEvent(anvandareId, handelse.eventId)
-    else await unsaveAdminUserEvent(anvandareId, handelse.eventId)
-    await undoMutation.mutateAsync(rad.id)
-    setVäntarÅngra(null)
+    ångraLås.current = true
+    setÅngrarId(rad.id)
+    setÅngraFel(null)
+    try {
+      if (!halvt) {
+        const { anvandareId, handelse, undoAction } = rad.ångraData
+        try {
+          if (undoAction === 'lägg-till') await saveAdminUserEvent(anvandareId, handelse.eventId)
+          else await unsaveAdminUserEvent(anvandareId, handelse.eventId)
+        } catch (fel) {
+          setÅngraFel({
+            id: rad.id,
+            text: `${visaFel(fel, 'Kunde inte ångra.')} Ingenting har ändrats — försök igen.`,
+          })
+          return
+        }
+        setHalvÅngrade(prev => new Set(prev).add(rad.id))
+      }
+      try {
+        await undoMutation.mutateAsync(rad.id)
+        setHalvÅngrade(prev => { const ny = new Set(prev); ny.delete(rad.id); return ny })
+        setVäntarÅngra(null)
+      } catch (fel) {
+        setÅngraFel({
+          id: rad.id,
+          text: `${visaFel(fel, 'Kunde inte markera raden som ångrad.')} Själva ändringen är redan gjord (${rad.ångraData.undoAction === 'lägg-till' ? 'händelsen är sparad hos användaren igen' : 'händelsen är borttagen från användarens sparade'}), men raden är inte markerad som ångrad. Klicka på "Markera som ångrad" — ångra inte på nytt.`,
+        })
+      }
+    } finally {
+      ångraLås.current = false
+      setÅngrarId(null)
+    }
   }
 
   const filterAktivt = aktörFilter !== 'Alla' || typFilter !== 'Alla' || tidsFilter !== 'Alla' || sökning !== ''
@@ -205,10 +232,9 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
         <div>
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             Aktivitetslogg
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200" title="Notis-raderna är fortfarande mockdata, resten är live">MOCK + LIVE</span>
           </h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Komplett sanningskälla för admin/system-händelser — konfiguration, kontolivscykel, ärenden, push, ingestor-körningar och registreringar. Skickade notiser fortfarande mock.
+            Komplett sanningskälla för admin/system-händelser — konfiguration, kontolivscykel, ärenden, push, ingestor-körningar och registreringar. Skickade notiser loggas inte här än.
           </p>
         </div>
         <button
@@ -226,10 +252,11 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
       {/* Sammanfattning */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Ingestor-körningar', value: data?.sammanfattning.ingestor ?? 0,  color: 'text-sky-600',    ikon: '⚙️' },
-          { label: 'Skickade notiser',   value: NOTIS_MOCK.length,                   color: 'text-violet-600', ikon: '🔔' },
-          { label: 'Fel',                value: data?.sammanfattning.fel ?? 0,       color: 'text-red-500',    ikon: '❌' },
-          { label: 'Varningar',          value: data?.sammanfattning.varningar ?? 0, color: 'text-amber-500',  ikon: '⚠️' },
+          // "—" (okänt) i stället för 0 när loggen inte hämtats — 0 fel får aldrig betyda "vet ej".
+          { label: 'Ingestor-körningar', value: data ? data.sammanfattning.ingestor : '—',  color: 'text-sky-600',    ikon: '⚙️' },
+          { label: 'Skickade notiser (ej kopplat)', value: '—',                color: 'text-slate-300',  ikon: '🔔' },
+          { label: 'Fel',                value: data ? data.sammanfattning.fel : '—',       color: 'text-red-500',    ikon: '❌' },
+          { label: 'Varningar',          value: data ? data.sammanfattning.varningar : '—', color: 'text-amber-500',  ikon: '⚠️' },
         ].map(k => (
           <div key={k.label} className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-5 flex flex-col gap-1 items-center text-center">
             <span className="text-xl">{k.ikon}</span>
@@ -313,19 +340,21 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
         </div>
 
         {/* Rader */}
-        {isLoading ? (
-          <div className="px-6 py-16 text-center">
-            <p className="text-sm text-slate-400">Laddar...</p>
-          </div>
-        ) : visade.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <p className="text-2xl mb-2">🔍</p>
-            <p className="text-sm text-slate-500">Inga poster matchar filtret.</p>
-            <button onClick={nollställFilter} className="mt-3 text-xs text-violet-600 hover:text-violet-800 transition-colors">
-              Rensa filter
-            </button>
-          </div>
-        ) : (
+        <HamtningsStatus
+          fraga={loggFråga}
+          felText="Kunde inte hämta aktivitetsloggen. Loggen kan innehålla poster — det här är inte samma sak som en tom logg."
+          tomt={visade.length === 0}
+          className="px-6 py-16"
+          tomtText={
+            <>
+              <p className="text-2xl mb-2">🔍</p>
+              <p className="text-sm text-slate-500">Inga poster matchar filtret.</p>
+              <button onClick={nollställFilter} className="mt-3 text-xs text-violet-600 hover:text-violet-800 transition-colors">
+                Rensa filter
+              </button>
+            </>
+          }
+        >
           <>
             <div className="divide-y divide-slate-50">
               {visade.map(rad => (
@@ -375,16 +404,22 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
                         <div className="mt-2 flex items-center gap-2">
                           <button
                             onClick={() => ångra(rad)}
-                            disabled={rad.ångrad}
+                            disabled={rad.ångrad || ångrarId !== null}
                             className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent ${
                               väntarÅngra === rad.id
                                 ? 'border-red-200 text-red-700 hover:bg-red-50'
                                 : 'border-violet-200 text-violet-700 hover:bg-violet-50'
                             }`}
                           >
-                            {rad.ångrad ? 'Redan ångrad' : väntarÅngra === rad.id ? 'Bekräfta ångra?' : '↩ Ångra'}
+                            {rad.ångrad
+                              ? 'Redan ångrad'
+                              : ångrarId === rad.id
+                                ? 'Ångrar...'
+                                : halvÅngrade.has(rad.id)
+                                  ? 'Markera som ångrad'
+                                  : väntarÅngra === rad.id ? 'Bekräfta ångra?' : '↩ Ångra'}
                           </button>
-                          {väntarÅngra === rad.id && !rad.ångrad && (
+                          {väntarÅngra === rad.id && !rad.ångrad && !halvÅngrade.has(rad.id) && ångrarId === null && (
                             <button
                               onClick={() => setVäntarÅngra(null)}
                               className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
@@ -393,6 +428,9 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
                             </button>
                           )}
                         </div>
+                      )}
+                      {ångraFel?.id === rad.id && (
+                        <p role="alert" className="mt-2 text-xs text-red-600 leading-relaxed">{ångraFel.text}</p>
                       )}
                     </div>
                   )}
@@ -411,7 +449,7 @@ export default function Aktivitetslogg({ onÖppnaÄrende }: Props = {}) {
               </div>
             )}
           </>
-        )}
+        </HamtningsStatus>
 
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { adminFetch } from './adminFetch'
+import { felFranSvar } from './hamta'
 
 export type AktörTyp = 'System' | 'Admin'
 
@@ -12,6 +13,7 @@ export type LoggTyp =
   | 'Ärende'
   | 'Push'
   | 'Registrering'
+  | 'Säkerhet'
 
 export type LoggStatus = 'OK' | 'Fel' | 'Varning'
 
@@ -89,7 +91,7 @@ export async function fetchAdminActivityLog(params?: FetchActivityLogParams): Pr
   const qs = query.toString()
 
   const res = await adminFetch(`/api/admin/activity-log${qs ? `?${qs}` : ''}`)
-  if (!res.ok) throw new Error(`fetchAdminActivityLog: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminActivityLog')
   return res.json()
 }
 
@@ -98,10 +100,10 @@ export async function createActivityLogEntry(req: CreateLogEntryRequest): Promis
     method: 'POST',
     body:   JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`createActivityLogEntry: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'createActivityLogEntry')
 }
 
 export async function undoActivityLogEntry(id: string): Promise<void> {
   const res = await adminFetch(`/api/admin/activity-log/${id}/undo`, { method: 'PUT' })
-  if (!res.ok) throw new Error(`undoActivityLogEntry: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'undoActivityLogEntry')
 }

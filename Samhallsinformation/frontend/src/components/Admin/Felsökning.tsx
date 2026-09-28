@@ -5,8 +5,12 @@ import { dryRunSource } from '../../api/testing'
 import { fetchAdminHealth, type AdminHealthDto, type HälsaStatus } from '../../api/health'
 import type { AdminSource } from '../../types'
 import LarmKort from './LarmKort'
+import { MockBadge, MockBanner } from '../common/MockBadge'
+import HamtningsStatus, { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
 
-type Hälsa = 'OK' | 'Varning' | 'Nere' | 'Kontrollerar...'
+// 'Okänd' = hälso-anropet misslyckades. Det är inte samma sak som "Nere" (vi vet inget)
+// och aldrig "OK" — och inte heller en evig "Kontrollerar...".
+type Hälsa = 'OK' | 'Varning' | 'Nere' | 'Kontrollerar...' | 'Okänd'
 
 interface Tjänst {
   id:          string
@@ -27,6 +31,8 @@ interface KällKontroll {
   aktiv:          boolean
   senastHämtad:   string
   färskhetStatus: FärskhetStatus
+  /** SourceType: 0 = RSS, 1 = WebAPI, 2 = CAP. Torrkörningen läser alltid källan som RSS. */
+  typ:            number
 }
 
 interface Felrad {
@@ -42,24 +48,27 @@ const HÄLSA_MAP: Record<HälsaStatus, Hälsa> = { OK: 'OK', Varning: 'Varning',
 // gränssnittet redan renderar. Under laddning/refetch visas alla rader som
 // "Kontrollerar..." — matchar den gamla mockens ping-UX, men bakom en riktig
 // nätverksanrop nu.
-function tjänsterFrånHälsa(h: AdminHealthDto | undefined, isFetching: boolean, senastKl: string): Tjänst[] {
+function tjänsterFrånHälsa(h: AdminHealthDto | undefined, isFetching: boolean, senastKl: string, hälsoFel = false): Tjänst[] {
   const kontrollerar = isFetching || !h
-  const status = (s: HälsaStatus): Hälsa => kontrollerar ? 'Kontrollerar...' : HÄLSA_MAP[s]
+  const okänd = hälsoFel && !isFetching
+  const status = (s: HälsaStatus): Hälsa => okänd ? 'Okänd' : kontrollerar ? 'Kontrollerar...' : HÄLSA_MAP[s]
+  // Utan svar: "Okänd" om anropet misslyckats (och inget pågår), annars "Kontrollerar...".
+  const utanSvar: Hälsa = okänd ? 'Okänd' : 'Kontrollerar...'
 
   return [
     {
       id: 'api', namn: 'Backend-API', beskrivning: 'REST-API',
-      hälsa: h ? status(h.api.status) : 'Kontrollerar...',
+      hälsa: h ? status(h.api.status) : utanSvar,
       svarstid: h ? `${h.api.latencyMs} ms` : '—', senast: h ? senastKl : '—',
     },
     {
       id: 'db', namn: 'Databas', beskrivning: 'EF Core — SQLite lokalt, PostgreSQL i produktion',
-      hälsa: h ? status(h.db.status) : 'Kontrollerar...',
+      hälsa: h ? status(h.db.status) : utanSvar,
       svarstid: h ? `${h.db.latencyMs} ms` : '—', senast: h ? senastKl : '—',
     },
     {
       id: 'ingestor', namn: 'Ingestor', beskrivning: h ? `${h.ingestor.aktivaKällor - h.ingestor.källorMedFel}/${h.ingestor.aktivaKällor} aktiva källor utan fel` : 'Bakgrundstjänst — 5 min-cykel',
-      hälsa: h ? status(h.ingestor.status) : 'Kontrollerar...',
+      hälsa: h ? status(h.ingestor.status) : utanSvar,
       svarstid: '—', senast: h?.ingestor.lastFetchedAt ? new Date(h.ingestor.lastFetchedAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }) : '—',
     },
     {
@@ -68,7 +77,7 @@ function tjänsterFrånHälsa(h: AdminHealthDto | undefined, isFetching: boolean
           ? 'Inga notiser skickade senaste 24h'
           : `${h.notifieringar.totaltSenaste24h - h.notifieringar.felSenaste24h}/${h.notifieringar.totaltSenaste24h} lyckade senaste 24h`)
         : 'Push-utskick',
-      hälsa: h ? status(h.notifieringar.status) : 'Kontrollerar...',
+      hälsa: h ? status(h.notifieringar.status) : utanSvar,
       svarstid: '—', senast: h ? senastKl : '—',
     },
   ]
@@ -122,7 +131,7 @@ function KommandeKontroller() {
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-slate-900">Kommande kontroller</h3>
+          <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">Kommande kontroller <MockBadge /></h3>
           <p className="text-xs text-slate-400 mt-0.5">Schemalagda och köade körningar</p>
         </div>
         <div className="flex gap-1">
@@ -138,6 +147,9 @@ function KommandeKontroller() {
             </button>
           ))}
         </div>
+      </div>
+      <div className="px-6 py-3 border-b border-slate-100">
+        <MockBanner>Påhittad lista — det finns ingen körschemaläggning att läsa. Ingestorn körs var 5:e minut i bakgrunden.</MockBanner>
       </div>
       <div className="divide-y divide-slate-50">
         {visade.map(k => (
@@ -175,6 +187,7 @@ const HÄLSA_CLS: Record<Hälsa, { pill: string; dot: string }> = {
   'Varning':         { pill: 'bg-amber-100 text-amber-700 border border-amber-200',  dot: 'bg-amber-400'              },
   'Nere':            { pill: 'bg-red-100 text-red-700 border border-red-200',        dot: 'bg-red-500'                },
   'Kontrollerar...': { pill: 'bg-slate-100 text-slate-500 border border-slate-200',  dot: 'bg-slate-400 animate-pulse'},
+  'Okänd':           { pill: 'bg-red-100 text-red-700 border border-red-200',        dot: 'bg-slate-400'              },
 }
 
 const NIVÅ_CLS: Record<Felrad['nivå'], string> = {
@@ -230,6 +243,8 @@ const RESULTAT_CLS: Record<HistorikRad['resultat'], string> = {
   'Fel':     'bg-red-100 text-red-700 border border-red-200',
 }
 
+const ärRss = (k: KällKontroll) => k.typ === 0
+
 function toKällKontroll(s: AdminSource): KällKontroll {
   let hälsa: Hälsa = 'Varning'
   let färskhetStatus: FärskhetStatus = 'OK'
@@ -253,18 +268,20 @@ function toKällKontroll(s: AdminSource): KällKontroll {
     aktiv:          s.isActive,
     senastHämtad,
     färskhetStatus,
+    typ:            s.type,
   }
 }
 
 export default function Felsökning() {
   const queryClient = useQueryClient()
 
-  const { data: apiSources = [], isLoading: källorLaddar } = useQuery({
+  const källorFråga = useQuery({
     queryKey: ['admin-sources'],
     queryFn:  fetchAdminSources,
     retry: 1,
     refetchInterval: 60_000,
   })
+  const källorLaddar = källorFråga.isLoading
 
   const updateMutation = useMutation({
     mutationFn: ({ id, req }: { id: number; req: Parameters<typeof updateAdminSource>[1] }) =>
@@ -272,75 +289,49 @@ export default function Felsökning() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-sources'] }),
   })
 
-  const källorLive: KällKontroll[] = apiSources.map(toKällKontroll)
+  const källorLive: KällKontroll[] = (källorFråga.data ?? []).map(toKällKontroll)
 
-  const { data: health, isFetching: hälsaKontrolleras, refetch: pingaAlla } = useQuery({
+  const hälsaFråga = useQuery({
     queryKey: ['admin-health'],
     queryFn:  fetchAdminHealth,
     refetchInterval: 60_000,
   })
-  const tjänster = tjänsterFrånHälsa(health, hälsaKontrolleras, new Date().toLocaleTimeString('sv-SE'))
+  const { data: health, isFetching: hälsaKontrolleras, refetch: pingaAlla } = hälsaFråga
+  const tjänster = tjänsterFrånHälsa(health, hälsaKontrolleras, new Date().toLocaleTimeString('sv-SE'), hälsaFråga.isError)
 
   const [testar, setTestar]     = useState<number | null>(null)
   const [pipeline, setPipeline] = useState<Record<number, PipelineSteg[]>>({})
-  const [kör, setKör]           = useState<number | null>(null)
   const [loggFilter, setLoggFilter] = useState<Felrad['nivå'] | 'Alla'>('Alla')
 
   function toggleAktiv(k: KällKontroll) {
     updateMutation.mutate({ id: k.id, req: { isActive: !k.aktiv } })
   }
 
-  function körNu(id: number) {
-    setKör(id)
-    setTimeout(() => setKör(null), 2000)
-  }
-
   async function testaAnslutning(k: KällKontroll) {
+    if (!ärRss(k)) return
     setTestar(k.id)
-
-    const init: PipelineSteg[] = [
-      { namn: 'Anslutning',                status: 'väntar' },
-      { namn: 'RSS/XML-parsing',           status: 'väntar' },
-      { namn: 'Mappning → CanonicalEvent', status: 'väntar' },
-      { namn: 'Deduplicering',             status: 'väntar' },
-      { namn: 'Databas-skrivning',         status: 'väntar' },
-    ]
-    setPipeline(prev => ({ ...prev, [k.id]: init }))
-
-    const uppdatera = (index: number, status: StegStatus, detalj?: string) => {
+    setPipeline(prev => ({ ...prev, [k.id]: [{ namn: 'Torrkörning (RSS)', status: 'kör' }] }))
+    try {
+      // Ett enda anrop: servern hämtar flödet och parsar det, inget sparas. Bara det som
+      // faktiskt uppmättes visas — inga påhittade steg för mappning, deduplicering eller skrivning.
+      const result = await dryRunSource(k.url, k.namn)
       setPipeline(prev => ({
         ...prev,
-        [k.id]: prev[k.id].map((s, i) => i === index ? { ...s, status, detalj } : s),
+        [k.id]: [{ namn: 'Hämtning och parsning (torrkörning)', status: result.count > 0 ? 'OK' : 'Varning', detalj: `${result.count} poster lästes — inget sparades` }],
       }))
-    }
-    const vänta = (ms: number) => new Promise(res => setTimeout(res, ms))
-
-    uppdatera(0, 'kör')
-    try {
-      const result = await dryRunSource(k.url, k.namn)
-      await vänta(250)
-      uppdatera(0, 'OK', 'HTTP 200')
-      uppdatera(1, 'kör')
-      await vänta(250)
-      uppdatera(1, 'OK', `${result.count} poster hittade`)
-      uppdatera(2, 'kör')
-      await vänta(250)
-      uppdatera(2, 'OK', `${result.count}/${result.count} mappade korrekt`)
-      uppdatera(3, 'kör')
-      await vänta(250)
-      uppdatera(3, 'OK', 'Deduplicering klar')
-      uppdatera(4, 'kör')
-      await vänta(250)
-      uppdatera(4, 'OK', `${result.count} händelser inlästa`)
     } catch (err) {
-      uppdatera(0, 'Fel', err instanceof Error ? err.message : 'Timeout eller nätverksfel')
+      setPipeline(prev => ({
+        ...prev,
+        [k.id]: [{ namn: 'Hämtning och parsning (torrkörning)', status: 'Fel', detalj: err instanceof Error ? err.message : 'Timeout eller nätverksfel' }],
+      }))
     } finally {
       setTestar(null)
     }
   }
 
-  const systemOK      = tjänster.every(t => t.hälsa === 'OK')
-  const systemVarning = !systemOK && tjänster.every(t => t.hälsa !== 'Nere')
+  const hälsaOkänd    = hälsaFråga.isError && !hälsaKontrolleras
+  const systemOK      = !hälsaOkänd && tjänster.every(t => t.hälsa === 'OK')
+  const systemVarning = !hälsaOkänd && !systemOK && tjänster.every(t => t.hälsa !== 'Nere')
 
   return (
     <div className="flex flex-col gap-6">
@@ -359,9 +350,9 @@ export default function Felsökning() {
             <p className="text-xs text-slate-400 mt-0.5">Riktiga kontroller — databasanslutning, källornas senaste hämtning, notisleverans</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border ${systemOK ? 'bg-green-100 text-green-700 border-green-200' : systemVarning ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
-              <span className={`w-2 h-2 rounded-full ${systemOK ? 'bg-green-500' : systemVarning ? 'bg-amber-400' : 'bg-red-500'}`} />
-              {systemOK ? 'Alla system OK' : systemVarning ? 'Varningar finns' : 'Driftstörning'}
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border ${hälsaOkänd ? 'bg-slate-100 text-slate-600 border-slate-200' : systemOK ? 'bg-green-100 text-green-700 border-green-200' : systemVarning ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+              <span className={`w-2 h-2 rounded-full ${hälsaOkänd ? 'bg-slate-400' : systemOK ? 'bg-green-500' : systemVarning ? 'bg-amber-400' : 'bg-red-500'}`} />
+              {hälsaOkänd ? 'Status okänd' : systemOK ? 'Alla system OK' : systemVarning ? 'Varningar finns' : 'Driftstörning'}
             </div>
             <button
               onClick={() => pingaAlla()}
@@ -372,6 +363,15 @@ export default function Felsökning() {
             </button>
           </div>
         </div>
+        {hälsaOkänd && (
+          <HamtningsFel
+            fel={hälsaFråga.error}
+            reserv="Kunde inte hämta systemhälsan. Statusen är okänd, det betyder inte att allt fungerar."
+            onForsokIgen={() => { void pingaAlla() }}
+            arIgang={hälsaKontrolleras}
+            className="px-6 py-4 border-b border-slate-100 bg-red-50"
+          />
+        )}
         <div className="divide-y divide-slate-50">
           {tjänster.map(t => {
             const cls = HÄLSA_CLS[t.hälsa]
@@ -402,15 +402,24 @@ export default function Felsökning() {
             <p className="text-xs text-slate-400 mt-0.5">
               {källorLaddar
                 ? 'Hämtar källor...'
-                : `${källorLive.length} källor · ${källorLive.filter(k => k.aktiv).length} aktiva`
+                : källorFråga.data === undefined
+                  ? 'Källor okända'
+                  : `${källorLive.length} källor · ${källorLive.filter(k => k.aktiv).length} aktiva`
               }
             </p>
           </div>
         </div>
 
-        {källorLaddar ? (
-          <div className="px-6 py-10 text-center text-sm text-slate-400">Laddar källdata...</div>
-        ) : (
+        <MutationFel fel={updateMutation.error} reserv="Kunde inte ändra källans status. Försök igen." className="px-6 py-3" />
+
+        <HamtningsStatus
+          fraga={källorFråga}
+          felText="Kunde inte hämta källorna."
+          tomt={källorLive.length === 0}
+          tomtText="Inga källor finns."
+          laddarText="Laddar källdata..."
+          className="px-6 py-10"
+        >
           <div className="divide-y divide-slate-50">
             {källorLive.map(k => {
               const cls   = HÄLSA_CLS[k.hälsa]
@@ -448,22 +457,23 @@ export default function Felsökning() {
                       </button>
                     </div>
 
-                    {/* Kör nu */}
+                    {/* Kör nu — ingen endpoint finns, så knappen är avstängd i stället för att låtsas */}
                     <button
-                      onClick={() => körNu(k.id)}
-                      disabled={kör === k.id || !k.aktiv}
-                      className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 border-slate-200 text-slate-600 hover:border-violet-200 hover:text-violet-600 hover:bg-violet-50"
+                      disabled
+                      title="Inte kopplat — det finns ingen endpoint som startar en hämtning; ingestorn kör var 5:e minut"
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 cursor-not-allowed"
                     >
-                      {kör === k.id ? 'Kör...' : 'Kör nu'}
+                      Kör nu
                     </button>
 
-                    {/* Testa anslutning — kör riktig dryRun */}
+                    {/* Torrkörning — endast RSS-källor (servern läser URL:en som RSS) */}
                     <button
                       onClick={() => testaAnslutning(k)}
-                      disabled={pågår}
-                      className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 border-slate-200 text-slate-600 hover:border-sky-200 hover:text-sky-600 hover:bg-sky-50"
+                      disabled={pågår || !ärRss(k)}
+                      title={ärRss(k) ? 'Hämtar RSS-flödet och räknar poster, sparar inget' : 'Torrkörningen läser bara RSS — den här källan är ett API och kan inte testas här'}
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-slate-200 text-slate-600 hover:border-sky-200 hover:text-sky-600 hover:bg-sky-50"
                     >
-                      {pågår ? 'Testar...' : 'Testa'}
+                      {pågår ? 'Testar...' : 'Torrkör RSS'}
                     </button>
                   </div>
 
@@ -489,7 +499,7 @@ export default function Felsökning() {
               )
             })}
           </div>
-        )}
+        </HamtningsStatus>
       </div>
 
       {/* Kommande kontroller */}
@@ -498,8 +508,11 @@ export default function Felsökning() {
       {/* Kontrollhistorik */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-base font-semibold text-slate-900">Kontrollhistorik</h3>
+          <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">Kontrollhistorik <MockBadge /></h3>
           <p className="text-xs text-slate-400 mt-0.5">Senast genomförda kontroller</p>
+        </div>
+        <div className="px-6 py-3 border-b border-slate-100">
+          <MockBanner>Påhittad historik — inga kontroller sparas. Riktiga ingestor-körningar finns i Aktivitetslogg och Rapporter.</MockBanner>
         </div>
         <div className="divide-y divide-slate-50">
           {HISTORIK.map(h => (
@@ -518,8 +531,8 @@ export default function Felsökning() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Felloggar</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Senaste 24 timmarna</p>
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">Felloggar <MockBadge /></h3>
+            <p className="text-xs text-slate-400 mt-0.5">Exempelrader — inte riktiga fel</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex gap-1">
@@ -535,10 +548,17 @@ export default function Felsökning() {
                 </button>
               ))}
             </div>
-            <button className="text-xs font-medium text-slate-400 hover:text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg transition-colors">
+            <button
+              disabled
+              title="Inte kopplat — ingen riktig fellogg att exportera"
+              className="text-xs font-medium text-slate-300 border border-slate-200 px-3 py-1.5 rounded-lg cursor-not-allowed"
+            >
               Exportera
             </button>
           </div>
+        </div>
+        <div className="px-6 py-3 border-b border-slate-100">
+          <MockBanner>Påhittade felrader (bl.a. exception och SMS-utskick som aldrig hänt). Riktiga fel: Rapporter → Fel i datainsamling och Aktivitetslogg.</MockBanner>
         </div>
         <div className="divide-y divide-slate-50">
           {FELLOGGAR.filter(f => loggFilter === 'Alla' || f.nivå === loggFilter).map((f, i) => (

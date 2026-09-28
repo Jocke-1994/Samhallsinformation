@@ -212,6 +212,9 @@ namespace Samhallsinformation.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -223,6 +226,12 @@ namespace Samhallsinformation.Migrations
                     b.HasIndex("Geography");
 
                     b.HasIndex("PublishedAt");
+
+                    b.HasIndex("SourceId");
+
+                    b.HasIndex("SourceId", "ExternalId")
+                        .IsUnique()
+                        .HasFilter("\"ExternalId\" IS NOT NULL AND \"ExternalId\" <> ''");
 
                     b.ToTable("Events");
                 });

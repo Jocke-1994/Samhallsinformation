@@ -1,4 +1,5 @@
 import { fornyaEfter401, hamtaAktuellToken } from './authBridge'
+import { fetchMedTimeout } from './hamta'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -11,11 +12,14 @@ export function getToken(): string | null {
 // roteras av en förnyelse mellan första försöket och omförsöket).
 export type AdminInit = Omit<RequestInit, 'body'> & {
   body?: BodyInit | null | (() => BodyInit | null)
+  // Tidsgräns i ms. Utelämnad = standard (30 s), LANG_TIMEOUT_MS för kända långa
+  // anrop, 0 = ingen. Gäller varje försök (även omförsöket efter 401).
+  timeoutMs?: number
 }
 
 function skicka(path: string, init: AdminInit | undefined, token: string | null): Promise<Response> {
   const body = typeof init?.body === 'function' ? init.body() : init?.body
-  return fetch(`${API_BASE}${path}`, {
+  return fetchMedTimeout(`${API_BASE}${path}`, {
     ...init,
     body,
     headers: {

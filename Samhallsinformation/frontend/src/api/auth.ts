@@ -1,4 +1,5 @@
 import { adminFetch } from './adminFetch'
+import { LANG_TIMEOUT_MS, felFranSvar } from './hamta'
 
 export interface MeDto {
   email:         string
@@ -12,7 +13,7 @@ export interface MeDto {
 
 export async function fetchMe(): Promise<MeDto> {
   const res = await adminFetch('/api/auth/me')
-  if (!res.ok) throw new Error(`fetchMe: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchMe')
   return res.json()
 }
 
@@ -22,8 +23,7 @@ export async function updateDisplayName(displayName: string): Promise<void> {
     body: JSON.stringify({ displayName }),
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `updateDisplayName: ${res.status}`)
+    throw await felFranSvar(res, 'updateDisplayName')
   }
 }
 
@@ -33,8 +33,7 @@ export async function updateMyProfile(fields: { name?: string }): Promise<{ acce
     body: JSON.stringify(fields),
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `updateMyProfile: ${res.status}`)
+    throw await felFranSvar(res, 'updateMyProfile')
   }
   return res.json()
 }
@@ -80,14 +79,13 @@ export async function requestEmailChange(newEmail: string, currentPassword?: str
     body: JSON.stringify({ newEmail, currentPassword }),
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `requestEmailChange: ${res.status}`)
+    throw await felFranSvar(res, 'requestEmailChange')
   }
 }
 
 export async function cancelEmailChange(): Promise<void> {
   const res = await adminFetch('/api/auth/me/email-change', { method: 'DELETE' })
-  if (!res.ok) throw new Error(`cancelEmailChange: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'cancelEmailChange')
 }
 
 export async function confirmEmailChange(token: string): Promise<void> {
@@ -96,8 +94,7 @@ export async function confirmEmailChange(token: string): Promise<void> {
     body: JSON.stringify({ token }),
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `confirmEmailChange: ${res.status}`)
+    throw await felFranSvar(res, 'confirmEmailChange')
   }
 }
 
@@ -107,14 +104,13 @@ export async function verifyEmail(token: string): Promise<void> {
     body: JSON.stringify({ token }),
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `verifyEmail: ${res.status}`)
+    throw await felFranSvar(res, 'verifyEmail')
   }
 }
 
 export async function resendVerification(): Promise<void> {
   const res = await adminFetch('/api/auth/resend-verification', { method: 'POST' })
-  if (!res.ok) throw new Error(`resendVerification: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'resendVerification')
 }
 
 // Kräver ingen inloggning (kontot är spärrat under raderingsfönstret) —
@@ -125,8 +121,7 @@ export async function cancelDeletion(token: string): Promise<void> {
     body: JSON.stringify({ token }),
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `cancelDeletion: ${res.status}`)
+    throw await felFranSvar(res, 'cancelDeletion')
   }
 }
 
@@ -134,16 +129,15 @@ export async function cancelDeletion(token: string): Promise<void> {
 // serialiseras tillbaka till en nedladdningsbar JSON-fil, ingen anledning
 // att typa varje nästlat fält i detalj.
 export async function exportMyData(): Promise<Record<string, unknown>> {
-  const res = await adminFetch('/api/auth/me/export')
-  if (!res.ok) throw new Error(`exportMyData: ${res.status}`)
+  const res = await adminFetch('/api/auth/me/export', { timeoutMs: LANG_TIMEOUT_MS })
+  if (!res.ok) throw await felFranSvar(res, 'exportMyData')
   return res.json()
 }
 
 export async function deleteMyAccount(): Promise<{ deletionScheduledAt: string }> {
   const res = await adminFetch('/api/auth/me', { method: 'DELETE' })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `deleteMyAccount: ${res.status}`)
+    throw await felFranSvar(res, 'deleteMyAccount')
   }
   return res.json()
 }

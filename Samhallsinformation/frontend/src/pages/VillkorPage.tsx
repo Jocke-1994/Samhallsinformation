@@ -29,7 +29,6 @@ export default function VillkorPage() {
         onSelectSource={() => {}}
         viewMode="Allt"
         onSelectViewMode={() => {}}
-        unreadSourceIds={new Set()}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

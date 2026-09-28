@@ -28,9 +28,16 @@ public static class TestDb
     /// Kind != Utc (härmar Npgsqls timestamptz-regel).</param>
     public static AppDbContext Create(DateTimeKindGuard? kindGuard = null)
     {
+        // G5 (enhet-8, avsnitt 4): Kind-vakten sitter på som STANDARD för alla SQLite-baserade
+        // tester, inte bara de som uttryckligen ber om en — annars får bara de tester som redan
+        // visste att de skulle leta efter Kind-buggar faktiskt skyddet. En kallare som vill
+        // inspektera överträdelser själv (i stället för att låta det första felet kasta) skickar
+        // sin egen guard med ThrowOnViolation=false.
+        kindGuard ??= new DateTimeKindGuard();
+
         var builder = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite("Data Source=:memory:");
-        if (kindGuard != null) builder.AddInterceptors(kindGuard);
+            .UseSqlite("Data Source=:memory:")
+            .AddInterceptors(kindGuard);
         var options = builder.Options;
 
         var db = new AppDbContext(options);
@@ -47,6 +54,13 @@ public static class TestDb
             throw;
         }
     }
+
+    /// <summary>
+    /// Tar bort det unika indexet på Events(SourceId, ExternalId) (V3-2) så att ett test kan bygga upp
+    /// dubblettdata som den riktiga produktionsdatabasen innehåller innan indexet skapas.
+    /// </summary>
+    public static void DropEventsUniqueIndex(AppDbContext db) =>
+        db.Database.ExecuteSqlRaw(@"DROP INDEX IF EXISTS ""IX_Events_SourceId_ExternalId""");
 
     /// <summary>
     /// En andra kontext mot SAMMA databas (delar anslutning) men med tom change tracker.

@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
-import { Routes, Route, useLocation, useSearchParams } from 'react-router'
+import { useState, useEffect } from 'react'
+import { Routes, Route, useLocation } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSwipeable } from 'react-swipeable'
 import Sidebar from './components/Sidebar/Sidebar'
@@ -22,25 +22,19 @@ import NotFoundPage from './pages/NotFoundPage'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import EmailVerificationBanner from './components/common/EmailVerificationBanner'
 import { fetchSources } from './api/sources'
-import { fetchUserSources } from './api/userSources'
-import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 import { useAuth } from './context/AuthContext'
-import { useAnvandare } from './hooks/useAnvandare'
-import { anvandarKallorNyckel } from './lib/queryNycklar'
 import { fetchMaintenanceBanners } from './api/maintenanceBanners'
 import type { Source } from './types'
 
 function HomePage() {
   const location = useLocation()
   const { isLoggedIn } = useAuth()
-  const anvandare = useAnvandare()
   const [selectedShortName, setSelectedShortName] = useState<string | null>(
     (location.state as { shortName?: string } | null)?.shortName ?? null
   )
   const [viewMode, setViewMode] = useState<'Allt' | 'Mitt'>(
     (location.state as { viewMode?: 'Allt' | 'Mitt' } | null)?.viewMode ?? 'Allt'
   )
-  const [readTrigger, setReadTrigger] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Allt/Mitt är bara meningsfullt i det kombinerade flödet för inloggade —
@@ -52,23 +46,6 @@ function HomePage() {
     queryKey: ['sources'],
     queryFn: fetchSources,
   })
-
-  const { data: userSources = [] } = useQuery({
-    queryKey: anvandarKallorNyckel(anvandare),
-    queryFn: fetchUserSources,
-    enabled: isLoggedIn,
-  })
-
-  const activeSourceIds = useMemo(
-    () => new Set(userSources.filter(p => p.isActive).map(p => p.sourceId)),
-    [userSources]
-  )
-
-  const unreadSourceIds = useUnreadSourceIds(sources, readTrigger)
-
-  const handleReadStatusChange = useCallback(() => {
-    setReadTrigger(n => n + 1)
-  }, [])
 
   const swipeHandlers = useSwipeable({
     onSwipedRight: (e) => { if (e.initial[0] < 30) setSidebarOpen(true) },
@@ -84,7 +61,6 @@ function HomePage() {
         onSelectSource={setSelectedShortName}
         viewMode={viewMode}
         onSelectViewMode={setViewMode}
-        unreadSourceIds={unreadSourceIds}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -92,36 +68,11 @@ function HomePage() {
         <NewsFeed
           shortName={selectedShortName}
           sources={sources}
-          activeSourceIds={activeSourceIds}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
-          onReadStatusChange={handleReadStatusChange}
           onOpenSidebar={() => setSidebarOpen(true)}
         />
       </main>
-    </div>
-  )
-}
-
-function ImpersonationBanner() {
-  const [params] = useSearchParams()
-  const namn = params.get('namn')
-  if (!params.has('impersonating') || !namn) return null
-
-  return (
-    <div className="bg-amber-500 px-6 py-2.5 flex items-center justify-between shadow-md">
-      <div className="flex items-center gap-2.5">
-        <span className="text-base">🎭</span>
-        <span className="text-sm font-medium text-white">
-          Du är inloggad som <strong>{namn}</strong> — adminläge
-        </span>
-      </div>
-      <button
-        onClick={() => window.close()}
-        className="text-xs font-semibold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg transition-colors"
-      >
-        Avsluta session
-      </button>
     </div>
   )
 }
@@ -198,7 +149,6 @@ export default function App() {
   return (
     <div className="h-dvh flex flex-col">
       <div className="flex flex-col shrink-0">
-        <ImpersonationBanner />
         <MaintenanceBanners />
         <EmailVerificationBanner />
       </div>

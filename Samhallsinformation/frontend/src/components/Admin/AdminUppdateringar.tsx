@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sendNewVersionNotice } from '../../api/push'
 import {
@@ -11,6 +11,8 @@ import { ADMIN_FLAGG_QUERY_KEY, invalideraFlaggor } from '../../lib/flaggCache'
 import { fetchAdminFaq } from '../../api/faq'
 import { isoTillDatetimeLocal } from '../../lib/tid'
 import ConfirmDialog from '../common/ConfirmDialog'
+import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
+import { visaFel } from '../../lib/felmeddelande'
 import { getTypConfig, PUNKT_TYPER } from '../../lib/uppdateringTyp'
 
 // ---------------------------------------------------------------------------
@@ -54,7 +56,7 @@ function SkickaNyVersionKort() {
       setVersion('')
       setMeddelande('')
     } catch (err) {
-      setFel(err instanceof Error ? err.message : 'Något gick fel')
+      setFel(visaFel(err, 'Notisen kunde inte skickas. Försök igen.'))
     } finally {
       setSkickar(false)
     }
@@ -94,7 +96,7 @@ function SkickaNyVersionKort() {
             {skickar ? 'Skickar…' : 'Skicka nu'}
           </button>
           {resultat && <p className="text-sm text-green-600">{resultat}</p>}
-          {fel && <p className="text-sm text-red-500">{fel}</p>}
+          {fel && <p role="alert" className="text-sm text-red-500">{fel}</p>}
         </div>
       </div>
       {bekräfta && (
@@ -124,8 +126,8 @@ function SkickaNyVersionKort() {
 // Ta bort-modal
 // ---------------------------------------------------------------------------
 
-function TaBortModal({ titel, onBekräfta, onStäng }: {
-  titel: string; onBekräfta: () => void; onStäng: () => void
+function TaBortModal({ titel, onBekräfta, onStäng, fel, arIgang }: {
+  titel: string; onBekräfta: () => void; onStäng: () => void; fel?: unknown; arIgang?: boolean
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
@@ -138,9 +140,10 @@ function TaBortModal({ titel, onBekräfta, onStäng }: {
           <p className="text-sm text-slate-600">
             <strong className="text-slate-800">"{titel}"</strong> tas bort permanent. Åtgärden kan inte ångras.
           </p>
+          <MutationFel fel={fel} reserv="Uppdateringen kunde inte tas bort. Försök igen." />
           <div className="flex gap-3">
             <button onClick={onStäng} className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Avbryt</button>
-            <button onClick={onBekräfta} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-xl transition-colors">Ta bort</button>
+            <button onClick={onBekräfta} disabled={arIgang} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors">{arIgang ? 'Tar bort...' : 'Ta bort'}</button>
           </div>
         </div>
       </div>
@@ -162,10 +165,12 @@ function nyPunkt(radId: number): PunktFormRad {
 
 let nästaRadId = 0
 
-function FormPanel({ redigerar, onSpara, onStäng }: {
+function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   redigerar: Uppdatering | null
   onSpara:   (data: UppdateringRequest) => void
   onStäng:   () => void
+  sparar?:   boolean
+  fel?:      unknown
 }) {
   const [titel,      setTitel]      = useState(redigerar?.titel ?? '')
   const [datum,      setDatum]      = useState(redigerar?.datum.split('T')[0] ?? new Date().toISOString().split('T')[0])
@@ -189,7 +194,8 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
   const [schemaDatum,  setSchemaDatum]  = useState(redigerar?.schemalagdPubliceringUtc ? isoTillDatetimeLocal(redigerar.schemalagdPubliceringUtc) : '')
   const [valdaFlaggor, setValdaFlaggor] = useState<string[]>(redigerar?.schemalagdaFlaggor ?? [])
 
-  const { data: adminFlaggor = [] } = useQuery({ queryKey: ADMIN_FLAGG_QUERY_KEY, queryFn: fetchAdminFeatureFlags })
+  const flaggFråga = useQuery({ queryKey: ADMIN_FLAGG_QUERY_KEY, queryFn: fetchAdminFeatureFlags })
+  const adminFlaggor = flaggFråga.data ?? []
   const redoFlaggor = adminFlaggor.filter(f => f.redoAttLanseras && !f.value)
 
   const { data: faqItems = [] } = useQuery({ queryKey: ['admin-faq'], queryFn: fetchAdminFaq })
@@ -218,9 +224,16 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
   const kanHaNollPunkter = schemalagd && valdaFlaggor.length > 0
   const harInnehåll      = punkter.length > 0 && punkter.every(p => p.text.trim() !== '')
   const rentFlaggSchema  = kanHaNollPunkter && punkter.length === 0
-  const kanSpara = titel.trim() !== '' && (harInnehåll || rentFlaggSchema) && (!schemalagd || schemaDatum !== '')
+  // E6#18: `type="date"`/`datetime-local` går att tömma helt — `new Date('')` är en
+  // Invalid Date vars `toISOString()` kastar ett `RangeError` i klickhanteraren
+  // (ingen felruta, knappen ser bara "död" ut). Både publiceringsdatumet och ett
+  // ev. schemalagt datum/tid valideras nu innan de får skickas.
+  const datumGiltigt       = datum !== '' && !Number.isNaN(new Date(datum).getTime())
+  const schemaDatumGiltigt = !schemalagd || (schemaDatum !== '' && !Number.isNaN(new Date(schemaDatum).getTime()))
+  const kanSpara = titel.trim() !== '' && datumGiltigt && schemaDatumGiltigt && (harInnehåll || rentFlaggSchema)
 
   function spara(publicera: boolean) {
+    if (sparar || !kanSpara) return
     onSpara({
       titel: titel.trim(),
       datum: new Date(datum).toISOString(),
@@ -313,7 +326,15 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Flaggor att aktivera</label>
-                  {redoFlaggor.length === 0 ? (
+                  {flaggFråga.isError && flaggFråga.data === undefined ? (
+                    <HamtningsFel
+                      fel={flaggFråga.error}
+                      reserv="Kunde inte hämta flaggorna. Listan är inte tom — den gick bara inte att läsa."
+                      onForsokIgen={() => { void flaggFråga.refetch() }}
+                      arIgang={flaggFråga.isFetching}
+                      className="items-start text-left"
+                    />
+                  ) : redoFlaggor.length === 0 ? (
                     <p className="text-xs text-slate-400">
                       Inga flaggor är markerade "redo att lanseras" än — gör det i Feature flags-panelen, eller flytta en idé till "lanseringsklar" i Funktionsidéer.
                     </p>
@@ -433,36 +454,39 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
+        <div className="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 shrink-0">
+          <MutationFel fel={fel} reserv="Uppdateringen kunde inte sparas. Din text finns kvar — försök igen." />
+          <div className="flex gap-3">
           <button onClick={onStäng} className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
             Avbryt
           </button>
           {schemalagd ? (
             <button
               onClick={() => kanSpara && spara(false)}
-              disabled={!kanSpara}
+              disabled={!kanSpara || sparar}
               className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
             >
-              {schemaDatum ? `Sparas, publiceras automatiskt ${schemaDatum.replace('T', ' ')}` : 'Schemalägg'}
+              {sparar ? 'Sparar...' : schemaDatum ? `Sparas, publiceras automatiskt ${schemaDatum.replace('T', ' ')}` : 'Schemalägg'}
             </button>
           ) : (
             <>
               <button
                 onClick={() => kanSpara && spara(false)}
-                disabled={!kanSpara}
+                disabled={!kanSpara || sparar}
                 className="flex-1 py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 disabled:opacity-40 transition-colors"
               >
-                Spara som utkast
+                {sparar ? 'Sparar...' : 'Spara som utkast'}
               </button>
               <button
                 onClick={() => kanSpara && spara(true)}
-                disabled={!kanSpara}
+                disabled={!kanSpara || sparar}
                 className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
               >
                 {redigerar?.publicerad ? 'Uppdatera' : 'Publicera'}
               </button>
             </>
           )}
+          </div>
         </div>
 
       </div>
@@ -476,10 +500,12 @@ function FormPanel({ redigerar, onSpara, onStäng }: {
 
 export default function AdminUppdateringar() {
   const queryClient = useQueryClient()
-  const { data: uppdateringar = [] } = useQuery({
+  const uppdFråga = useQuery({
     queryKey: ['admin-uppdateringar'],
     queryFn:  fetchAdminUppdateringar,
   })
+  const uppdateringar = uppdFråga.data ?? []
+  const uppdOkända = uppdFråga.data === undefined
 
   const [typFilter,     setTypFilter]     = useState<PunktTyp | 'Alla'>('Alla')
   const [statusFilter,  setStatusFilter]  = useState<'publicerad' | 'utkast' | 'Alla'>('Alla')
@@ -508,20 +534,26 @@ export default function AdminUppdateringar() {
     return true
   })
 
-  function öppnaSkapa()                 { setRedigerar(null); setPanelÖppen(true) }
-  function öppnaRedigera(u: Uppdatering) { setRedigerar(u);    setPanelÖppen(true) }
+  function öppnaSkapa()                 { createMutation.reset(); updateMutation.reset(); setRedigerar(null); setPanelÖppen(true) }
+  function öppnaRedigera(u: Uppdatering) { createMutation.reset(); updateMutation.reset(); setRedigerar(u);    setPanelÖppen(true) }
   function stängPanel()                 { setPanelÖppen(false); setRedigerar(null) }
 
+  // Panelen stängs först när servern bekräftat (V3-8) — en uppdatering med flera rader
+  // får inte försvinna vid ett 403/500/nätverksfel.
+  const sparaLås = useRef(false) // ref: react-query meddelar asynkront, så isPending stoppar inte två klick i samma tick
   function spara(data: UppdateringRequest) {
+    if (sparaLås.current) return
+    sparaLås.current = true
+    const villkor = { onSuccess: stängPanel, onSettled: () => { sparaLås.current = false } }
     if (redigerar) {
-      updateMutation.mutate({ id: redigerar.id, req: data })
+      updateMutation.mutate({ id: redigerar.id, req: data }, villkor)
     } else {
-      createMutation.mutate(data)
+      createMutation.mutate(data, villkor)
     }
-    stängPanel()
   }
 
   function togglePublicerad(u: Uppdatering) {
+    if (updateMutation.isPending) return
     // Manuell publicera/avpublicera vinner över ett ev. väntande schema —
     // annars skulle en ihågkommen schemaläggning kunna publicera om posten
     // igen senare, mot admins uttryckliga handling här.
@@ -548,13 +580,26 @@ export default function AdminUppdateringar() {
       {taBort && (
         <TaBortModal
           titel={taBort.titel}
-          onBekräfta={() => { deleteMutation.mutate(taBort.id); setTaBort(null) }}
-          onStäng={() => setTaBort(null)}
+          onBekräfta={() => { if (!deleteMutation.isPending) deleteMutation.mutate(taBort.id, { onSuccess: () => setTaBort(null) }) }}
+          onStäng={() => { deleteMutation.reset(); setTaBort(null) }}
+          fel={deleteMutation.error}
+          arIgang={deleteMutation.isPending}
         />
       )}
 
       {panelÖppen && (
-        <FormPanel redigerar={redigerar} onSpara={spara} onStäng={stängPanel} />
+        <FormPanel
+          redigerar={redigerar}
+          onSpara={spara}
+          onStäng={stängPanel}
+          sparar={createMutation.isPending || updateMutation.isPending}
+          fel={redigerar ? updateMutation.error : createMutation.error}
+        />
+      )}
+
+      {/* Misslyckad publicera/avpublicera (panelen visar sitt eget fel) */}
+      {!panelÖppen && !taBort && (
+        <MutationFel fel={updateMutation.error} reserv="Ändringen kunde inte sparas. Försök igen." className="bg-red-50 border border-red-200 rounded-2xl px-5 py-3" />
       )}
 
       <SkickaNyVersionKort />
@@ -567,7 +612,7 @@ export default function AdminUppdateringar() {
           { label: 'Utkast',      värde: antal.utkast,      färg: 'text-slate-400' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-5 text-center">
-            <p className={`text-3xl font-bold ${s.färg}`}>{s.värde}</p>
+            <p className={`text-3xl font-bold ${uppdOkända ? 'text-slate-300' : s.färg}`}>{uppdOkända ? '—' : s.värde}</p>
             <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-medium">{s.label}</p>
           </div>
         ))}
@@ -678,7 +723,21 @@ export default function AdminUppdateringar() {
                 </tr>
               )
             })}
-            {filtrerade.length === 0 && (
+            {uppdFråga.isLoading && (
+              <tr><td colSpan={5} className="px-6 py-10 text-center text-sm text-slate-400">Laddar uppdateringar...</td></tr>
+            )}
+            {uppdFråga.isError && (
+              <tr><td colSpan={5} className="p-0">
+                <HamtningsFel
+                  fel={uppdFråga.error}
+                  reserv={uppdOkända ? 'Kunde inte hämta uppdateringarna. Det här är inte samma sak som att inga finns.' : 'Kunde inte uppdatera listan. Den kan vara inaktuell.'}
+                  onForsokIgen={() => { void uppdFråga.refetch() }}
+                  arIgang={uppdFråga.isFetching}
+                  className="py-10"
+                />
+              </td></tr>
+            )}
+            {!uppdFråga.isLoading && !uppdOkända && filtrerade.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-6 py-10 text-center text-sm text-slate-400">
                   Inga uppdateringar matchar filtret.
