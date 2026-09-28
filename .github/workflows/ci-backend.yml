@@ -18,6 +18,13 @@ jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+    # V4-6b: sviten innehåller nu fyra Postgres-baserade tester (Trait "Category"="Postgres",
+    # Testcontainers.PostgreSql — se backend.Tests/PostgresFixture.cs). De kräver Docker, som
+    # ubuntu-latest-runnern bekräftat har (2026-09-27, engångskörning av `docker run --rm
+    # hello-world` i en nu borttagen diagnostik-PR). "Test"-steget nedan kör ALLA tester
+    # (ingen --filter) med avsikt — CI ska alltid köra Postgres-testerna. En lokal utvecklare
+    # utan Docker kör i stället `dotnet test --filter "Category!=Postgres"` för resten av sviten.
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -37,6 +44,6 @@ jobs:
         working-directory: Samhallsinformation
         run: dotnet build --no-restore --configuration Release
 
-      - name: Test
+      - name: Test (alla tester, inkl. Postgres/Testcontainers — kräver Docker)
         working-directory: Samhallsinformation
         run: dotnet test --no-build --configuration Release
