@@ -15,8 +15,8 @@ using Samhallsinformation.Models;
 /// byggd i ett test kan köra EXAKT samma migreringar + raw-SQL-block + seedning som produktionen gör,
 /// mot en riktig (t.ex. tom Testcontainers-) databas — inte en handskriven approximation av starten.
 ///
-/// Innehåller: migrationsstartens historik-probe (V2-1, i det skick som faktiskt ligger på <c>main</c> —
-/// V2-1:s hårdare probe-fix (PR #605) var vid extraktionstillfället fortfarande HÅLLS, inte mergad),
+/// Innehåller: migrationsstartens historik-probe (V2-1, PR #605 — <see cref="StartupSchemaGuard"/>
+/// beslutar Migrate/ResetLegacySchema/Abort, aldrig ett gissat DROP vid ett undersökningsfel),
 /// alla <c>pendingMigrations.Contains(...)</c>-raw-SQL-block, <c>MigrateAsync()</c>, källseedning,
 /// FAQ-seedning, e-postnormaliseringens datafix och admin-seedningen.
 /// </summary>
@@ -36,13 +36,18 @@ public static class DatabaseBootstrapper
             // env-var-kollen. Redan använt mönster i EventsUniqueIndex.cs/SourceIdSequence.cs.
             if (db.Database.IsNpgsql())
             {
-                bool alreadyMigrated;
-                try { alreadyMigrated = (await db.Database.GetAppliedMigrationsAsync()).Any(); }
-                catch { alreadyMigrated = false; }
-
-                if (!alreadyMigrated)
+                // Beslutet ligger i StartupSchemaGuard (E2#2): aldrig DROP p.g.a. ett undantag och
+                // aldrig DROP när databasen innehåller data. En krasch vid start är bättre än dataförlust.
+                var schemaDecision = StartupSchemaGuard.Decide(await StartupSchemaGuard.InspectAsync(db));
+                if (schemaDecision.Action == SchemaAction.Abort)
                 {
-                    // Ingen migrationshistorik → droppa och skapa fresh med MigrateAsync
+                    app.Logger.LogError("Startavbrott: {Reason}", schemaDecision.Reason);
+                    throw new InvalidOperationException(schemaDecision.Reason);
+                }
+
+                if (schemaDecision.Action == SchemaAction.ResetLegacySchema)
+                {
+                    // Ingen migrationshistorik och inga data → droppa och skapa fresh med MigrateAsync
                     await db.Database.ExecuteSqlRawAsync(@"
                         DROP TABLE IF EXISTS ""Events"";
                         DROP TABLE IF EXISTS ""UserPreferences"";

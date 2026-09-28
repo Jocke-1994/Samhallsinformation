@@ -21,16 +21,23 @@ using Xunit;
 /// PR:ens skrivande — så om det här testet faktiskt är rött i CI är det INTE ett fel i testet, utan
 /// exakt den kända, overifierade risken det är byggt för att bevisa. Se PR-beskrivningen.
 ///
-/// V2-1 (migrationsstartens historik-probe) var vid extraktionstillfället fortfarande HÅLLS/inte
-/// mergad (PR #605) — det här testet kör alltså mot probe-koden som FAKTISKT ligger på main just
-/// nu (catch-blocket som sätter alreadyMigrated=false vid ett probe-fel), inte V2-1:s hårdare
-/// variant. Om V2-1 mergas senare ärver det här testet automatiskt den nya koden (det anropar
-/// DatabaseBootstrapper.RunAsync, inte en kopia) — ingen uppdatering behövs här.
+/// V2-1 (migrationsstartens historik-probe, PR #605) var vid extraktionstillfället fortfarande
+/// HÅLLS/inte mergad — det här testet kördes då mot probe-koden som LÅG på main (catch-blocket som
+/// satte alreadyMigrated=false vid ett probe-fel). V2-1 är nu mergad: testet kör mot
+/// <see cref="Samhallsinformation.Infrastructure.StartupSchemaGuard.Decide"/>/<c>InspectAsync</c>
+/// istället (det anropar DatabaseBootstrapper.RunAsync, ingen kopia — ingen ändring krävdes här).
 ///
 /// **UPPDATERING 2026-09-27:** CI kördes — testet blev RÖTT, precis som förutsett ovan.
 /// <c>Npgsql.PostgresException 42P01: relation "Sources" does not exist</c>. Det bevisar E2#3/V3-23
 /// på riktigt. Skippat (se [Fact(Skip=...)] nedan) i väntan på V3-23 — se motiveringen där för
 /// rotorsaken.
+///
+/// **UPPDATERING (V2-1 mergad):** rotorsaken är oförändrad efter V2-1. På en genuint tom Postgres
+/// (inga tabeller alls) sätter StartupSchemaGuard.Decide korrekt Action=ResetLegacySchema (inga rader
+/// att förlora), men det ändrar bara VILKET drop/typläknings-block som körs. Sekvensblocket direkt
+/// efter ("Säkerställ att Sources.Id har en sequence...", <c>SELECT MAX("Id") FROM "Sources"</c>)
+/// körs OVILLKORLIGT i alla tre grenar och antar att "Sources" redan finns — V2-1 rör inte det
+/// blocket. Testet ska alltså fortfarande vara rött/skippat tills V3-23 är löst.
 /// </summary>
 [Collection("Postgres")]
 [Trait("Category", "Postgres")]
