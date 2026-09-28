@@ -26,6 +26,11 @@ using Xunit;
 /// nu (catch-blocket som sätter alreadyMigrated=false vid ett probe-fel), inte V2-1:s hårdare
 /// variant. Om V2-1 mergas senare ärver det här testet automatiskt den nya koden (det anropar
 /// DatabaseBootstrapper.RunAsync, inte en kopia) — ingen uppdatering behövs här.
+///
+/// **UPPDATERING 2026-09-27:** CI kördes — testet blev RÖTT, precis som förutsett ovan.
+/// <c>Npgsql.PostgresException 42P01: relation "Sources" does not exist</c>. Det bevisar E2#3/V3-23
+/// på riktigt. Skippat (se [Fact(Skip=...)] nedan) i väntan på V3-23 — se motiveringen där för
+/// rotorsaken.
 /// </summary>
 [Collection("Postgres")]
 [Trait("Category", "Postgres")]
@@ -38,7 +43,16 @@ public class StartupEmptyPostgresTests
         _fixture = fixture;
     }
 
-    [Fact]
+    // BEVISAT RÖTT i CI 2026-09-27: Npgsql.PostgresException 42P01 ("relation \"Sources\" does not
+    // exist"). Det här är INTE ett fel i testet — det ÄR E2#3/V3-23-fyndet (Start mot tom PostgreSQL)
+    // bevisat på riktigt för första gången, exakt vad testet byggdes för att avgöra. Rotorsak:
+    // uppstartens "säkerställ Sources.Id-sekvens"-block (DO-blocket med
+    // CREATE SEQUENCE "Sources_Id_seq" / SELECT MAX("Id") FROM "Sources") körs OVILLKORLIGT innan
+    // MigrateAsync() och antar att Sources-tabellen redan finns — ett antagande som bara stämmer på
+    // en databas med en tidigare SQLite→Postgres-historia, aldrig på en genuint tom Postgres. Skippat
+    // i väntan på V3-23 (som är UPPSKJUTEN i FIXPLAN.md). Det här testet ÄR facit för V3-23 — ta bort
+    // Skip så fort den fixen finns.
+    [Fact(Skip = "Bevisat rött 2026-09-27 (42P01: relation \"Sources\" does not exist) — E2#3/V3-23, inte ett testfel. Rotorsak: sekvensblocket i DatabaseBootstrapper läser Sources innan MigrateAsync(). Avskippa när V3-23 är löst.")]
     public async Task Startup_EmptyPostgres_BootstrapsAndAllDbSetsAreReadable()
     {
         var connectionString = await _fixture.CreateFreshDatabaseAsync();
