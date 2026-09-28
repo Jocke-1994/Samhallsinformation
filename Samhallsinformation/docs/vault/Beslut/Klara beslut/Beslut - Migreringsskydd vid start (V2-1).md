@@ -1,12 +1,14 @@
 ---
 typ: beslut
-status: öppen
+status: stängd
 datum: 2026-09-25
 ---
 
 # Beslut - Migreringsskydd vid start (V2-1)
 
-**PR:en ligger öppen men INTE mergad — väntar på ditt val.** (PR "Migreringsstart tappar aldrig data", nummer #605 på GitHub, V2-1 i åtgärdsplanen, se [[Code-review 2026-09-25]].)
+**Löst 2026-09-28: PR #605 mergad.** Användaren valde **Alt A, ursprungsversionen** — krascha vid ett probe-fel, aldrig gissa. (PR "Migreringsstart tappar aldrig data", V2-1 i åtgärdsplanen, se [[Code-review 2026-09-25]].)
+
+Mellan att PR:en öppnades och mergades hade V4-6b (PR #657) flyttat hela schema-setup-blocket ur `Program.cs` till `Infrastructure/DatabaseBootstrapper.cs`. Konflikten löstes genom att flytta `StartupSchemaGuard`-anropet dit, ordagrant samma logik — `Program.cs` verifierat byte-för-byte identisk med `main` efteråt. Verifierat live: produktionen (som har data, alltså `Migrate`-vägen) startade normalt efter deploy, ingen "Startavbrott"-rad i Railway-loggen.
 
 ## Problemet (fynd E2#2, hög påverkan / låg sannolikhet)
 Vid start körs `catch { alreadyMigrated = false; }` och om det blir "false" körs `DROP TABLE` på Events, Sources, UserPreferences och migreringshistoriken. Ett kortvarigt anslutningsfel när Railway startar om appen (eller vilket undantag som helst) tolkas som "ingen historik" → all produktionsdata i de tabellerna kan raderas.

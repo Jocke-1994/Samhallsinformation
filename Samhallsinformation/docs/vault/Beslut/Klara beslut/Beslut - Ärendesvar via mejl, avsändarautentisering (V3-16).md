@@ -1,12 +1,14 @@
 ---
 typ: beslut
-status: öppen
+status: stängd
 datum: 2026-09-26
 ---
 
 # Beslut - Ärendesvar via mejl: avsändarautentisering (V3-16)
 
-**PR:en ligger öppen men INTE mergad — väntar på ditt val.** (PR "Ärendesvar via mejl: avsändarautentisering", nummer #643 på GitHub, V3-16 i åtgärdsplanen, fynd E1#10 i [[Code-review 2026-09-25]].)
+**Löst 2026-09-28: PR #643 mergad.** Användaren valde **Alt B, den mjukare varianten** — saknat `authentication`-fält accepteras som kundsvar (bara loggning), plus kill-switchen `SUPPORT_REPLY_REQUIRE_AUTH`. (PR "Ärendesvar via mejl: avsändarautentisering", V3-16 i åtgärdsplanen, fynd E1#10 i [[Code-review 2026-09-25]].)
+
+Konflikt mot V2-13:s HTML-escape i samma fil (`ResendEmailService.cs`) löst genom att bevara båda funktionerna — verifierat: `EmailHtml.Encode` och autentiseringsparsningen finns kvar sida vid sida. 1084 tester gröna, 4 Skip (oförändrat, V4-6b:s Postgres-tester).
 
 ## Problemet
 Ett svar på ett supportärende via mejl (`svar+<ärendenr>@samhallsinformation.se`) litar på `From`-headern. En angripare som gissar ärendenumret (löpande heltal) och förfalskar kundens adress kan lägga in ett meddelande "från kunden" i ärendet, med notis till support.

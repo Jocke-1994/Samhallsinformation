@@ -17,11 +17,12 @@ fördelade på **57 PR:ar i fyra vågor**. Facit och all detalj ligger i repot, 
 
 ## Läge (uppdaterad 2026-09-28)
 - Granskning: **klar** (enhet 1–8)
-- Åtgärder: **57 av 60 utfärdade PR:ar mergade** (#598–#657, verifierat med `git log --merges`). Alla fyra vågor genomförda eller uttryckligen parkerade.
-- **Kvar:** två PR:ar väntar på ditt beslut (#605 migreringsskydd, #643 avsändarautentisering — se `FIXPLAN.md`). V3-23 (start mot tom PostgreSQL) är medvetet inte påbörjad men har nu ett facit-test som bevisar buggen — ingen akut risk, produktionen är inte tom.
+- Åtgärder: **HELA PLANEN GENOMFÖRD. 59 av 60 utfärdade PR:ar mergade** (#598–#657, verifierat med `git log --merges`). Alla fyra vågor genomförda eller uttryckligen parkerade.
+- De två sista väntande PR:arna (#605 migreringsskydd, #643 avsändarautentisering) mergades 2026-09-28 — se [[Beslut - Migreringsskydd vid start (V2-1)]] och [[Beslut - Ärendesvar via mejl, avsändarautentisering (V3-16)]] i "Klara beslut". Den enda PR:en som inte mergades är #654 (Docker-diagnostik, avsiktligt stängd — ren engångsverifiering, ingen kod att behålla).
+- V3-23 (start mot tom PostgreSQL) är fortsatt medvetet inte påbörjad men har nu ett facit-test som bevisar buggen — ingen akut risk, produktionen är inte tom.
 - Sök-funktionen kan byggas nu — vågorna den väntade på är klara.
 
-## Beslut (2026-09-25, alla genomförda utom två)
+## Beslut (2026-09-25, alla genomförda)
 - Support-rollen får Support-inbox (Användarlistan skrivskyddad) — ✅ byggt (V3-10)
 - Mitt flöde filtreras på servern — ✅ byggt och verifierat live (V3-11)
 - Mock-UI: märk MOCK i admin, ta bort/dölj medborgarmock — ✅ byggt (V3-20), ingen mock-flagga var på som default
