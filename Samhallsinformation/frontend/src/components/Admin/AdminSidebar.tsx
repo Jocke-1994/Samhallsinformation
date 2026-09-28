@@ -1,39 +1,10 @@
 import { useNavigate } from 'react-router'
 
-export type AdminSection =
-  | 'oversikt'
-  | 'kallor'
-  | 'sandlada'
-  | 'uppdateringar'
-  | 'faq'
-  | 'anvandare'
-  | 'support-inbox'
-  | 'handelsesok'
-  | 'aktivitetslogg'
-  | 'rapporter'
-  | 'felsökning'
-  | 'impersonation'
-  | 'feature-flags'
-  | 'funktionsideer'
+import { ADMIN_NAV, type AdminSection, type AdminRoll } from '../../lib/adminNavigering'
 
-export type AdminRoll = 'Admin' | 'Support'
-
-const NAV: { key: AdminSection; label: string; ikon: string; roller: AdminRoll[] }[] = [
-  { key: 'oversikt',       label: 'Översikt',         ikon: '🏠', roller: ['Admin'] },
-  { key: 'kallor',         label: 'Källhantering',     ikon: '📡', roller: ['Admin'] },
-  { key: 'sandlada',       label: 'Sandlåda',          ikon: '🧪', roller: ['Admin'] },
-  { key: 'uppdateringar',  label: 'Uppdateringar',     ikon: '📝', roller: ['Admin'] },
-  { key: 'faq',            label: 'FAQ-hantering',     ikon: '❓', roller: ['Admin'] },
-  { key: 'anvandare',      label: 'Användare',         ikon: '👥', roller: ['Admin', 'Support'] },
-  { key: 'support-inbox',  label: 'Support-inbox',     ikon: '🎫', roller: ['Admin', 'Support'] },
-  { key: 'handelsesok',    label: 'Händelsesök',       ikon: '🔍', roller: ['Admin', 'Support'] },
-  { key: 'aktivitetslogg', label: 'Aktivitetslogg',    ikon: '📋', roller: ['Admin'] },
-  { key: 'rapporter',      label: 'Rapporter',         ikon: '📊', roller: ['Admin'] },
-  { key: 'felsökning',     label: 'Felsökning',        ikon: '🔧', roller: ['Admin'] },
-  { key: 'impersonation',  label: 'Impersonation',  ikon: '🎭', roller: ['Admin'] },
-  { key: 'feature-flags',  label: 'Feature flags',  ikon: '🚩', roller: ['Admin'] },
-  { key: 'funktionsideer', label: 'Funktionsidéer', ikon: '💡', roller: ['Admin'] },
-]
+// Typerna bor i lib/adminNavigering (delad med AdminPage); återexporteras här så
+// befintliga importer fortsätter fungera.
+export type { AdminSection, AdminRoll }
 
 export default function AdminSidebar({
   active,
@@ -51,7 +22,7 @@ export default function AdminSidebar({
   badges?: Partial<Record<AdminSection, number>>
 }) {
   const navigate = useNavigate()
-  const synliga = NAV.filter(item => item.roller.includes(roll))
+  const synliga = ADMIN_NAV.filter(item => item.roller.includes(roll))
 
   return (
     <>

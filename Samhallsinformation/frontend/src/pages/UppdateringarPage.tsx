@@ -3,15 +3,10 @@ import { useSwipeable } from 'react-swipeable'
 import { useQuery } from '@tanstack/react-query'
 import Sidebar from '../components/Sidebar/Sidebar'
 import MobilTopBar from '../components/common/MobilTopBar'
-import { fetchUppdateringar, type PunktTyp } from '../api/uppdateringar'
+import { fetchUppdateringar, uppdateringarQueryKey } from '../api/uppdateringar'
+import { useAuth } from '../context/AuthContext'
+import { getTypConfig } from '../lib/uppdateringTyp'
 
-const TYP_CONFIG: Record<PunktTyp, { label: string; pill: string }> = {
-  'ny-funktion':  { label: 'Nytt',         pill: 'bg-violet-100 text-violet-700' },
-  'förbättring':  { label: 'Förbättrat',   pill: 'bg-amber-100 text-amber-700'  },
-  'buggfix':      { label: 'Fixat',        pill: 'bg-green-100 text-green-700'  },
-  'känt-problem': { label: 'Känt problem', pill: 'bg-red-100 text-red-700'      },
-  'kommer-snart': { label: 'Kommer snart', pill: 'bg-emerald-100 text-emerald-700' },
-}
 
 function formatDatum(iso: string): string {
   return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -27,12 +22,16 @@ export default function UppdateringarPage() {
     touchEventOptions: { passive: false },
   })
 
+  const { isLoggedIn } = useAuth()
   const { data: uppdateringar = [] } = useQuery({
-    queryKey: ['uppdateringar'],
+    queryKey: uppdateringarQueryKey(isLoggedIn),
     queryFn:  fetchUppdateringar,
   })
 
-  // Besökare (utloggade) — bara punkter märkta "alla" ska synas här. En
+  // Backend filtrerar redan anonyma till "alla" (V2-7); detta filter behålls som
+  // andra försvarslinje (äldre cachade svar) och för att den här publika sidan
+  // medvetet bara visar besökarvänligt innehåll även för inloggade.
+  // Bara punkter märkta "alla" ska synas här. En
   // release utan några synliga punkter kvar visas inte alls.
   const besökarvänliga = uppdateringar
     .map(u => ({ ...u, punkter: u.punkter.filter(p => p.synlighet === 'alla') }))
@@ -47,7 +46,6 @@ export default function UppdateringarPage() {
         onSelectSource={() => {}}
         viewMode="Allt"
         onSelectViewMode={() => {}}
-        unreadSourceIds={new Set()}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -79,10 +77,10 @@ export default function UppdateringarPage() {
                 </div>
                 <div className="px-8 py-5 flex flex-col gap-3">
                   {latest.punkter.map(p => {
-                    const cfg = TYP_CONFIG[p.typ]
+                    const cfg = getTypConfig(p.typ)
                     return (
                       <div key={p.id} className="flex items-start gap-3">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.pill}`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.badge}`}>
                           {cfg.label}
                         </span>
                         <span className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{p.text}</span>
@@ -103,10 +101,10 @@ export default function UppdateringarPage() {
                       </div>
                       <div className="flex flex-col gap-2">
                         {update.punkter.map(p => {
-                          const cfg = TYP_CONFIG[p.typ]
+                          const cfg = getTypConfig(p.typ)
                           return (
                             <div key={p.id} className="flex items-start gap-2.5">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.pill}`}>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.badge}`}>
                                 {cfg.label}
                               </span>
                               <span className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{p.text}</span>

@@ -1,5 +1,6 @@
 namespace Samhallsinformation.Controllers;
 
+using System.Net;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -64,13 +65,13 @@ public class EventsController : ControllerBase
 
         if (from.HasValue)
         {
-            var fromUtc = DateTimeQueryHelpers.EnsureUtcKind(from.Value);
+            var fromUtc = UtcDateTime.Ensure(from.Value);
             query = query.Where(e => e.PublishedAt >= fromUtc);
         }
 
         if (to.HasValue)
         {
-            var toUtc = DateTimeQueryHelpers.EnsureUtcKind(to.Value);
+            var toUtc = UtcDateTime.Ensure(to.Value);
             query = query.Where(e => e.PublishedAt <= toUtc);
         }
 
@@ -148,13 +149,13 @@ public class EventsController : ControllerBase
 
         if (from.HasValue)
         {
-            var fromUtc = DateTimeQueryHelpers.EnsureUtcKind(from.Value);
+            var fromUtc = UtcDateTime.Ensure(from.Value);
             query = query.Where(e => e.PublishedAt >= fromUtc);
         }
 
         if (to.HasValue)
         {
-            var toUtc = DateTimeQueryHelpers.EnsureUtcKind(to.Value);
+            var toUtc = UtcDateTime.Ensure(to.Value);
             query = query.Where(e => e.PublishedAt <= toUtc);
         }
 
@@ -178,10 +179,19 @@ public class EventsController : ControllerBase
         return Ok(new { total, page, pageSize, sourcesSearched, events = result });
     }
 
-    // Kollar reaktivt om en händelses källänk fortfarande lever, t.ex. innan
-    // "Läs mer"-klick på en sparad händelse öppnas i en ny flik. Ingen
-    // schemalagd bakgrundskoll — bara vid faktiskt klick, så trafiken mot
-    // källan hålls minimal.
+    // Kollar reaktivt om en händelses källänk fortfarande lever, t.ex. efter
+    // "Läs mer"-klick på en händelse. Ingen schemalagd bakgrundskoll — bara
+    // vid faktiskt klick, så trafiken mot källan hålls minimal.
+    //
+    // Tre lägen (status):
+    //   "alive"   — källan svarade 2xx.
+    //   "dead"    — källan svarade ENTYDIGT 404 eller 410 (sidan är borta).
+    //   "unknown" — allt annat: timeout, nätverks-/TLS-fel, 403 (många
+    //               myndighetssajter blockerar bottar), 429, 5xx, 3xx utan mål.
+    //               Ett sådant svar säger ingenting om huruvida sidan finns, så
+    //               klienten får aldrig tolka det som "borta".
+    // "alive" (bool) behålls bara för äldre klienter (cachade PWA-versioner) som
+    // läser det fältet: den är false ENDAST vid "dead", aldrig vid "unknown".
     [HttpGet("{id:guid}/link-status")]
     public async Task<IActionResult> GetLinkStatus(Guid id)
     {
@@ -189,19 +199,26 @@ public class EventsController : ControllerBase
         if (evt is null) return NotFound();
 
         var client = _httpClientFactory.CreateClient("linkcheck");
-        bool alive;
+        string status;
         try
         {
             using var request  = new HttpRequestMessage(HttpMethod.Get, evt.Url);
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-            alive = response.IsSuccessStatusCode;
+            status = response.StatusCode switch
+            {
+                HttpStatusCode.NotFound or HttpStatusCode.Gone => "dead",
+                _ when response.IsSuccessStatusCode            => "alive",
+                _                                              => "unknown",
+            };
         }
         catch
         {
-            alive = false;
+            // Timeout (klientens korta timeout ger TaskCanceledException),
+            // DNS-/TLS-/nätverksfel eller ogiltig URL — vet inte, alltså "unknown".
+            status = "unknown";
         }
 
-        return Ok(new { alive });
+        return Ok(new { status, alive = status != "dead" });
     }
 
     // Ren analytics — loggas vid varje klick på "Dela" (NewsItem.tsx), oavsett

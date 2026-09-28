@@ -48,7 +48,7 @@ public class GenericRssIngestor : IIngestor
             var canonicalEvent = new CanonicalEvent
             {
                 SourceId    = Source.Id,
-                ExternalId  = item.Id ?? link,
+                ExternalId  = string.IsNullOrWhiteSpace(item.Id) ? link : item.Id,
                 Title       = title,
                 Content     = summary,
                 PublishedAt = item.PublishDate.UtcDateTime == default

@@ -1,4 +1,5 @@
-import { adminFetch } from './adminFetch'
+import { adminFetch, getToken } from './adminFetch'
+import { felFranSvar, publikFetch } from './hamta'
 
 export type PunktTyp = 'ny-funktion' | 'förbättring' | 'buggfix' | 'känt-problem' | 'kommer-snart'
 export type Synlighet = 'alla' | 'inloggade'
@@ -37,17 +38,28 @@ export interface UppdateringRequest {
   schemalagdaFlaggor?:       string[]
 }
 
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
-
+// Publika endpointen filtrerar på Synlighet i backend: anonym får bara punkter
+// märkta "alla", en giltig token ger även "inloggade". Token skickas därför
+// när den finns. Ingen Content-Type-header på GET (undviker onödig preflight
+// för anonyma besökare).
 export async function fetchUppdateringar(): Promise<Uppdatering[]> {
-  const res = await fetch(`${API_BASE}/api/uppdateringar`)
-  if (!res.ok) throw new Error(`fetchUppdateringar: ${res.status}`)
+  const token = getToken()
+  const res = await publikFetch(`/api/uppdateringar`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  })
+  if (!res.ok) throw await felFranSvar(res, 'fetchUppdateringar')
   return res.json()
+}
+
+// Svaret skiljer sig mellan inloggad och anonym — de får aldrig dela cache-post.
+// Prefixet ['uppdateringar'] behålls så admins invalidateQueries träffar båda.
+export function uppdateringarQueryKey(isLoggedIn: boolean) {
+  return ['uppdateringar', isLoggedIn ? 'inloggad' : 'anonym'] as const
 }
 
 export async function fetchAdminUppdateringar(): Promise<Uppdatering[]> {
   const res = await adminFetch('/api/admin/uppdateringar')
-  if (!res.ok) throw new Error(`fetchAdminUppdateringar: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminUppdateringar')
   return res.json()
 }
 
@@ -56,7 +68,7 @@ export async function createUppdatering(req: UppdateringRequest): Promise<Uppdat
     method: 'POST',
     body:   JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`createUppdatering: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'createUppdatering')
   return res.json()
 }
 
@@ -65,11 +77,11 @@ export async function updateUppdatering(id: string, req: UppdateringRequest): Pr
     method: 'PUT',
     body:   JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`updateUppdatering: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'updateUppdatering')
   return res.json()
 }
 
 export async function deleteUppdatering(id: string): Promise<void> {
   const res = await adminFetch(`/api/admin/uppdateringar/${id}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`deleteUppdatering: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'deleteUppdatering')
 }

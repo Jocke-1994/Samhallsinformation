@@ -1,4 +1,5 @@
 import { adminFetch } from './adminFetch'
+import { felFranSvar } from './hamta'
 
 export interface AdminUserDto {
   id:                     string
@@ -91,13 +92,13 @@ export interface SavedByUser {
 
 export async function fetchAdminUsers(): Promise<AdminUserDto[]> {
   const res = await adminFetch('/api/admin/users')
-  if (!res.ok) throw new Error(`fetchAdminUsers: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminUsers')
   return res.json()
 }
 
 export async function fetchUserNotifications(): Promise<UserNotisDto[]> {
   const res = await adminFetch('/api/admin/users/notifications')
-  if (!res.ok) throw new Error(`fetchUserNotifications: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchUserNotifications')
   return res.json()
 }
 
@@ -112,44 +113,43 @@ export async function setAdminUserStatus(
     method: 'PUT',
     body: JSON.stringify({ isActive, reason, reminderAt, reminderNote }),
   })
-  if (!res.ok) throw new Error(`setAdminUserStatus: ${res.status}`)
+  if (!res.ok) {
+    // Servern svarar 400 med { error } vid t.ex. självspärr / sista administratören.
+    throw await felFranSvar(res, 'setAdminUserStatus')
+  }
 }
 
 export async function deleteAdminUser(id: string): Promise<void> {
   const res = await adminFetch(`/api/admin/users/${id}`, { method: 'DELETE' })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `deleteAdminUser: ${res.status}`)
+    throw await felFranSvar(res, 'deleteAdminUser')
   }
 }
 
 export async function cancelUserDeletion(id: string): Promise<void> {
   const res = await adminFetch(`/api/admin/users/${id}/cancel-deletion`, { method: 'POST' })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `cancelUserDeletion: ${res.status}`)
+    throw await felFranSvar(res, 'cancelUserDeletion')
   }
 }
 
 export async function sendAdminUserPasswordReset(id: string): Promise<void> {
   const res = await adminFetch(`/api/admin/users/${id}/send-password-reset`, { method: 'POST' })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `sendAdminUserPasswordReset: ${res.status}`)
+    throw await felFranSvar(res, 'sendAdminUserPasswordReset')
   }
 }
 
 export async function resendAdminUserVerification(id: string): Promise<void> {
   const res = await adminFetch(`/api/admin/users/${id}/resend-verification`, { method: 'POST' })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `resendAdminUserVerification: ${res.status}`)
+    throw await felFranSvar(res, 'resendAdminUserVerification')
   }
 }
 
 export async function fetchAdminUserPolisenBevakningar(id: string): Promise<AdminPolisenBevakningDto[]> {
   const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar`)
-  if (!res.ok) throw new Error(`fetchAdminUserPolisenBevakningar: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminUserPolisenBevakningar')
   return res.json()
 }
 
@@ -158,47 +158,47 @@ export async function fetchAdminUserPolisenBevakningar(id: string): Promise<Admi
 // hjälpa en enskild användare rätta sina inställningar.
 export async function createAdminUserPolisenBevakning(id: string, req: BevakningRequestBody): Promise<AdminPolisenBevakningDto> {
   const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar`, { method: 'POST', body: JSON.stringify(req) })
-  if (!res.ok) throw new Error(`createAdminUserPolisenBevakning: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'createAdminUserPolisenBevakning')
   return res.json()
 }
 
 export async function updateAdminUserPolisenBevakning(id: string, bevakningId: string, req: BevakningRequestBody): Promise<AdminPolisenBevakningDto> {
   const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar/${bevakningId}`, { method: 'PUT', body: JSON.stringify(req) })
-  if (!res.ok) throw new Error(`updateAdminUserPolisenBevakning: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'updateAdminUserPolisenBevakning')
   return res.json()
 }
 
 export async function deleteAdminUserPolisenBevakning(id: string, bevakningId: string): Promise<void> {
   const res = await adminFetch(`/api/admin/users/${id}/polisen-bevakningar/${bevakningId}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`deleteAdminUserPolisenBevakning: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'deleteAdminUserPolisenBevakning')
 }
 
 export async function fetchAdminUserSources(id: string): Promise<AdminUserSourceDto[]> {
   const res = await adminFetch(`/api/admin/users/${id}/sources`)
-  if (!res.ok) throw new Error(`fetchAdminUserSources: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminUserSources')
   return res.json()
 }
 
 export async function setAdminUserSourceActive(id: string, sourceId: number, isActive: boolean): Promise<void> {
   const res = await adminFetch(`/api/admin/users/${id}/sources/${sourceId}`, { method: 'PUT', body: JSON.stringify({ isActive }) })
-  if (!res.ok) throw new Error(`setAdminUserSourceActive: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'setAdminUserSourceActive')
 }
 
 export async function fetchAdminUserSettingLog(id: string): Promise<AdminSettingLogDto[]> {
   const res = await adminFetch(`/api/admin/users/${id}/setting-log`)
-  if (!res.ok) throw new Error(`fetchAdminUserSettingLog: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminUserSettingLog')
   return res.json()
 }
 
 export async function fetchAdminUserNotificationLog(id: string): Promise<AdminNotificationLogDto[]> {
   const res = await adminFetch(`/api/admin/users/${id}/notification-log`)
-  if (!res.ok) throw new Error(`fetchAdminUserNotificationLog: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminUserNotificationLog')
   return res.json()
 }
 
 export async function fetchAdminUserPushSettings(id: string): Promise<AdminUserPushSettingsDto> {
   const res = await adminFetch(`/api/admin/users/${id}/push-settings`)
-  if (!res.ok) throw new Error(`fetchAdminUserPushSettings: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminUserPushSettings')
   return res.json()
 }
 
@@ -213,8 +213,7 @@ export interface AdminExplainEventDto {
 export async function explainAdminUserEvent(id: string, eventId: string): Promise<AdminExplainEventDto> {
   const res = await adminFetch(`/api/admin/users/${id}/explain-event/${eventId}`)
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error ?? `explainAdminUserEvent: ${res.status}`)
+    throw await felFranSvar(res, 'explainAdminUserEvent')
   }
   return res.json()
 }
@@ -230,12 +229,12 @@ export async function setAdminUserPushSettings(id: string, req: {
   pushNyVersion?: boolean
 }): Promise<void> {
   const res = await adminFetch(`/api/admin/users/${id}/push-settings`, { method: 'PUT', body: JSON.stringify(req) })
-  if (!res.ok) throw new Error(`setAdminUserPushSettings: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'setAdminUserPushSettings')
 }
 
 export async function fetchAdminUserSavedEvents(id: string): Promise<AdminSavedEventDto[]> {
   const res = await adminFetch(`/api/admin/users/${id}/saved-events`)
-  if (!res.ok) throw new Error(`fetchAdminUserSavedEvents: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminUserSavedEvents')
   return res.json()
 }
 
@@ -244,18 +243,18 @@ export async function saveAdminUserEvent(id: string, eventId: string): Promise<v
     method: 'POST',
     body: JSON.stringify({ eventId }),
   })
-  if (!res.ok) throw new Error(`saveAdminUserEvent: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'saveAdminUserEvent')
 }
 
 export async function unsaveAdminUserEvent(id: string, eventId: string): Promise<void> {
   const res = await adminFetch(`/api/admin/users/${id}/saved-events/${eventId}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`unsaveAdminUserEvent: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'unsaveAdminUserEvent')
 }
 
 export async function fetchSavedEventsByEvent(eventIds: string[]): Promise<Record<string, SavedByUser[]>> {
   if (eventIds.length === 0) return {}
   const qs = eventIds.map(id => `eventIds=${encodeURIComponent(id)}`).join('&')
   const res = await adminFetch(`/api/admin/saved-events/by-event?${qs}`)
-  if (!res.ok) throw new Error(`fetchSavedEventsByEvent: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchSavedEventsByEvent')
   return res.json()
 }

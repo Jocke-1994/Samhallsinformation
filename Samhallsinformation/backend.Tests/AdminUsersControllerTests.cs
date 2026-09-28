@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
@@ -356,11 +357,25 @@ public class AdminUsersControllerTests
         Assert.IsType<NotFoundResult>(result);
     }
 
+    // V3-10 (D1): klassen tillåter Admin ELLER Support så att Support kan LÄSA användarlistan
+    // (GetUsers/Lookup). Varje annan action är märkt Admin-only på metodnivå (attributen ANDas).
+    // Den fulla behörighetsmatrisen bevisas i SupportRollBehorighetTests.
     [Fact]
-    public void AdminUsersController_RequiresAdminRole()
+    public void AdminUsersController_ClassAllowsAdminAndSupport_EveryOtherActionIsAdminOnly()
     {
         var attr = typeof(AdminUsersController).GetCustomAttribute<AuthorizeAttribute>();
         Assert.NotNull(attr);
-        Assert.Equal("Admin", attr!.Roles);
+        Assert.Equal("Admin,Support", attr!.Roles);
+
+        var läsActions = new[] { nameof(AdminUsersController.GetUsers), nameof(AdminUsersController.Lookup) };
+        var actions = typeof(AdminUsersController)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(m => m.GetCustomAttributes<HttpMethodAttribute>().Any());
+
+        foreach (var m in actions.Where(m => !läsActions.Contains(m.Name)))
+        {
+            var metodAttr = m.GetCustomAttribute<AuthorizeAttribute>();
+            Assert.True(metodAttr?.Roles == "Admin", $"{m.Name} måste vara märkt [Authorize(Roles = \"Admin\")]");
+        }
     }
 }

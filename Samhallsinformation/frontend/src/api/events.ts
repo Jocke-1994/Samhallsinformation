@@ -1,5 +1,6 @@
 import type { CanonicalEvent, EventsResponse } from '../types'
 import { adminFetch } from './adminFetch'
+import { felFranSvar, publikFetch } from './hamta'
 
 interface FetchEventsParams {
   shortName?: string
@@ -215,8 +216,6 @@ const MOCK_EVENTS: CanonicalEvent[] = [
 ]
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
-
 export async function fetchEvents(params: FetchEventsParams = {}): Promise<EventsResponse> {
   if (USE_MOCK) {
     return { total: MOCK_EVENTS.length, page: 1, pageSize: MOCK_EVENTS.length, events: MOCK_EVENTS }
@@ -229,8 +228,19 @@ export async function fetchEvents(params: FetchEventsParams = {}): Promise<Event
   if (params.page) query.set('page', String(params.page))
   if (params.pageSize) query.set('pageSize', String(params.pageSize))
 
-  const res = await fetch(`${API_BASE}/api/events?${query}`)
-  if (!res.ok) throw new Error(`fetchEvents: ${res.status}`)
+  const res = await publikFetch(`/api/events?${query}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchEvents')
+  return res.json()
+}
+
+// Mitt flöde, filtrerat på servern (V3-11): användarens aktiva källor, med
+// Polisen matchad mot användarens bevakningar. Kräver inloggning (401 annars).
+export async function fetchMittFlode(page: number, pageSize: number): Promise<EventsResponse> {
+  if (USE_MOCK) {
+    return { total: MOCK_EVENTS.length, page: 1, pageSize: MOCK_EVENTS.length, events: MOCK_EVENTS, hasMore: false, totalExakt: true }
+  }
+  const res = await adminFetch(`/api/user/feed?page=${page}&pageSize=${pageSize}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchMittFlode')
   return res.json()
 }
 
@@ -248,14 +258,21 @@ export async function logEventShare(eventId: string): Promise<void> {
   }
 }
 
-export async function checkEventLinkStatus(eventId: string): Promise<boolean> {
-  if (USE_MOCK) return true
+// Tre lägen. Bara 'dead' (källan svarade entydigt 404/410) får få UI:t att
+// varna — 'unknown' betyder att kollen inte kunde avgöra något (timeout,
+// 403 från bot-blockering, 5xx, nätverksfel hos servern eller hos oss) och ska
+// behandlas som "ingenting hänt". Kollen får aldrig hindra någon från att nå källan.
+export type LänkStatus = 'alive' | 'dead' | 'unknown'
+
+export async function checkEventLinkStatus(eventId: string): Promise<LänkStatus> {
+  if (USE_MOCK) return 'alive'
   try {
-    const res = await fetch(`${API_BASE}/api/events/${eventId}/link-status`)
-    if (!res.ok) return true // okänt fel i kollen — anta levande, hellre än att blockera ett fungerande klick
-    const data: { alive: boolean } = await res.json()
-    return data.alive
+    const res = await publikFetch(`/api/events/${eventId}/link-status`)
+    if (!res.ok) return 'unknown'
+    const data: { status?: string } = await res.json()
+    // Bara ett uttryckligt 'dead' räknas — saknat/okänt fält (t.ex. äldre backend) blir 'unknown'.
+    return data.status === 'dead' || data.status === 'alive' ? data.status : 'unknown'
   } catch {
-    return true
+    return 'unknown'
   }
 }

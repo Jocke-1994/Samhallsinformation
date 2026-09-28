@@ -3,8 +3,10 @@ namespace Samhallsinformation.Controllers;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Support;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 using Samhallsinformation.Services;
@@ -36,6 +38,7 @@ public class SupportController : ControllerBase
 
     [HttpPost("tickets")]
     [AllowAnonymous]
+    [EnableRateLimiting(SupportTicketRateLimit.PolicyName)]
     public async Task<IActionResult> Create([FromBody] CreateTicketRequest req)
     {
         var userId = CurrentUserId;
@@ -43,8 +46,19 @@ public class SupportController : ControllerBase
         // ContactEmail är frivilligt — bara nödvändigt om avsändaren vill ha
         // svar, inte för att skicka in något. Ett anonymt inskick utan e-post
         // är ett giltigt, avsiktligt "kasta över muren"-meddelande.
-        if (string.IsNullOrWhiteSpace(req.Message))
-            return BadRequest("Message krävs.");
+        var (subject, category, message, contactName, contactEmail) =
+            (req.Subject, req.Category, req.Message, req.ContactName, req.ContactEmail);
+
+        // Kundtjänstboten kan inte visa ett 400 för en människa: dess inskick
+        // avkortas/rensas i stället för att avvisas på längd/e-post/kategori.
+        // Övriga kanaler (app-formulären) får strikta gränser med 400.
+        if (req.Channel == SupportTicketValidator.BotChannel)
+            (subject, category, message, contactName, contactEmail) =
+                SupportTicketValidator.SanitizeBotInput(subject, category, message, contactName, contactEmail);
+
+        var fel = SupportTicketValidator.Validate(subject, category, message, req.Channel, contactName, contactEmail);
+        if (fel != null)
+            return BadRequest(fel);
 
         User? user = userId != null ? await _db.Users.FindAsync(userId.Value) : null;
 
@@ -55,12 +69,12 @@ public class SupportController : ControllerBase
         var ticket = new SupportTicket
         {
             TicketNumber    = nextNumber,
-            Subject         = string.IsNullOrWhiteSpace(req.Subject) ? "Feedback" : req.Subject,
-            Category        = string.IsNullOrWhiteSpace(req.Category) ? "Feedback" : req.Category,
+            Subject         = string.IsNullOrWhiteSpace(subject) ? "Feedback" : subject.Trim(),
+            Category        = string.IsNullOrWhiteSpace(category) ? "Feedback" : category.Trim(),
             Channel         = req.Channel,
             CreatedByUserId = userId,
-            ContactName     = user?.Name ?? req.ContactName,
-            ContactEmail    = user?.Email ?? req.ContactEmail,
+            ContactName     = user?.Name ?? NullIfBlank(contactName),
+            ContactEmail    = user?.Email ?? NullIfBlank(contactEmail),
             LastUserMessageAt = DateTime.UtcNow,
         };
         _db.SupportTickets.Add(ticket);
@@ -70,7 +84,7 @@ public class SupportController : ControllerBase
             Ticket       = ticket,
             SenderType   = "user",
             AuthorUserId = userId,
-            Text         = req.Message,
+            Text         = message!.Trim(),
         });
 
         await _db.SaveChangesAsync();
@@ -93,6 +107,9 @@ public class SupportController : ControllerBase
 
         return Ok(new { ticket.Id, ticket.TicketNumber });
     }
+
+    private static string? NullIfBlank(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     [HttpGet("tickets")]
     [Authorize]

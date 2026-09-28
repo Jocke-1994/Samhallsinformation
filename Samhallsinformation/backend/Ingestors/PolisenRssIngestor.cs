@@ -46,7 +46,7 @@ public class PolisenRssIngestor : IIngestor
             var canonicalEvent = new CanonicalEvent
             {
                 SourceId = Source.Id,
-                ExternalId = item.Id ?? link,
+                ExternalId = string.IsNullOrWhiteSpace(item.Id) ? link : item.Id,
                 Title = rawTitle,
                 Content = System.Net.WebUtility.HtmlDecode(item.Summary?.Text ?? string.Empty),
                 PublishedAt = item.PublishDate.UtcDateTime,

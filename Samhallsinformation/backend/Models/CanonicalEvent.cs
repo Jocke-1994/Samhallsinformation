@@ -17,4 +17,9 @@ public class CanonicalEvent
     public string Severity { get; set; } = "Bra att veta"; // Punkt 7 fallback
     public bool IsNational { get; set; }
     public DateTime IngestedAt { get; set; } = DateTime.UtcNow;
+
+    // V4-1b (E3#10): satt när en redan sparad rad uppdateras för att källan (t.ex.
+    // Trafikverket/SMHI) ändrat innehållet för samma ExternalId. Aldrig satt vid
+    // insert — null betyder "aldrig ändrad sedan den sparades".
+    public DateTime? UpdatedAt { get; set; }
 }

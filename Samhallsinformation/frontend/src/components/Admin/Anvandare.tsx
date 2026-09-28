@@ -2,8 +2,9 @@ import { useState, useEffect, Fragment } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createActivityLogEntry } from '../../api/activityLog'
 import { useAuth } from '../../context/AuthContext'
+import { effektivAdminRoll } from '../../lib/adminNavigering'
 import {
-  fetchAdminUsers, setAdminUserStatus, fetchUserNotifications, deleteAdminUser, cancelUserDeletion,
+  fetchAdminUsers, setAdminUserStatus, deleteAdminUser, cancelUserDeletion,
   fetchAdminUserSavedEvents, unsaveAdminUserEvent,
   fetchAdminUserPolisenBevakningar, fetchAdminUserNotificationLog, fetchAdminUserSettingLog, type AdminUserDto,
   createAdminUserPolisenBevakning, updateAdminUserPolisenBevakning, deleteAdminUserPolisenBevakning,
@@ -15,8 +16,10 @@ import {
 import { fetchAdminTickets, type AdminTicketListItemDto } from '../../api/support'
 import { checkEventLinkStatus } from '../../api/events'
 import { searchEvents, type AdminSearchEvent } from '../../api/eventSearch'
-import type { PendingNotis } from '../../types/adminNotis'
 import KategoriFilterModal from '../Profile/MinaKallor/KategoriFilterModal'
+import { IngetKopplatAn } from '../common/MockBadge'
+import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
+import { visaFel } from '../../lib/felmeddelande'
 
 type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
 type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd' | 'Raderas snart' | 'Raderat'
@@ -48,20 +51,6 @@ interface Användare {
   raderasVid?:      string
   inloggningsmetod: Inloggningsmetod
   kontaktuppgifter: Kontaktuppgift[]
-}
-
-interface AktivitetRad {
-  tid:      string
-  händelse: string
-}
-
-interface NotifKälla {
-  källNamn:          string
-  aktiv:             boolean
-  kanaler:           KontaktTyp[]
-  kontaktuppgiftIds: number[]      // vilka kontaktuppgifter som används per kanal
-  geografier:        string[]
-  kategorier:        string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -103,31 +92,6 @@ function mapAdminUser(dto: AdminUserDto, joinNr: number): Användare {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Mock-data — bara Aktivitet-fliken (inloggningsspårning) har ingen backend-
-// motsvarighet än, se `[[project_admin_anvandare]]`. Nyckeln nedan (3, 6...)
-// matchar inga riktiga användar-ID:n (nu riktiga GUID:er) — visas därför bara
-// som ett tomt "inget än"-läge tills det kopplas mot riktig data i en
-// framtida omgång. Polisen-filter, Supportärenden (fetchAdminTickets) och
-// Notishistorik använder alla riktig data, se längre ner.
-// ---------------------------------------------------------------------------
-
-const MOCK_AKTIVITET: Record<string, AktivitetRad[]> = {
-  3: [
-    { tid: 'Idag 10:42',   händelse: 'Loggade in'                            },
-    { tid: 'Idag 10:43',   händelse: 'Öppnade Polisen-källan'                },
-    { tid: 'Igår 18:30',   händelse: 'Loggade in'                            },
-    { tid: 'Igår 18:31',   händelse: 'Uppdaterade notifieringsinställningar' },
-    { tid: '2026-03-30',   händelse: 'Lade till e-post erik@arbete.se'       },
-    { tid: '2026-03-10',   händelse: 'Skapade konto'                         },
-  ],
-  6: [
-    { tid: 'Idag 08:50',   händelse: 'Loggade in'                   },
-    { tid: 'Igår 20:10',   händelse: 'Läste 4 artiklar från Polisen' },
-    { tid: '2026-03-20',   händelse: 'Skapade konto'                 },
-  ],
-}
-
 function ticketNr(t: AdminTicketListItemDto): string {
   return `SUP-${String(t.ticketNumber).padStart(4, '0')}`
 }
@@ -137,30 +101,6 @@ const ARENDE_STATUS_CLS: Record<ArendeStatusMini, string> = {
   'Under behandling': 'bg-amber-50 text-amber-700 border border-amber-200',
   'Hanterat':         'bg-green-50 text-green-700 border border-green-200',
   'Stängt':           'bg-slate-100 text-slate-500 border border-slate-200',
-}
-
-const MOCK_NOTIF: Record<string, NotifKälla[]> = {
-  3: [
-    { källNamn: 'Polisen',         aktiv: true,  kanaler: ['E-post', 'SMS'], kontaktuppgiftIds: [301, 303], geografier: ['Norrköping', 'Göteborg', 'Nationellt'], kategorier: ['Brott', 'Trafikhändelse']             },
-    { källNamn: 'SMHI',            aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [301],       geografier: ['Västra Götaland', 'Nationellt'],        kategorier: ['Vädervarning']                        },
-    { källNamn: 'MSB',             aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [302],       geografier: ['Nationellt'],                           kategorier: ['Krisberedskap']                       },
-    { källNamn: 'Trafikverket',    aktiv: false, kanaler: [],                kontaktuppgiftIds: [],          geografier: [],                                       kategorier: []                                      },
-    { källNamn: 'Krisinformation', aktiv: false, kanaler: [],                kontaktuppgiftIds: [],          geografier: [],                                       kategorier: []                                      },
-  ],
-  6: [
-    { källNamn: 'Polisen',         aktiv: true,  kanaler: ['E-post', 'SMS'], kontaktuppgiftIds: [601, 602], geografier: ['Göteborg', 'Malmö'],                   kategorier: ['Brott']                               },
-    { källNamn: 'SMHI',            aktiv: false, kanaler: [],                kontaktuppgiftIds: [],          geografier: [],                                       kategorier: []                                      },
-    { källNamn: 'MSB',             aktiv: false, kanaler: [],                kontaktuppgiftIds: [],          geografier: [],                                       kategorier: []                                      },
-    { källNamn: 'Trafikverket',    aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [601],       geografier: ['Göteborg'],                             kategorier: ['Trafikstörning', 'Vägarbete']         },
-    { källNamn: 'Krisinformation', aktiv: false, kanaler: [],                kontaktuppgiftIds: [],          geografier: [],                                       kategorier: []                                      },
-  ],
-  1: [
-    { källNamn: 'Polisen',         aktiv: true,  kanaler: ['E-post', 'SMS'], kontaktuppgiftIds: [102, 103], geografier: ['Nationellt'],                           kategorier: ['Brott', 'Trafikhändelse', 'Övrigt']   },
-    { källNamn: 'SMHI',            aktiv: true,  kanaler: ['E-post', 'SMS'], kontaktuppgiftIds: [101, 103], geografier: ['Nationellt'],                           kategorier: ['Vädervarning']                        },
-    { källNamn: 'MSB',             aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [101],       geografier: ['Nationellt'],                           kategorier: ['Krisberedskap']                       },
-    { källNamn: 'Trafikverket',    aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [101],       geografier: ['Nationellt'],                           kategorier: ['Trafikstörning']                      },
-    { källNamn: 'Krisinformation', aktiv: true,  kanaler: ['E-post'],        kontaktuppgiftIds: [101],       geografier: ['Nationellt'],                           kategorier: ['Krisberedskap', 'Samhällsinformation'] },
-  ],
 }
 
 // ---------------------------------------------------------------------------
@@ -252,6 +192,46 @@ function initialer(namn: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Resultat av en massåtgärd (V2-3): per-rad-utfall i stället för "allt eller inget"
+// ---------------------------------------------------------------------------
+
+interface MassResultat {
+  totalt: number
+  fel:    { id: string; namn: string; orsak: string }[]
+}
+
+function felOrsak(orsak: unknown): string {
+  return orsak instanceof Error && orsak.message ? orsak.message : 'Något gick fel'
+}
+
+function MassResultatVy({ resultat, onStäng }: { resultat: MassResultat; onStäng: () => void }) {
+  const lyckade = resultat.totalt - resultat.fel.length
+  return (
+    <div className="px-6 py-5 flex flex-col gap-4" data-testid="mass-resultat">
+      <p className="text-sm font-medium text-slate-700">{lyckade} av {resultat.totalt} lyckades.</p>
+      {resultat.fel.length > 0 && (
+        <div className="text-sm text-red-700 bg-red-50 rounded-lg px-3.5 py-2.5 flex flex-col gap-1.5">
+          <p className="font-medium">Misslyckades:</p>
+          <ul className="flex flex-col gap-1">
+            {resultat.fel.map(f => <li key={f.id}>{f.namn} — {f.orsak}</li>)}
+          </ul>
+        </div>
+      )}
+      {resultat.fel.length > 0 && (
+        <p className="text-xs text-slate-500">De som misslyckades är fortfarande markerade i listan.</p>
+      )}
+      <button onClick={onStäng} className="w-full py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Stäng</button>
+    </div>
+  )
+}
+
+/** Första ~5 namnen, sedan "och N till". */
+function namnSammanfattning(namn: string[], max = 5): string {
+  if (namn.length <= max) return namn.join(', ')
+  return `${namn.slice(0, max).join(', ')} och ${namn.length - max} till`
+}
+
+// ---------------------------------------------------------------------------
 // Modaler
 // ---------------------------------------------------------------------------
 
@@ -318,8 +298,11 @@ const PÅMINNELSE_VAL: { label: string; dagar: number | null }[] = [
   { label: 'Ingen påminnelse', dagar: null },
 ]
 
-function StängAvModal({ antal, onSpara, onStäng }: {
+function StängAvModal({ antal, arbetar, fel, resultat, onSpara, onStäng }: {
   antal: number
+  arbetar?: boolean
+  fel?: string | null
+  resultat?: MassResultat | null
   onSpara: (anledning: string, paminnelseOm: number | null) => void
   onStäng: () => void
 }) {
@@ -336,6 +319,7 @@ function StängAvModal({ antal, onSpara, onStäng }: {
           </div>
           <button onClick={onStäng} className="text-amber-200 hover:text-white transition-colors">✕</button>
         </div>
+        {resultat ? <MassResultatVy resultat={resultat} onStäng={onStäng} /> : (
         <div className="px-6 py-5 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
@@ -369,21 +353,26 @@ function StängAvModal({ antal, onSpara, onStäng }: {
               ? 'Kontot förblir avstängt tills en admin aktiverar det manuellt — men klockan i adminpanelen påminner om att titta på fallet igen.'
               : 'Kontot förblir avstängt tills en admin aktiverar det manuellt. Ingen påminnelse sätts.'}
           </p>
-          <button onClick={() => onSpara(anledning, paminnelseDagar)}
-            className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold rounded-xl transition-colors">
-            Stäng av
+          {fel && <p role="alert" className="text-sm text-red-600">{fel}</p>}
+          <button onClick={() => onSpara(anledning, paminnelseDagar)} disabled={arbetar}
+            className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors">
+            {arbetar ? 'Stänger av…' : 'Stäng av'}
           </button>
         </div>
+        )}
       </div>
     </div>
   )
 }
 
-function RaderaModal({ antal, namn, fel, raderar, onBekräfta, onStäng }: {
+function RaderaModal({ antal, namn, namnLista, fel, raderar, resultat, onBekräfta, onStäng }: {
   antal: number
   namn?: string
+  /** Massradering: namnen som berörs, så bekräftelsen visar exakt vilka konton. */
+  namnLista?: string[]
   fel?: string | null
   raderar?: boolean
+  resultat?: MassResultat | null
   onBekräfta: () => void
   onStäng: () => void
 }) {
@@ -397,7 +386,13 @@ function RaderaModal({ antal, namn, fel, raderar, onBekräfta, onStäng }: {
           </div>
           <button onClick={onStäng} className="text-red-300 hover:text-white transition-colors">✕</button>
         </div>
+        {resultat ? <MassResultatVy resultat={resultat} onStäng={onStäng} /> : (
         <div className="px-6 py-5 flex flex-col gap-4">
+          {namnLista && namnLista.length > 0 && (
+            <p className="text-sm font-medium text-slate-800" data-testid="radera-namnlista">
+              Du håller på att radera {namnLista.length} {namnLista.length === 1 ? 'konto' : 'konton'}: {namnSammanfattning(namnLista)}.
+            </p>
+          )}
           <p className="text-sm text-slate-600">
             Kontot spärras omedelbart. Namn, e-post och lösenord anonymiseras permanent i enlighet med GDPR
             artikel 17 — men inte förrän om <span className="font-medium">24 timmar</span>, så det går att ångra
@@ -411,60 +406,7 @@ function RaderaModal({ antal, namn, fel, raderar, onBekräfta, onStäng }: {
             </button>
           </div>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function ImpersonationModal({ användare, onBekräfta, onStäng }: {
-  användare: Användare
-  onBekräfta: (kommentar: string) => void
-  onStäng: () => void
-}) {
-  const [kommentar, setKommentar] = useState('')
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="bg-gradient-to-br from-amber-500 to-amber-700 px-6 py-5 flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-white">Logga in som användare</h2>
-            <p className="text-amber-100 text-sm mt-0.5">{användare.namn}</p>
-          </div>
-          <button onClick={onStäng} className="text-amber-200 hover:text-white transition-colors">✕</button>
-        </div>
-        <div className="px-6 py-5 flex flex-col gap-4">
-          <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
-            <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700 shrink-0">
-              {användare.namn.split(' ').map(n => n[0]).join('').slice(0, 2)}
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800">{användare.namn}</p>
-              <p className="text-xs text-slate-400">{användare.epost} · <span title={`GUID: ${användare.id}`} className="cursor-help underline decoration-dotted">Nr {användare.joinNr}</span></p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-              Anteckning <span className="normal-case text-slate-400 font-normal">(frivillig)</span>
-            </label>
-            <textarea
-              rows={2}
-              value={kommentar}
-              onChange={e => setKommentar(e.target.value)}
-              placeholder="T.ex. 'Kontrollera att +46 70 123 45 67 tar emot SMS'"
-              className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none placeholder:text-slate-300"
-            />
-          </div>
-          <ul className="text-xs text-slate-600 flex flex-col gap-1.5 pl-1">
-            <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0">•</span>En ny flik öppnas med användarens vy</li>
-            <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0">•</span>Användaren märker ingenting och loggas inte ut</li>
-            <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0">•</span>Sessionen loggas i aktivitetsloggen</li>
-          </ul>
-          <div className="flex gap-3">
-            <button onClick={onStäng} className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Avbryt</button>
-            <button onClick={() => onBekräfta(kommentar)} className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold rounded-xl transition-colors">Öppna session</button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )
@@ -478,11 +420,18 @@ interface AnvandareProps {
   onÖppnaÄrende?:     (arendeId: string) => void
   defaultÖppnaEpost?: string
   defaultFlik?:       DetaljFlik
-  onPendingNotiser?:  (items: PendingNotis[]) => void
+  /** Anropas när djuplänken öppnat sin användare, så föräldern nollställer den (V2-16). */
+  onDjuplänkKonsumerad?: () => void
 }
 
-export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onPendingNotiser }: AnvandareProps) {
-  const { aktivVy } = useAuth()
+export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, defaultFlik, onDjuplänkKonsumerad }: AnvandareProps) {
+  const { aktivVy, roll, email: egenEpostRå } = useAuth()
+  // Support (och en Admin som förhandsvisar Support-vyn) LÄSER användarna — inga
+  // åtgärder: ingen avstängning/radering/mejl/bevakningar/källor/push/
+  // sparat och ingen massmarkering. Backend nekar dessa med 403 för Support (D1, V3-10),
+  // så knapparna döljs i stället för att ge en felruta.
+  const skrivskyddad = effektivAdminRoll(roll, aktivVy) === 'Support'
+  const egenEpost = egenEpostRå?.toLowerCase() ?? null
   const queryClient = useQueryClient()
   const { data: adminUsers, isLoading: laddar, isError: laddningFel, refetch } = useQuery({
     queryKey: ['admin-users'],
@@ -500,8 +449,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   const [enkildRadera, setEnkildRadera]         = useState<Användare | null>(null)
   const [raderar, setRaderar]                   = useState(false)
   const [raderaFel, setRaderaFel]               = useState<string | null>(null)
+  const [stängerAv, setStängerAv]               = useState(false)
+  const [stängAvFel, setStängAvFel]             = useState<string | null>(null)
+  const [massArbetar, setMassArbetar]           = useState(false)
+  const [massResultat, setMassResultat]         = useState<MassResultat | null>(null)
   const [enkildRollÄndring, setEnkildRollÄndring] = useState<Användare | null>(null)
-  const [impersonationMål, setImpersonationMål]   = useState<Användare | null>(null)
   const [skickarLösenordsåterställning, setSkickarLösenordsåterställning] = useState(false)
   const [skickarVerifieringsmail, setSkickarVerifieringsmail]             = useState(false)
   const [mejlFeedback, setMejlFeedback]                                   = useState<string | null>(null)
@@ -515,13 +467,37 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     return true
   })
 
-  function toggleMarkerad(e: React.MouseEvent, id: string) {
+  // Egen rad kan aldrig massmarkeras (backend avvisar självspärr/självradering).
+  const ärEgenRad = (u: Användare) => egenEpost !== null && u.epost.toLowerCase() === egenEpost
+  // "Markera alla" väljer bara det som är rimligt att massåtgärda: inte egen rad,
+  // inte Admin-konton och inte redan raderade konton. Admin-konton kan fortfarande
+  // markeras ett i taget — backend avvisar då sista aktiva admin med tydligt fel per rad.
+  const ärMassmarkerbar = (u: Användare) =>
+    !ärEgenRad(u) && !u.roller.includes('Admin') && u.status !== 'Raderat'
+  const massmarkerbara = filtrerade.filter(ärMassmarkerbar)
+  const antalMarkeradeBland = massmarkerbara.filter(u => markerade.has(u.id)).length
+  const allaMarkerade = massmarkerbara.length > 0 && antalMarkeradeBland === massmarkerbara.length
+  const delvisMarkerade = antalMarkeradeBland > 0 && !allaMarkerade
+
+  function toggleMarkerad(e: React.MouseEvent, u: Användare) {
     e.stopPropagation()
-    setMarkerade(prev => { const ny = new Set(prev); ny.has(id) ? ny.delete(id) : ny.add(id); return ny })
+    if (skrivskyddad || ärEgenRad(u)) return
+    setMarkerade(prev => {
+      const ny = new Set(prev)
+      if (ny.has(u.id)) ny.delete(u.id)
+      else ny.add(u.id)
+      return ny
+    })
   }
 
   function toggleAllaMarkerade() {
-    setMarkerade(prev => prev.size === filtrerade.length ? new Set() : new Set(filtrerade.map(u => u.id)))
+    if (skrivskyddad) return
+    setMarkerade(prev => {
+      const ny = new Set(prev)
+      if (allaMarkerade) massmarkerbara.forEach(u => ny.delete(u.id))
+      else massmarkerbara.forEach(u => ny.add(u.id))
+      return ny
+    })
   }
 
   useEffect(() => {
@@ -547,30 +523,22 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     })
   }, [användare])
 
-  const { data: kontoNotiser = [] } = useQuery({
-    queryKey: ['user-notifications'],
-    queryFn:  fetchUserNotifications,
-    refetchInterval: 30_000,
-  })
-
-  const { data: valdsÄrenden = [] } = useQuery({
+  // V3-8: varje flik i detaljpanelen skiljer laddar / fel (med Försök igen) / tomt — ett
+  // misslyckat anrop får inte se ut som "Inga bevakningar" eller "Ingen historik".
+  const ärendeFråga = useQuery({
     queryKey: ['admin-tickets-for-user', vald?.id],
     queryFn:  () => fetchAdminTickets({ userId: vald!.id }),
     enabled:  !!vald,
   })
+  const valdsÄrenden = ärendeFråga.data ?? []
 
-  useEffect(() => {
-    if (!onPendingNotiser) return
-    onPendingNotiser(kontoNotiser.map(n => ({
-      arendeId: n.userId, amne: n.namn, typ: 'kontospärrning' as const, notering: n.notering, epost: n.epost,
-    })))
-  }, [kontoNotiser, onPendingNotiser])
-
-  const { data: polisenBevakningar = [], isLoading: bevakningarLaddar } = useQuery({
+  const bevakningFråga = useQuery({
     queryKey: ['admin-polisen-bevakningar', vald?.id],
     queryFn:  () => fetchAdminUserPolisenBevakningar(vald!.id),
     enabled:  !!vald,
   })
+  const polisenBevakningar = bevakningFråga.data ?? []
+  const bevakningarLaddar = bevakningFråga.isLoading
   const [redigerarBevakning, setRedigerarBevakning] = useState<AdminPolisenBevakningDto | 'ny' | null>(null)
 
   function invalideraBevakningar() {
@@ -593,26 +561,34 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     onSuccess: invalideraBevakningar,
   })
 
-  async function sparaBevakning(kategorier: string[] | null, omraden: string[] | null) {
+  // Modalen stängs först när servern bekräftat; vid fel visas felet i modalen och valen finns kvar.
+  function sparaBevakning(kategorier: string[] | null, omraden: string[] | null) {
+    if (skapaBevakningMutation.isPending || uppdateraBevakningMutation.isPending) return
+    const stäng = { onSuccess: () => setRedigerarBevakning(null) }
     if (redigerarBevakning === 'ny') {
-      await skapaBevakningMutation.mutateAsync({ kategorier, omraden })
+      skapaBevakningMutation.mutate({ kategorier, omraden }, stäng)
     } else if (redigerarBevakning) {
-      await uppdateraBevakningMutation.mutateAsync({ bevakningId: redigerarBevakning.id, kategorier, omraden })
+      uppdateraBevakningMutation.mutate({ bevakningId: redigerarBevakning.id, kategorier, omraden }, stäng)
     }
-    setRedigerarBevakning(null)
   }
+  const bevakningSparFel = skapaBevakningMutation.error ?? uppdateraBevakningMutation.error
+  const bevakningSparFelText = bevakningSparFel ? visaFel(bevakningSparFel, 'Bevakningen kunde inte sparas. Försök igen.') : null
 
-  const { data: valdaKällor = [], isLoading: källorLaddar } = useQuery({
+  const källFråga = useQuery({
     queryKey: ['admin-user-sources', vald?.id],
     queryFn:  () => fetchAdminUserSources(vald!.id),
     enabled:  !!vald,
   })
+  const valdaKällor = källFråga.data ?? []
+  const källorLaddar = källFråga.isLoading
 
-  const { data: pushInstallningar, isLoading: pushLaddar } = useQuery({
+  const pushFråga = useQuery({
     queryKey: ['admin-user-push-settings', vald?.id],
     queryFn:  () => fetchAdminUserPushSettings(vald!.id),
     enabled:  !!vald,
   })
+  const pushInstallningar = pushFråga.data
+  const pushLaddar = pushFråga.isLoading
 
   const andraPushMutation = useMutation({
     mutationFn: (req: { pushEnabled?: boolean; pushNyaHandelser?: boolean; pushNyVersion?: boolean }) =>
@@ -644,15 +620,22 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
   const [forklaratEvent, setForklaratEvent] = useState<AdminSearchEvent | null>(null)
   const [forklaring, setForklaring] = useState<AdminExplainEventDto | null>(null)
   const [forklaringLaddar, setForklaringLaddar] = useState(false)
+  const [forklaraFel, setForklaraFel] = useState<string | null>(null)
+  const [sparatFel, setSparatFel] = useState<string | null>(null)
 
   async function sokForklaraHandelse() {
     if (!forklaraSokord.trim()) return
     setForklaraSoker(true)
     setForklaratEvent(null)
     setForklaring(null)
+    setForklaraFel(null)
     try {
       const resultat = await searchEvents({ sokord: forklaraSokord.trim(), pageSize: 5 })
       setForklaraTraffar(resultat.events)
+    } catch (fel) {
+      // Ett fel är inte "inga träffar".
+      setForklaraTraffar([])
+      setForklaraFel(visaFel(fel, 'Sökningen misslyckades. Försök igen.'))
     } finally {
       setForklaraSoker(false)
     }
@@ -663,33 +646,44 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     setForklaratEvent(ev)
     setForklaring(null)
     setForklaringLaddar(true)
+    setForklaraFel(null)
     try {
       setForklaring(await explainAdminUserEvent(vald.id, ev.id))
+    } catch (fel) {
+      setForklaraFel(visaFel(fel, 'Kunde inte hämta förklaringen. Försök igen.'))
     } finally {
       setForklaringLaddar(false)
     }
   }
 
-  const { data: notishistorik = [], isLoading: notishistorikLaddar } = useQuery({
+  const notisFråga = useQuery({
     queryKey: ['admin-notification-log', vald?.id],
     queryFn:  () => fetchAdminUserNotificationLog(vald!.id),
     enabled:  !!vald,
   })
+  const notishistorik = notisFråga.data ?? []
+  const notishistorikLaddar = notisFråga.isLoading
 
-  const { data: installningshistorik = [], isLoading: installningshistorikLaddar } = useQuery({
+  const histFråga = useQuery({
     queryKey: ['admin-setting-log', vald?.id],
     queryFn:  () => fetchAdminUserSettingLog(vald!.id),
     enabled:  !!vald,
   })
+  const installningshistorik = histFråga.data ?? []
+  const installningshistorikLaddar = histFråga.isLoading
 
+  // Djuplänken konsumeras EN gång: så fort användaren hittats öppnas panelen
+  // och föräldern nollställer defaultÖppnaEpost. Därefter gör en refetch av
+  // `användare` ingenting här, så panelen hoppar inte tillbaka (V2-16, E6#3).
   useEffect(() => {
     if (!defaultÖppnaEpost) return
     const u = användare.find(x => x.epost === defaultÖppnaEpost)
     if (u) {
       setVald(u)
-      setDetaljFlik(defaultFlik ?? 'notifinstallningar')
+      setDetaljFlik(defaultFlik ?? 'oversikt')
+      onDjuplänkKonsumerad?.()
     }
-  }, [defaultÖppnaEpost, defaultFlik, användare])
+  }, [defaultÖppnaEpost, defaultFlik, användare, onDjuplänkKonsumerad])
 
   function öppnaDetalj(u: Användare) {
     setVald(u)
@@ -725,33 +719,39 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     }
   }
 
-  const { data: sparadeHändelser = [], refetch: refetchSparat } = useQuery({
+  const sparatFråga = useQuery({
     queryKey: ['admin-saved-events', vald?.id],
     queryFn:  () => fetchAdminUserSavedEvents(vald!.id),
     enabled:  !!vald,
   })
+  const sparadeHändelser = sparatFråga.data ?? []
+  const refetchSparat = sparatFråga.refetch
 
   const [dödaLänkar, setDödaLänkar] = useState<Set<string>>(new Set())
-  const [kollarLänk, setKollarLänk] = useState<string | null>(null)
 
-  async function öppnaSparad(h: { eventId: string; url: string }) {
-    setKollarLänk(h.eventId)
-    const alive = await checkEventLinkStatus(h.eventId)
-    setKollarLänk(null)
-    if (alive) {
-      window.open(h.url, '_blank', 'noopener,noreferrer')
-    } else {
-      setDödaLänkar(prev => new Set(prev).add(h.eventId))
-    }
+  // Öppnar länken direkt (synkront i klicket, aldrig efter en await) och kollar
+  // i bakgrunden — markeras som död bara vid ett entydigt 'dead' (404/410).
+  function öppnaSparad(h: { eventId: string; url: string }) {
+    window.open(h.url, '_blank', 'noopener,noreferrer')
+    checkEventLinkStatus(h.eventId)
+      .then(status => { if (status === 'dead') setDödaLänkar(prev => new Set(prev).add(h.eventId)) })
+      .catch(() => { /* kollen är bara en bonus — ett fel ska aldrig störa */ })
   }
 
   async function taBortSparad(eventId: string) {
     if (!vald) return
     const handelse = sparadeHändelser.find(h => h.eventId === eventId)
-    await unsaveAdminUserEvent(vald.id, eventId)
+    setSparatFel(null)
+    try {
+      await unsaveAdminUserEvent(vald.id, eventId)
+    } catch (fel) {
+      setSparatFel(visaFel(fel, 'Händelsen kunde inte tas bort. Försök igen.'))
+      return
+    }
     await refetchSparat()
     if (handelse) {
-      await createActivityLogEntry({
+      try {
+        await createActivityLogEntry({
         typ:     'Kontoåtgärd',
         rubrik:  `Tog bort sparad händelse från ${vald.namn}`,
         detalj:  `"${handelse.title}" (${handelse.sourceName}) borttagen från ${vald.namn}s konto.`,
@@ -762,6 +762,9 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           undoAction: 'lägg-till',
         },
       })
+      } catch {
+        setSparatFel('Händelsen togs bort, men kunde inte loggas i aktivitetsloggen.')
+      }
     }
   }
 
@@ -787,25 +790,49 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     return d.toISOString()
   }
 
-  async function stängAv(anledning: string, påminnelseOm: number | null) {
-    const reminderAt = beräknaPåminnelse(påminnelseOm)
-    await Promise.all([...markerade].map(id => setAdminUserStatus(id, false, anledning || undefined, reminderAt)))
-    await refetch()
-    setMarkerade(new Set()); setModal(null)
+  // Kör en åtgärd mot alla markerade konton och samlar utfallet PER RAD
+  // (Promise.allSettled). Listan hämtas alltid om efteråt, även vid delvis fel,
+  // och bara de lyckade raderna avmarkeras. Modalen stängs bara om allt lyckades —
+  // annars visas en sammanfattning med serverns orsak per misslyckad rad.
+  async function körMassåtgärd(åtgärd: (id: string) => Promise<void>, rensaVald = false) {
+    if (massArbetar) return
+    const ids = [...markerade]
+    const namnFörId = new Map(användare.map(u => [u.id, u.namn]))
+    setMassArbetar(true); setMassResultat(null)
+    try {
+      const utfall = await Promise.allSettled(ids.map(id => åtgärd(id)))
+      const lyckade = new Set<string>()
+      const fel: MassResultat['fel'] = []
+      utfall.forEach((r, i) => {
+        if (r.status === 'fulfilled') lyckade.add(ids[i])
+        else fel.push({ id: ids[i], namn: namnFörId.get(ids[i]) ?? ids[i], orsak: felOrsak(r.reason) })
+      })
+      await refetch()
+      if (rensaVald && vald && lyckade.has(vald.id)) setVald(null)
+      setMarkerade(prev => { const ny = new Set(prev); lyckade.forEach(id => ny.delete(id)); return ny })
+      if (fel.length === 0) setModal(null)
+      else setMassResultat({ totalt: ids.length, fel })
+    } finally {
+      setMassArbetar(false)
+    }
   }
 
-  async function raderaMarkerade() {
-    setRaderaFel(null); setRaderar(true)
-    try {
-      await Promise.all([...markerade].map(id => deleteAdminUser(id)))
-      await refetch()
-      if (vald && markerade.has(vald.id)) setVald(null)
-      setMarkerade(new Set()); setModal(null)
-    } catch (err) {
-      setRaderaFel(err instanceof Error ? err.message : 'Något gick fel')
-    } finally {
-      setRaderar(false)
-    }
+  function stängAv(anledning: string, påminnelseOm: number | null) {
+    const reminderAt = beräknaPåminnelse(påminnelseOm)
+    return körMassåtgärd(id => setAdminUserStatus(id, false, anledning || undefined, reminderAt))
+  }
+
+  function raderaMarkerade() {
+    setRaderaFel(null)
+    return körMassåtgärd(id => deleteAdminUser(id), true)
+  }
+
+  function stängMassModal() {
+    setModal(null); setMassResultat(null); setRaderaFel(null)
+  }
+
+  function öppnaMassModal(typ: 'stäng-av' | 'radera') {
+    setMassResultat(null); setRaderaFel(null); setModal(typ)
   }
 
   async function raderaEnkild(u: Användare) {
@@ -835,15 +862,29 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     }
   }
 
+  // V3-8: modalen stängs först när servern bekräftat; vid fel visas felet och anledningen finns kvar.
   async function stängAvEnkild(u: Användare, anledning: string, påminnelseOm: number | null) {
-    await setAdminUserStatus(u.id, false, anledning || undefined, beräknaPåminnelse(påminnelseOm))
-    await refetch()
-    setEnkildStängAv(null)
+    if (stängerAv) return
+    setStängerAv(true); setStängAvFel(null)
+    try {
+      await setAdminUserStatus(u.id, false, anledning || undefined, beräknaPåminnelse(påminnelseOm))
+      await refetch()
+      setEnkildStängAv(null)
+    } catch (fel) {
+      setStängAvFel(visaFel(fel, 'Kontot kunde inte stängas av. Försök igen.'))
+    } finally {
+      setStängerAv(false)
+    }
   }
 
   async function aktiveraEnkild(u: Användare) {
-    await setAdminUserStatus(u.id, true)
-    await refetch()
+    setMejlFeedback(null)
+    try {
+      await setAdminUserStatus(u.id, true)
+      await refetch()
+    } catch (fel) {
+      setMejlFeedback(visaFel(fel, 'Kontot kunde inte aktiveras. Försök igen.'))
+    }
   }
 
   const antal = {
@@ -853,20 +894,31 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
     avstängda:   användare.filter(u => u.status === 'Avstängd').length,
   }
 
-  const allaMarkerade = filtrerade.length > 0 && markerade.size === filtrerade.length
+  const markeradeNamn = användare.filter(u => markerade.has(u.id)).map(u => u.namn)
 
-
+  // Rubrikcheckboxens indeterminate-läge kan bara sättas via DOM-egenskapen.
+  const rubrikCheckboxRef = (el: HTMLInputElement | null) => { if (el) el.indeterminate = delvisMarkerade }
   const harOverifierad = (u: Användare) => u.kontaktuppgifter.some(k => !k.verifierad)
 
   return (
     <div className="flex flex-col gap-6">
 
+      {skrivskyddad && (
+        <p className="text-sm text-slate-600 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+          Skrivskyddad vy — som Support kan du titta på användarnas uppgifter men inte ändra dem.
+          Ändringar görs av en administratör.
+        </p>
+      )}
+
       {/* Modaler — bulk */}
       {modal === 'roller'   && <RollModal antal={markerade.size} onSpara={applicerapRoller} onStäng={() => setModal(null)} />}
-      {modal === 'stäng-av' && <StängAvModal antal={markerade.size} onSpara={stängAv} onStäng={() => setModal(null)} />}
+      {modal === 'stäng-av' && (
+        <StängAvModal antal={markerade.size} arbetar={massArbetar} resultat={massResultat}
+          onSpara={stängAv} onStäng={stängMassModal} />
+      )}
       {modal === 'radera'   && (
-        <RaderaModal antal={markerade.size} fel={raderaFel} raderar={raderar}
-          onBekräfta={raderaMarkerade} onStäng={() => { setModal(null); setRaderaFel(null) }} />
+        <RaderaModal antal={markerade.size} namnLista={markeradeNamn} fel={raderaFel} raderar={massArbetar}
+          resultat={massResultat} onBekräfta={raderaMarkerade} onStäng={stängMassModal} />
       )}
 
       {/* Modaler — enskild */}
@@ -876,17 +928,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           onStäng={() => setEnkildRollÄndring(null)} />
       )}
       {enkildStängAv && (
-        <StängAvModal antal={1} onSpara={(anledning, påminnelseOm) => stängAvEnkild(enkildStängAv, anledning, påminnelseOm)} onStäng={() => setEnkildStängAv(null)} />
-      )}
-      {impersonationMål && (
-        <ImpersonationModal
-          användare={impersonationMål}
-          onBekräfta={(_kommentar) => {
-            window.open(`/?impersonating=${impersonationMål.id}&namn=${encodeURIComponent(impersonationMål.namn)}`, '_blank')
-            setImpersonationMål(null)
-          }}
-          onStäng={() => setImpersonationMål(null)}
-        />
+        <StängAvModal antal={1} arbetar={stängerAv} fel={stängAvFel} onSpara={(anledning, påminnelseOm) => stängAvEnkild(enkildStängAv, anledning, påminnelseOm)} onStäng={() => { setStängAvFel(null); setEnkildStängAv(null) }} />
       )}
       {enkildRadera && (
         <RaderaModal antal={1} namn={enkildRadera.namn} fel={raderaFel} raderar={raderar}
@@ -918,8 +960,8 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               <div className="flex gap-2 ml-auto">
                 <button disabled title="Inte kopplat mot backend än — ingen endpoint för att ändra roll"
                   className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 cursor-not-allowed">Ändra roller</button>
-                <button onClick={() => setModal('stäng-av')} className="text-xs font-medium px-3 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors">Stäng av</button>
-                <button onClick={() => setModal('radera')} className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Radera</button>
+                <button onClick={() => öppnaMassModal('stäng-av')} className="text-xs font-medium px-3 py-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors">Stäng av</button>
+                <button onClick={() => öppnaMassModal('radera')}className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Radera</button>
                 <button onClick={() => setMarkerade(new Set())} className="text-xs font-medium px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">✕ Avmarkera</button>
               </div>
             </>
@@ -948,10 +990,15 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase tracking-wide">
-              <th className="px-6 py-3 w-10">
-                <input type="checkbox" checked={allaMarkerade} onChange={toggleAllaMarkerade}
-                  className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer" />
-              </th>
+              {!skrivskyddad && (
+                <th className="px-6 py-3 w-10">
+                  <input type="checkbox" ref={rubrikCheckboxRef} checked={allaMarkerade} onChange={toggleAllaMarkerade}
+                    disabled={massmarkerbara.length === 0}
+                    aria-label="Markera alla"
+                    title="Markerar alla utom administratörer och ditt eget konto"
+                    className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer" />
+                </th>
+              )}
               <th className="text-left px-2 py-3 font-medium w-10">ID</th>
               <th className="text-left px-4 py-3 font-medium">Användare</th>
               <th className="text-left px-4 py-3 font-medium">Roller</th>
@@ -966,10 +1013,15 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               <tr key={u.id}
                 className={`hover:bg-slate-50 transition-colors cursor-pointer ${markerade.has(u.id) ? 'bg-violet-50' : ''}`}
                 onClick={() => öppnaDetalj(u)}>
-                <td className="px-6 py-3" onClick={e => toggleMarkerad(e, u.id)}>
-                  <input type="checkbox" checked={markerade.has(u.id)} readOnly
-                    className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer" />
-                </td>
+                {!skrivskyddad && (
+                  <td className="px-6 py-3" onClick={e => toggleMarkerad(e, u)}>
+                    <input type="checkbox" checked={markerade.has(u.id)} readOnly
+                      disabled={ärEgenRad(u)}
+                      aria-label={`Markera ${u.namn}`}
+                      title={ärEgenRad(u) ? 'Du kan inte massmarkera ditt eget konto' : undefined}
+                      className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                  </td>
+                )}
                 <td className="px-2 py-3 text-xs text-slate-400 font-mono cursor-help" title={`GUID: ${u.id}`}>#{u.joinNr}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
@@ -1003,13 +1055,13 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               </tr>
             ))}
             {laddar && (
-              <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-slate-400">Laddar användare…</td></tr>
+              <tr><td colSpan={skrivskyddad ? 7 : 8} className="px-6 py-10 text-center text-sm text-slate-400">Laddar användare…</td></tr>
             )}
             {laddningFel && (
-              <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-red-500">Kunde inte hämta användarlistan. Försök ladda om sidan.</td></tr>
+              <tr><td colSpan={skrivskyddad ? 7 : 8} className="px-6 py-10 text-center text-sm text-red-500">Kunde inte hämta användarlistan. Försök ladda om sidan.</td></tr>
             )}
             {!laddar && !laddningFel && filtrerade.length === 0 && (
-              <tr><td colSpan={8} className="px-6 py-10 text-center text-sm text-slate-400">Inga användare matchar filtret.</td></tr>
+              <tr><td colSpan={skrivskyddad ? 7 : 8} className="px-6 py-10 text-center text-sm text-slate-400">Inga användare matchar filtret.</td></tr>
             )}
           </tbody>
         </table>
@@ -1045,7 +1097,6 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setImpersonationMål(vald)} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white transition-colors">Logga in som</button>
               <button onClick={() => setVald(null)} className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none">✕</button>
             </div>
           </div>
@@ -1071,7 +1122,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
 
           {/* ── Översikt ── */}
           {detaljFlik === 'oversikt' && (
-            <div className="px-6 py-5 grid grid-cols-2 gap-8">
+            <div className={`px-6 py-5 grid gap-8 ${skrivskyddad ? 'grid-cols-1' : 'grid-cols-2'}`}>
 
               <div className="flex flex-col gap-5">
 
@@ -1123,6 +1174,8 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Polisen-bevakningar</p>
                   {bevakningarLaddar ? (
                     <p className="text-sm text-slate-400">Laddar...</p>
+                  ) : bevakningFråga.isError && bevakningFråga.data === undefined ? (
+                    <HamtningsFel fel={bevakningFråga.error} reserv="Kunde inte hämta bevakningarna. Det är inte samma sak som att det inte finns några." onForsokIgen={() => { void bevakningFråga.refetch() }} arIgang={bevakningFråga.isFetching} className="items-start text-left" />
                   ) : (
                     <>
                       {polisenBevakningar.length === 0 ? (
@@ -1140,10 +1193,12 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                                       : <span className="text-xs text-slate-400">Alla</span>}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <button onClick={() => setRedigerarBevakning(b)} className="text-xs text-violet-600 hover:text-violet-800 font-medium">Ändra</button>
-                                  <button onClick={() => taBortBevakningMutation.mutate(b.id)} className="text-xs text-slate-400 hover:text-red-500 font-medium">Ta bort</button>
-                                </div>
+                                {!skrivskyddad && (
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <button onClick={() => setRedigerarBevakning(b)} className="text-xs text-violet-600 hover:text-violet-800 font-medium">Ändra</button>
+                                    <button onClick={() => taBortBevakningMutation.mutate(b.id)} disabled={taBortBevakningMutation.isPending} className="text-xs text-slate-400 hover:text-red-500 font-medium disabled:opacity-50">Ta bort</button>
+                                  </div>
+                                )}
                               </div>
                               <div>
                                 <p className="text-xs text-slate-400 mb-1">Områden</p>
@@ -1157,13 +1212,18 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                           ))}
                         </div>
                       )}
-                      <button onClick={() => setRedigerarBevakning('ny')} className="text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors">
-                        + Ny bevakning
-                      </button>
+                      {!skrivskyddad && (
+                        <button onClick={() => setRedigerarBevakning('ny')} className="text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors">
+                          + Ny bevakning
+                        </button>
+                      )}
                     </>
                   )}
-                  {redigerarBevakning && (
+                  <MutationFel fel={taBortBevakningMutation.error} reserv="Bevakningen kunde inte tas bort. Försök igen." className="mb-2" />
+                  {!skrivskyddad && redigerarBevakning && (
                     <KategoriFilterModal
+                      sparar={skapaBevakningMutation.isPending || uppdateraBevakningMutation.isPending}
+                      fel={bevakningSparFelText}
                       kallNamn="Polisen"
                       initialKategorier={redigerarBevakning === 'ny' ? null : redigerarBevakning.kategorier}
                       initialOmraden={redigerarBevakning === 'ny' ? null : redigerarBevakning.omraden}
@@ -1180,8 +1240,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     drag-och-släpp i Mina källor). */}
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Aktiva källor</p>
+                  <MutationFel fel={växlaKällaMutation.error} reserv="Källan kunde inte ändras. Försök igen." className="mb-2" />
                   {källorLaddar ? (
                     <p className="text-sm text-slate-400">Laddar...</p>
+                  ) : källFråga.isError && källFråga.data === undefined ? (
+                    <HamtningsFel fel={källFråga.error} reserv="Kunde inte hämta källorna. Det är inte samma sak som att inga finns." onForsokIgen={() => { void källFråga.refetch() }} arIgang={källFråga.isFetching} className="items-start text-left" />
                   ) : valdaKällor.length === 0 ? (
                     <p className="text-sm text-slate-500">Inga källor tillagda.</p>
                   ) : (
@@ -1189,15 +1252,25 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                       {valdaKällor.map(k => (
                         <div key={k.sourceId} className="flex items-center justify-between gap-2">
                           <span className="text-sm text-slate-700">{k.name}</span>
-                          <button
-                            onClick={() => växlaKällaMutation.mutate({ sourceId: k.sourceId, isActive: !k.isActive })}
-                            disabled={växlaKällaMutation.isPending}
-                            className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors disabled:opacity-50 ${
-                              k.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                            }`}
-                          >
-                            {k.isActive ? 'Aktiv' : 'Inaktiv'}
-                          </button>
+                          {skrivskyddad ? (
+                            <span
+                              className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                                k.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                              }`}
+                            >
+                              {k.isActive ? 'Aktiv' : 'Inaktiv'}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => växlaKällaMutation.mutate({ sourceId: k.sourceId, isActive: !k.isActive })}
+                              disabled={växlaKällaMutation.isPending}
+                              className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors disabled:opacity-50 ${
+                                k.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                              }`}
+                            >
+                              {k.isActive ? 'Aktiv' : 'Inaktiv'}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1231,6 +1304,7 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     </button>
                   </div>
 
+                  {forklaraFel && <p role="alert" className="text-xs text-red-600 mb-2">{forklaraFel}</p>}
                   {forklaraTraffar.length > 0 && !forklaratEvent && (
                     <div className="flex flex-col gap-1 mb-2">
                       {forklaraTraffar.map(ev => (
@@ -1279,34 +1353,38 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">
                     Push-notiser <span className="normal-case text-slate-300 font-normal">— ändra bara om användaren själv bett om det</span>
                   </p>
+                  <MutationFel fel={andraPushMutation.error} reserv="Push-inställningen kunde inte ändras. Försök igen." className="mb-2" />
                   {pushLaddar ? (
                     <p className="text-sm text-slate-400">Laddar...</p>
                   ) : !pushInstallningar ? (
-                    <p className="text-sm text-slate-500">Kunde inte hämtas.</p>
+                    <HamtningsFel fel={pushFråga.error} reserv="Kunde inte hämta push-inställningarna." onForsokIgen={() => { void pushFråga.refetch() }} arIgang={pushFråga.isFetching} className="items-start text-left" />
                   ) : (
                     <div className="flex flex-col gap-2">
                       <div className="flex flex-wrap gap-1.5">
-                        <button
-                          onClick={() => andraPushMutation.mutate({ pushEnabled: !pushInstallningar.pushEnabled })}
-                          disabled={andraPushMutation.isPending}
-                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${pushInstallningar.pushEnabled ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
-                        >
-                          Push {pushInstallningar.pushEnabled ? 'på' : 'av'}
-                        </button>
-                        <button
-                          onClick={() => andraPushMutation.mutate({ pushNyaHandelser: !pushInstallningar.pushNyaHandelser })}
-                          disabled={andraPushMutation.isPending}
-                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${pushInstallningar.pushNyaHandelser ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
-                        >
-                          Ny händelse {pushInstallningar.pushNyaHandelser ? 'på' : 'av'}
-                        </button>
-                        <button
-                          onClick={() => andraPushMutation.mutate({ pushNyVersion: !pushInstallningar.pushNyVersion })}
-                          disabled={andraPushMutation.isPending}
-                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${pushInstallningar.pushNyVersion ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
-                        >
-                          Ny version {pushInstallningar.pushNyVersion ? 'på' : 'av'}
-                        </button>
+                        {([
+                          { etikett: 'Push',        på: pushInstallningar.pushEnabled,       ändra: { pushEnabled: !pushInstallningar.pushEnabled } },
+                          { etikett: 'Ny händelse', på: pushInstallningar.pushNyaHandelser,  ändra: { pushNyaHandelser: !pushInstallningar.pushNyaHandelser } },
+                          { etikett: 'Ny version',  på: pushInstallningar.pushNyVersion,     ändra: { pushNyVersion: !pushInstallningar.pushNyVersion } },
+                        ]).map(t => {
+                          const text = `${t.etikett} ${t.på ? 'på' : 'av'}`
+                          return skrivskyddad ? (
+                            <span
+                              key={t.etikett}
+                              className={`text-xs font-medium px-2.5 py-1 rounded-full border ${t.på ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
+                            >
+                              {text}
+                            </span>
+                          ) : (
+                            <button
+                              key={t.etikett}
+                              onClick={() => andraPushMutation.mutate(t.ändra)}
+                              disabled={andraPushMutation.isPending}
+                              className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50 ${t.på ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                            >
+                              {text}
+                            </button>
+                          )
+                        })}
                       </div>
                       {pushInstallningar.enheter.length === 0 ? (
                         <p className="text-xs text-slate-400">Inga registrerade enheter.</p>
@@ -1328,7 +1406,10 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     (UserSavedEvent-tabellen). Skrivs från Händelsesök */}
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-2">Sparat</p>
-                  {sparadeHändelser.length === 0 ? (
+                  {sparatFel && <p role="alert" className="text-xs text-red-600 mb-2">{sparatFel}</p>}
+                  {sparatFråga.isError && sparatFråga.data === undefined ? (
+                    <HamtningsFel fel={sparatFråga.error} reserv="Kunde inte hämta sparade händelser. Det är inte samma sak som att inga finns." onForsokIgen={() => { void sparatFråga.refetch() }} arIgang={sparatFråga.isFetching} className="items-start text-left" />
+                  ) : sparadeHändelser.length === 0 ? (
                     <p className="text-sm text-slate-400">Inga sparade händelser.</p>
                   ) : (
                     <div className="flex flex-col gap-2">
@@ -1345,20 +1426,21 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                             ) : (
                               <button
                                 onClick={() => öppnaSparad(h)}
-                                disabled={kollarLänk === h.eventId}
-                                className="text-slate-700 hover:text-violet-600 hover:underline truncate block text-left disabled:opacity-50"
+                                className="text-slate-700 hover:text-violet-600 hover:underline truncate block text-left"
                               >
-                                {kollarLänk === h.eventId ? 'Kollar länken…' : h.title}
+                                {h.title}
                               </button>
                             )}
                             <p className="text-xs text-slate-400">{h.sourceName} · sparad {new Date(h.savedAt).toLocaleDateString('sv-SE')}</p>
                           </div>
-                          <button
-                            onClick={() => taBortSparad(h.eventId)}
-                            className="shrink-0 text-xs text-slate-400 hover:text-red-500 transition-colors"
-                          >
-                            Ta bort
-                          </button>
+                          {!skrivskyddad && (
+                            <button
+                              onClick={() => taBortSparad(h.eventId)}
+                              className="shrink-0 text-xs text-slate-400 hover:text-red-500 transition-colors"
+                            >
+                              Ta bort
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1378,127 +1460,86 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
                     <p className="text-xs font-medium text-red-700">🗑 Raderas (anonymiseras) automatiskt {vald.raderasVid}</p>
                     <p className="text-xs text-red-600">Går att ångra fram till dess — därefter permanent.</p>
                     {raderaFel && <p className="text-xs text-red-700 bg-red-100 rounded-lg px-2.5 py-1.5">{raderaFel}</p>}
-                    <button
-                      onClick={() => angraRadering(vald)}
-                      disabled={raderar}
-                      className="self-start text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-red-300 text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors">
-                      {raderar ? 'Ångrar…' : 'Ångra radering'}
-                    </button>
+                    {!skrivskyddad && (
+                      <button
+                        onClick={() => angraRadering(vald)}
+                        disabled={raderar}
+                        className="self-start text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-red-300 text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors">
+                        {raderar ? 'Ångrar…' : 'Ångra radering'}
+                      </button>
+                    )}
                   </div>
                 )}
 
               </div>
 
               {/* Åtgärder */}
-              <div className="flex flex-col gap-3">
-                <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">Åtgärder</p>
-                <button disabled title="Inte kopplat mot backend än — ingen endpoint för att ändra roll"
-                  className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-300 cursor-not-allowed">
-                  Ändra roller
-                </button>
-                <button
-                  onClick={() => skickaLösenordsåterställning(vald)}
-                  disabled={skickarLösenordsåterställning}
-                  className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition-colors">
-                  {skickarLösenordsåterställning ? 'Skickar…' : 'Skicka lösenordsåterställning'}
-                </button>
-                {vald.kontaktuppgifter.some(k => !k.verifierad) && (
+              {!skrivskyddad && (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">Åtgärder</p>
+                  <button disabled title="Inte kopplat mot backend än — ingen endpoint för att ändra roll"
+                    className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-300 cursor-not-allowed">
+                    Ändra roller
+                  </button>
                   <button
-                    onClick={() => skickaVerifieringsmail(vald)}
-                    disabled={skickarVerifieringsmail}
+                    onClick={() => skickaLösenordsåterställning(vald)}
+                    disabled={skickarLösenordsåterställning}
                     className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition-colors">
-                    {skickarVerifieringsmail ? 'Skickar…' : 'Skicka verifieringsmail'}
+                    {skickarLösenordsåterställning ? 'Skickar…' : 'Skicka lösenordsåterställning'}
                   </button>
-                )}
-                {mejlFeedback && <p className="text-xs text-slate-500">{mejlFeedback}</p>}
-                {vald.status === 'Avstängd' && (
-                  <button onClick={() => aktiveraEnkild(vald)}
-                    className="text-left px-4 py-2.5 rounded-xl border border-green-200 text-sm text-green-700 hover:bg-green-50 transition-colors">
-                    Aktivera konto
+                  {vald.kontaktuppgifter.some(k => !k.verifierad) && (
+                    <button
+                      onClick={() => skickaVerifieringsmail(vald)}
+                      disabled={skickarVerifieringsmail}
+                      className="text-left px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition-colors">
+                      {skickarVerifieringsmail ? 'Skickar…' : 'Skicka verifieringsmail'}
+                    </button>
+                  )}
+                  {mejlFeedback && <p className="text-xs text-slate-500">{mejlFeedback}</p>}
+                  {vald.status === 'Avstängd' && (
+                    <button onClick={() => aktiveraEnkild(vald)}
+                      className="text-left px-4 py-2.5 rounded-xl border border-green-200 text-sm text-green-700 hover:bg-green-50 transition-colors">
+                      Aktivera konto
+                    </button>
+                  )}
+                  {vald.status === 'Aktiv' && (
+                    <button onClick={() => setEnkildStängAv(vald)}
+                      className="text-left px-4 py-2.5 rounded-xl border border-amber-200 text-sm text-amber-700 hover:bg-amber-50 transition-colors">
+                      Stäng av konto
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setEnkildRadera(vald)}
+                    disabled={vald.status === 'Raderat' || vald.status === 'Raderas snart'}
+                    title={
+                      vald.status === 'Raderat' ? 'Kontot är redan raderat'
+                        : vald.status === 'Raderas snart' ? 'Radering är redan schemalagd — se panelen ovan'
+                        : undefined
+                    }
+                    className="text-left px-4 py-2.5 rounded-xl border border-red-200 text-sm text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors">
+                    Radera konto (GDPR)
                   </button>
-                )}
-                {vald.status === 'Aktiv' && (
-                  <button onClick={() => setEnkildStängAv(vald)}
-                    className="text-left px-4 py-2.5 rounded-xl border border-amber-200 text-sm text-amber-700 hover:bg-amber-50 transition-colors">
-                    Stäng av konto
-                  </button>
-                )}
-                <button
-                  onClick={() => setEnkildRadera(vald)}
-                  disabled={vald.status === 'Raderat' || vald.status === 'Raderas snart'}
-                  title={
-                    vald.status === 'Raderat' ? 'Kontot är redan raderat'
-                      : vald.status === 'Raderas snart' ? 'Radering är redan schemalagd — se panelen ovan'
-                      : undefined
-                  }
-                  className="text-left px-4 py-2.5 rounded-xl border border-red-200 text-sm text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors">
-                  Radera konto (GDPR)
-                </button>
-              </div>
+                </div>
+              )}
 
             </div>
           )}
 
-          {/* ── Notifieringsinställningar ── */}
+          {/* ── Notifieringsinställningar ── inget API bakom fliken; riktig data ligger under Översikt */}
           {detaljFlik === 'notifinstallningar' && (
-            <div className="px-6 py-5">
-              {!(MOCK_NOTIF[vald.id]?.some(k => k.aktiv)) ? (
-                <p className="text-center text-sm text-slate-400 py-10">Användaren har inga aktiva notifieringar.</p>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {(MOCK_NOTIF[vald.id] ?? []).map(k => (
-                    <div key={k.källNamn} className={`rounded-xl border px-5 py-4 ${k.aktiv ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50 opacity-60'}`}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${k.aktiv ? 'bg-green-500' : 'bg-slate-300'}`} />
-                          <p className="text-sm font-semibold text-slate-800">{k.källNamn}</p>
-                        </div>
-                        <div className="flex gap-1">
-                          {k.kanaler.map(kanal => (
-                            <span key={kanal} className={`text-xs font-medium px-2 py-0.5 rounded-full ${KANAL_CLS[kanal]}`}>{kanal}</span>
-                          ))}
-                        </div>
-                      </div>
-                      {k.aktiv && (
-                        <div className="grid grid-cols-3 gap-3">
-                          <div>
-                            <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1.5">Skickas till</p>
-                            <div className="flex flex-col gap-1">
-                              {k.kontaktuppgiftIds.map(kid => {
-                                const ku = vald.kontaktuppgifter.find(x => x.id === kid)
-                                if (!ku) return null
-                                return (
-                                  <div key={kid} className="flex items-center gap-1.5">
-                                    <span className={`text-xs font-medium px-1.5 py-0 rounded-full ${KANAL_CLS[ku.typ]}`}>{ku.typ}</span>
-                                    <span className="text-xs text-slate-600 truncate">{ku.värde}</span>
-                                    {!ku.verifierad && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Ej verifierad" />}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1.5">Geografier</p>
-                            <div className="flex flex-wrap gap-1">
-                              {k.geografier.length > 0
-                                ? k.geografier.map(g => <span key={g} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{g}</span>)
-                                : <span className="text-xs text-slate-400">Alla</span>}
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1.5">Kategorier</p>
-                            <div className="flex flex-wrap gap-1">
-                              {k.kategorier.length > 0
-                                ? k.kategorier.map(kat => <span key={kat} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{kat}</span>)
-                                : <span className="text-xs text-slate-400">Alla</span>}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="pb-8">
+              <IngetKopplatAn rubrik="Inga notifieringsinställningar visas här">
+                Den här fliken är inte kopplad till backend. Användarens riktiga aktiva källor,
+                Polisen-bevakningar och push-inställningar finns under Översikt.
+              </IngetKopplatAn>
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setDetaljFlik('oversikt')}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors"
+                >
+                  Visa under Översikt
+                </button>
+              </div>
             </div>
           )}
 
@@ -1507,6 +1548,8 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
             <div>
               {notishistorikLaddar ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Laddar...</p>
+              ) : notisFråga.isError && notisFråga.data === undefined ? (
+                <HamtningsFel fel={notisFråga.error} reserv="Kunde inte hämta notishistoriken. Det är inte samma sak som att inga notiser skickats." onForsokIgen={() => { void notisFråga.refetch() }} arIgang={notisFråga.isFetching} className="px-6 py-10" />
               ) : notishistorik.length === 0 ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Inga notiser skickade till den här användaren.</p>
               ) : (
@@ -1564,6 +1607,8 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
             <div>
               {installningshistorikLaddar ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Laddar...</p>
+              ) : histFråga.isError && histFråga.data === undefined ? (
+                <HamtningsFel fel={histFråga.error} reserv="Kunde inte hämta inställningshistoriken. Det är inte samma sak som ingen historik." onForsokIgen={() => { void histFråga.refetch() }} arIgang={histFråga.isFetching} className="px-6 py-10" />
               ) : installningshistorik.length === 0 ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Ingen inställningshistorik för den här användaren.</p>
               ) : (
@@ -1596,7 +1641,11 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
           {/* ── Supportärenden ── */}
           {detaljFlik === 'ärenden' && (
             <div>
-              {valdsÄrenden.length === 0 ? (
+              {ärendeFråga.isLoading ? (
+                <p className="px-6 py-10 text-center text-sm text-slate-400">Laddar...</p>
+              ) : ärendeFråga.isError && ärendeFråga.data === undefined ? (
+                <HamtningsFel fel={ärendeFråga.error} reserv="Kunde inte hämta ärendena. Det är inte samma sak som att inga finns." onForsokIgen={() => { void ärendeFråga.refetch() }} arIgang={ärendeFråga.isFetching} className="px-6 py-10" />
+              ) : valdsÄrenden.length === 0 ? (
                 <p className="px-6 py-10 text-center text-sm text-slate-400">Inga supportärenden kopplade till den här användaren.</p>
               ) : (
                 <table className="w-full text-sm">
@@ -1634,20 +1683,12 @@ export default function Anvandare({ onÖppnaÄrende, defaultÖppnaEpost, default
             </div>
           )}
 
-          {/* ── Aktivitet ── */}
+          {/* ── Aktivitet ── ingen inloggningsspårning finns än */}
           {detaljFlik === 'aktivitet' && (
-            <div className="divide-y divide-slate-50">
-              {(MOCK_AKTIVITET[vald.id] ?? []).length === 0 ? (
-                <p className="px-6 py-10 text-center text-sm text-slate-400">Ingen aktivitet registrerad.</p>
-              ) : (
-                (MOCK_AKTIVITET[vald.id] ?? []).map((a, i) => (
-                  <div key={i} className="flex items-center gap-4 px-6 py-3">
-                    <span className="text-xs text-slate-400 font-mono w-32 shrink-0">{a.tid}</span>
-                    <p className="text-sm text-slate-700">{a.händelse}</p>
-                  </div>
-                ))
-              )}
-            </div>
+            <IngetKopplatAn rubrik="Ingen aktivitet registreras än">
+              Inloggningar och användaraktivitet spåras inte, så den här fliken kan inte visa något.
+              Det betyder inte att användaren är inaktiv.
+            </IngetKopplatAn>
           )}
 
         </div>

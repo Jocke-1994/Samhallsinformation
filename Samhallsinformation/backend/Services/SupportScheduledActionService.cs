@@ -1,6 +1,8 @@
 namespace Samhallsinformation.Services;
 
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Support;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -27,7 +29,8 @@ public class SupportScheduledActionService : BackgroundService
             {
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                await ExecuteDueActionsAsync(db, stoppingToken);
+                var delivery = scope.ServiceProvider.GetRequiredService<ISupportReplyDelivery>();
+                await ExecuteDueActionsAsync(db, delivery, _logger, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -42,61 +45,86 @@ public class SupportScheduledActionService : BackgroundService
         }
     }
 
-    public static async Task ExecuteDueActionsAsync(AppDbContext db, CancellationToken ct = default)
+    /// <summary>
+    /// Kör alla förfallna åtgärder, en i taget med egen SaveChanges. En trasig åtgärd loggas
+    /// och hoppas över — den fäller varken de andra åtgärderna eller bakgrundstjänsten.
+    /// <paramref name="delivery"/> måste dela <paramref name="db"/> (samma scope).
+    /// </summary>
+    public static async Task ExecuteDueActionsAsync(
+        AppDbContext db, ISupportReplyDelivery delivery, ILogger logger, CancellationToken ct = default)
     {
-        var now = DateTime.UtcNow;
-        var due = await db.SupportTicketScheduledActions
-            .Where(a => !a.Executed && a.ScheduledAt <= now)
+        var dueIds = await db.SupportTicketScheduledActions
+            .Where(a => !a.Executed && a.ScheduledAt <= DateTime.UtcNow)
+            .OrderBy(a => a.ScheduledAt)
+            .Select(a => a.Id)
             .ToListAsync(ct);
 
-        foreach (var action in due)
+        foreach (var id in dueIds)
         {
-            var ticket = await db.SupportTickets.FindAsync([action.TicketId], ct);
-            if (ticket == null) { action.Executed = true; action.ExecutedAt = now; continue; }
-
-            switch (action.Type)
+            try
             {
-                case "svar":
-                    db.SupportTicketMessages.Add(new SupportTicketMessage
-                    {
-                        TicketId     = ticket.Id,
-                        SenderType   = "agent",
-                        AuthorUserId = action.CreatedByUserId,
-                        Text         = action.Text ?? string.Empty,
-                        IsInternal   = false,
-                    });
-                    break;
-
-                case "intern":
-                    db.SupportTicketMessages.Add(new SupportTicketMessage
-                    {
-                        TicketId     = ticket.Id,
-                        SenderType   = "agent",
-                        AuthorUserId = action.CreatedByUserId,
-                        Text         = action.Text ?? string.Empty,
-                        IsInternal   = true,
-                    });
-                    break;
-
-                case "tilldela":
-                    ticket.AssignedToUserId = action.ReassignToUserId;
-                    var instruktion = string.IsNullOrWhiteSpace(action.Instruction) ? "" : $" — {action.Instruction}";
-                    db.SupportTicketMessages.Add(new SupportTicketMessage
-                    {
-                        TicketId     = ticket.Id,
-                        SenderType   = "agent",
-                        AuthorUserId = action.CreatedByUserId,
-                        Text         = $"Ärendet ombokat automatiskt (schemalagd åtgärd){instruktion}",
-                        IsInternal   = true,
-                    });
-                    break;
+                await ExecuteOneAsync(db, delivery, id, ct);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Schemalagd supportåtgärd {ActionId} kunde inte utföras — hoppar över och fortsätter", id);
+                // Kasta bort halvfärdiga ändringar så de inte följer med nästa åtgärds SaveChanges.
+                db.ChangeTracker.Clear();
+            }
+        }
+    }
 
-            ticket.UpdatedAt   = now;
-            action.Executed    = true;
-            action.ExecutedAt  = now;
+    private static async Task ExecuteOneAsync(AppDbContext db, ISupportReplyDelivery delivery, Guid actionId, CancellationToken ct)
+    {
+        var action = await db.SupportTicketScheduledActions.FirstOrDefaultAsync(a => a.Id == actionId && !a.Executed, ct);
+        if (action == null) return;
+
+        var now = DateTime.UtcNow;
+        void MarkExecuted() { action.Executed = true; action.ExecutedAt = now; }
+
+        var ticket = await db.SupportTickets.FindAsync([action.TicketId], ct);
+        if (ticket == null)
+        {
+            MarkExecuted();
+            await db.SaveChangesAsync(ct);
+            return;
         }
 
-        if (due.Count > 0) await db.SaveChangesAsync(ct);
+        switch (action.Type)
+        {
+            case SupportScheduledActionValidator.Svar:
+            case SupportScheduledActionValidator.Intern:
+                // Samma väg som AdminSupportController.Reply (spara + mejla + logga). Åtgärden
+                // markeras utförd i SAMMA SaveChanges som meddelandet, före mejlet skickas —
+                // så ett mejlfel (som loggas, inte kastas) eller en omkörning kan inte ge dubbla utskick.
+                await delivery.DeliverAsync(
+                    new SupportReplyDeliveryRequest(
+                        ticket, action.CreatedByUserId, action.Text ?? string.Empty,
+                        IsInternal: action.Type == SupportScheduledActionValidator.Intern,
+                        AktörTyp: AktörTyper.System, Scheduled: true),
+                    beforeSave: MarkExecuted, ct);
+                return;
+
+            case SupportScheduledActionValidator.Tilldela:
+                ticket.AssignedToUserId = action.ReassignToUserId;
+                var instruktion = string.IsNullOrWhiteSpace(action.Instruction) ? "" : $" — {action.Instruction}";
+                db.SupportTicketMessages.Add(new SupportTicketMessage
+                {
+                    TicketId     = ticket.Id,
+                    SenderType   = "agent",
+                    AuthorUserId = action.CreatedByUserId,
+                    Text         = $"Ärendet ombokat automatiskt (schemalagd åtgärd){instruktion}",
+                    IsInternal   = true,
+                });
+                break;
+        }
+
+        ticket.UpdatedAt = now;
+        MarkExecuted();
+        await db.SaveChangesAsync(ct);
     }
 }

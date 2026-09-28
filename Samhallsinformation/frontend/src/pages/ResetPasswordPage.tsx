@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
+import { visaFel } from '../lib/felmeddelande'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -31,7 +32,7 @@ export default function ResetPasswordPage() {
       setDone(true)
       setTimeout(() => navigate('/login', { replace: true }), 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Något gick fel')
+      setError(visaFel(err, 'Något gick fel, försök igen'))
     } finally {
       setLoading(false)
     }

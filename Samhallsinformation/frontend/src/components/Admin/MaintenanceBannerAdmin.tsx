@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   type MaintenanceBanner, type BannerÅskådare, type MaintenanceBannerRequest,
-  fetchMaintenanceBanners, createMaintenanceBanner, updateMaintenanceBanner, deleteMaintenanceBanner,
+  fetchAdminMaintenanceBanners, createMaintenanceBanner, updateMaintenanceBanner, deleteMaintenanceBanner,
 } from '../../api/maintenanceBanners'
 import { formatSvensktDatumTid, isoTillDatetimeLocal } from '../../lib/tid'
+import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
 
 const ÅSKÅDARE: BannerÅskådare[] = ['Alla', 'Besökare', 'Användare']
 
@@ -33,8 +34,8 @@ function status(b: MaintenanceBanner): { text: string; färg: string } {
 // Ta bort-modal
 // ---------------------------------------------------------------------------
 
-function TaBortModal({ meddelande, onBekräfta, onStäng }: {
-  meddelande: string; onBekräfta: () => void; onStäng: () => void
+function TaBortModal({ meddelande, onBekräfta, onStäng, fel, arIgang }: {
+  meddelande: string; onBekräfta: () => void; onStäng: () => void; fel?: unknown; arIgang?: boolean
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
@@ -47,9 +48,10 @@ function TaBortModal({ meddelande, onBekräfta, onStäng }: {
           <p className="text-sm text-slate-600">
             <strong className="text-slate-800">"{meddelande}"</strong> tas bort permanent och slutar visas direkt.
           </p>
+          <MutationFel fel={fel} reserv="Meddelandet kunde inte tas bort. Försök igen." />
           <div className="flex gap-3">
             <button onClick={onStäng}    className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Avbryt</button>
-            <button onClick={onBekräfta} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-xl transition-colors">Ta bort</button>
+            <button onClick={onBekräfta} disabled={arIgang} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors">{arIgang ? 'Tar bort...' : 'Ta bort'}</button>
           </div>
         </div>
       </div>
@@ -61,10 +63,12 @@ function TaBortModal({ meddelande, onBekräfta, onStäng }: {
 // Formulärmodal
 // ---------------------------------------------------------------------------
 
-function FormModal({ redigerar, onSpara, onStäng }: {
+function FormModal({ redigerar, onSpara, onStäng, sparar, fel }: {
   redigerar: MaintenanceBanner | null
   onSpara:   (req: MaintenanceBannerRequest) => void
   onStäng:   () => void
+  sparar?:   boolean
+  fel?:      unknown
 }) {
   const [meddelande, setMeddelande] = useState(redigerar?.message ?? '')
   const [start, setStart]           = useState(redigerar ? isoTillDatetimeLocal(redigerar.startUtc) : '')
@@ -85,7 +89,7 @@ function FormModal({ redigerar, onSpara, onStäng }: {
   const kanAnvändaStandardtext = start !== '' && slut !== '' && new Date(slut) > new Date(start)
 
   function spara() {
-    if (!kanSpara) return
+    if (!kanSpara || sparar) return
     onSpara({
       message: meddelande.trim(),
       startUtc: new Date(start).toISOString(),
@@ -191,17 +195,20 @@ function FormModal({ redigerar, onSpara, onStäng }: {
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
-          <button onClick={onStäng} className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
-            Avbryt
-          </button>
-          <button
-            onClick={spara}
-            disabled={!kanSpara}
-            className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
-          >
-            {redigerar ? 'Spara ändringar' : 'Skapa meddelande'}
-          </button>
+        <div className="px-6 py-4 border-t border-slate-100 flex flex-col gap-3">
+          <MutationFel fel={fel} reserv="Meddelandet kunde inte sparas. Din inmatning finns kvar — försök igen." />
+          <div className="flex gap-3">
+            <button onClick={onStäng} className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+              Avbryt
+            </button>
+            <button
+              onClick={spara}
+              disabled={!kanSpara || sparar}
+              className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              {sparar ? 'Sparar...' : redigerar ? 'Spara ändringar' : 'Skapa meddelande'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -214,16 +221,18 @@ function FormModal({ redigerar, onSpara, onStäng }: {
 
 export default function MaintenanceBannerAdmin() {
   const queryClient = useQueryClient()
-  const { data: banners = [] } = useQuery({
-    queryKey: ['maintenance-banners'],
-    queryFn:  fetchMaintenanceBanners,
+  const bannerFråga = useQuery({
+    queryKey: ['admin-maintenance-banners'],
+    queryFn:  fetchAdminMaintenanceBanners,
   })
+  const banners = bannerFråga.data ?? []
 
   const [panelÖppen, setPanelÖppen] = useState(false)
   const [redigerar,  setRedigerar]  = useState<MaintenanceBanner | null>(null)
   const [taBort,     setTaBort]     = useState<MaintenanceBanner | null>(null)
 
   function invalidera() {
+    queryClient.invalidateQueries({ queryKey: ['admin-maintenance-banners'] })
     queryClient.invalidateQueries({ queryKey: ['maintenance-banners'] })
   }
 
@@ -234,14 +243,20 @@ export default function MaintenanceBannerAdmin() {
   })
   const deleteMutation = useMutation({ mutationFn: deleteMaintenanceBanner, onSuccess: invalidera })
 
-  function öppnaSkapa()                     { setRedigerar(null); setPanelÖppen(true) }
-  function öppnaRedigera(b: MaintenanceBanner) { setRedigerar(b);    setPanelÖppen(true) }
+  function öppnaSkapa()                     { createMutation.reset(); updateMutation.reset(); setRedigerar(null); setPanelÖppen(true) }
+  function öppnaRedigera(b: MaintenanceBanner) { createMutation.reset(); updateMutation.reset(); setRedigerar(b);    setPanelÖppen(true) }
   function stängPanel()                     { setPanelÖppen(false); setRedigerar(null) }
 
+  // Modalen stängs först när servern bekräftat (V3-8) — vid fel finns inmatningen kvar.
+  // Lås i en ref: react-query meddelar komponenten asynkront, så isPending hinner inte
+  // stoppa två klick i samma tick.
+  const sparaLås = useRef(false)
   function spara(req: MaintenanceBannerRequest) {
-    if (redigerar) updateMutation.mutate({ id: redigerar.id, req })
-    else            createMutation.mutate(req)
-    stängPanel()
+    if (sparaLås.current) return
+    sparaLås.current = true
+    const villkor = { onSuccess: stängPanel, onSettled: () => { sparaLås.current = false } }
+    if (redigerar) updateMutation.mutate({ id: redigerar.id, req }, villkor)
+    else            createMutation.mutate(req, villkor)
   }
 
   const sorterade = [...banners].sort((a, b) => new Date(b.startUtc).getTime() - new Date(a.startUtc).getTime())
@@ -251,12 +266,20 @@ export default function MaintenanceBannerAdmin() {
       {taBort && (
         <TaBortModal
           meddelande={taBort.message}
-          onBekräfta={() => { deleteMutation.mutate(taBort.id); setTaBort(null) }}
-          onStäng={() => setTaBort(null)}
+          onBekräfta={() => { if (!deleteMutation.isPending) deleteMutation.mutate(taBort.id, { onSuccess: () => setTaBort(null) }) }}
+          onStäng={() => { deleteMutation.reset(); setTaBort(null) }}
+          fel={deleteMutation.error}
+          arIgang={deleteMutation.isPending}
         />
       )}
       {panelÖppen && (
-        <FormModal redigerar={redigerar} onSpara={spara} onStäng={stängPanel} />
+        <FormModal
+          redigerar={redigerar}
+          onSpara={spara}
+          onStäng={stängPanel}
+          sparar={createMutation.isPending || updateMutation.isPending}
+          fel={redigerar ? updateMutation.error : createMutation.error}
+        />
       )}
 
       <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
@@ -278,7 +301,17 @@ export default function MaintenanceBannerAdmin() {
         </button>
       </div>
 
-      {sorterade.length === 0 ? (
+      {bannerFråga.isLoading ? (
+        <p className="px-6 py-8 text-center text-sm text-slate-400">Laddar driftmeddelanden...</p>
+      ) : bannerFråga.isError && bannerFråga.data === undefined ? (
+        <HamtningsFel
+          fel={bannerFråga.error}
+          reserv="Kunde inte hämta driftmeddelandena. Det här är inte samma sak som att inga finns."
+          onForsokIgen={() => { void bannerFråga.refetch() }}
+          arIgang={bannerFråga.isFetching}
+          className="px-6 py-8"
+        />
+      ) : sorterade.length === 0 ? (
         <p className="px-6 py-8 text-center text-sm text-slate-400">Inga driftmeddelanden skapade.</p>
       ) : (
         <div className="divide-y divide-slate-50">

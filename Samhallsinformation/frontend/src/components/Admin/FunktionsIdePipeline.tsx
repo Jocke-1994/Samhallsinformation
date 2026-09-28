@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchFeatureIdeas, createFeatureIdea, type IdeaStage, type FeatureIdeaListItemDto } from '../../api/featureIdeas'
 import IdeDetaljModal from './IdeDetaljModal'
+import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
 
 export const STAGE_LABELS: Record<IdeaStage, string> = {
   brainstorm:     'Brainstorm',
@@ -49,7 +50,10 @@ export default function FunktionsIdePipeline({ onÖppnaÄrende }: Props) {
   const [nyBeskrivning, setNyBeskrivning] = useState('')
 
   const queryClient = useQueryClient()
-  const { data: idéer = [] } = useQuery({ queryKey: ['feature-ideas'], queryFn: () => fetchFeatureIdeas() })
+  const idéFråga = useQuery({ queryKey: ['feature-ideas'], queryFn: () => fetchFeatureIdeas() })
+  const idéer = idéFråga.data ?? []
+  const idéerOkända = idéFråga.data === undefined
+  const skapaLås = useRef(false) // ref: react-query meddelar asynkront, så isPending stoppar inte två klick i samma tick
 
   const createMutation = useMutation({
     mutationFn: () => createFeatureIdea({ title: nyTitel.trim(), description: nyBeskrivning.trim() || undefined }),
@@ -111,13 +115,18 @@ export default function FunktionsIdePipeline({ onÖppnaÄrende }: Props) {
             rows={3}
             className="text-sm border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:border-violet-400 resize-none"
           />
+          <MutationFel fel={createMutation.error} reserv="Idén kunde inte skapas. Din text finns kvar — försök igen." />
           <div className="flex items-center gap-2">
             <button
-              onClick={() => createMutation.mutate()}
+              onClick={() => {
+                if (skapaLås.current) return
+                skapaLås.current = true
+                createMutation.mutate(undefined, { onSettled: () => { skapaLås.current = false } })
+              }}
               disabled={!nyTitel.trim() || createMutation.isPending}
               className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors"
             >
-              Skapa idé
+              {createMutation.isPending ? 'Skapar...' : 'Skapa idé'}
             </button>
             <button
               onClick={() => setVisaForm(false)}
@@ -155,7 +164,21 @@ export default function FunktionsIdePipeline({ onÖppnaÄrende }: Props) {
                   <td className="pl-4 pr-5 py-4 text-slate-400 text-xs">{formatDate(i.updatedAt)}</td>
                 </tr>
               ))}
-              {filtrerade.length === 0 && (
+              {idéFråga.isLoading && (
+                <tr><td colSpan={5} className="py-16 text-center text-sm text-slate-400">Laddar idéer...</td></tr>
+              )}
+              {idéFråga.isError && (
+                <tr><td colSpan={5} className="p-0">
+                  <HamtningsFel
+                    fel={idéFråga.error}
+                    reserv={idéerOkända ? 'Kunde inte hämta idéerna. Det här är inte samma sak som att inga idéer finns.' : 'Kunde inte uppdatera listan. Den kan vara inaktuell.'}
+                    onForsokIgen={() => { void idéFråga.refetch() }}
+                    arIgang={idéFråga.isFetching}
+                    className="py-12"
+                  />
+                </td></tr>
+              )}
+              {!idéFråga.isLoading && !idéerOkända && filtrerade.length === 0 && (
                 <tr><td colSpan={5} className="py-16 text-center text-sm text-slate-400">Inga idéer i det här läget.</td></tr>
               )}
             </tbody>

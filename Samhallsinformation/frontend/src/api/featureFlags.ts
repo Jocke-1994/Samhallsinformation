@@ -1,10 +1,9 @@
 import { adminFetch } from './adminFetch'
-
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
+import { felFranSvar, publikFetch } from './hamta'
 
 export async function fetchFeatureFlagOverrides(): Promise<Record<string, boolean>> {
-  const res = await fetch(`${API_BASE}/api/feature-flags`)
-  if (!res.ok) throw new Error(`fetchFeatureFlagOverrides: ${res.status}`)
+  const res = await publikFetch(`/api/feature-flags`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchFeatureFlagOverrides')
   return res.json()
 }
 
@@ -13,12 +12,12 @@ export async function setFeatureFlagOverride(key: string, value: boolean): Promi
     method: 'PUT',
     body:   JSON.stringify({ value }),
   })
-  if (!res.ok) throw new Error(`setFeatureFlagOverride: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'setFeatureFlagOverride')
 }
 
 export async function resetFeatureFlagOverrides(): Promise<void> {
   const res = await adminFetch('/api/admin/feature-flags', { method: 'DELETE' })
-  if (!res.ok) throw new Error(`resetFeatureFlagOverrides: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'resetFeatureFlagOverrides')
 }
 
 export interface AdminFeatureFlagOverride {
@@ -31,7 +30,7 @@ export interface AdminFeatureFlagOverride {
 // publika fetchFeatureFlagOverrides ovan, som bara ger Key→Value.
 export async function fetchAdminFeatureFlags(): Promise<AdminFeatureFlagOverride[]> {
   const res = await adminFetch('/api/admin/feature-flags')
-  if (!res.ok) throw new Error(`fetchAdminFeatureFlags: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminFeatureFlags')
   return res.json()
 }
 
@@ -40,5 +39,5 @@ export async function setFeatureFlagRedo(key: string, redoAttLanseras: boolean):
     method: 'PUT',
     body:   JSON.stringify({ redoAttLanseras }),
   })
-  if (!res.ok) throw new Error(`setFeatureFlagRedo: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'setFeatureFlagRedo')
 }

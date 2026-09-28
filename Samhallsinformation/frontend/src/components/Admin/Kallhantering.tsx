@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchAdminSources, createAdminSource, updateAdminSource, deleteAdminSource, resyncAdminSource } from '../../api/sources'
 import type { AdminSource } from '../../types'
+import ConfirmDialog from '../common/ConfirmDialog'
+import { MockBadge, MockBanner } from '../common/MockBadge'
+import { MutationFel } from '../common/HamtningsStatus'
+import { visaFel } from '../../lib/felmeddelande'
 
 export type KällStatus = 'OK' | 'Begränsad drift' | 'Nere' | 'Okänd'
 type Kategori        = 'Nationell' | 'Regional' | 'Kommunal' | 'Transport' | 'Väder'
@@ -236,11 +240,25 @@ function toKälla(s: AdminSource): Källa {
   }
 }
 
+// Fält som redigeringsformuläret äger. Bara det användaren faktiskt rört sparas i utkastet.
+export type KällUtkast = Partial<Pick<Källa, 'namn' | 'url' | 'kategori' | 'publicerad'>>
+
+// Delta mot källans AKTUELLA läge (inte en kopia från när formuläret öppnades): bara ändrade fält
+// skickas, och aldrig isActive — så att en ändring gjord någon annanstans under tiden
+// (snabbknapp, annan flik, annan admin) inte skrivs över med ett föråldrat värde.
+export function beräknaKällDelta(aktuell: Källa, utkast: KällUtkast): Parameters<typeof updateAdminSource>[1] {
+  const delta: Parameters<typeof updateAdminSource>[1] = {}
+  if (utkast.namn       !== undefined && utkast.namn       !== aktuell.namn)       delta.name        = utkast.namn
+  if (utkast.url        !== undefined && utkast.url        !== aktuell.url)        delta.url         = utkast.url
+  if (utkast.kategori   !== undefined && utkast.kategori   !== aktuell.kategori)   delta.category    = utkast.kategori
+  if (utkast.publicerad !== undefined && utkast.publicerad !== aktuell.publicerad) delta.isPublished = utkast.publicerad
+  return delta
+}
 
 export default function Kallhantering() {
   const queryClient = useQueryClient()
 
-  const { data: apiSources = [], isLoading, isError, error } = useQuery({
+  const { data: apiSources = [], isLoading, isError, isFetching, error, refetch } = useQuery({
     queryKey: ['admin-sources'],
     queryFn: fetchAdminSources,
     retry: 1,
@@ -258,6 +276,11 @@ export default function Kallhantering() {
   const deleteMutation = useMutation({
     mutationFn: deleteAdminSource,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-sources'] }),
+    onError: (err, id) => {
+      // Visa serverns text (t.ex. att dedikerade källor inte kan raderas) på källans rad — samma ruta som omsynk.
+      setResyncResultat({ id, text: err instanceof Error ? `✗ ${err.message}` : '✗ Borttagning misslyckades' })
+      setTimeout(() => setResyncResultat(null), 6000)
+    },
   })
   const resyncMutation = useMutation({
     mutationFn: resyncAdminSource,
@@ -276,11 +299,18 @@ export default function Kallhantering() {
 
   const [sök,         setSök]         = useState('')
   const [filterKat,   setFilterKat]   = useState<Kategori | ''>('')
-  const [redigerar,   setRedigerar]   = useState<Källa | null>(null)
+  // Redigering: bara vilken källa som är öppen + det användaren ändrat. Övriga fält läses live
+  // från serverns senaste läge (query-cachen), så formuläret aldrig håller en gammal kopia.
+  const [redigerarId, setRedigerarId] = useState<number | null>(null)
+  const [utkast,      setUtkast]      = useState<KällUtkast>({})
+  const aktuellRedigerad = redigerarId != null ? kallor.find(k => k.id === redigerarId) : undefined
+  const redigerar: Källa | null = aktuellRedigerad ? { ...aktuellRedigerad, ...utkast } : null
+  const [attTaBort,   setAttTaBort]   = useState<{ id: number; namn: string } | null>(null)
   const [visaForm,    setVisaForm]    = useState(false)
   const [aktiverar,   setAktiverar]   = useState<Set<string>>(new Set())
   const [sparad,      setSparad]      = useState<number | null>(null)
   const [resyncResultat, setResyncResultat] = useState<{ id: number; text: string } | null>(null)
+  const [aktiveringFel, setAktiveringFel] = useState<{ url: string; text: string } | null>(null)
   const [ändringar,   setÄndringar]   = useState<SchemalagdÄndring[]>(INITIAL_ÄNDRINGAR)
   const [visaÄndring,    setVisaÄndring]    = useState(false)
   const [nyÄndring,      setNyÄndring]      = useState<Omit<SchemalagdÄndring, 'id'>>({
@@ -295,27 +325,39 @@ export default function Kallhantering() {
     setTimeout(() => setSparad(null), 2000)
   }
 
+  // V3-8: "Sparad" visas och formuläret stängs först när servern bekräftat. Vid fel
+  // finns felet kvar i UI:t och (för redigering) användarens inmatning.
   function toggleAktiv(k: Källa) {
-    updateMutation.mutate({ id: k.id, req: { isActive: !k.aktiv } })
-    flashSparad(k.id)
+    if (updateMutation.isPending) return
+    updateMutation.mutate({ id: k.id, req: { isActive: !k.aktiv } }, { onSuccess: () => flashSparad(k.id) })
   }
 
   function togglePublicerad(k: Källa) {
-    updateMutation.mutate({ id: k.id, req: { isPublished: !k.publicerad } })
-    flashSparad(k.id)
+    if (updateMutation.isPending) return
+    updateMutation.mutate({ id: k.id, req: { isPublished: !k.publicerad } }, { onSuccess: () => flashSparad(k.id) })
+  }
+
+  function öppnaRedigering(id: number | null) {
+    setRedigerarId(id)
+    setUtkast({})
+    updateMutation.reset()
   }
 
   function sparaRedigering() {
-    if (!redigerar) return
-    updateMutation.mutate({
-      id: redigerar.id,
-      req: { name: redigerar.namn, url: redigerar.url, category: redigerar.kategori, isPublished: redigerar.publicerad },
+    if (!aktuellRedigerad || updateMutation.isPending) return
+    const delta = beräknaKällDelta(aktuellRedigerad, utkast)
+    if (Object.keys(delta).length === 0) {
+      öppnaRedigering(null)
+      return
+    }
+    const id = aktuellRedigerad.id
+    updateMutation.mutate({ id, req: delta }, {
+      onSuccess: () => { flashSparad(id); öppnaRedigering(null) },
     })
-    flashSparad(redigerar.id)
-    setRedigerar(null)
   }
 
   function aktiveraKälla(k: KureradKälla) {
+    setAktiveringFel(null)
     setAktiverar(prev => new Set(prev).add(k.url))
     createMutation.mutate({
       name:      k.namn,
@@ -329,15 +371,23 @@ export default function Kallhantering() {
         setAktiverar(prev => { const n = new Set(prev); n.delete(k.url); return n })
         flashSparad(created.id)
       },
-      onError: () => {
+      onError: (err) => {
         setAktiverar(prev => { const n = new Set(prev); n.delete(k.url); return n })
+        setAktiveringFel({ url: k.url, text: visaFel(err, `Kunde inte lägga till ${k.namn}. Försök igen.`) })
       },
     })
   }
 
+  // Borttagning är permanent och tar via cascade bort ALLA användares
+  // prenumerationer på källan — därför alltid via bekräftelsedialogen.
+  function begärTaBort(k: Källa) {
+    setAttTaBort({ id: k.id, namn: k.namn })
+  }
+
   function taBort(id: number) {
+    setAttTaBort(null)
     deleteMutation.mutate(id)
-    if (redigerar?.id === id) setRedigerar(null)
+    if (redigerarId === id) öppnaRedigering(null)
   }
 
   function kontrolleraFlöde(id: number) {
@@ -348,10 +398,6 @@ export default function Kallhantering() {
       setFlöden(prev => prev.map(f => f.id === id ? { ...f, senastKontroll: nu } : f))
       setKontrollerarFlöde(prev => { const n = new Set(prev); n.delete(id); return n })
     }, delay)
-  }
-
-  function kontrolleraAllaFlöden() {
-    flöden.forEach(f => kontrolleraFlöde(f.id))
   }
 
   function importeraÄndring(f: ExterntFlöde) {
@@ -383,6 +429,21 @@ export default function Kallhantering() {
   return (
     <div className="flex flex-col gap-5">
 
+      {attTaBort && (
+        <ConfirmDialog
+          rubrik={`Ta bort källan "${attTaBort.namn}"?`}
+          bekräftaText="Ta bort källan"
+          onBekräfta={() => taBort(attTaBort.id)}
+          onAvbryt={() => setAttTaBort(null)}
+        >
+          <p>
+            Det här tar bort källan <strong>{attTaBort.namn}</strong> och alla användares
+            prenumerationer på den — kan inte ångras. Källans hämtade händelser (och användares
+            sparade/delade händelser från den) tas bort samtidigt.
+          </p>
+        </ConfirmDialog>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -391,11 +452,11 @@ export default function Kallhantering() {
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">LIVE</span>
           </h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            {isLoading ? 'Laddar...' : `${kallor.length} källor registrerade · ${kallor.filter(k => k.aktiv).length} aktiva`}
+            {isLoading ? 'Laddar...' : isError && apiSources.length === 0 ? 'Antal okänt — källistan kunde inte hämtas' : `${kallor.length} källor registrerade · ${kallor.filter(k => k.aktiv).length} aktiva`}
           </p>
         </div>
         <button
-          onClick={() => { setVisaForm(true); setRedigerar(null) }}
+          onClick={() => { setVisaForm(true); öppnaRedigering(null) }}
           className="bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
         >
           + Lägg till källa
@@ -404,7 +465,7 @@ export default function Kallhantering() {
 
       {/* Auth-fel */}
       {isError && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+        <div role="alert" className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-start gap-3">
           <span className="text-red-500 text-lg shrink-0">⚠</span>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-red-800">Kunde inte hämta källista från backend</p>
@@ -414,12 +475,18 @@ export default function Kallhantering() {
             </p>
           </div>
           <button
-            onClick={() => window.location.reload()}
-            className="text-xs text-red-600 hover:text-red-800 font-medium shrink-0"
+            onClick={() => { void refetch() }}
+            disabled={isFetching}
+            className="text-xs text-red-600 hover:text-red-800 font-medium shrink-0 disabled:opacity-40"
           >
-            Ladda om
+            {isFetching ? 'Försöker...' : 'Försök igen'}
           </button>
         </div>
+      )}
+
+      {/* Misslyckad av/på- eller publiceringsväxling (redigeringsformuläret visar sitt eget fel) */}
+      {redigerar === null && (
+        <MutationFel fel={updateMutation.error} reserv="Ändringen kunde inte sparas. Försök igen." className="bg-red-50 border border-red-200 rounded-2xl px-5 py-3" />
       )}
 
       {/* Kuraterad källlista */}
@@ -465,6 +532,7 @@ export default function Kallhantering() {
                           <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{k.kategori}</span>
                         </div>
                         <p className="text-xs text-slate-400 mt-0.5">{k.beskrivning}</p>
+                        {aktiveringFel?.url === k.url && <p role="alert" className="text-xs text-red-600 mt-1">{aktiveringFel.text}</p>}
                       </div>
                       <div className="shrink-0">
                         {k.redo ? (
@@ -564,19 +632,19 @@ export default function Kallhantering() {
                         onClick={() => resyncMutation.mutate(k.id)}
                         disabled={resyncMutation.isPending && resyncMutation.variables === k.id}
                         title="Hämta om och skriv över redan sparade händelser med senaste ingestor-logiken"
-                        className="text-xs text-sky-600 hover:text-sky-800 font-medium opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+                        className="text-xs text-sky-600 hover:text-sky-800 font-medium [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all disabled:opacity-50"
                       >
                         {resyncMutation.isPending && resyncMutation.variables === k.id ? 'Synkar...' : 'Synka om'}
                       </button>
                       <button
-                        onClick={() => setRedigerar(redigerar?.id === k.id ? null : { ...k })}
-                        className="text-xs text-violet-600 hover:text-violet-800 font-medium opacity-0 group-hover:opacity-100 transition-all"
+                        onClick={() => öppnaRedigering(redigerarId === k.id ? null : k.id)}
+                        className="text-xs text-violet-600 hover:text-violet-800 font-medium [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
                       >
                         Redigera
                       </button>
                       <button
-                        onClick={() => taBort(k.id)}
-                        className="text-xs text-red-400 hover:text-red-600 font-medium opacity-0 group-hover:opacity-100 transition-all"
+                        onClick={() => begärTaBort(k)}
+                        className="text-xs text-red-400 hover:text-red-600 font-medium [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
                       >
                         Ta bort
                       </button>
@@ -601,22 +669,22 @@ export default function Kallhantering() {
                       <div className="grid grid-cols-3 gap-4">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-medium text-slate-500">Namn</label>
-                          <input type="text" value={redigerar.namn} onChange={e => setRedigerar(p => p ? { ...p, namn: e.target.value } : p)} className={inputCls} />
+                          <input type="text" value={redigerar.namn} onChange={e => setUtkast(u => ({ ...u, namn: e.target.value }))} className={inputCls} />
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-medium text-slate-500">URL</label>
-                          <input type="url" value={redigerar.url} onChange={e => setRedigerar(p => p ? { ...p, url: e.target.value } : p)} className={inputCls} />
+                          <input type="url" value={redigerar.url} onChange={e => setUtkast(u => ({ ...u, url: e.target.value }))} className={inputCls} />
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-medium text-slate-500">Kategori</label>
-                          <select value={redigerar.kategori} onChange={e => setRedigerar(p => p ? { ...p, kategori: e.target.value as Kategori } : p)} className={selectCls}>
+                          <select value={redigerar.kategori} onChange={e => setUtkast(u => ({ ...u, kategori: e.target.value as Kategori }))} className={selectCls}>
                             {KATEGORIER.map(kat => <option key={kat} value={kat}>{kat}</option>)}
                           </select>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-3">
                         <button
-                          onClick={() => setRedigerar(p => p ? { ...p, publicerad: !p.publicerad } : p)}
+                          onClick={() => setUtkast(u => ({ ...u, publicerad: !redigerar.publicerad }))}
                           className={`w-10 h-5 rounded-full relative transition-colors shrink-0 ${redigerar.publicerad ? 'bg-green-500' : 'bg-slate-200'}`}
                         >
                           <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${redigerar.publicerad ? 'left-5' : 'left-0.5'}`} />
@@ -628,6 +696,7 @@ export default function Kallhantering() {
                           }
                         </span>
                       </div>
+                      <MutationFel fel={updateMutation.error} reserv="Ändringen kunde inte sparas. Din inmatning finns kvar — försök igen." className="mt-3" />
                       <div className="flex gap-3 mt-4">
                         <button
                           onClick={sparaRedigering}
@@ -636,7 +705,7 @@ export default function Kallhantering() {
                         >
                           {updateMutation.isPending ? 'Sparar...' : 'Spara'}
                         </button>
-                        <button onClick={() => setRedigerar(null)} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">Avbryt</button>
+                        <button onClick={() => öppnaRedigering(null)} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">Avbryt</button>
                       </div>
                     </td>
                   </tr>
@@ -657,17 +726,22 @@ export default function Kallhantering() {
           <div>
             <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
               Schemalagda ändringar
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">MOCK</span>
+              <MockBadge />
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">Planerat underhåll, av- och påslagningar</p>
           </div>
           <button
-            onClick={() => setVisaÄndring(v => !v)}
-            className="bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+            disabled
+            title="Inte kopplat — schemalagda ändringar sparas ingenstans och ändrar inget"
+            className="bg-slate-100 text-slate-400 text-sm font-medium px-4 py-2 rounded-xl cursor-not-allowed"
           >
             + Schemalägg
           </button>
         </div>
+        <div className="px-6 py-3 border-b border-slate-100">
+          <MockBanner>Exempeldata i webbläsaren — inget sparas och inget slås av eller på enligt schemat.</MockBanner>
+        </div>
+        <fieldset disabled className="min-w-0 border-0 p-0 m-0 opacity-60">
 
         {/* Formulär */}
         {visaÄndring && (
@@ -861,6 +935,7 @@ export default function Kallhantering() {
             })}
           </div>
         )}
+        </fieldset>
       </div>
 
       {/* Externa statusflöden */}
@@ -869,17 +944,22 @@ export default function Kallhantering() {
           <div>
             <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
               Externa statusflöden
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">MOCK</span>
+              <MockBadge />
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">Läser källornas egna driftstatus — uppdateras automatiskt</p>
+            <p className="text-xs text-slate-400 mt-0.5">Skulle läsa källornas egna driftstatus — inte byggt</p>
           </div>
           <button
-            onClick={kontrolleraAllaFlöden}
-            className="bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+            disabled
+            title="Inte kopplat — statusen är påhittad och inga externa flöden läses"
+            className="bg-slate-100 text-slate-400 text-sm font-medium px-4 py-2 rounded-xl cursor-not-allowed"
           >
             Kontrollera alla
           </button>
         </div>
+        <div className="px-6 py-3 border-b border-slate-100">
+          <MockBanner>Påhittad status — inga externa driftflöden läses, och "Kontrollera" ändrar bara en tidsstämpel. Texten under rubriken om automatisk uppdatering gäller inte.</MockBanner>
+        </div>
+        <fieldset disabled className="min-w-0 border-0 p-0 m-0 opacity-60">
 
         <div className="divide-y divide-slate-100">
           {flöden.map(f => {
@@ -959,6 +1039,7 @@ export default function Kallhantering() {
             )
           })}
         </div>
+        </fieldset>
       </div>
 
     </div>

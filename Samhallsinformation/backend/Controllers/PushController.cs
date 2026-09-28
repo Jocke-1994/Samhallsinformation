@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Push;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 using Samhallsinformation.Services;
@@ -120,26 +121,14 @@ public class PushController : ControllerBase
     // utan att någon flik är öppen) — claimId är en slumpad engångs-Guid som
     // bara någonsin skickats till just den här användarens egna enheter via
     // deras krypterade push-kanal, så den fungerar som sin egen spärr.
-    // Ett okänt claimId (redan uttömt av en cleanup, eller aldrig funnits)
-    // svarar "claimed: true" — fail-open, hellre en extra notis än att en
-    // riktig händelse aldrig visas någonstans. Load-check-save (inte en
-    // atomär UPDATE ... WHERE — ExecuteUpdateAsync stöds inte av InMemory-
-    // providern testsviten använder) — ett teoretiskt race mellan två
-    // enheter som claimar i EXAKT samma millisekund kan ge en dubbelvisad
-    // notis i sällsynta fall, aldrig sämre än beteendet innan den här
-    // funktionen fanns.
+    // Logiken (atomär first-claim-wins + hantering av okänt claimId) bor i
+    // PushClaims.TryClaimAsync — se den för resonemanget.
     [HttpPost("claim")]
     [AllowAnonymous]
     public async Task<IActionResult> Claim([FromBody] ClaimRequest req)
     {
-        var claim = await _db.PushDispatchClaims.FirstOrDefaultAsync(c => c.Id == req.ClaimId);
-        if (claim == null) return Ok(new { claimed = true });
-        if (claim.ClaimedAt != null) return Ok(new { claimed = false });
-
-        claim.ClaimedAt = DateTime.UtcNow;
-        claim.ClaimedByDeviceId = req.DeviceId;
-        await _db.SaveChangesAsync();
-        return Ok(new { claimed = true });
+        var claimed = await PushClaims.TryClaimAsync(_db, req.ClaimId, req.DeviceId);
+        return Ok(new { claimed });
     }
 
     // Anonym — frontend behöver den publika nyckeln för pushManager.subscribe(),
@@ -157,6 +146,13 @@ public class PushController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Subscribe([FromBody] SubscribeRequest req)
     {
+        // Blind SSRF-skydd (E1#6): servern POST:ar senare mot endpointen, så den
+        // måste vara https och tillhöra en känd push-tjänst.
+        if (!PushEndpointValidator.TryValidate(
+                req.Endpoint, out var endpointError,
+                PushEndpointValidator.ParseExtraHosts(_config[PushEndpointValidator.ExtraHostsConfigKey])))
+            return BadRequest(new { error = endpointError });
+
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
         // Upsert på Endpoint (inte UserId+Endpoint) — ett endpoint tillhör en

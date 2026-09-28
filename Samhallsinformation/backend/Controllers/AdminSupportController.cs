@@ -4,27 +4,32 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Auth;
+using Samhallsinformation.Application.Support;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 using Samhallsinformation.Services;
 
+// Support-inboxen är Support-rollens startsida (beslut D1, V3-10): alla actions
+// här är ärendehantering och tillåter därför Admin ELLER Support. Ingen action
+// i den här controllern ska vara Admin-only — gör en action det, flytta den
+// till en egen controller så att klassattributet förblir sanningen.
 [ApiController]
 [Route("api/admin/support")]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = AdminRoller.AdminEllerSupport)]
 public class AdminSupportController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IAktivitetsloggService _aktivitetslogg;
-    private readonly IEmailService _email;
-    private readonly ILogger<AdminSupportController> _logger;
+    private readonly ISupportReplyDelivery _replyDelivery;
 
-    public AdminSupportController(AppDbContext db, IAktivitetsloggService aktivitetslogg, IEmailService email, ILogger<AdminSupportController> logger)
+    public AdminSupportController(AppDbContext db, IAktivitetsloggService aktivitetslogg, ISupportReplyDelivery replyDelivery)
     {
         _db = db;
         _aktivitetslogg = aktivitetslogg;
-        _email = email;
-        _logger = logger;
+        _replyDelivery = replyDelivery;
     }
 
     private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -150,46 +155,12 @@ public class AdminSupportController : ControllerBase
     [HttpPost("tickets/{id}/reply")]
     public async Task<IActionResult> Reply(Guid id, [FromBody] AgentReplyRequest req)
     {
-        var ticket = await _db.SupportTickets.Include(t => t.CreatedByUser).FirstOrDefaultAsync(t => t.Id == id);
+        var ticket = await _db.SupportTickets.FirstOrDefaultAsync(t => t.Id == id);
         if (ticket == null) return NotFound();
 
-        _db.SupportTicketMessages.Add(new SupportTicketMessage
-        {
-            TicketId     = ticket.Id,
-            SenderType   = "agent",
-            AuthorUserId = CurrentUserId,
-            Text         = req.Text,
-            IsInternal   = req.IsInternal,
-        });
-        ticket.UpdatedAt = DateTime.UtcNow;
-
-        await _db.SaveChangesAsync();
-        var ärendeNummer = $"SUP-{ticket.TicketNumber:D4}";
-        await _aktivitetslogg.LogAsync(
-            AktörTyper.Admin, LoggTyper.Ärende,
-            $"Ärende svarat — {ticket.Subject}",
-            req.IsInternal ? $"Intern anteckning — {ärendeNummer}" : $"Svar skickat till medborgaren — {ärendeNummer}",
-            relateratÄrendeId: ticket.Id);
-
-        // Skickas som riktigt mejl bara för svar avsedda för medborgaren — en
-        // adress att skicka till måste finnas (anonym feedback utan ContactEmail
-        // har ingen). Ett Resend-fel ska aldrig få det redan sparade svaret att
-        // se ut som att det misslyckades, därför fångas felet och loggas istället.
-        if (!req.IsInternal)
-        {
-            var toEmail = ticket.ContactEmail ?? ticket.CreatedByUser?.Email;
-            if (!string.IsNullOrWhiteSpace(toEmail))
-            {
-                try
-                {
-                    await _email.SendTicketReplyAsync(toEmail, ticket.TicketNumber, ticket.Subject, req.Text, ticket.InboundAddress);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Kunde inte skicka ärendesvar som mejl för ärende {TicketNumber}", ticket.TicketNumber);
-                }
-            }
-        }
+        // Spara, mejla medborgaren och logga sker i den delade leveranstjänsten —
+        // samma väg som schemalagda svar (SupportScheduledActionService).
+        await _replyDelivery.DeliverAsync(new SupportReplyDeliveryRequest(ticket, CurrentUserId, req.Text, req.IsInternal));
 
         return Ok();
     }
@@ -252,7 +223,7 @@ public class AdminSupportController : ControllerBase
         var ticket = await _db.SupportTickets.FindAsync(id);
         if (ticket == null) return NotFound();
 
-        ticket.ReminderAt   = req.ReminderAt;
+        ticket.ReminderAt   = UtcDateTime.Ensure(req.ReminderAt);
         ticket.ReminderNote = req.ReminderNote;
         ticket.UpdatedAt    = DateTime.UtcNow;
         await _db.SaveChangesAsync();
@@ -263,13 +234,28 @@ public class AdminSupportController : ControllerBase
     public async Task<IActionResult> AddScheduledAction(Guid id, [FromBody] AddScheduledActionRequest req)
     {
         var ticket = await _db.SupportTickets.FindAsync(id);
-        if (ticket == null) return NotFound();
+        if (ticket == null) return BadRequest("Ärendet finns inte.");
+        if (SupportScheduledActionValidator.IsClosed(ticket.Status))
+            return BadRequest("Ärendet är avslutat — det går inte att schemalägga åtgärder på det.");
+
+        var scheduledAt = SupportScheduledActionValidator.NormalizeToUtc(req.ScheduledAt);
+        var fel = SupportScheduledActionValidator.Validate(req.Type, scheduledAt, req.Text, req.Instruction, DateTime.UtcNow);
+        if (fel != null) return BadRequest(fel);
+
+        if (req.Type == SupportScheduledActionValidator.Tilldela)
+        {
+            if (req.ReassignToUserId == null)
+                return BadRequest("Välj vem ärendet ska tilldelas.");
+            var mottagare = await _db.Users.AnyAsync(u => u.Id == req.ReassignToUserId && (u.Role == "Admin" || u.Role == "Support"));
+            if (!mottagare)
+                return BadRequest("Den valda handläggaren finns inte.");
+        }
 
         var action = new SupportTicketScheduledAction
         {
             TicketId         = ticket.Id,
             Type             = req.Type,
-            ScheduledAt      = req.ScheduledAt,
+            ScheduledAt      = scheduledAt,
             CreatedByUserId  = CurrentUserId,
             Text             = req.Text,
             ReassignToUserId = req.ReassignToUserId,

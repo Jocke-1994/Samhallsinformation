@@ -154,18 +154,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var user   = await _db.Users.FindAsync(userId);
-        if (user == null) return NotFound();
-
-        if (_hasher.VerifyHashedPassword(user, user.PasswordHash, req.CurrentPassword) == PasswordVerificationResult.Failed)
-            return Unauthorized(new { error = "Nuvarande lösenord stämmer inte" });
-
-        user.PasswordHash = _hasher.HashPassword(user, req.NewPassword);
-
-        _db.UserSettingAuditLogs.Add(new UserSettingAuditLog { UserId = userId, Setting = "password", OldValue = null, NewValue = null, ChangedBy = "user" });
-
-        await _db.SaveChangesAsync();
-        return Ok(new { message = "Lösenordet är uppdaterat" });
+        return ToActionResult(await _auth.ChangePasswordAsync(userId, req.CurrentPassword, req.NewPassword, req.RefreshToken));
     }
 
     // Self-service GDPR-export (artikel 20) — riktig data, ersätter den
@@ -307,9 +296,18 @@ public class AuthController : ControllerBase
         if (user.DeletionScheduledAt != null)
             return BadRequest(new { error = "Radering är redan schemalagd för ditt konto." });
 
+        // Ett konto som en admin redan spärrat får inte använda radering för att komma runt spärren
+        // (access-token gäller ≤15 min efter avstängning, och ångra-länken skulle annars häva den).
+        if (!user.IsActive)
+            return StatusCode(403, new { error = "Ditt konto är spärrat och kan inte raderas härifrån. Kontakta support om du vill ha hjälp med ditt konto." });
+
+        // En admin som raderar sig själv skulle spärra kontot — låt aldrig den sista aktiva admin göra det.
+        if (await AccountSuspension.IsLastActiveAdminAsync(_db, user))
+            return BadRequest(new { error = "Du är den sista aktiva administratören och kan inte radera ditt konto." });
+
         user.IsActive            = false;
         user.SuspendedAt       ??= DateTime.UtcNow;
-        user.SuspendedReason     = "Radering begärd av användaren (GDPR) — raderas automatiskt om 24 timmar";
+        user.SuspendedReason     = AccountSuspension.UserDeletionReason;
         user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24);
         user.DeletionCancelToken = Guid.NewGuid().ToString("N");
 
@@ -321,7 +319,7 @@ public class AuthController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        var cancelLink = $"{_frontendUrl.TrimEnd('/')}/cancel-deletion?token={user.DeletionCancelToken}";
+        var cancelLink = $"{_frontendUrl.TrimEnd('/')}/cancel-deletion?token={Uri.EscapeDataString(user.DeletionCancelToken)}";
         _ = _email.SendAccountDeletionScheduledAsync(user.Email, user.Name, cancelLink, user.DeletionScheduledAt.Value);
 
         return Ok(new { deletionScheduledAt = user.DeletionScheduledAt });
@@ -339,7 +337,11 @@ public class AuthController : ControllerBase
     private IActionResult ToActionResult(AuthResult result)
     {
         if (!result.Success)
+        {
+            if (result.RetryAfter is { } retryAfter)
+                Response.Headers.RetryAfter = ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString();
             return StatusCode(result.StatusCode, new { error = result.Error });
+        }
 
         if (result.Tokens != null)
             return Ok(new
@@ -360,7 +362,8 @@ public record RegisterRequest(string Name, string Email, string Password, bool A
 public record GoogleLoginRequest(string IdToken, bool AcceptedTerms);
 public record RefreshRequest(string RefreshToken);
 public record UpdateMeRequest(string? Name, string? DisplayName = null);
-public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+// RefreshToken = enhetens egen refresh-token; den enda som behålls när övriga sessioner återkallas.
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword, string? RefreshToken = null);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);
 public record VerifyEmailRequest(string Token);

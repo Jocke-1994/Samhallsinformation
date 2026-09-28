@@ -1,12 +1,14 @@
 namespace Samhallsinformation.Services;
 
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Auth;
 using Samhallsinformation.Data;
 
 // Kör faktisk GDPR-anonymisering av konton vars 24h-ångerfönster
-// (User.DeletionScheduledAt, satt av AdminUsersController.Delete) har gått ut.
-// Kontot spärras redan omedelbart när raderingen begärs — den här tjänsten
-// gör bara den slutgiltiga, irreversibla anonymiseringen efter fönstret.
+// (User.DeletionScheduledAt, satt av AuthController.DeleteMe / AdminUsersController.Delete)
+// har gått ut. Kontot spärras redan omedelbart när raderingen begärs — den här tjänsten
+// gör bara den slutgiltiga, irreversibla anonymiseringen efter fönstret. Själva arbetet
+// (User-raden + alla tabeller med persondata) ligger i UserAnonymizer.
 public class UserDeletionBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -27,7 +29,7 @@ public class UserDeletionBackgroundService : BackgroundService
             {
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                await ExecuteDueDeletionsAsync(db, stoppingToken);
+                await ExecuteDueDeletionsAsync(db, stoppingToken, _logger);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -42,27 +44,34 @@ public class UserDeletionBackgroundService : BackgroundService
         }
     }
 
-    public static async Task ExecuteDueDeletionsAsync(AppDbContext db, CancellationToken ct = default)
+    // Returnerar antalet konton som anonymiserades. Varje konto körs i sin egen transaktion
+    // (UserAnonymizer): ett fel för ett konto rullar tillbaka just det kontot (DeletedAt sätts inte,
+    // så det försöks igen nästa cykel) och stoppar varken övriga konton eller bakgrundstjänsten.
+    public static async Task<int> ExecuteDueDeletionsAsync(AppDbContext db, CancellationToken ct = default, ILogger? logger = null)
     {
         var now = DateTime.UtcNow;
-        var due = await db.Users
+        var dueIds = await db.Users
             .Where(u => u.DeletionScheduledAt != null && u.DeletionScheduledAt <= now && u.DeletedAt == null)
+            .Select(u => u.Id)
             .ToListAsync(ct);
 
-        foreach (var user in due)
+        var done = 0;
+        foreach (var id in dueIds)
         {
-            user.Name                   = "Raderad användare";
-            user.Email                  = $"deleted-{Guid.NewGuid():N}@anonymized.local";
-            user.PasswordHash           = "";
-            user.Role                   = "Användare";
-            user.IsActive               = false;
-            user.SuspendedReason        = "Konto raderat (GDPR)";
-            user.SuspensionReminderAt   = null;
-            user.SuspensionReminderNote = null;
-            user.DeletionScheduledAt    = null;
-            user.DeletedAt              = now;
+            try
+            {
+                await UserAnonymizer.AnonymizeAsync(db, id, now, ct);
+                done++;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "GDPR-anonymisering av användare {UserId} misslyckades — allt för kontot rullades tillbaka, försöker igen nästa cykel", id);
+            }
         }
-
-        if (due.Count > 0) await db.SaveChangesAsync(ct);
+        return done;
     }
 }

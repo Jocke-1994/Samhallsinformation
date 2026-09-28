@@ -47,13 +47,14 @@ public class AnonymousEndpointsGuardTests
         new("MaintenanceBannersController", "GetAll", "GET", "Driftbanderoll som visas för alla besökare."),
         new("SiteSettingsController", "GetSiteSettings", "GET", "Globala sajtinställningar (visa Logga in/Skapa konto-knappar) som utloggade besökare behöver."),
         new("SourcesController", "GetSources",      "GET",  "Publik källista i sidomenyn; bara publicerade källor."),
-        new("UppdateringarController", "GetUppdateringar", "GET", "Publik changelog/Nyheter; bara publicerade poster."),
+        new("UppdateringarController", "GetUppdateringar", "GET", "Publik changelog/Nyheter; bara publicerade poster. Anonyma får bara punkter med Synlighet=\"alla\"; giltig JWT (läses via User, ingen [Authorize]) ger även \"inloggade\"-punkter."),
         new("PushController", "GetPublicKey",       "GET",  "Publik VAPID-nyckel som webbläsaren behöver för pushManager.subscribe() (publik per design)."),
 
         // --- Publik skrivning / tjänst-till-tjänst ---
         new("EventsController", "LogShare",         "POST", "Analytics vid klick på Dela (ska funka utloggad). Saknar validering av att händelsen finns och rate limit, se enhet-1 obs. (Publika endpoints)."),
         new("PushController", "Claim",              "POST", "Service workern har inte pålitligt en färsk JWT; slumpad engångs-Guid är spärren. Ingen rate limit, se enhet-1 obs. och enhet-3 #4."),
         new("SupportController", "Create",          "POST", "Feedback/ärende från utloggade besökare (Hjälp & Feedback-knappen). Saknar rate limit och längdgränser, se enhet-1 #8."),
+        new("CspReportController", "Receive",       "POST", "CSP-rapporter (rapportera-läge, V3-22): webbläsaren skickar dem utan inloggning. Skyddad av egen rate limit-policy (30/min/IP), bodygräns 8 KB, sanerad och dedupad lagring; svarar alltid 204."),
         new("WebhooksController", "ResendInbound",  "POST", "Resend inbound-webhook; skyddas av svix-signaturverifiering i metoden, inte av JWT. Hårdgörs i V1-2 (enhet-1 #5/#10)."),
 
         // --- MISSTÄNKT: ser oavsiktligt öppna ut. Ändras INTE i den här PR:en ---

@@ -1,4 +1,5 @@
 import { adminFetch } from './adminFetch'
+import { felFranSvar } from './hamta'
 
 export interface CreateTicketRequest {
   subject?: string
@@ -32,24 +33,44 @@ export interface MyTicketDetailDto extends MyTicketDto {
   messages: TicketMessageDto[]
 }
 
+export const TICKET_RATE_LIMIT_MESSAGE = 'För många ärenden just nu, försök igen senare.'
+const TICKET_GENERIC_ERROR = 'Något gick fel. Försök igen eller kontakta oss direkt.'
+
+// Fel med ett färdigt, användarvänligt svenskt meddelande i .message:
+// 429 (rate limit) och 400 (servern avvisade indatan, t.ex. för lång text
+// eller ogiltig e-post — bodyn är då ett svenskt felmeddelande i klartext).
+export class TicketError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'TicketError'
+    this.status = status
+  }
+}
+
 export async function createTicket(req: CreateTicketRequest): Promise<{ id: string; ticketNumber: number }> {
   const res = await adminFetch('/api/support/tickets', {
     method: 'POST',
     body: JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`createTicket: ${res.status}`)
+  if (res.status === 429) throw new TicketError(429, TICKET_RATE_LIMIT_MESSAGE)
+  if (res.status === 400) {
+    const text = (await res.text().catch(() => '')).trim()
+    throw new TicketError(400, text.length > 0 && text.length < 200 ? text : TICKET_GENERIC_ERROR)
+  }
+  if (!res.ok) throw new TicketError(res.status, TICKET_GENERIC_ERROR)
   return res.json()
 }
 
 export async function fetchMyTickets(): Promise<MyTicketDto[]> {
   const res = await adminFetch('/api/support/tickets')
-  if (!res.ok) throw new Error(`fetchMyTickets: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchMyTickets')
   return res.json()
 }
 
 export async function fetchMyTicket(id: string): Promise<MyTicketDetailDto> {
   const res = await adminFetch(`/api/support/tickets/${id}`)
-  if (!res.ok) throw new Error(`fetchMyTicket: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchMyTicket')
   return res.json()
 }
 
@@ -58,7 +79,7 @@ export async function replyToTicket(id: string, text: string): Promise<void> {
     method: 'POST',
     body: JSON.stringify({ text }),
   })
-  if (!res.ok) throw new Error(`replyToTicket: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'replyToTicket')
 }
 
 // --- Admin ---
@@ -119,7 +140,7 @@ export interface NotisDto {
 
 export async function fetchAgents(): Promise<AdminAgentDto[]> {
   const res = await adminFetch('/api/admin/support/agents')
-  if (!res.ok) throw new Error(`fetchAgents: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAgents')
   return res.json()
 }
 
@@ -129,13 +150,13 @@ export async function fetchAdminTickets(params?: { userId?: string; status?: str
   if (params?.status) query.set('status', params.status)
   const qs = query.toString()
   const res = await adminFetch(`/api/admin/support/tickets${qs ? `?${qs}` : ''}`)
-  if (!res.ok) throw new Error(`fetchAdminTickets: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminTickets')
   return res.json()
 }
 
 export async function fetchAdminTicket(id: string): Promise<AdminTicketDetailDto> {
   const res = await adminFetch(`/api/admin/support/tickets/${id}`)
-  if (!res.ok) throw new Error(`fetchAdminTicket: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminTicket')
   return res.json()
 }
 
@@ -144,7 +165,7 @@ export async function replyAsAgent(id: string, text: string, isInternal: boolean
     method: 'POST',
     body: JSON.stringify({ text, isInternal }),
   })
-  if (!res.ok) throw new Error(`replyAsAgent: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'replyAsAgent')
 }
 
 export async function setTicketStatus(id: string, status: string): Promise<void> {
@@ -152,7 +173,7 @@ export async function setTicketStatus(id: string, status: string): Promise<void>
     method: 'PUT',
     body: JSON.stringify({ status }),
   })
-  if (!res.ok) throw new Error(`setTicketStatus: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'setTicketStatus')
 }
 
 export async function setTicketArchived(id: string, archived: boolean): Promise<void> {
@@ -160,7 +181,7 @@ export async function setTicketArchived(id: string, archived: boolean): Promise<
     method: 'PUT',
     body: JSON.stringify({ archived }),
   })
-  if (!res.ok) throw new Error(`setTicketArchived: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'setTicketArchived')
 }
 
 export async function assignTicket(id: string, userId: string | null): Promise<void> {
@@ -168,7 +189,7 @@ export async function assignTicket(id: string, userId: string | null): Promise<v
     method: 'PUT',
     body: JSON.stringify({ userId }),
   })
-  if (!res.ok) throw new Error(`assignTicket: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'assignTicket')
 }
 
 export async function setTicketReminder(id: string, reminderAt: string | null, reminderNote: string | null): Promise<void> {
@@ -176,7 +197,7 @@ export async function setTicketReminder(id: string, reminderAt: string | null, r
     method: 'PUT',
     body: JSON.stringify({ reminderAt, reminderNote }),
   })
-  if (!res.ok) throw new Error(`setTicketReminder: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'setTicketReminder')
 }
 
 export interface AddScheduledActionRequest {
@@ -192,17 +213,17 @@ export async function addScheduledAction(ticketId: string, req: AddScheduledActi
     method: 'POST',
     body: JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`addScheduledAction: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'addScheduledAction')
   return res.json()
 }
 
 export async function cancelScheduledAction(actionId: string): Promise<void> {
   const res = await adminFetch(`/api/admin/support/scheduled-actions/${actionId}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`cancelScheduledAction: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'cancelScheduledAction')
 }
 
 export async function fetchSupportNotifications(): Promise<NotisDto[]> {
   const res = await adminFetch('/api/admin/support/notifications')
-  if (!res.ok) throw new Error(`fetchSupportNotifications: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchSupportNotifications')
   return res.json()
 }

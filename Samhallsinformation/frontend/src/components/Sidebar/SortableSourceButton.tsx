@@ -6,11 +6,10 @@ interface Props {
   shortName: string
   sorteraAktiv: boolean
   active: boolean
-  hasUnread: boolean
   onClick: () => void
 }
 
-export default function SortableSourceButton({ shortName, sorteraAktiv, active, hasUnread, onClick }: Props) {
+export default function SortableSourceButton({ shortName, sorteraAktiv, active, onClick }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: shortName })
 
   return (
@@ -38,7 +37,7 @@ export default function SortableSourceButton({ shortName, sorteraAktiv, active, 
         </button>
       )}
       <div className="flex-1 min-w-0">
-        <SourceButton label={shortName} active={active} hasUnread={hasUnread} onClick={onClick} />
+        <SourceButton label={shortName} active={active} onClick={onClick} />
       </div>
     </div>
   )

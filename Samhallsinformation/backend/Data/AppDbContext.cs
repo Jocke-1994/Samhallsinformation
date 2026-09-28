@@ -39,6 +39,8 @@ public class AppDbContext : DbContext
     public DbSet<EventShareLog>              EventShareLogs            => Set<EventShareLog>();
     public DbSet<Uppdatering>                Uppdateringar             => Set<Uppdatering>();
     public DbSet<UppdateringsPunkt>          UppdateringsPunkter       => Set<UppdateringsPunkt>();
+    public DbSet<AdminAlert>                 AdminAlerts               => Set<AdminAlert>();
+    public DbSet<AppliedSeed>                AppliedSeeds              => Set<AppliedSeed>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -52,6 +54,17 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.ExternalId);
+            // V3-2: samma (SourceId, ExternalId) får inte finnas två gånger — samtidiga körningar
+            // (bakgrundsingest + manuell "kör nu") gav dubbletter som inget stoppade. Partiellt index:
+            // rader utan stabilt ExternalId (tomt/NULL) är undantagna, de kan legitimt finnas flera.
+            // Filtret är standard-SQL med dubbelciterade identifierare och gäller likadant i SQLite och
+            // PostgreSQL. Ingen FK mot Sources — det finns föräldralösa händelser från raderade källor.
+            entity.HasIndex(e => new { e.SourceId, e.ExternalId })
+                  .IsUnique()
+                  .HasFilter("\"ExternalId\" IS NOT NULL AND \"ExternalId\" <> ''");
+            // Partiella index kan inte användas för frågor på enbart SourceId (EventsController m.fl.),
+            // därför ett vanligt index vid sidan av.
+            entity.HasIndex(e => e.SourceId);
             entity.HasIndex(e => e.Geography);
             entity.HasIndex(e => e.PublishedAt);
         });
@@ -131,6 +144,18 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Token).IsUnique();
             entity.HasIndex(e => e.UserId);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AppliedSeed>(entity =>
+        {
+            entity.HasKey(e => e.Key);
+        });
+
+        modelBuilder.Entity<AdminAlert>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Key).IsUnique();
+            entity.HasIndex(e => e.ResolvedAt);
         });
 
         modelBuilder.Entity<IngestorRunLog>(entity =>

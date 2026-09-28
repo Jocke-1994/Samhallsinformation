@@ -37,8 +37,7 @@ Räcker med **ett** kryss för att alt C ska tas upp till beslut.
 - [ ] **1. Ny extern skriptkälla** läggs in på sidorna (analys, reklam,
   widget) utöver `chat.js` och Google Analytics (`gtag`). *Upptäcks:* skript-vakt i CI (test som läser
   `index.html` mot en tillåtelselista, byggs i V1-0b).
-- [ ] **2. CSP-rapporter visar oväntade skriptkällor.** *Upptäcks:* CSP i
-  rapportera-läge (V3-22) loggar till backend → larm i övervakningen.
+- [ ] **2. CSP-rapporter visar oväntade skriptkällor.** *Upptäcks:* **LIVE sedan 2026-09-28** (V3-22 mergad, PR #644) — CSP i rapportera-läge loggar till backend och en `csp_violation`-larmregel i övervakningen mejlar Admin vid ny, oväntad `script-src`-källa. Bekräfta att ett larm är äkta innan kryss — PR #644:s egen testrapport nämnde en trolig falsklarms-källa (Google Signals/en annan Google-origin).
 - [ ] **3. Känsligare data eller betalning/anslag** ska hanteras. *Upptäcks:*
   funktionsidéer som rör detta märks med `säkerhetsomprövning` och länkar hit.
   (Se även [[Beslut - Monetisering]] — ingen reklam, inga betalfunktioner som
@@ -54,7 +53,7 @@ Räcker med **ett** kryss för att alt C ska tas upp till beslut.
 
 ## Rutin
 - Läses vid sessionsstart när åtgärdsplanen tas upp, och efter varje våg.
-- När V3-22 (CSP) slutförs: stäm av villkor 2 och lägg in CSP-larmet.
+- **V3-22 (CSP) och V1-9 (övervakning) är klara och mergade (2026-09-28)** — villkor 2 och 6 bevakas nu automatiskt av `csp_violation`- respektive `users_threshold`-regeln. Kvar att bevaka manuellt: villkor 1, 3, 4, 5.
 
 ## Kopplat
 - [[Code-review 2026-09-25]] — hela granskningen och åtgärdsplanen

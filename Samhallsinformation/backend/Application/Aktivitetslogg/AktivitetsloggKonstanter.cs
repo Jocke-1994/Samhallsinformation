@@ -19,4 +19,5 @@ public static class LoggTyper
     public const string Ärende        = "Ärende";         // öppnat/tilldelat/status/arkiverat
     public const string Push          = "Push";           // admin-utlöst push skickad
     public const string Registrering  = "Registrering";   // ny användare (System — citizen-initierad)
+    public const string Säkerhet      = "Säkerhet";       // system, CSP-rapporter från webbläsare (V3-22)
 }

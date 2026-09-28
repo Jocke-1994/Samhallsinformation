@@ -15,6 +15,17 @@ public class TrafikverketApiIngestor : IIngestor
     private const string ApiUrl = "https://api.trafikinfo.trafikverket.se/v2/data.json";
     private const string ApiUrlV1 = "https://api.trafikinfo.trafikverket.se/v1/data.json";
 
+    // V4-1b (E3#13): frågan hade tidigare varken sortering eller paginering — bara de
+    // första 100 träffarna i den ordning Trafikverkets API råkade lämna dem, så aktiva
+    // situationer kunde tystnas ned om fler än 100 fanns samtidigt. `orderby="ModifiedTime
+    // desc"` (attribut på QUERY-elementet, dokumenterat av Trafikverket) garanterar
+    // åtminstone att de SENAST ÄNDRADE situationerna alltid är med. Gränsen höjd 100 -> 500
+    // som ett enkelt, snabbt skyddsnät istället för att bygga riktig delta/paginering
+    // (changeid) i den här PR:en — värt en egen uppföljning om 500 någonsin visar sig
+    // otillräckligt (loggraden "Trafikverket API returned {SituationCount} situations"
+    // avslöjar om gränsen träffas).
+    private const int QueryLimit = 500;
+
     public Source Source { get; } = new Source
     {
         Id        = 4,
@@ -46,7 +57,7 @@ public class TrafikverketApiIngestor : IIngestor
         var xml = $"""
             <REQUEST>
               <LOGIN authenticationkey="{_apiKey}" />
-              <QUERY objecttype="Situation" schemaversion="1.6" namespace="road.trafficinfo" limit="100">
+              <QUERY objecttype="Situation" schemaversion="1.6" namespace="road.trafficinfo" limit="{QueryLimit}" orderby="ModifiedTime desc">
               </QUERY>
             </REQUEST>
             """;

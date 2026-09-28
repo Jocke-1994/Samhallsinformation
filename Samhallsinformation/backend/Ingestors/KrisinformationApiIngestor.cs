@@ -1,14 +1,17 @@
 namespace Samhallsinformation.Ingestors;
 
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using Samhallsinformation.Models;
 using Samhallsinformation.Helpers;
 
 public class KrisinformationApiIngestor : IIngestor
 {
     private readonly HttpClient _httpClient;
+    private readonly ILogger<KrisinformationApiIngestor> _logger;
 
     private const string ApiUrl =
         "https://api.krisinformation.se/v3/news?numberOfNewsArticles=50&language=sv";
@@ -26,9 +29,10 @@ public class KrisinformationApiIngestor : IIngestor
         IsPublished = true,
     };
 
-    public KrisinformationApiIngestor(HttpClient httpClient)
+    public KrisinformationApiIngestor(HttpClient httpClient, ILogger<KrisinformationApiIngestor> logger)
     {
         _httpClient = httpClient;
+        _logger     = logger;
     }
 
     public async Task<List<CanonicalEvent>> FetchEventsAsync()
@@ -40,7 +44,21 @@ public class KrisinformationApiIngestor : IIngestor
 
         foreach (var item in items)
         {
-            if (item.IsTest) continue;
+            if (item == null || item.IsTest) continue;
+
+            // En post vars publiceringsdatum saknas eller inte går att tolka hoppas över i
+            // stället för att fälla hela hämtningen — annars tystnar källan (den enda med
+            // VMA/kritiska varningar) tills den trasiga posten skjutits ut ur de 50 senaste (V3-5).
+            if (!TryParsePublished(item.Published, out var publishedAt))
+            {
+                _logger.LogWarning(
+                    "{Source}: hoppar över post {Identifier} (\"{Headline}\") — ogiltigt Published-datum: \"{Published}\"",
+                    Source.Name,
+                    string.IsNullOrWhiteSpace(item.Identifier) ? "(identifierare saknas)" : item.Identifier,
+                    item.Headline,
+                    item.Published);
+                continue;
+            }
 
             var canonicalEvent = new CanonicalEvent
             {
@@ -48,7 +66,7 @@ public class KrisinformationApiIngestor : IIngestor
                 ExternalId = item.Identifier,
                 Title      = item.Headline ?? string.Empty,
                 Content    = StripHtml(item.BodyText ?? item.Preamble ?? string.Empty),
-                PublishedAt = DateTimeOffset.Parse(item.Published).UtcDateTime,
+                PublishedAt = publishedAt,
                 Url        = item.Web ?? string.Empty,
                 RawData    = item.Headline + " | " + item.Preamble,
                 Geography  = ExtractGeography(item.Area),
@@ -61,6 +79,21 @@ public class KrisinformationApiIngestor : IIngestor
         }
 
         return events;
+    }
+
+    // Invariant kultur (API:t levererar ISO 8601, aldrig svenska datumformat) och
+    // AssumeUniversal så att ett datum utan offset tolkas som UTC, inte serverns lokala tid.
+    // Resultatet är alltid Kind=Utc.
+    internal static bool TryParsePublished(string? raw, out DateTime utc)
+    {
+        if (DateTimeOffset.TryParse(raw?.Trim(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dto))
+        {
+            utc = dto.UtcDateTime;
+            return true;
+        }
+
+        utc = default;
+        return false;
     }
 
     // Krisinformation har ingen egen severity-kod i API-svaret, men VMA
@@ -115,7 +148,7 @@ internal class KrisinformationItem
     [JsonPropertyName("Headline")]     public string? Headline   { get; set; }
     [JsonPropertyName("Preamble")]     public string? Preamble   { get; set; }
     [JsonPropertyName("BodyText")]     public string? BodyText   { get; set; }
-    [JsonPropertyName("Published")]    public string Published   { get; set; } = string.Empty;
+    [JsonPropertyName("Published")]    public string? Published  { get; set; }
     [JsonPropertyName("Web")]          public string? Web        { get; set; }
     [JsonPropertyName("Area")]         public List<KrisinformationArea>? Area { get; set; }
     [JsonPropertyName("IsTest")]       public bool IsTest        { get; set; }

@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -27,6 +28,15 @@ public class AdminActivityLogController : ControllerBase
       // se #491 wave 1-scopningen.
     private const int MaxFönster = 1000;
 
+    // V4-1b (E4#11): ingestor-cyklernas Take-gräns var TIDIGARE 1000 rader — med ~10
+    // källor per 5-minuterscykel motsvarar det bara ~8 timmar, oavsett vilket tidsfilter
+    // (från/till) admin faktiskt valt ("7 dagar"/"30 dagar" gav i praktiken samma ~8
+    // timmar, tyst avkortat). Det faktiska tidsfönstret styrs nu ENBART av från/till
+    // (samma UtcDateTime.Ensure-mönster som V3-6) — den här konstanten är bara ett
+    // radtak som skyddsnät mot att en ofiltrerad "Alla"-fråga drar in obegränsat många
+    // rader, kraftigt höjd så den inte längre är den faktiska gränsen i normala fall.
+    private const int IngestorRadtakSkyddsnät = 10_000;
+
     private readonly AppDbContext _db;
 
     public AdminActivityLogController(AppDbContext db) => _db = db;
@@ -45,6 +55,11 @@ public class AdminActivityLogController : ControllerBase
     {
         if (gräns > 500) gräns = 500;
         if (gräns < 1)   gräns = 1;
+
+        // V3-6: "2026-09-01" binds som Kind=Unspecified, som Npgsql vägrar mot timestamptz
+        // (500 i produktion, grönt i SQLite). Bara Kind läggs på — dagsgränserna är oförändrade.
+        från = UtcDateTime.Ensure(från);
+        till = UtcDateTime.Ensure(till);
 
         var adminQuery = _db.AdminActivityLogs.AsQueryable();
         if (!visaArkiverade) adminQuery = adminQuery.Where(l => !l.Arkiverad);
@@ -69,7 +84,7 @@ public class AdminActivityLogController : ControllerBase
         if (från != null) ingestorQuery = ingestorQuery.Where(l => l.RunAt >= från);
         if (till != null) ingestorQuery = ingestorQuery.Where(l => l.RunAt <= till);
 
-        var ingestorRader = await ingestorQuery.OrderByDescending(l => l.RunAt).Take(MaxFönster).ToListAsync();
+        var ingestorRader = await ingestorQuery.OrderByDescending(l => l.RunAt).Take(IngestorRadtakSkyddsnät).ToListAsync();
         // Fullständigt Name, inte ShortName — flera källor delar medvetet
         // ShortName för sidomenyns gruppering (t.ex. "Polisen" och "Polisen
         // Efterlysningar" delar "Polisen"), vilket gör en ingestor-radrubrik

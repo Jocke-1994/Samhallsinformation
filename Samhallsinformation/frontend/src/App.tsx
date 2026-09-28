@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
-import { Routes, Route, useLocation, useSearchParams } from 'react-router'
+import { useState, useEffect } from 'react'
+import { Routes, Route, useLocation } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSwipeable } from 'react-swipeable'
 import Sidebar from './components/Sidebar/Sidebar'
@@ -14,15 +14,15 @@ import VerifyEmailPage from './pages/VerifyEmailPage'
 import ConfirmEmailChangePage from './pages/ConfirmEmailChangePage'
 import CancelDeletionPage from './pages/CancelDeletionPage'
 import CookieConsent from './components/CookieConsent/CookieConsent'
+import BevakningsToastHost from './components/NewsFeed/BevakningsToastHost'
 import OmPage from './pages/OmPage'
 import VillkorPage from './pages/VillkorPage'
 import UppdateringarPage from './pages/UppdateringarPage'
+import NotFoundPage from './pages/NotFoundPage'
+import ErrorBoundary from './components/common/ErrorBoundary'
+import EmailVerificationBanner from './components/common/EmailVerificationBanner'
 import { fetchSources } from './api/sources'
-import { fetchUserSources } from './api/userSources'
-import { useUnreadSourceIds } from './hooks/useUnreadSourceIds'
 import { useAuth } from './context/AuthContext'
-import { useFlags } from './context/FeatureFlagsContext'
-import { resendVerification } from './api/auth'
 import { fetchMaintenanceBanners } from './api/maintenanceBanners'
 import type { Source } from './types'
 
@@ -35,7 +35,6 @@ function HomePage() {
   const [viewMode, setViewMode] = useState<'Allt' | 'Mitt'>(
     (location.state as { viewMode?: 'Allt' | 'Mitt' } | null)?.viewMode ?? 'Allt'
   )
-  const [readTrigger, setReadTrigger] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Allt/Mitt är bara meningsfullt i det kombinerade flödet för inloggade —
@@ -47,23 +46,6 @@ function HomePage() {
     queryKey: ['sources'],
     queryFn: fetchSources,
   })
-
-  const { data: userSources = [] } = useQuery({
-    queryKey: ['user-sources'],
-    queryFn: fetchUserSources,
-    enabled: isLoggedIn,
-  })
-
-  const activeSourceIds = useMemo(
-    () => new Set(userSources.filter(p => p.isActive).map(p => p.sourceId)),
-    [userSources]
-  )
-
-  const unreadSourceIds = useUnreadSourceIds(sources, readTrigger)
-
-  const handleReadStatusChange = useCallback(() => {
-    setReadTrigger(n => n + 1)
-  }, [])
 
   const swipeHandlers = useSwipeable({
     onSwipedRight: (e) => { if (e.initial[0] < 30) setSidebarOpen(true) },
@@ -79,7 +61,6 @@ function HomePage() {
         onSelectSource={setSelectedShortName}
         viewMode={viewMode}
         onSelectViewMode={setViewMode}
-        unreadSourceIds={unreadSourceIds}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -87,96 +68,11 @@ function HomePage() {
         <NewsFeed
           shortName={selectedShortName}
           sources={sources}
-          activeSourceIds={activeSourceIds}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
-          onReadStatusChange={handleReadStatusChange}
           onOpenSidebar={() => setSidebarOpen(true)}
         />
       </main>
-    </div>
-  )
-}
-
-function ImpersonationBanner() {
-  const [params] = useSearchParams()
-  const namn = params.get('namn')
-  if (!params.has('impersonating') || !namn) return null
-
-  return (
-    <div className="bg-amber-500 px-6 py-2.5 flex items-center justify-between shadow-md">
-      <div className="flex items-center gap-2.5">
-        <span className="text-base">🎭</span>
-        <span className="text-sm font-medium text-white">
-          Du är inloggad som <strong>{namn}</strong> — adminläge
-        </span>
-      </div>
-      <button
-        onClick={() => window.close()}
-        className="text-xs font-semibold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg transition-colors"
-      >
-        Avsluta session
-      </button>
-    </div>
-  )
-}
-
-const VERIFY_BANNER_SNOOZE_KEY = 'si_verify_banner_snoozed_until'
-const VERIFY_BANNER_SNOOZE_MS  = 24 * 60 * 60 * 1000
-
-function EmailVerificationBanner() {
-  const { isLoggedIn, emailVerified, email } = useAuth()
-  const flaggor = useFlags()
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle')
-  // Nyckeln måste vara kontospecifik (inte en enda global nyckel) — annars
-  // slår ett snooze-klick på ETT konto igenom på VILKET konto som helst som
-  // loggar in på samma enhet inom 24h, även ett som aldrig klickat knappen.
-  const [snoozedUntil, setSnoozedUntil] = useState(0)
-
-  useEffect(() => {
-    if (!email) { setSnoozedUntil(0); return }
-    setSnoozedUntil(Number(localStorage.getItem(`${VERIFY_BANNER_SNOOZE_KEY}:${email}`) ?? 0))
-  }, [email])
-
-  if (!isLoggedIn || emailVerified || !flaggor.konto_epost_paminnelse || Date.now() < snoozedUntil) return null
-
-  async function handleResend() {
-    setStatus('sending')
-    try {
-      await resendVerification()
-      setStatus('sent')
-    } catch {
-      setStatus('idle')
-    }
-  }
-
-  function handleSnooze() {
-    if (!email) return
-    const until = Date.now() + VERIFY_BANNER_SNOOZE_MS
-    localStorage.setItem(`${VERIFY_BANNER_SNOOZE_KEY}:${email}`, String(until))
-    setSnoozedUntil(until)
-  }
-
-  return (
-    <div className="bg-violet-600 px-6 py-2.5 flex items-center justify-between gap-3 shadow-md flex-wrap">
-      <span className="text-sm text-white">
-        Bekräfta din e-postadress{email ? ` — vi har skickat en länk till ${email}` : ''}.
-      </span>
-      <div className="flex items-center gap-3 shrink-0">
-        <button
-          onClick={handleSnooze}
-          className="text-xs font-medium text-white/80 hover:text-white underline underline-offset-2 transition-colors"
-        >
-          Påminn senare
-        </button>
-        <button
-          onClick={handleResend}
-          disabled={status !== 'idle'}
-          className="text-xs font-semibold bg-white/20 hover:bg-white/30 disabled:opacity-70 text-white px-3 py-1.5 rounded-lg transition-colors shrink-0"
-        >
-          {status === 'sent' ? 'Skickat!' : status === 'sending' ? 'Skickar…' : 'Skicka igen'}
-        </button>
-      </div>
     </div>
   )
 }
@@ -193,7 +89,7 @@ const MAINTENANCE_DISMISS_PREFIX = 'si_maintenance_dismissed_'
 function MaintenanceBanners() {
   const { isLoggedIn } = useAuth()
   const { data: banners = [] } = useQuery({
-    queryKey: ['maintenance-banners'],
+    queryKey: ['maintenance-banners', isLoggedIn],
     queryFn: fetchMaintenanceBanners,
     staleTime: 5 * 60_000,
   })
@@ -248,31 +144,39 @@ function EnMaintenanceBanner({ banner }: { banner: { id: string; message: string
 // sidomenyn. De enskilda sidorna (HomePage m.fl.) är h-full, inte h-screen,
 // så de fyller exakt det som blir kvar under banderollerna.
 export default function App() {
+  const location = useLocation()
+
   return (
     <div className="h-dvh flex flex-col">
       <div className="flex flex-col shrink-0">
-        <ImpersonationBanner />
         <MaintenanceBanners />
         <EmailVerificationBanner />
       </div>
       <div className="flex-1 min-h-0">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<OnboardingPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
-          <Route path="/cancel-deletion" element={<CancelDeletionPage />} />
-          <Route path="/profil" element={<ProfilePage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/om" element={<OmPage />} />
-          <Route path="/villkor" element={<VillkorPage />} />
-          <Route path="/uppdateringar" element={<UppdateringarPage />} />
-        </Routes>
+        {/* Ett kastande sidfel ska bara ersätta route-ytan — banderoller och
+            cookie-banner ligger utanför. location.key nollställer felet vid
+            varje navigering så att användaren inte fastnar i felvyn. */}
+        <ErrorBoundary resetKeys={[location.key]}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<OnboardingPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
+            <Route path="/cancel-deletion" element={<CancelDeletionPage />} />
+            <Route path="/profil" element={<ProfilePage />} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/om" element={<OmPage />} />
+            <Route path="/villkor" element={<VillkorPage />} />
+            <Route path="/uppdateringar" element={<UppdateringarPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </ErrorBoundary>
       </div>
       <CookieConsent />
+      <BevakningsToastHost />
     </div>
   )
 }

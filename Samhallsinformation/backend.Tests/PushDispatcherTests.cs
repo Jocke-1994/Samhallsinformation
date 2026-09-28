@@ -24,7 +24,7 @@ public class PushDispatcherTests
     // namnet till bevaknings-matchad utskick (se PolisenEventsTests nedan för
     // det). Dessa generiska tester ska inte råka gå via den grenen.
     private static (User User, Source Source, UserDevice Device) SeedSubscriber(
-        AppDbContext db, bool pushNyaHandelser = true, bool sourceActive = true)
+        AppDbContext db, bool pushNyaHandelser = true, bool sourceActive = true, bool sourcePublished = true)
     {
         var user = new User
         {
@@ -33,7 +33,7 @@ public class PushDispatcherTests
             PasswordHash     = "x",
             PushNyaHandelser = pushNyaHandelser,
         };
-        var source = new Source { Name = "Krisinformation", ShortName = "Krisinformation", BaseUrl = "https://example.com" };
+        var source = new Source { Name = "Krisinformation", ShortName = "Krisinformation", BaseUrl = "https://example.com", IsPublished = sourcePublished };
         db.Users.Add(user);
         db.Sources.Add(source);
         db.SaveChanges();
@@ -157,7 +157,8 @@ public class PushDispatcherTests
     // Källan heter medvetet "Polisen" här — det är exakt vad som triggar
     // PushDispatchers bevaknings-gren (jfr SeedSubscriber ovan, som medvetet
     // undviker namnet för de generiska testerna).
-    private static (User User, Source Source, UserDevice Device) SeedPolisenSubscriber(AppDbContext db)
+    private static (User User, Source Source, UserDevice Device) SeedPolisenSubscriber(
+        AppDbContext db, bool sourcePublished = true)
     {
         var user = new User
         {
@@ -166,7 +167,7 @@ public class PushDispatcherTests
             PasswordHash     = "x",
             PushNyaHandelser = true,
         };
-        var source = new Source { Name = "Polisen", ShortName = "Polisen", BaseUrl = "https://example.com" };
+        var source = new Source { Name = "Polisen", ShortName = "Polisen", BaseUrl = "https://example.com", IsPublished = sourcePublished };
         db.Users.Add(user);
         db.Sources.Add(source);
         db.SaveChanges();
@@ -445,7 +446,7 @@ public class PushDispatcherTests
         db.UserDevices.Add(new UserDevice { UserId = admin.Id, Endpoint = "https://push.example/admin-ep-2", P256dh = "p", Auth = "a" });
         db.SaveChanges();
         var push = Substitute.For<IPushNotificationService>();
-        var claimIds = new List<Guid?>();
+        var claimIds = new System.Collections.Concurrent.ConcurrentBag<Guid?>();
         push.SendAsync(Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(),
                 Arg.Do<Guid?>(id => claimIds.Add(id)), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
@@ -453,11 +454,12 @@ public class PushDispatcherTests
         await PushDispatcher.DispatchNewTicketAsync(db, push, "https://test.local", NewTicket());
 
         Assert.Equal(2, claimIds.Count);
-        Assert.NotNull(claimIds[0]);
-        Assert.Equal(claimIds[0], claimIds[1]);
+        var distinct = claimIds.Distinct().ToList(); // båda enheterna delar ETT claimId
+        var first = Assert.Single(distinct);
+        Assert.NotNull(first);
         var claim = Assert.Single(db.PushDispatchClaims);
         Assert.Equal(admin.Id, claim.UserId);
-        Assert.Equal(claimIds[0], claim.Id);
+        Assert.Equal(first, claim.Id);
     }
 
     [Fact]
@@ -473,5 +475,213 @@ public class PushDispatcherTests
             Arg.Any<UserDevice>(),
             Arg.Is<string>(t => t!.Contains("feedback", StringComparison.OrdinalIgnoreCase)),
             Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
+    // ── V2-4: mottagarfilter (IsActive / DeletedAt / spärr / radering / IsPublished) ──
+    //
+    // Varje "orättmätigt" kontotillstånd som inte ska ge push. IsActive=false är
+    // den spärrade användaren; DeletedAt är ett GDPR-raderat (anonymiserat) konto;
+    // SuspendedAt/DeletionScheduledAt är tidsstämplarna som sätts tillsammans med
+    // IsActive=false idag men kontrolleras var för sig så en framtida väg inte
+    // läcker push till ett konto på väg bort.
+    public static IEnumerable<object[]> IneligibleStates => new[]
+    {
+        new object[] { "inactive" },
+        new object[] { "deleted" },
+        new object[] { "suspendedAt" },
+        new object[] { "deletionScheduled" },
+    };
+
+    private static void MakeIneligible(AppDbContext db, User user, string state)
+    {
+        switch (state)
+        {
+            case "inactive":          user.IsActive = false; break;
+            case "deleted":           user.DeletedAt = DateTime.UtcNow; break;
+            case "suspendedAt":       user.SuspendedAt = DateTime.UtcNow; break;
+            case "deletionScheduled": user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24); break;
+            default: throw new ArgumentOutOfRangeException(nameof(state), state, null);
+        }
+        db.SaveChanges();
+    }
+
+    private static Task AssertNoPushAsync(IPushNotificationService push) =>
+        push.DidNotReceiveWithAnyArgs().SendAsync(default!, default!, default!, default, default, default);
+
+    // -- Väg 1: nya händelser --
+
+    [Theory]
+    [MemberData(nameof(IneligibleStates))]
+    public async Task DispatchNewEventsAsync_IneligibleSubscriber_SendsNothing(string state)
+    {
+        using var db = NewDb();
+        var (user, source, _) = SeedSubscriber(db);
+        MakeIneligible(db, user, state);
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 2, insertedEvents: []);
+
+        await AssertNoPushAsync(push);
+        Assert.Empty(db.NotificationDeliveryLogs);
+    }
+
+    [Fact]
+    public async Task DispatchNewEventsAsync_UnpublishedSource_SendsNothing()
+    {
+        using var db = NewDb();
+        var (_, source, _) = SeedSubscriber(db, sourcePublished: false);
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 2, insertedEvents: []);
+
+        await AssertNoPushAsync(push);
+    }
+
+    [Fact]
+    public async Task DispatchNewEventsAsync_OnlyEligibleSubscriberOfTwo_GetsPush()
+    {
+        using var db = NewDb();
+        var (suspended, source, _) = SeedSubscriber(db);
+        MakeIneligible(db, suspended, "inactive");
+
+        var active = new User { Name = "Bo", Email = $"{Guid.NewGuid()}@example.com", PasswordHash = "x" };
+        db.Users.Add(active);
+        db.SaveChanges();
+        db.UserSourcePreferences.Add(new UserSourcePreference { UserId = active.Id, SourceId = source.Id, IsActive = true, SortOrder = 0 });
+        var activeDevice = new UserDevice { UserId = active.Id, Endpoint = "https://push.example/active-ep", P256dh = "p", Auth = "a" };
+        db.UserDevices.Add(activeDevice);
+        db.SaveChanges();
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: []);
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == activeDevice.Id),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+        await push.ReceivedWithAnyArgs(1).SendAsync(default!, default!, default!, default, default, default);
+    }
+
+    // Polisen-grenen (bevakningsmatchad) bygger på samma recipientIds — filtret ska
+    // gälla även där, inte bara i den generiska grenen.
+    [Theory]
+    [MemberData(nameof(IneligibleStates))]
+    public async Task DispatchNewEventsAsync_PolisenIneligibleSubscriber_SendsNothing(string state)
+    {
+        using var db = NewDb();
+        var (user, source, _) = SeedPolisenSubscriber(db);
+        MakeIneligible(db, user, state);
+        var events = new List<CanonicalEvent> { MakeEvent(source.Id, "Göteborg", "Trafikolycka") };
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: events);
+
+        await AssertNoPushAsync(push);
+    }
+
+    [Fact]
+    public async Task DispatchNewEventsAsync_PolisenUnpublishedSource_SendsNothing()
+    {
+        using var db = NewDb();
+        var (_, source, _) = SeedPolisenSubscriber(db, sourcePublished: false);
+        var events = new List<CanonicalEvent> { MakeEvent(source.Id, "Göteborg", "Trafikolycka") };
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: events);
+
+        await AssertNoPushAsync(push);
+    }
+
+    // -- Väg 2: ny version --
+
+    [Theory]
+    [MemberData(nameof(IneligibleStates))]
+    public async Task DispatchNewVersionAsync_IneligibleUser_SendsNothing(string state)
+    {
+        using var db = NewDb();
+        var (user, _, _) = SeedSubscriber(db); // PushNyVersion defaultar till true
+        MakeIneligible(db, user, state);
+        var push = Substitute.For<IPushNotificationService>();
+
+        var sent = await PushDispatcher.DispatchNewVersionAsync(db, push, "https://test.local", "1.2.0", "Nya källor");
+
+        Assert.Equal(0, sent);
+        await AssertNoPushAsync(push);
+    }
+
+    // -- Väg 3-5: personalnotiser (nytt ärende, ärendesvar, ny användare) --
+
+    [Theory]
+    [MemberData(nameof(IneligibleStates))]
+    public async Task DispatchNewTicketAsync_IneligibleStaff_SendsNothing(string state)
+    {
+        using var db = NewDb();
+        var (admin, _) = SeedAdminWithDevice(db);
+        MakeIneligible(db, admin, state);
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewTicketAsync(db, push, "https://test.local", NewTicket());
+
+        await AssertNoPushAsync(push);
+    }
+
+    [Theory]
+    [MemberData(nameof(IneligibleStates))]
+    public async Task DispatchTicketReplyAsync_IneligibleStaff_SendsNothing(string state)
+    {
+        using var db = NewDb();
+        var (admin, _) = SeedAdminWithDevice(db, role: "Support");
+        MakeIneligible(db, admin, state);
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchTicketReplyAsync(db, push, "https://test.local", NewTicket());
+
+        await AssertNoPushAsync(push);
+    }
+
+    [Theory]
+    [MemberData(nameof(IneligibleStates))]
+    public async Task DispatchNewUserAsync_IneligibleStaff_SendsNothing(string state)
+    {
+        using var db = NewDb();
+        var (admin, _) = SeedAdminWithDevice(db);
+        MakeIneligible(db, admin, state);
+        var push = Substitute.For<IPushNotificationService>();
+        var newUser = new User { Name = "Ny Person", Email = "ny@example.com", PasswordHash = "x" };
+
+        await PushDispatcher.DispatchNewUserAsync(db, push, "https://test.local", newUser);
+
+        // Kärnan i E3 #5: en avstängd admin ska inte få namn + e-post på nya användare.
+        await AssertNoPushAsync(push);
+    }
+
+    [Fact]
+    public async Task DispatchNewUserAsync_ActiveAdmin_StillGetsPush()
+    {
+        using var db = NewDb();
+        var (_, device) = SeedAdminWithDevice(db);
+        var push = Substitute.For<IPushNotificationService>();
+        var newUser = new User { Name = "Ny Person", Email = "ny@example.com", PasswordHash = "x" };
+
+        await PushDispatcher.DispatchNewUserAsync(db, push, "https://test.local", newUser);
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(),
+            Arg.Is<string>(b => b!.Contains("Ny Person") && b.Contains("ny@example.com")),
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DispatchTicketReplyAsync_ActiveSupport_StillGetsPush()
+    {
+        using var db = NewDb();
+        var (_, device) = SeedAdminWithDevice(db, role: "Support");
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchTicketReplyAsync(db, push, "https://test.local", NewTicket());
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
     }
 }

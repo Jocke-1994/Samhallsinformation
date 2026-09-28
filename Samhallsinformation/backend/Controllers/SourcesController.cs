@@ -3,7 +3,9 @@ namespace Samhallsinformation.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Events;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Sources;
 using Samhallsinformation.Data;
 using Samhallsinformation.Ingestors;
 using Samhallsinformation.Models;
@@ -17,19 +19,27 @@ public class SourcesController : ControllerBase
     private readonly IEnumerable<IIngestor> _dedicatedIngestors;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAktivitetsloggService _aktivitetslogg;
+    private readonly ILogger<SourcesController>? _logger;
 
-    public SourcesController(AppDbContext db, IEnumerable<IIngestor> dedicatedIngestors, IHttpClientFactory httpClientFactory, IAktivitetsloggService aktivitetslogg)
+    public SourcesController(AppDbContext db, IEnumerable<IIngestor> dedicatedIngestors, IHttpClientFactory httpClientFactory, IAktivitetsloggService aktivitetslogg, ILogger<SourcesController>? logger = null)
     {
         _db = db;
         _dedicatedIngestors = dedicatedIngestors;
         _httpClientFactory = httpClientFactory;
         _aktivitetslogg = aktivitetslogg;
+        _logger = logger;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetSources()
     {
-        var sources = await _db.Sources.Where(s => s.IsPublished).ToListAsync();
+        // Publik DTO — bara det frontend läser (sidomeny, Mina källor, onboarding).
+        // Aldrig LastFetchError/LastFetchedAt/Url/BaseUrl/Type/IsPublished utåt;
+        // de finns kvar i /api/admin/sources.
+        var sources = await _db.Sources
+            .Where(s => s.IsPublished)
+            .Select(s => new PublicSourceDto(s.Id, s.Name, s.ShortName, s.IsActive))
+            .ToListAsync();
         return Ok(sources);
     }
 
@@ -120,6 +130,12 @@ public class SourcesController : ControllerBase
         var source = await _db.Sources.FindAsync(id);
         if (source == null) return NotFound();
 
+        // En pausad (IsActive=false) källa ska inte hämtas — varken av bakgrundscykeln eller
+        // manuellt. Vi rör varken LastFetchError eller aktivitetsloggen: det är inget fel.
+        // IsPublished påverkas inte (sandlådekällor ska gå att köra om).
+        if (!IngestorBackgroundService.ShouldIngest(source))
+            return BadRequest(new { error = "Källan är inaktiv (IsActive=false) och hämtas inte. Aktivera källan först." });
+
         var ingestor = _dedicatedIngestors.FirstOrDefault(i => i.Source.Id == id);
         if (ingestor == null)
         {
@@ -131,7 +147,7 @@ public class SourcesController : ControllerBase
 
         try
         {
-            var (inserted, updated, _) = await EventSync.SyncAsync(_db, ingestor, overwriteExisting: true);
+            var (inserted, updated, _) = await EventSync.SyncAsync(_db, ingestor, overwriteExisting: true, logger: _logger);
             source.LastFetchedAt  = DateTime.UtcNow;
             source.LastFetchError = null;
             await _db.SaveChangesAsync();
@@ -139,6 +155,14 @@ public class SourcesController : ControllerBase
                 AktörTyper.Admin, LoggTyper.Konfiguration,
                 $"Källa omsynkad — {source.Name}", $"{inserted} nya, {updated} uppdaterade");
             return Ok(new { inserted, updated });
+        }
+        catch (DbUpdateException ex) when (EventsUniqueIndex.IsEventDuplicateViolation(ex))
+        {
+            // Unikt index på Events(SourceId, ExternalId) (V3-2): bakgrundsingesten hann spara samma händelse.
+            // Inget källfel — ingenting sparades (SaveChanges rullades tillbaka), inget LastFetchError.
+            _db.ChangeTracker.Clear();
+            _logger?.LogWarning("Resync av {SourceId}: samtidig körning hann spara samma händelse(r) (unikt index på Events)", id);
+            return Conflict(new { error = "En samtidig körning hann spara samma händelser. Försök igen om en stund." });
         }
         catch (Exception ex)
         {
@@ -158,15 +182,24 @@ public class SourcesController : ControllerBase
         var source = await _db.Sources.FindAsync(id);
         if (source == null) return NotFound();
 
+        // Seedade/dedikerade källor återskapas av Program.cs vid varje start — radering vore inte varaktig
+        // (och den återskapade dedikerade källan blir IsPublished=true med alla gamla händelser synliga).
+        if (SeededSources.IsSeeded(source, _dedicatedIngestors))
+            return BadRequest(new { error = "Dedikerade källor kan inaktiveras men inte raderas — sätt dem som inaktiva i stället." });
+
         var namn = source.Name;
-        _db.Sources.Remove(source);
-        await _db.SaveChangesAsync();
+        var r = await SourceDeletion.DeleteAsync(_db, id);
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Konfiguration,
-            $"Källa borttagen — {namn}", $"Id {id}");
+            $"Källa borttagen — {namn}",
+            $"Id {id}. Borttaget: {r.Events} händelser, {r.Subscriptions} prenumerationer, " +
+            $"{r.SavedEvents} sparade händelser, {r.ShareLogs} delningsloggar, {r.RunLogs} körloggar");
         return NoContent();
     }
 }
+
+// IsActive behålls: Sidebar och useUnreadSourceIds filtrerar på s.isActive.
+public record PublicSourceDto(int Id, string Name, string ShortName, bool IsActive);
 
 public record CreateSourceRequest(
     string Name,

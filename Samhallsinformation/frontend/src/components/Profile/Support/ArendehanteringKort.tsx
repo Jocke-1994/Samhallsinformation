@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createTicket, fetchMyTicket, fetchMyTickets, replyToTicket, type MyTicketDto } from '../../../api/support'
+import { createTicket, TicketError, fetchMyTicket, fetchMyTickets, replyToTicket, type MyTicketDto } from '../../../api/support'
 import { BETA } from '../../../betaConfig'
+import { useAnvandare } from '../../../hooks/useAnvandare'
+import { minaArendenNyckel, mittArendeNyckel } from '../../../lib/queryNycklar'
 
 type SortField = 'status' | 'skapat' | 'uppdaterat' | null
 type SortDir = 'asc' | 'desc'
@@ -67,10 +69,11 @@ function ArendeRad({
 }) {
   const [svar, setSvar] = useState('')
   const queryClient = useQueryClient()
+  const anvandare = useAnvandare()
   const kanSvara = ticket.status === 'Öppet' || ticket.status === 'Under behandling'
 
   const { data: detail, isLoading } = useQuery({
-    queryKey: ['my-ticket', ticket.id],
+    queryKey: mittArendeNyckel(anvandare, ticket.id),
     queryFn: () => fetchMyTicket(ticket.id),
     enabled: expanded,
   })
@@ -157,9 +160,14 @@ function ArendeRad({
                         placeholder="Skriv ditt svar..."
                         className="bg-white text-slate-900 text-sm px-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-violet-500 placeholder-slate-400 resize-none"
                       />
+                      {replyMutation.isError && (
+                        <p role="alert" className="text-xs text-red-500">
+                          Ditt svar kunde inte skickas. Texten finns kvar — försök igen.
+                        </p>
+                      )}
                       <div className="flex items-center gap-3">
                         <button
-                          onClick={() => { if (svar.trim()) replyMutation.mutate() }}
+                          onClick={() => { if (svar.trim() && !replyMutation.isPending) replyMutation.mutate() }}
                           disabled={replyMutation.isPending}
                           className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
                         >
@@ -186,7 +194,8 @@ function ArendeRad({
 
 export default function ArendehanteringKort() {
   const queryClient = useQueryClient()
-  const { data: tickets = [] } = useQuery({ queryKey: ['my-tickets'], queryFn: fetchMyTickets })
+  const anvandare = useAnvandare()
+  const { data: tickets = [] } = useQuery({ queryKey: minaArendenNyckel(anvandare), queryFn: fetchMyTickets })
 
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set())
@@ -286,8 +295,11 @@ export default function ArendehanteringKort() {
                 const val = e.target.value
                 setKategori(val)
                 setError('')
-                if (val === 'Testare' && BETA.mall) setMeddelande(BETA.mall)
-                else if (val !== 'Testare') setMeddelande('')
+                // Kategorin får aldrig radera det användaren skrivit: betamallen
+                // fylls bara i i ett tomt fält, och tas bara bort igen om den
+                // fortfarande är orörd (ämne och e-post rörs aldrig här).
+                if (val === 'Testare' && BETA.mall && meddelande.trim() === '') setMeddelande(BETA.mall)
+                else if (val !== 'Testare' && BETA.mall && meddelande === BETA.mall) setMeddelande('')
               }}
               className="bg-white text-slate-900 text-sm px-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-violet-500"
             >
@@ -299,6 +311,7 @@ export default function ArendehanteringKort() {
             <label className="text-sm font-medium text-slate-700">Ämne</label>
             <input
               type="text"
+              maxLength={200}
               value={amne}
               onChange={e => { setAmne(e.target.value); setError('') }}
               placeholder="Beskriv kortfattat vad det gäller..."
@@ -308,6 +321,7 @@ export default function ArendehanteringKort() {
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700">Beskriv ditt ärende</label>
             <textarea
+              maxLength={5000}
               value={meddelande}
               onChange={e => { setMeddelande(e.target.value); setError('') }}
               rows={5}
@@ -315,7 +329,7 @@ export default function ArendehanteringKort() {
               className="bg-white text-slate-900 text-sm px-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:border-violet-500 placeholder-slate-400 resize-none"
             />
           </div>
-          {error && <p className="text-xs text-red-500">{error}</p>}
+          {(error || createMutation.error) && <p role="alert" className="text-xs text-red-500">{error || (createMutation.error instanceof TicketError ? createMutation.error.message : "Något gick fel. Försök igen senare.")}</p>}
         </div>
         <div className="flex justify-center py-5">
           <button

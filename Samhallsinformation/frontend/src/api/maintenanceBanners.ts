@@ -1,4 +1,5 @@
-import { adminFetch } from './adminFetch'
+import { adminFetch, getToken } from './adminFetch'
+import { felFranSvar, publikFetch } from './hamta'
 
 export type BannerÅskådare = 'Alla' | 'Besökare' | 'Användare'
 
@@ -17,11 +18,21 @@ export interface MaintenanceBannerRequest {
   audience: BannerÅskådare
 }
 
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
-
+// Publik lista — servern filtrerar på tid och målgrupp. Token skickas om den finns
+// så servern kan skilja inloggad från besökare (Användare-/Besökare-banderoller).
 export async function fetchMaintenanceBanners(): Promise<MaintenanceBanner[]> {
-  const res = await fetch(`${API_BASE}/api/maintenance-banners`)
-  if (!res.ok) throw new Error(`fetchMaintenanceBanners: ${res.status}`)
+  const token = getToken()
+  const res = await publikFetch(`/api/maintenance-banners`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  })
+  if (!res.ok) throw await felFranSvar(res, 'fetchMaintenanceBanners')
+  return res.json()
+}
+
+// Admin: hela listan (även kommande, avslutade och alla målgrupper).
+export async function fetchAdminMaintenanceBanners(): Promise<MaintenanceBanner[]> {
+  const res = await adminFetch('/api/admin/maintenance-banners')
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminMaintenanceBanners')
   return res.json()
 }
 
@@ -30,7 +41,7 @@ export async function createMaintenanceBanner(req: MaintenanceBannerRequest): Pr
     method: 'POST',
     body: JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`createMaintenanceBanner: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'createMaintenanceBanner')
   return res.json()
 }
 
@@ -39,11 +50,11 @@ export async function updateMaintenanceBanner(id: string, req: MaintenanceBanner
     method: 'PUT',
     body: JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`updateMaintenanceBanner: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'updateMaintenanceBanner')
   return res.json()
 }
 
 export async function deleteMaintenanceBanner(id: string): Promise<void> {
   const res = await adminFetch(`/api/admin/maintenance-banners/${id}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`deleteMaintenanceBanner: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'deleteMaintenanceBanner')
 }

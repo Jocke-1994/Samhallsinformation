@@ -1,4 +1,5 @@
 import { adminFetch } from './adminFetch'
+import { felFranSvar } from './hamta'
 
 export interface AdminStats {
   totalEvents:      number
@@ -12,6 +13,6 @@ export interface AdminStats {
 
 export async function fetchAdminStats(): Promise<AdminStats> {
   const res = await adminFetch('/api/admin/stats')
-  if (!res.ok) throw new Error(`fetchAdminStats: ${res.status}`)
+  if (!res.ok) throw await felFranSvar(res, 'fetchAdminStats')
   return res.json()
 }

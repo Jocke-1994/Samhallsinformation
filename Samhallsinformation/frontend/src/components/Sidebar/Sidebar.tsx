@@ -22,7 +22,6 @@ interface Props {
   onSelectSource: (shortName: string | null) => void
   viewMode: 'Allt' | 'Mitt'
   onSelectViewMode: (mode: 'Allt' | 'Mitt') => void
-  unreadSourceIds: Set<number>
   isOpen: boolean
   onClose: () => void
 }
@@ -55,7 +54,7 @@ const TILLÅTNA_VYN: Record<SystemRoll, SystemRoll[]> = {
 }
 
 
-export default function Sidebar({ selectedShortName, onSelectSource, viewMode, onSelectViewMode, unreadSourceIds, isOpen, onClose }: Props) {
+export default function Sidebar({ selectedShortName, onSelectSource, viewMode, onSelectViewMode, isOpen, onClose }: Props) {
   const navigate  = useNavigate()
   const location  = useLocation()
   const { isLoggedIn, roll, aktivVy, name, logout, byttVy } = useAuth()
@@ -289,7 +288,6 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
           <SourceButton
             label={ALLA_HANDELSER_LABEL}
             active={selectedShortName === null && !isProfilePage && viewMode === 'Allt'}
-            hasUnread={false}
             onClick={() => {
               onSelectSource(null)
               onSelectViewMode('Allt')
@@ -301,7 +299,6 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
             <SourceButton
               label={MITT_FLODE_LABEL}
               active={selectedShortName === null && !isProfilePage && viewMode === 'Mitt'}
-              hasUnread={false}
               onClick={() => {
                 onSelectSource(null)
                 onSelectViewMode('Mitt')
@@ -323,7 +320,6 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
                       shortName={shortName}
                       sorteraAktiv={sorteraAktiv}
                       active={selectedShortName === shortName && !isProfilePage}
-                      hasUnread={group.some(s => unreadSourceIds.has(s.id))}
                       onClick={() => {
                         navigate('/', { state: { shortName } })
                         onSelectSource(shortName)
@@ -340,7 +336,6 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
                 key={shortName}
                 label={shortName}
                 active={selectedShortName === shortName && !isProfilePage}
-                hasUnread={false}
                 onClick={() => {
                   navigate('/', { state: { shortName } })
                   onSelectSource(shortName)

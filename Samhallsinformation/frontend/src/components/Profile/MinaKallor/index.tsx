@@ -8,6 +8,8 @@ import AktivaKallorKort from './AktivaKallorKort'
 import RekommenderadeKallorKort from './RekommenderadeKallorKort'
 import AllaKallorKort from './AllaKallorKort'
 import { useFlags } from '../../../context/FeatureFlagsContext'
+import { useAnvandare } from '../../../hooks/useAnvandare'
+import { anvandarKallorNyckel } from '../../../lib/queryNycklar'
 import type { Source } from '../../../types'
 
 export default function MinaKallor() {
@@ -15,6 +17,8 @@ export default function MinaKallor() {
   const [highlightId, setHighlightId] = useState<string | null>(location.state?.highlightId ?? null)
   const flaggor = useFlags()
   const queryClient = useQueryClient()
+  const anvandare = useAnvandare()
+  const kallorNyckel = anvandarKallorNyckel(anvandare)
 
   useEffect(() => {
     if (!highlightId) return
@@ -28,7 +32,7 @@ export default function MinaKallor() {
   })
 
   const { data: prefs = [] } = useQuery({
-    queryKey: ['user-sources'],
+    queryKey: kallorNyckel,
     queryFn:  fetchUserSources,
   })
 
@@ -39,7 +43,7 @@ export default function MinaKallor() {
   const mutation = useMutation({
     mutationFn: saveUserSources,
     onSuccess: (_data, variables) => {
-      queryClient.setQueryData<UserSourcePref[]>(['user-sources'], (old = []) => {
+      queryClient.setQueryData<UserSourcePref[]>(kallorNyckel, (old = []) => {
         const byId = new Map(old.map(p => [p.sourceId, p]))
         for (const v of variables) {
           byId.set(v.sourceId, {
@@ -51,13 +55,20 @@ export default function MinaKallor() {
         }
         return Array.from(byId.values())
       })
+      // Mitt flöde filtreras på servern efter dina aktiva källor — hämta om det.
+      void queryClient.invalidateQueries({ queryKey: ['mitt-flode'] })
     },
   })
 
   const activeIds     = new Set(prefs.filter(p => p.isActive).map(p => p.sourceId))
   const activeSources = sources.filter(s => activeIds.has(s.id))
 
+  // Ett skrivande anrop i taget: medan PUT:en pågår är korten låsta, så att ett
+  // andra klick inte skickar en ny ändring ovanpå en ännu obekräftad.
+  const sparar = mutation.isPending
+
   function handleAdd(ids: number[]) {
+    if (sparar) return
     let nastaOrdning = prefs.filter(p => p.isActive).length
     const uppdateringar: SourcePrefUpdate[] = ids.map(sourceId => {
       const befintlig = prefs.find(p => p.sourceId === sourceId)
@@ -67,16 +78,28 @@ export default function MinaKallor() {
   }
 
   function handleRemove(id: number) {
+    if (sparar) return
     const befintlig = prefs.find(p => p.sourceId === id)
     mutation.mutate([{ sourceId: id, isActive: false, sortOrder: befintlig?.sortOrder ?? 0 }])
   }
 
   function handleDeleteAll() {
+    if (sparar) return
     mutation.mutate(prefs.filter(p => p.isActive).map(p => ({ ...p, isActive: false })))
   }
 
   return (
     <div className="flex flex-col gap-6 mt-6">
+
+      {/* Cachen uppdateras först när servern bekräftat (onSuccess), så ett
+          misslyckat anrop lämnar listan orörd — det enda som saknades var att
+          tala om det. Felet försvinner när nästa försök startar. */}
+      {mutation.isError && (
+        <div role="alert" className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <span className="text-red-500 text-sm">⚠</span>
+          <p className="text-xs font-medium text-red-600">Ändringen kunde inte sparas — dina källor är oförändrade. Försök igen.</p>
+        </div>
+      )}
 
       {/* En rad: alla aktiverade kort bredvid varandra. kallor_lagg_till är av
           live just nu (för smalt kort, lämnade ett tomt hål bredvid Aktiva
@@ -88,7 +111,10 @@ export default function MinaKallor() {
           Rörs inte förrän kortet antingen kopplas mot riktig data eller byggs
           om i grunden. */}
       {(flaggor.kallor_lagg_till || flaggor.kallor_aktiva || flaggor.kallor_rekommenderade || flaggor.kallor_alla) && (
-        <div className="flex flex-col lg:flex-row gap-6 items-stretch lg:items-start">
+        <div
+          aria-busy={sparar}
+          className={`flex flex-col lg:flex-row gap-6 items-stretch lg:items-start transition-opacity ${sparar ? 'opacity-60 pointer-events-none' : ''}`}
+        >
           {flaggor.kallor_lagg_till && (
             <div className="w-full lg:w-80 lg:shrink-0">
               <LaggTillKort sources={sources} activeIds={activeIds} onAdd={handleAdd} />
