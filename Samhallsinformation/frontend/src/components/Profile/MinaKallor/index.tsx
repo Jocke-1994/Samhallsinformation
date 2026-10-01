@@ -77,10 +77,13 @@ export default function MinaKallor() {
     mutation.mutate(uppdateringar)
   }
 
-  function handleRemove(id: number) {
+  function handleRemove(ids: number[]) {
     if (sparar) return
-    const befintlig = prefs.find(p => p.sourceId === id)
-    mutation.mutate([{ sourceId: id, isActive: false, sortOrder: befintlig?.sortOrder ?? 0 }])
+    const uppdateringar: SourcePrefUpdate[] = ids.map(sourceId => {
+      const befintlig = prefs.find(p => p.sourceId === sourceId)
+      return { sourceId, isActive: false, sortOrder: befintlig?.sortOrder ?? 0 }
+    })
+    mutation.mutate(uppdateringar)
   }
 
   function handleDeleteAll() {

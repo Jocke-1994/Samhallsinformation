@@ -168,4 +168,74 @@ public class UserSourcesControllerTests
         Assert.Contains(source.Id.ToString(), Message(result));
         Assert.False((await db.UserSourcePreferences.SingleAsync()).IsActive);
     }
+
+    // V4-6: källor som delar ShortName (multi-feed-mönstret, Polisen/Polisen
+    // Efterlysningar) visas som EN rad i Aktiva/Alla källor — att lägga till
+    // eller ta bort den ena utan den andra skulle osynkronisera dem.
+
+    [Fact]
+    public async Task Save_ActivatingOneOfTwoSiblingsWithSameShortName_ActivatesBothSiblings()
+    {
+        using var db = TestDb.Create();
+        var user = await NewUser(db);
+        var huvudkalla = await NewSource(db, published: true, "Polisen");
+        var efterlysningar = await NewSource(db, published: true, "Polisen");
+        var controller = NewController(db, user.Id);
+
+        Assert.IsType<OkResult>(await controller.SaveSources(new() { new(huvudkalla.Id, true, 0) }));
+
+        var prefs = await db.UserSourcePreferences.ToListAsync();
+        Assert.Equal(2, prefs.Count);
+        Assert.All(prefs, p => Assert.True(p.IsActive));
+        Assert.Contains(prefs, p => p.SourceId == efterlysningar.Id);
+    }
+
+    [Fact]
+    public async Task Save_DeactivatingOneOfTwoSiblingsWithSameShortName_DeactivatesBothSiblings()
+    {
+        using var db = TestDb.Create();
+        var user = await NewUser(db);
+        var huvudkalla = await NewSource(db, published: true, "Polisen");
+        var efterlysningar = await NewSource(db, published: true, "Polisen");
+        var controller = NewController(db, user.Id);
+        await controller.SaveSources(new() { new(huvudkalla.Id, true, 0) });
+
+        Assert.IsType<OkResult>(await controller.SaveSources(new() { new(huvudkalla.Id, false, 0) }));
+
+        var prefs = await db.UserSourcePreferences.ToListAsync();
+        Assert.All(prefs, p => Assert.False(p.IsActive));
+        Assert.Contains(prefs, p => p.SourceId == efterlysningar.Id);
+    }
+
+    // En opublicerad syskonkälla (t.ex. en ny komplementkälla som ännu inte verifierats
+    // leverera data) ska aldrig kunna blockera att huvudkällan går att aktivera.
+    [Fact]
+    public async Task Save_ActivatingSourceWithUnpublishedSibling_ActivatesOnlyThePublishedOne()
+    {
+        using var db = TestDb.Create();
+        var user = await NewUser(db);
+        var huvudkalla = await NewSource(db, published: true, "Polisen");
+        var opublicerad = await NewSource(db, published: false, "Polisen");
+        var controller = NewController(db, user.Id);
+
+        Assert.IsType<OkResult>(await controller.SaveSources(new() { new(huvudkalla.Id, true, 0) }));
+
+        var prefs = await db.UserSourcePreferences.ToListAsync();
+        var pref = Assert.Single(prefs);
+        Assert.Equal(huvudkalla.Id, pref.SourceId);
+        Assert.True(pref.IsActive);
+    }
+
+    [Fact]
+    public async Task Save_SourceWithoutSiblings_UnaffectedByGroupExpansion()
+    {
+        using var db = TestDb.Create();
+        var user = await NewUser(db);
+        var source = await NewSource(db, published: true, "Krisinformation");
+        var controller = NewController(db, user.Id);
+
+        Assert.IsType<OkResult>(await controller.SaveSources(new() { new(source.Id, true, 0) }));
+
+        Assert.Single(await db.UserSourcePreferences.ToListAsync());
+    }
 }
