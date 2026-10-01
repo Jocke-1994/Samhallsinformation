@@ -6,6 +6,20 @@ using Samhallsinformation.Models;
 
 public static class PushDispatcher
 {
+    // PolisenRssIngestor.Source.Id (fast, kollisionsskyddat av IngestorSourceSeeder).
+    // "Polisen Efterlysningar" (seedad i DatabaseBootstrapper) delar medvetet
+    // ShortName "Polisen" för sidomenygruppering men är en helt annan källa med
+    // ett annat Id — och saknar EventType/Geography (fritextrubriker, ingen
+    // strukturerad extraktion). PolisenBevakningMatcher.Matches tolkar null som
+    // "matchar allt", så att gate:a på ShortName här (som tidigare) skulle låta
+    // VILKEN bevakning som helst "matcha" en Efterlysning och ge en missvisande
+    // push-text som påstår att den matchade en specifik bevakning. Gate:a på
+    // Id så bara den riktiga händelsekällan går via bevaknings-matchningen —
+    // Efterlysningar (och ev. framtida "Polisen"-ShortName-källor) går via den
+    // vanliga generiska batch-pushen istället, precis som alla andra källor.
+    private const int PolisenHandelserSourceId = 1;
+
+
     // EN gemensam grundfilter för ALLA mottagarvägar (nya händelser, ny version,
     // nytt ärende, ärendesvar, ny användare) — en framtida dispatch-väg ska börja
     // härifrån istället för db.Users, annars glöms filtret. Ett konto får bara
@@ -62,7 +76,7 @@ public static class PushDispatcher
         // bevakningar (PolisenBevakningMatcher) — en delad batchtext funkar
         // inte längre här eftersom olika mottagare kan matcha olika
         // delmängder av samma insatta händelser. Övriga källor oförändrade.
-        if (source.ShortName == "Polisen")
+        if (source.Id == PolisenHandelserSourceId)
         {
             await DispatchPolisenEventsAsync(db, push, frontendUrl, source, recipientIds, insertedEvents, ct);
             return;

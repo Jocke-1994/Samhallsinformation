@@ -20,9 +20,13 @@ public class PushDispatcherTests
         return new AppDbContext(options);
     }
 
-    // Källa som medvetet INTE heter "Polisen" — PushDispatcher grenar på det
-    // namnet till bevaknings-matchad utskick (se PolisenEventsTests nedan för
-    // det). Dessa generiska tester ska inte råka gå via den grenen.
+    // Källa som medvetet INTE heter "Polisen" och har ett Id skilt från 1 —
+    // PushDispatcher grenar på PolisenHandelserSourceId (=1, PolisenRssIngestor.
+    // Source.Id i produktion) till bevaknings-matchad utskick (se
+    // SeedPolisenSubscriber/PolisenEventsTests nedan för det). Utan ett explicit
+    // Id här skulle EF Core InMemory-providern auto-tilldela 1 ändå (första/enda
+    // Source i en fräsch testdatabas), vilket oavsiktligt skulle trigga samma
+    // gren — explicit Id håller de generiska testerna genuint utanför den.
     private static (User User, Source Source, UserDevice Device) SeedSubscriber(
         AppDbContext db, bool pushNyaHandelser = true, bool sourceActive = true, bool sourcePublished = true)
     {
@@ -33,7 +37,7 @@ public class PushDispatcherTests
             PasswordHash     = "x",
             PushNyaHandelser = pushNyaHandelser,
         };
-        var source = new Source { Name = "Krisinformation", ShortName = "Krisinformation", BaseUrl = "https://example.com", IsPublished = sourcePublished };
+        var source = new Source { Id = 2, Name = "Krisinformation", ShortName = "Krisinformation", BaseUrl = "https://example.com", IsPublished = sourcePublished };
         db.Users.Add(user);
         db.Sources.Add(source);
         db.SaveChanges();
@@ -154,9 +158,11 @@ public class PushDispatcherTests
         Assert.Equal("failed", log.Status);
     }
 
-    // Källan heter medvetet "Polisen" här — det är exakt vad som triggar
-    // PushDispatchers bevaknings-gren (jfr SeedSubscriber ovan, som medvetet
-    // undviker namnet för de generiska testerna).
+    // Källans Id är medvetet satt till 1 (= PolisenRssIngestor.Source.Id i
+    // produktion) — det är vad som triggar PushDispatchers bevaknings-gren
+    // sedan fixen för Polisen Efterlysningar-matchningen, inte längre bara
+    // ShortName (jfr SeedSubscriber ovan, som medvetet undviker namnet för
+    // de generiska testerna, och SeedPolisenEfterlysningarSubscriber nedan).
     private static (User User, Source Source, UserDevice Device) SeedPolisenSubscriber(
         AppDbContext db, bool sourcePublished = true)
     {
@@ -167,7 +173,7 @@ public class PushDispatcherTests
             PasswordHash     = "x",
             PushNyaHandelser = true,
         };
-        var source = new Source { Name = "Polisen", ShortName = "Polisen", BaseUrl = "https://example.com", IsPublished = sourcePublished };
+        var source = new Source { Id = 1, Name = "Polisen", ShortName = "Polisen", BaseUrl = "https://example.com", IsPublished = sourcePublished };
         db.Users.Add(user);
         db.Sources.Add(source);
         db.SaveChanges();
@@ -180,11 +186,36 @@ public class PushDispatcherTests
         return (user, source, device);
     }
 
+    // Samma ShortName ("Polisen") som huvudkällan ovan, men ett ANNAT Id — precis
+    // som riktiga "Polisen Efterlysningar" (DatabaseBootstrapper). Ska INTE gå via
+    // bevaknings-matchningen, se testet nedan.
+    private static (User User, Source Source, UserDevice Device) SeedPolisenEfterlysningarSubscriber(AppDbContext db)
+    {
+        var user = new User
+        {
+            Name             = "Berit",
+            Email            = $"{Guid.NewGuid()}@example.com",
+            PasswordHash     = "x",
+            PushNyaHandelser = true,
+        };
+        var source = new Source { Id = 99, Name = "Polisen Efterlysningar", ShortName = "Polisen", BaseUrl = "https://example.com", IsPublished = true };
+        db.Users.Add(user);
+        db.Sources.Add(source);
+        db.SaveChanges();
+
+        db.UserSourcePreferences.Add(new UserSourcePreference { UserId = user.Id, SourceId = source.Id, IsActive = true, SortOrder = 0 });
+        var device = new UserDevice { UserId = user.Id, Endpoint = "https://push.example/efterlysning-ep", P256dh = "p256dh-key", Auth = "auth-secret" };
+        db.UserDevices.Add(device);
+        db.SaveChanges();
+
+        return (user, source, device);
+    }
+
     // Titeln har medvetet ett datumprefix (samma format som skarp Polisen-data,
     // "14 augusti 13.05, Trafikolycka, Göteborg") — inte "Trafikolycka, Göteborg"
     // rakt av. Matchningen sker mot eventType (redan strukturerat fält), inte
     // title, så ett realistiskt datumprefix bevisar att fixen faktiskt biter.
-    private static CanonicalEvent MakeEvent(int sourceId, string geography, string? eventType) => new()
+    private static CanonicalEvent MakeEvent(int sourceId, string? geography, string? eventType) => new()
     {
         SourceId    = sourceId,
         ExternalId  = Guid.NewGuid().ToString(),
@@ -327,6 +358,44 @@ public class PushDispatcherTests
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
             Arg.Any<string>(),
             Arg.Is<string>(b => b!.Contains('2') && b.Contains("bevakningar")),
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
+    // Regressionstest för bevaknings-matchningsbuggen (kodgranskning V4-5,
+    // 2026-09-27): "Polisen Efterlysningar" delar ShortName "Polisen" med
+    // huvudkällan men har ett ANNAT Id och saknar EventType/Geography.
+    // PolisenBevakningMatcher.Matches tolkar null EventType/Geography som
+    // "matchar allt" — innan fixen (gate på ShortName) gick Efterlysningar
+    // via samma per-användare-bevaknings-gren som riktiga Polisen-händelser,
+    // och fick en missvisande "matchar dina bevakningar"-text trots att
+    // bevakningen inte filtrerat bort något alls. Efter fixen (gate på Id)
+    // ska Efterlysningar gå via den vanliga generiska batch-pushen, precis
+    // som alla andra källor.
+    [Fact]
+    public async Task DispatchNewEventsAsync_PolisenEfterlysningarDelarShortNameMenInteId_AnvanderGeneriskBatchtext()
+    {
+        using var db = NewDb();
+        var (user, source, device) = SeedPolisenEfterlysningarSubscriber(db);
+        db.PolisenBevakningar.Add(new PolisenBevakning
+        {
+            UserId         = user.Id,
+            KategorierJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Skjutning" }),
+            OmradenJson    = System.Text.Json.JsonSerializer.Serialize(new[] { "Kungälv" }),
+        });
+        db.SaveChanges();
+        var events = new List<CanonicalEvent>
+        {
+            MakeEvent(source.Id, geography: null, eventType: null),
+            MakeEvent(source.Id, geography: null, eventType: null),
+        };
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 2, insertedEvents: events);
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(),
+            Arg.Is<string>(b => b!.Contains("Polisen Efterlysningar") && !b.Contains("bevakning")),
             Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
     }
 

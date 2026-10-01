@@ -155,7 +155,9 @@ public class PushFanOutTests
     {
         using var db = TestDb.Create();
         var device = PushControllerTests.SeedDevice(db);
-        var source = new Source { Name = "Krisinformation", ShortName = "Krisinformation", BaseUrl = "https://example.com", IsPublished = true };
+        // Explicit Id != 1 (= PolisenRssIngestor.Source.Id) så källan inte av misstag
+        // triggar PushDispatchers bevaknings-gren.
+        var source = new Source { Id = 2, Name = "Krisinformation", ShortName = "Krisinformation", BaseUrl = "https://example.com", IsPublished = true };
         db.Sources.Add(source);
         db.SaveChanges();
         db.UserSourcePreferences.Add(new UserSourcePreference { UserId = device.UserId, SourceId = source.Id, IsActive = true });
@@ -181,7 +183,8 @@ public class PushFanOutTests
     {
         using var db = TestDb.Create();
         var user = new User { Name = "Ada", Email = "a@example.com", PasswordHash = "x", PushNyaHandelser = true };
-        var source = new Source { Name = "Krisinformation", ShortName = "Krisinformation", BaseUrl = "https://example.com", IsPublished = true };
+        // Explicit Id != 1, se kommentaren i testet ovan.
+        var source = new Source { Id = 2, Name = "Krisinformation", ShortName = "Krisinformation", BaseUrl = "https://example.com", IsPublished = true };
         db.Users.Add(user); db.Sources.Add(source); db.SaveChanges();
         db.UserSourcePreferences.Add(new UserSourcePreference { UserId = user.Id, SourceId = source.Id, IsActive = true });
         var devices = Enumerable.Range(0, 3).Select(i => new UserDevice { UserId = user.Id, Endpoint = $"https://push.example/{i}", P256dh = "p", Auth = "a" }).ToList();
