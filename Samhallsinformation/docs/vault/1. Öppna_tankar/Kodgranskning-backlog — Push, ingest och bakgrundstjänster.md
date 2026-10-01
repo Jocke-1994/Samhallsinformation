@@ -9,25 +9,30 @@ Rå tanke, del av V4-5 (se syskonfilen "Auth, sessioner och inloggning" för
 bakgrund om varför den här filen finns). Allt nedan verifierat mot
 NUVARANDE kod 2026-09-27 — det som redan var åtgärdat är inte med.
 
-## Viktigast: Polisen-bevakningar matchar fel för "Polisen Efterlysningar"
+## ✅ Löst (2026-10-01): Polisen-bevakningar matchade fel för "Polisen Efterlysningar"
 
-**`PushDispatcher.DispatchNewEventsAsync` grenar fortfarande på
+**`PushDispatcher.DispatchNewEventsAsync` grenade på
 `source.ShortName == "Polisen"`** för att slå på per-användare
 Polisen-bevaknings-filtrering. "Polisen Efterlysningar" (seedad i
 `Program.cs`) delar MEDVETET samma `ShortName` ("Polisen") för att grupperas
 under samma sidomeny-knapp — men har `EventType = null` och
-`Geography = null`. `PolisenBevakningMatcher.Matches` tolkar `null` som
-"matchar allt", så **vilken bevakning som helst matchar en Efterlysning**,
-och pushtexten blir den generiska "Ny händelse (Polisen)" istället för att
-nämna typ/område. Enligt projektminnet (session 49, 2026-09-15/17)
-publicerades Polisen Efterlysningar i produktion — det här är alltså inte
-längre ett teoretiskt scenario, utan en risk mot LIVE-trafik: en användare
-med en snäv bevakning (t.ex. "bara Kungälv") kan börja få push för
-rikstäckande efterlysningar utan koppling till sin bevakning.
+`Geography = null`. `PolisenBevakningMatcher.Matches` tolkade `null` som
+"matchar allt", så vilken bevakning som helst matchade en Efterlysning, och
+pushtexten blev missvisande (påstod att den matchat en specifik bevakning
+trots att bevakningen inte filtrerat bort något alls).
 
-Förslag oförändrat sedan granskningen: välj på `SourceId` (eller en
-explicit "är detta huvudflödet"-flagga på `Source`) i stället för
-`ShortName`, som är en visningsegenskap, inte en identitet.
+**Fix:** [PR #666](https://github.com/Jocke-1994/Samhallsinformation/pull/666)
+— gatear nu på `source.Id` (= `PolisenRssIngestor.Source.Id`, fast och
+kollisionsskyddat) istället för `ShortName`. Nytt regressionstest. Mergad
+2026-10-01.
+
+**Sidofynd som löstes i samma veva:** Polisen/Polisen Efterlysningar (och
+SMHI/SMHI Nyheter, samma mönster) visades som två separata rader i Aktiva
+källor/Alla källor trots att de är en enhet. [PR #667](https://github.com/Jocke-1994/Samhallsinformation/pull/667)
+— slog ihop dem till en rad (generisk ShortName-gruppering, samma princip
+Sidebar redan använder), backend expanderar nu till-/bortval till hela
+gruppen, och en idempotent backfill aktiverade Efterlysningar/SMHI Nyheter
+åt användare som redan hade huvudkällan aktiv. Mergad 2026-10-01.
 
 *(enhet-3, "Push/matchning")*
 
