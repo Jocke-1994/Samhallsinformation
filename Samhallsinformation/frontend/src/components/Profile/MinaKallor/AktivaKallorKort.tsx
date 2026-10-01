@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Source } from '../../../types'
 import PolisenBevakningarLista from './PolisenBevakningarLista'
 import { useFlags } from '../../../context/FeatureFlagsContext'
+import { grupperaKallor, representant } from './kallGrupper'
 
 // Bara Polisen har bevakningar tillgängligt just nu, eftersom det är den
 // enda källan som fått sina händelsetyper extraherade (EventType, PR #373).
@@ -9,37 +10,45 @@ import { useFlags } from '../../../context/FeatureFlagsContext'
 // standard för dem.
 const HAR_KATEGORIFILTER = new Set(['Polisen'])
 
-function KallaRad({ k, onRemove }: { k: Source; onRemove: (id: number) => void }) {
+function KallaRad({ visningsKalla, gruppIds, onRemove }: {
+  visningsKalla: Source
+  gruppIds:      number[]
+  onRemove:      (ids: number[]) => void
+}) {
   const flaggor = useFlags()
-  const harFilterKnapp = flaggor.kallor_polisen_filter && HAR_KATEGORIFILTER.has(k.shortName)
+  const harFilterKnapp = flaggor.kallor_polisen_filter && HAR_KATEGORIFILTER.has(visningsKalla.shortName)
 
   return (
     <div className="py-2 group">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-slate-800 leading-snug truncate">{k.name}</p>
+          <p className="text-sm font-medium text-slate-800 leading-snug truncate">{visningsKalla.name}</p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <button
-            onClick={() => onRemove(k.id)}
+            onClick={() => onRemove(gruppIds)}
             className="hover-reveal px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-semibold rounded-lg transition-all"
           >- Ta bort</button>
         </div>
       </div>
-      {harFilterKnapp && <PolisenBevakningarLista kallNamn={k.name} />}
+      {harFilterKnapp && <PolisenBevakningarLista kallNamn={visningsKalla.name} />}
     </div>
   )
 }
 
 export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highlightId, harLaggTillKort }: {
   sources:          Source[]
-  onRemove:         (id: number) => void
+  onRemove:         (ids: number[]) => void
   onDeleteAll:      () => void
   highlightId:      string | null
   harLaggTillKort:  boolean
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const sorterade = [...sources].sort((a, b) => a.name.localeCompare(b.name, 'sv'))
+  // Källor som delar shortName (t.ex. Polisen + Polisen Efterlysningar) visas
+  // som EN rad — samma gruppering som Sidebar redan använder.
+  const grupper = [...grupperaKallor(sources).values()]
+    .map(gruppkallor => ({ visningsKalla: representant(gruppkallor), gruppIds: gruppkallor.map(k => k.id) }))
+    .sort((a, b) => a.visningsKalla.name.localeCompare(b.visningsKalla.name, 'sv'))
 
   return (
     <div
@@ -56,7 +65,7 @@ export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highl
         </div>
       </div>
 
-      {sorterade.length === 0 ? (
+      {grupper.length === 0 ? (
         <div className="px-6 py-12 text-center">
           <p className="text-3xl mb-3">📭</p>
           <p className="text-sm font-medium text-slate-700">Inga aktiva källor</p>
@@ -67,12 +76,14 @@ export default function AktivaKallorKort({ sources, onRemove, onDeleteAll, highl
       ) : (
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <div className="flex flex-col">
-            {sorterade.map(k => <KallaRad key={k.id} k={k} onRemove={onRemove} />)}
+            {grupper.map(({ visningsKalla, gruppIds }) => (
+              <KallaRad key={visningsKalla.shortName} visningsKalla={visningsKalla} gruppIds={gruppIds} onRemove={onRemove} />
+            ))}
           </div>
         </div>
       )}
 
-      {sorterade.length > 0 && (
+      {grupper.length > 0 && (
         <div className="px-6 py-3 border-t border-slate-100 flex justify-end">
           {!showDeleteConfirm ? (
             <button

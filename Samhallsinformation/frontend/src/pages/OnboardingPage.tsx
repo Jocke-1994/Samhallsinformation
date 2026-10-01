@@ -93,10 +93,10 @@ export default function OnboardingPage() {
     setValdaKällor(prev => new Set([...prev, ...ids]))
   }
 
-  function handleRemove(id: number) {
+  function handleRemove(ids: number[]) {
     setValdaKällor(prev => {
       const next = new Set(prev)
-      next.delete(id)
+      for (const id of ids) next.delete(id)
       return next
     })
   }

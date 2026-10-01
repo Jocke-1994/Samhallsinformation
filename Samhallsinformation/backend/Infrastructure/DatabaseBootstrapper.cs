@@ -1183,6 +1183,55 @@ public static class DatabaseBootstrapper
                 await db.SaveChangesAsync();
             }
 
+            // V4-6: backfill — källor som delar ShortName (multi-feed-mönstret, t.ex.
+            // Polisen + Polisen Efterlysningar, SMHI + SMHI Nyheter) visas nu som EN rad
+            // i Aktiva/Alla källor, och UserSourcesController expanderar framtida
+            // till-/bortval till hela gruppen. Användare som redan hade huvudkällan
+            // aktiv INNAN syskonet fanns/aktiverades separat ska inte tyst sakna
+            // innehåll/push för det — aktivera syskonet åt dem en gång. Idempotent
+            // (redan aktiva rader rörs inte), körs varje uppstart, ingen risk att
+            // skriva över en medveten avaktivering (bara rader som saknas eller är
+            // inaktiva för ett syskon vars grupp-medlem redan är aktiv uppdateras).
+            var publiceradeKallor = await db.Sources.Where(s => s.IsPublished).ToListAsync();
+            var kallGrupper = publiceradeKallor
+                .GroupBy(s => s.ShortName)
+                .Where(g => g.Count() > 1)
+                .ToDictionary(g => g.Key, g => g.Select(s => s.Id).ToList());
+
+            foreach (var gruppKallor in kallGrupper.Values)
+            {
+                var aktivaAnvandarIds = await db.UserSourcePreferences
+                    .Where(p => gruppKallor.Contains(p.SourceId) && p.IsActive)
+                    .Select(p => p.UserId)
+                    .Distinct()
+                    .ToListAsync();
+                if (aktivaAnvandarIds.Count == 0) continue;
+
+                var befintligaPrefs = await db.UserSourcePreferences
+                    .Where(p => aktivaAnvandarIds.Contains(p.UserId) && gruppKallor.Contains(p.SourceId))
+                    .ToListAsync();
+                var prefUppslag = befintligaPrefs.ToDictionary(p => (p.UserId, p.SourceId));
+
+                foreach (var userId in aktivaAnvandarIds)
+                {
+                    foreach (var sourceId in gruppKallor)
+                    {
+                        if (prefUppslag.TryGetValue((userId, sourceId), out var pref))
+                        {
+                            if (!pref.IsActive) pref.IsActive = true;
+                        }
+                        else
+                        {
+                            db.UserSourcePreferences.Add(new UserSourcePreference
+                            {
+                                UserId = userId, SourceId = sourceId, IsActive = true, SortOrder = 0,
+                            });
+                        }
+                    }
+                }
+            }
+            await db.SaveChangesAsync();
+
             // Rätta felaktiga RSS-URL:er (gamla URL:er pekade på HTML-sidor)
             var lmvSource = await db.Sources.FirstOrDefaultAsync(s =>
                 s.Name == "Livsmedelsverket" &&
