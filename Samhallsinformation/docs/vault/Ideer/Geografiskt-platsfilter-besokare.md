@@ -82,6 +82,30 @@ UI-skiss (se "Kvarstående frågor" längst ner).
     en tillfällig vyinställning man växlar i stunden. Olika syften,
     kan leva sida vid sida.
 
+## Beslut 2026-10-04, forts. — mobil
+
+12. **Mobil-riktning** — favoriten är en kombo av B (Visa fler) och C
+    (Sökfält), inte någon av de fyra renodlade. Byggd som en femte
+    mobilskiss ("E · B + C kombo") i samma Artifact: sökfältet ligger
+    alltid överst (genväg för den som redan vet vad den letar efter),
+    och under det en kort rad (6 pluppar, som B) med "Visa fler" för
+    den som bara vill bläddra. Så fort man skriver i sökfältet söks det
+    över HELA listan (inte bara de 6 synliga), inte bara de redan
+    expanderade.
+13. **Sökträff som saknar en aktiv händelse** (testat med "Kungälv",
+    en riktig kommun utan en exempel-händelse i skissens data) — **min
+    rekommendation, väntar på din bekräftelse:** sökfältet söker bara
+    bland platser som redan har en aktiv plupp (en pågående händelse),
+    INTE en allmän sökning mot alla Sveriges kommuner. Skriver man ett
+    namn utan någon aktuell händelse blir det noll träffar, med texten
+    "Inga aktuella händelser i 'Kungälv' just nu — pluppar visas bara
+    för platser med en aktiv händelse" (byggt och synligt live i
+    Variant E om man testar). Anledningen: att göra sökningen till en
+    allmän plats-uppslagning (sök VILKEN kommun som helst, se "inga
+    händelser just nu" för en tom plats) är en annan, större funktion —
+    närmare en plats-bevakning än ett flödesfilter. Säg till om det är
+    det du egentligen var ute efter, annars står det här som beslutet.
+
 ## Kvarstående frågor
 
 **9. Skalning vid många pluppar — UI-skiss klar, väntar på din favorit.**
