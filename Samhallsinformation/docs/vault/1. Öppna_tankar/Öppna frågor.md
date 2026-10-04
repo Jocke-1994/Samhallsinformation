@@ -36,14 +36,10 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   två separata kryssrutor i schemaläggningsflödet — en för push (redan
   manuell knapp behålls för ad-hoc), en ny "Synas för besökare?" som
   styr en "Ny version"-banner via MaintenanceBanner-systemet.
-
-## Väntar på ditt svar
-
 - **[[../Ideer/Geografiskt-platsfilter-besokare|Geografiskt
-  platsfilter för besökare]]** — 9 av 11 scenarier beslutade
-  2026-10-04. Kvar: liveuppdatering (ett förslag ligger, väntar på din
-  nick) och pluppskalning vid 20-30+ platser (fyra UI-alternativ, väntar
-  på att du pekar ut en favorit i Artifact-skissen).
+  platsfilter för besökare]]** — alla 13 scenarier beslutade, redo för
+  pipelinen. UI-skiss (Artifact, desktop+mobil) klar, mobil-favoriten är
+  en B+C-kombo med sök-mot-alla-platser + gråmarkerade inaktiva orter.
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,

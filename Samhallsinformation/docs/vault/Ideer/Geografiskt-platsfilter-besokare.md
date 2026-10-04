@@ -1,6 +1,6 @@
 ---
 typ: ide
-status: fragor-olosta  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
+status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ej-bedomd
 beroenden: ""
 prioritet: ej-bedomd
@@ -28,8 +28,9 @@ Sveriges kommunindelning ändras i praktiken aldrig) — ett engångsjobb,
 inte löpande underhåll, men ett genuint datajobb utöver att bara
 aggregera `Geography`-strängar rakt av.
 
-Status: 10 av 11 scenarier beslutade. Ett kvarstår, väntar på en
-UI-skiss (se "Kvarstående frågor" längst ner).
+Status: alla 11 ursprungliga scenarier beslutade, plus två tillkomna
+mobil-frågor (12-13). Redo för pipelinen — se Kopplat för kvarvarande
+tekniska förberedelser (referenstabellen) innan byggstart.
 
 ## Beslut 2026-10-04 (efter dina svar)
 
@@ -68,7 +69,9 @@ UI-skiss (se "Kvarstående frågor" längst ner).
    `cookie_consent` redan använder för besökare utan konto), inte
    serverbundet eftersom ingen inloggning finns. Enkelt att rensa/byta.
    Invänder du inte: det här är beslutet.
-9. *(omformulerad — se Kvarstående frågor)*
+9. **Skalning vid många pluppar** — favoriten är en kombo av Variant B
+   (Visa fler) och C (Sökfält), inte någon av de fyra renodlade. Se
+   beslut 12 nedan för den slutgiltiga mobil-riktningen.
 10. **Kombination med befintligt filter** — bekräftat: platsfiltret är
     en egen, fristående vy, INTE AND-kombinerad med det befintliga
     allvarlighetsfiltret (Alla/Kritisk/Viktigt/Bra att veta).
@@ -92,45 +95,32 @@ UI-skiss (se "Kvarstående frågor" längst ner).
     den som bara vill bläddra. Så fort man skriver i sökfältet söks det
     över HELA listan (inte bara de 6 synliga), inte bara de redan
     expanderade.
-13. **Sökträff som saknar en aktiv händelse** (testat med "Kungälv",
-    en riktig kommun utan en exempel-händelse i skissens data) — **min
-    rekommendation, väntar på din bekräftelse:** sökfältet söker bara
-    bland platser som redan har en aktiv plupp (en pågående händelse),
-    INTE en allmän sökning mot alla Sveriges kommuner. Skriver man ett
-    namn utan någon aktuell händelse blir det noll träffar, med texten
-    "Inga aktuella händelser i 'Kungälv' just nu — pluppar visas bara
-    för platser med en aktiv händelse" (byggt och synligt live i
-    Variant E om man testar). Anledningen: att göra sökningen till en
-    allmän plats-uppslagning (sök VILKEN kommun som helst, se "inga
-    händelser just nu" för en tom plats) är en annan, större funktion —
-    närmare en plats-bevakning än ett flödesfilter. Säg till om det är
-    det du egentligen var ute efter, annars står det här som beslutet.
+13. **Sökträff som saknar en aktiv händelse** (testat med "Kungälv") —
+    **omvärderat och beslutat annorlunda än mitt första förslag.** Sökfältet
+    söker mot ALLA svenska kommuner/län, inte bara de som redan har en
+    aktiv plupp. En ort utan en aktuell händelse visas som en gråmarkerad,
+    streckad plupp märkt "(0)" — synlig men INTE klickbar — med en
+    förklarande rad: "Gråmarkerade orter har inga aktuella händelser just
+    nu — gå tillbaka hit senare om det händer något." Byggt och testbart
+    live i Variant E (prova "Kungälv", "Kiruna", "Halmstad", "Kalmar",
+    "Örnsköldsvik" eller "Växjö").
+    **Teknisk konsekvens:** kräver en riktig, komplett katalog att söka
+    mot — rekommendation: SCB:s officiella kommun- och länslista
+    (~290 + 21), inte ett försök att räkna upp varje områdessträng
+    källorna råkar producera. Samma referenstabell som redan krävs för
+    kommun→län-mappningen (beslut 2) — i praktiken bara en extra
+    "har en aktiv händelse just nu"-flagga på den tabellen, ingen ny
+    separat datakälla.
 
-## Kvarstående frågor
+## UI-skiss
 
-**9. Skalning vid många pluppar — UI-skiss klar, väntar på din favorit.**
-Claude Artifact (Design-canvas): https://claude.ai/artifact/NRitLhJURPuw69QcJUsACA
-— ett "Nuläge"-skärm (ingångspunkten, "📍 Filtrera på plats"-fliken) plus
-fyra interaktiva varianter sida vid sida, alla med 22 exempel-pluppar,
-klickbara (växla Botkyrka/Haninge/Stockholms län/Nationellt m.fl. och se
-de sektionerade resultaten — inkl. SMHI:s länsvarning som ärvs in under
-både Botkyrka och Haninge, enligt beslut 2+3):
-  - **A — Skrollbar rad**: en rad, horisontell scroll
-  - **B — Visa fler**: kort rad (8 st) + expanderbar knapp för resten
-  - **C — Sökfält**: skriv för att hitta en specifik ort bland alla
-  - **D — Fri radbrytning**: ingen gräns, raden växer nedåt över flera rader
-Jag menade: om 50 händelser just nu råkar sprida sig över 20–30 olika
-platser (inte bara ett fåtal), blir det en lång rad av pluppar att
-visa på en gång. Hur ska UI:t hantera DEN situationen specifikt?
-Exempel på alternativ (ingen rekommenderad ännu, vill se din reaktion
-i skissen):
-  - en horisontellt skrollbar rad med pluppar
-  - en kort rad + en "Visa fler"-knapp som expanderar resten
-  - ett sökfält ovanför pluppraden för att hitta en specifik ort
-  - inget särskilt — låt raden radbryta över flera rader och acceptera
-    att den blir hög
-Jag bygger in alla fyra som alternativ i UI-skissen (Claude Artifact)
-så du kan peka på den du gillar istället för att behöva svara i text.
+Claude Artifact (Design-canvas, interaktiv): https://claude.ai/artifact/NRitLhJURPuw69QcJUsACA
+— ett "Nuläge"-skärm (ingångspunkten, "📍 Filtrera på plats"-fliken),
+fyra renodlade desktop/mobil-varianter (A skrollbar rad, B visa fler,
+C sökfält, D fri radbrytning) och en femte, vald mobil-kombo (E · B+C)
+med sök-mot-alla-platser + gråmarkerade inaktiva pluppar (beslut 13).
+Alla pluppar klickbara, sektionerad resultatvy inkl. SMHI:s länsvarning
+som ärvs in under både Botkyrka och Haninge (beslut 2+3).
 
 ## Kopplat
 - [[../Verktyg/Schemalagd-lansering|Schemalagd lansering]] — samma
