@@ -40,8 +40,10 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
 ## Väntar på ditt svar
 
 - **[[../Ideer/Geografiskt-platsfilter-besokare|Geografiskt
-  platsfilter för besökare]]** — 11 konkreta scenarier skrivna, väntar
-  på dina svar innan omfattning/UI-skiss kan låsas.
+  platsfilter för besökare]]** — 9 av 11 scenarier beslutade
+  2026-10-04. Kvar: liveuppdatering (ett förslag ligger, väntar på din
+  nick) och pluppskalning vid 20-30+ platser (fyra UI-alternativ, väntar
+  på att du pekar ut en favorit i Artifact-skissen).
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,

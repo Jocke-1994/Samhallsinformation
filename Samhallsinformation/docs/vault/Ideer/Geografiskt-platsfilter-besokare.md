@@ -11,68 +11,102 @@ kalla: "session 2026-10-04, användarens önskemål om att kunna filtrera redan 
 # Geografiskt platsfilter för besökare
 
 Idé: ett platsfilter i flödet, nåbart redan utan inloggning. Första
-instinkten var "filtrera på län", men avstämt 2026-10-04 (se
-`docs/vault/Verktyg/Schemalagd-lansering.md`s syskonresonemang i chatten)
-— det användaren egentligen beskriver är **dynamiska pluppar/chips per
-plats som redan finns i "Senaste nytt" just nu**, inte en filtrering mot
-de 21 formella svenska länen. Konkret exempel: finns det en händelse i
+instinkten var "filtrera på län", men avstämt 2026-10-04 — det
+användaren egentligen beskriver är **dynamiska pluppar/chips per plats
+som redan finns i "Senaste nytt" just nu**, inte en filtrering mot de 21
+formella svenska länen. Konkret exempel: finns det en händelse i
 Botkyrka ska det finnas en "Botkyrka"-plupp i filtret. Finns ingen
 Botkyrka-händelse finns ingen plupp.
 
-Tekniskt enklare än först trott: `CanonicalEvent.Geography` är redan
-fritext per källa (Polisen = kommun, extraherat ur titeln; SMHI = eget
-varningsområde, ofta redan länsnivå; Krisinformation/Trafikverket = egen
-granularitet). En ren "visa distinkta platser som finns i flödet"-
-funktion kräver alltså ingen ny kommun→län-mappningstabell för v1 — bara
-en aggregering av redan existerande `Geography`-värden.
+**Rättelse från ursprungstexten:** jag skrev först att det INTE skulle
+behövas en kommun→län-mappning för v1. Det stämmer inte längre efter
+svaren på scenario 2+3 nedan — eftersom en länsvarning (SMHI) ska räknas
+in automatiskt när man filtrerar på en kommun inom det länet (t.ex.
+Botkyrka), måste systemet veta att Botkyrka ligger i Stockholms län.
+Det kräver en statisk referenstabell (kommun → län, ca 290 rader,
+Sveriges kommunindelning ändras i praktiken aldrig) — ett engångsjobb,
+inte löpande underhåll, men ett genuint datajobb utöver att bara
+aggregera `Geography`-strängar rakt av.
 
-Flera detaljer är dock olösta — se scenarierna nedan, väntar på svar
-innan detta kan gå vidare.
+Status: 9 av 11 scenarier beslutade. Två kvarstår (se "Kvarstående
+frågor" längst ner).
 
-## Öppna frågor — scenarier att ta ställning till
+## Beslut 2026-10-04 (efter dina svar)
 
-1. **Grupperingsnivå.** Botkyrka och Haninge har båda en händelse just
-   nu — visas de som två separata, platta pluppar, eller grupperade
-   under en gemensam "Stockholms län"-rubrik/plupp man kan expandera?
-2. **Blandad granularitet.** SMHI utfärdar en varning för hela
-   "Stockholms län" (ingen specifik kommun). Blir det en egen plupp
-   ("Stockholms län") helt separat från "Botkyrka", eller ska den
-   automatiskt räknas in om besökaren filtrerar på "Botkyrka" (eftersom
-   Botkyrka ligger i Stockholms län)?
-3. **Vad en plupp faktiskt filtrerar på.** Om besökaren klickar
-   "Botkyrka" — visas BARA Botkyrka-märkta händelser, eller även
-   bredare händelser som täcker Botkyrka (t.ex. en nationell SMHI-
-   varning, eller scenario 2:s länsvarning)?
-4. **Flera pluppar samtidigt.** Går det att välja flera pluppar på en
-   gång (t.ex. Botkyrka + Haninge, ELLER-logik — visa händelser för
-   endera), eller bara en plats åt gången?
-5. **Händelser utan plats.** Vissa händelser saknar `Geography` helt
-   (CLAUDE.md-principen: saknas geografi räknas det som nationellt).
-   Finns en "Hela Sverige"/nationell-plupp, och är den vald som
-   standard eller måste besökaren aktivt välja den också?
-6. **Tidsfönster för vilka pluppar som visas.** Styrs pluppkatalogen av
-   exakt det som råkar vara laddat på skärmen just nu (NewsFeed hämtar
-   50 senaste), eller ett bredare fönster (t.ex. senaste 7 dagarna) så
-   en plats inte plötsligt försvinner ur filtret bara för att dess
-   händelse skrollat ur vy?
-7. **Liveuppdatering.** Ska pluppkatalogen uppdateras live i takt med
-   att nya händelser kommer in (polling), eller räcker det att den
-   sätts vid sidladdning?
-8. **Minns valet.** Om en besökare väljer "Botkyrka" och sedan laddar
-   om sidan eller kommer tillbaka senare — ska valet komma ihåg
-   (webbläsarlokalt, ingen inloggning finns) eller nollställas varje
-   besök?
-9. **Skalning vid många pluppar.** Om 20-30 olika platser har
-   händelser samtidigt — skrollbar rad, "visa fler"-knapp, sökfält,
-   eller något annat? Finns ett tak på hur många som visas samtidigt?
-10. **Kombination med befintligt filter.** Hur samspelar platspluppen
-    med det redan befintliga allvarlighetsfiltret (Alla/Kritisk/
-    Viktigt/Bra att veta) — AND-kombinerade (båda måste matcha), eller
-    är platsfiltret en helt egen, fristående vy?
-11. **Medlemmar också?** Ska samma pluppfilter senare även gälla i
-    "Mitt flöde" för inloggade, eller är det här medvetet en
-    besökarspecifik funktion (jfr session 35s Polisen-bevakningar, som
-    redan låter medlemmar bevaka specifika kommuner på ett annat sätt)?
+1. **Grupperingsnivå** — platta pluppar, ingen nästling/gruppering.
+   Botkyrka, Haninge och Stockholms län blir tre separata, jämbördiga
+   pluppar sida vid sida — inte en expanderbar länsrubrik med kommuner
+   under sig.
+2. **Blandad granularitet** — en länsvarning (t.ex. SMHI på "Stockholms
+   län") får sin EGEN plupp, OCH räknas in automatiskt för varje kommun
+   inom länet. Det här är anledningen till att kommun→län-mappningen
+   (se rättelsen ovan) faktiskt behövs.
+3. **Vad en plupp filtrerar på** — att klicka "Botkyrka" visar ALLT som
+   rör Botkyrka: direkta Botkyrka-märkta händelser OCH ärvda bredare
+   händelser (länsvarningar, ev. nationella — se scenario 5).
+4. **Flera pluppar samtidigt** — ja, flervalsbart (ELLER-logik). Vyn ska
+   vara tydligt sektionerad per vald plats ("Dessa gäller Haninge",
+   "Dessa gäller Botkyrka") snarare än en sammanslagen, odelad lista.
+   UI-konsekvens: det här är i praktiken grupperade sektioner i
+   resultatvyn, inte bara en filtrerad flat lista — viktigt att få med
+   i skissen.
+5. **Händelser utan plats** — ja, en egen väljbar "Nationellt"/"Hela
+   Sverige"-plupp för händelser utan specifik ort (samma
+   CLAUDE.md-fallback som redan gäller: saknas geografi = nationellt).
+   Inte förvalt/automatiskt inkluderad — besökaren väljer den aktivt
+   som vilken annan plupp som helst, annars är bilden för filtrerad
+   "bara Botkyrka" renare.
+6. **Tidsfönster** — bekräftat: pluppkatalogen byggs av de senaste 50
+   händelserna, samma mängd `NewsFeed` redan hämtar för "Allt"-vyn.
+   Ingen separat fråga mot backend bara för pluppkatalogen.
+7. *(flyttad till Kvarstående frågor — se nedan)*
+8. **Minns valet** — rekommendation: spara senaste plats-val i
+   webbläsarens `localStorage` (samma mönster som t.ex. `theme`/
+   `cookie_consent` redan använder för besökare utan konto), inte
+   serverbundet eftersom ingen inloggning finns. Enkelt att rensa/byta.
+   Invänder du inte: det här är beslutet.
+9. *(omformulerad — se Kvarstående frågor)*
+10. **Kombination med befintligt filter** — bekräftat: platsfiltret är
+    en egen, fristående vy, INTE AND-kombinerad med det befintliga
+    allvarlighetsfiltret (Alla/Kritisk/Viktigt/Bra att veta).
+11. **Medlemmar också** — min rekommendation: ja, bygg det som en delad
+    funktion från start, inte besökarspecifikt. `HomePage`/`NewsFeed`
+    är redan samma komponent för besökare och medlemmar (bara "Mitt
+    flöde" är inloggningsgated) — att även göra platsfiltret delat är
+    alltså INTE merarbete, det är redan arkitekturen. Ingen konflikt
+    med Polisen-bevakningar (session 35) — bevakningar är en stående
+    push-prenumeration en medlem sätter upp i förväg, platsfiltret är
+    en tillfällig vyinställning man växlar i stunden. Olika syften,
+    kan leva sida vid sida.
+
+## Kvarstående frågor
+
+**7. Liveuppdatering — mitt förslag, väntar på din nick.**
+`NewsFeed` pollar INTE idag (ingen `refetchInterval` i koden) — den
+hämtar om vid sidladdning/fönsterfokus, standardbeteendet för
+react-query. Eftersom pluppkatalogen (beslut 6) byggs av exakt samma
+50-händelser-hämtning som redan driver "Allt"-vyn, får pluppkatalogen
+GRATIS samma uppdateringstakt som resten av flödet redan har — ingen ny
+polling-mekanism behöver byggas. Nackdel: en plats plupp kan i
+sällsynta fall försvinna mitt i en session om listan hämtas om och den
+äldsta Botkyrka-händelsen hamnat utanför de 50 senaste. Förslag: bygg
+INGEN separat polling för v1, acceptera den risken (den är redan
+identisk med hur severity-filtret beter sig idag). Säg till om du vill
+diskutera vidare.
+
+**9. Skalning vid många pluppar — omformulerad, min fråga var otydlig.**
+Jag menade: om 50 händelser just nu råkar sprida sig över 20–30 olika
+platser (inte bara ett fåtal), blir det en lång rad av pluppar att
+visa på en gång. Hur ska UI:t hantera DEN situationen specifikt?
+Exempel på alternativ (ingen rekommenderad ännu, vill se din reaktion
+i skissen):
+  - en horisontellt skrollbar rad med pluppar
+  - en kort rad + en "Visa fler"-knapp som expanderar resten
+  - ett sökfält ovanför pluppraden för att hitta en specifik ort
+  - inget särskilt — låt raden radbryta över flera rader och acceptera
+    att den blir hög
+Jag bygger in alla fyra som alternativ i UI-skissen (Claude Artifact)
+så du kan peka på den du gillar istället för att behöva svara i text.
 
 ## Kopplat
 - [[../Verktyg/Schemalagd-lansering|Schemalagd lansering]] — samma
@@ -81,3 +115,6 @@ innan detta kan gå vidare.
 - `backend/Models/CanonicalEvent.cs` (`Geography`-fältet) och
   `backend/Ingestors/*.cs` (hur varje källa fyller i det) — tekniska
   utgångsläget för vad som faktiskt går att aggregera idag
+- Ny, inte påbörjad: en statisk kommun→län-referenstabell (konsekvens
+  av beslut 2) — hör hemma i backend, troligen en seedad lookup-tabell
+  eller en inbäddad konstant-lista, inte en ingestor-ändring
