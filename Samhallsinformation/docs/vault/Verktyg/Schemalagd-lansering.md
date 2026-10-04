@@ -32,10 +32,11 @@ resonemanget bakom valen nedan).
    flaggorna slås på, posten publiceras BARA om den har innehåll (annars
    förblir den en tyst intern flagg-aktivering, syns aldrig publikt).
    Allt loggas i Aktivitetsloggen som System-rader.
-5. **Push ("Ny version"-notisen) är medvetet separat** — samma manuella
-   knapp som redan fanns i Uppdateringar, ingen automatisk koppling.
-   Beslutat som enklare v1; kan kopplas ihop senare om det visar sig
-   önskvärt (se öppna frågan nedan).
+5. **Push ("Ny version"-notisen)** — den befintliga manuella knappen i
+   Uppdateringar finns kvar för ad-hoc-pushar. Sedan 2026-10-04 beslutat
+   att även lägga till en checkbox i schemaläggningsflödet som auto-
+   triggar pushen när den schemalagda posten publiceras (se Beslut
+   2026-10-04 nedan) — inte byggt än.
 
 ## Varför designen ser ut såhär (beslut från dialogen)
 
@@ -68,12 +69,11 @@ resonemanget bakom valen nedan).
 - Admin-UI: `FeatureFlagsAdmin.tsx` (redo-togglen),
   `AdminUppdateringar.tsx` → `FormPanel` (hela schemaläggningsflödet).
 
-## Öppna frågor
-- Ska push ("Ny version"-notisen) kopplas ihop automatiskt med en
-  schemalagd lansering senare, istället för att förbli en manuell knapp?
-  Inte beslutat — se resonemanget i konversationen (kräver antingen ett
-  textfält på flaggan, eller att push hakar in på Uppdaterings-
-  publiceringen istället för på flaggan direkt).
+## Beslut 2026-10-04
+Lägg till en checkbox i schemaläggningsflödet (steg 3, Uppdateringar) som
+auto-triggar "Ny version"-pushen när den schemalagda posten publiceras.
+Den befintliga manuella knappen behålls — för ad-hoc-pushar som inte hör
+till en schemalagd post. Inte byggt än.
 
 ## Kopplat
 - [[../Ideer/Uppdateringar-schemalagd-publicering|Uppdateringar

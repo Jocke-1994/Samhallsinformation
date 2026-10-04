@@ -31,10 +31,9 @@ samlat ställe i admin.
 - Förhandsprenumeration — "aktivera automatiskt åt mig när den släpps"
   ikryssat i en väntande nyhetspost.
 
-## Öppna frågor
-- Är någon av de tre kvarvarande punkterna (push-koppling, djuplänk,
-  förhandsprenumeration) värda att bygga nu när grundflödet finns, eller
-  vänta tills ett konkret behov dyker upp?
+## Beslut 2026-10-03
+Avvakta — inga av de tre kvarvarande punkterna (push-koppling, djuplänk,
+förhandsprenumeration) byggs förrän ett konkret behov dyker upp.
 
 ## Kopplat
 - [[../Verktyg/Schemalagd-lansering|Schemalagd lansering]] — det faktiska

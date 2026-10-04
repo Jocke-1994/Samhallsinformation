@@ -55,12 +55,11 @@ steg — se kvarvarande öppna fråga.
   handplockning av SMS/Snapchat/etc. behövs eller går ens att styra
   från vår sida.
 
-## Öppna frågor
-- Är det här en enklare v1 av session 38:s idé (dela till sparade
-  kontakter/grupper INOM appen, ett eget socialt lager), eller en helt
-  egen, avsiktligt minimal funktion? Det byggda är den enkla varianten
-  (OS-delningsmeny) — kontakter/grupper inom appen är inte byggt och
-  inte planerat i den här omgången
+## Beslut 2026-10-04
+Enklare v1 av session 38:s idé. Det byggda (OS-delningsmeny) är ett
+medvetet första steg — kontakter/grupper-delning INOM appen (ett eget
+socialt lager) kan byggas ovanpå senare, inte en separat, obesläktad idé.
+Inte påbörjat i den här omgången.
 
 ## Kopplat
 - (session 38-anteckningen finns bara i minnessystemet, inte i valvet —

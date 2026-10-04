@@ -26,25 +26,25 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   allvarligaste delfrågan, hallucinationsrisken, är löst separat — se
   [[../Ideer/Kundtjanstbot-handelse-sok-api|Kundtjänstbot-handelse-sok-api]])
 
-## Väntar på ditt svar
+## Väntar på en åtgärd (beslutat 2026-10-04, inte byggt än)
 
-- **[[../Ideer/Dela händelse|Dela händelse]]** — byggd (bakom avstängd
-  flagga `flode_dela`, PR #574). Enda kvarvarande frågan: är det här en
-  enklare v1 av session 38:s idé (dela till sparade kontakter/grupper),
-  eller en helt egen, avsiktligt minimal funktion?
-- **[[../Verktyg/Schemalagd-lansering|Schemalagd lansering]]** — byggd
-  2026-09-21. Ska push ("Ny version"-notisen) kopplas ihop automatiskt
-  med en schemalagd lansering senare, eller förbli en manuell knapp?
-- **[[../Ideer/Uppdateringar-schemalagd-publicering|Uppdateringar
-  schemalagd publicering]]** — grundflödet byggt, tre delar av den
-  ursprungliga visionen kvar (push-koppling, djuplänk, förhands-
-  prenumeration). Värda att bygga nu, eller vänta på ett konkret behov?
+- **[[../Ideer/Dela händelse|Dela händelse]]** — beslutat: enklare v1 av
+  session 38:s idé. Kontakter/grupper-delning INOM appen är ett medvetet
+  framtida steg ovanpå det redan byggda (OS-delningsmenyn), inte en
+  separat idé.
+- **[[../Verktyg/Schemalagd-lansering|Schemalagd lansering]]** — beslutat:
+  lägg till en checkbox i schemaläggningsflödet som auto-triggar
+  "Ny version"-pushen, behåll den befintliga manuella knappen för
+  ad-hoc-pushar utanför en schemalagd post.
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,
   planen ligger kvar
 - **[[../Ideer/Bottom bar (mobil)|Bottom bar (mobil)]]** — öppet, ingen
   brådska, fler kandidater än Sök/Bevakningar kan dyka upp
+- **[[../Ideer/Uppdateringar-schemalagd-publicering|Uppdateringar
+  schemalagd publicering]]** — beslutat 2026-10-03: avvaktar ett
+  konkret behov innan push-koppling/djuplänk/förhandsprenumeration byggs
 
 ## Redan besvarade, väntar bara på att byggas eller ligga kvar avsiktligt
 Inte en fråga till dig — bara saker som är beslutade men inte gjorda än.
