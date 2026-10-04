@@ -51,11 +51,43 @@ utan att behöva gå via den här mappen alls.
 2. **Formaliseras** — håller idén, blir den en riktig `Ideer/`-not (mall
    finns) med öppna frågor tydligt listade
 3. **Pipeline** — redo att byggas, får ett `pipelineNr` i frontmatter och
-   läggs upp i adminpanelens funktionsidé-pipeline
+   läggs upp i adminpanelens funktionsidé-pipeline (se "Rutin per
+   pipeline-steg" nedan för vad som krävs inom pipelinen)
 4. **Byggd eller avfärdad** — blir en `Funktioner/`-not (status: aktiv),
    eller avfärdas med en motivering (samma mönster som
    `Beslut/Beslut - SPAR avfärdat.md`) så den inte dyker upp som ett
    oavslutat spöke senare
+
+## Rutin per pipeline-steg (beslutad 2026-10-04)
+
+Steg 3 ovan ("Pipeline") är i sig sju delsteg i adminpanelens
+funktionsidé-pipeline (`FeatureIdea.Stage`). Den här tabellen definierar
+vad som krävs för att VARA i ett steg, och vad som krävs för att gå
+VIDARE till nästa — så att det aldrig är en gissning var en idé hör
+hemma.
+
+| Steg | Kriterium för att vara här | Krävs för att gå vidare |
+|---|---|---|
+| 💭 **Brainstorm** | En rå idé skriven ner, ingen struktur krävs | Formaliserad som en riktig `Ideer/`-not (mallen följd) med en tydlig pitch |
+| 🔍 **Triage** | Under aktiv utvärdering — öppna frågor identifierade och utreds | Alla `Öppna frågor` lösta → `Beslut`, UI godkänd om UI-tung (`uiGodkand: ja`) |
+| 🔨 **Bygger** | Kodarbete faktiskt pågår JUST NU — gren finns, PR öppnas | Byggd bakom en avstängd feature-flag, test/bygg grönt |
+| 🧪 **Testar** | Kod klar, verifieras (manuellt/automatiserat) | Hela [[../Verktyg/Checklista-innan-lansering\|Checklista innan lansering]] avklarad |
+| 🚀 **Lanseringsklar** | Redo för riktiga användare, väntar på rätt tillfälle | Flaggan faktiskt aktiverad i produktion |
+| ✅ **Lanserad** | Flaggan på i produktion | — (slutstadie, blir en `Funktioner/`-not, se steg 4 ovan) |
+| ❌ **Avfärdad** | Beslutat att INTE bygga, från vilket steg som helst | Alltid en motivering |
+
+**Viktig nyans mellan Triage och Bygger:** en idé som är helt beslutad
+(inga öppna frågor, UI godkänd) men där ingen kod ännu är påbörjad hör
+fortfarande hemma i **Triage**, inte Bygger — Bygger är reserverat för
+"kod skrivs just nu", inte "beslutat men väntar i kö".
+
+Första tillämpningen (2026-10-04): [[../Ideer/Geografiskt-platsfilter-besokare]]
+och [[../Verktyg/Schemalagd-lansering]]s "Ny version"-tillägg gick in i
+Triage samma dag — helt beslutade, ingen kod påbörjad.
+[[../Ideer/Dela händelse]] själv är redan `lanserad` sedan tidigare
+(behöver ingen retroaktiv pipeline-post), och
+[[../Ideer/Dela-till-kontakter-grupper]] är medvetet kvar i
+Brainstorm/utanför pipelinen — inte beslutad att byggas än.
 
 ## Frågor — besvarade 2026-09-12
 - **Två parallella vägar (rå tanke ELLER direkt `Ideer/`-not), eller allt
