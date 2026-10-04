@@ -62,5 +62,5 @@ socialt lager) kan byggas ovanpå senare, inte en separat, obesläktad idé.
 Inte påbörjat i den här omgången.
 
 ## Kopplat
-- (session 38-anteckningen finns bara i minnessystemet, inte i valvet —
-  säg till om du vill att den flyttas hit också)
+- [[Dela-till-kontakter-grupper|Dela till sparade kontakter/grupper]] —
+  session 38-idén, nu flyttad hit från minnessystemet
