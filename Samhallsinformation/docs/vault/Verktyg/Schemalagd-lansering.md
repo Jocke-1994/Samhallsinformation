@@ -82,7 +82,8 @@ inte en delad:
   MaintenanceBanner-systemet (`App.tsx`/`MaintenanceBannerAdmin.tsx`,
   målgrupp Besökare, schemalagd till samma publiceringstidpunkt).
 
-Inget av detta byggt än.
+Inget av detta byggt än. Inlagt som Funktionsidé #2 i adminpanelens
+pipeline (lokal, 2026-10-04), stadie: Triage.
 
 ## Kopplat
 - [[../Ideer/Uppdateringar-schemalagd-publicering|Uppdateringar

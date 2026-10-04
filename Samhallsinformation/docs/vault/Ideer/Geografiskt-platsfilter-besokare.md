@@ -1,10 +1,10 @@
 ---
 typ: ide
-status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
+status: i-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ja
 beroenden: ""
 prioritet: ej-bedomd
-pipelineNr: ""
+pipelineNr: "1"  # Funktionsidé #1 i adminpanelens pipeline (lokal, 2026-10-04), stadie: Triage
 kalla: "session 2026-10-04, användarens önskemål om att kunna filtrera redan som besökare"
 ---
 
