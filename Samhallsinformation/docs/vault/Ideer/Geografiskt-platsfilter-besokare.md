@@ -28,8 +28,8 @@ Sveriges kommunindelning ändras i praktiken aldrig) — ett engångsjobb,
 inte löpande underhåll, men ett genuint datajobb utöver att bara
 aggregera `Geography`-strängar rakt av.
 
-Status: 9 av 11 scenarier beslutade. Två kvarstår (se "Kvarstående
-frågor" längst ner).
+Status: 10 av 11 scenarier beslutade. Ett kvarstår, väntar på en
+UI-skiss (se "Kvarstående frågor" längst ner).
 
 ## Beslut 2026-10-04 (efter dina svar)
 
@@ -59,7 +59,10 @@ frågor" längst ner).
 6. **Tidsfönster** — bekräftat: pluppkatalogen byggs av de senaste 50
    händelserna, samma mängd `NewsFeed` redan hämtar för "Allt"-vyn.
    Ingen separat fråga mot backend bara för pluppkatalogen.
-7. *(flyttad till Kvarstående frågor — se nedan)*
+7. **Liveuppdatering** — bekräftat: ingen separat polling-mekanism
+   byggs för v1. Pluppkatalogen räknas om varje gång den delade
+   50-händelser-hämtningen (beslut 6) hämtas om — samma uppdateringstakt
+   som resten av flödet redan har (sidladdning/fönsterfokus).
 8. **Minns valet** — rekommendation: spara senaste plats-val i
    webbläsarens `localStorage` (samma mönster som t.ex. `theme`/
    `cookie_consent` redan använder för besökare utan konto), inte
@@ -81,20 +84,17 @@ frågor" längst ner).
 
 ## Kvarstående frågor
 
-**7. Liveuppdatering — mitt förslag, väntar på din nick.**
-`NewsFeed` pollar INTE idag (ingen `refetchInterval` i koden) — den
-hämtar om vid sidladdning/fönsterfokus, standardbeteendet för
-react-query. Eftersom pluppkatalogen (beslut 6) byggs av exakt samma
-50-händelser-hämtning som redan driver "Allt"-vyn, får pluppkatalogen
-GRATIS samma uppdateringstakt som resten av flödet redan har — ingen ny
-polling-mekanism behöver byggas. Nackdel: en plats plupp kan i
-sällsynta fall försvinna mitt i en session om listan hämtas om och den
-äldsta Botkyrka-händelsen hamnat utanför de 50 senaste. Förslag: bygg
-INGEN separat polling för v1, acceptera den risken (den är redan
-identisk med hur severity-filtret beter sig idag). Säg till om du vill
-diskutera vidare.
-
-**9. Skalning vid många pluppar — omformulerad, min fråga var otydlig.**
+**9. Skalning vid många pluppar — UI-skiss klar, väntar på din favorit.**
+Claude Artifact (Design-canvas): https://claude.ai/artifact/NRitLhJURPuw69QcJUsACA
+— ett "Nuläge"-skärm (ingångspunkten, "📍 Filtrera på plats"-fliken) plus
+fyra interaktiva varianter sida vid sida, alla med 22 exempel-pluppar,
+klickbara (växla Botkyrka/Haninge/Stockholms län/Nationellt m.fl. och se
+de sektionerade resultaten — inkl. SMHI:s länsvarning som ärvs in under
+både Botkyrka och Haninge, enligt beslut 2+3):
+  - **A — Skrollbar rad**: en rad, horisontell scroll
+  - **B — Visa fler**: kort rad (8 st) + expanderbar knapp för resten
+  - **C — Sökfält**: skriv för att hitta en specifik ort bland alla
+  - **D — Fri radbrytning**: ingen gräns, raden växer nedåt över flera rader
 Jag menade: om 50 händelser just nu råkar sprida sig över 20–30 olika
 platser (inte bara ett fåtal), blir det en lång rad av pluppar att
 visa på en gång. Hur ska UI:t hantera DEN situationen specifikt?
