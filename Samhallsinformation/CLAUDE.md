@@ -179,6 +179,32 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 52 — 2026-10-04
+**What was done:**
+- Ren planerings-/designsession, ingen kod skriven. Tre trådar användaren bad om en genomgång av: möjligheten att filtrera på län redan som besökare, en "Ny version"-banner för besökare, och skisser på nya vyer — alla tre landade i konkreta beslut
+- **Två gamla, kvarglömda öppna frågor från `docs/vault/1. Öppna_tankar/Öppna frågor.md` besvarades först**: Dela händelse (enklare v1 av session 38:s idé, inte samma idé i mindre skala) och Schemalagd lanserings öppna fråga om push-koppling
+- **Geografiskt platsfilter för besökare** — ny idé, omformulerad under samtalet från "filtrera på län" till "dynamiska pluppar per plats som redan finns i Senaste nytt just nu". 14 scenarier utredda och beslutade över flera rundor (grupperingsnivå, länsvarningars ärvning till kommun-nivå, flerval med sektionerad resultatvy, nationellt-plupp, tidsfönster, liveuppdatering, minns-valet, skalning vid 20+ platser, delat med medlemmar). Kräver en ny statisk kommun→län-referenstabell (~290 rader) — inte byggd än, bara identifierad
+- **UI-skiss byggd och itererad i en Claude Artifact (Design-canvas)**: https://claude.ai/artifact/NRitLhJURPuw69QcJUsACA — fyra desktop/mobil-skalningsvarianter (skrollbar rad, visa fler, sökfält, fri radbrytning), en vald B+C-kombo (Variant E, sök mot alla platser + gråmarkerade inaktiva "(0)"-pluppar) i både desktop- och mobilbredd, plus en avfärdad autocomplete-dropdown-variant. **UI godkänd av användaren 2026-10-04**
+- **Schemalagd lansering** fick ett beslutat tillägg: två separata kryssrutor (inte delade) i schemaläggningsflödet — en triggar "Ny version"-push till inloggade, en ny "Synas för besökare?" visar en besökar-banner via det redan befintliga MaintenanceBanner-systemet
+- **Session 38:s virality-idé** (dela till sparade kontakter/grupper) flyttad från minnessystemet till en egen vault-not (`docs/vault/Ideer/Dela-till-kontakter-grupper.md`), medvetet kvar i Brainstorm
+- **Ny formell pipeline-steg-rutin** skriven in i `docs/vault/1. Öppna_tankar/Flöde ny idé.md` — en tabell som definierar kriterier för varje steg i adminpanelens funktionsidé-pipeline (Brainstorm → Triage → Bygger → Testar → Lanseringsklar → Lanserad/Avfärdad). Nyckel-nyans: en helt beslutad men opåbörjad idé hör hemma i Triage, inte Bygger
+- **Platsfiltret + Schemalagd lanserings tillägg inlagda i produktionens Funktionsidé-pipeline**, stadie Triage — skapade först lokalt via ett direkt API-anrop (curl mot `/api/admin/feature-ideas`) för att verifiera flödet säkert, sedan manuellt av användaren i produktion eftersom webbläsarautomationen flakade på klick-actions (skärmdumpar fungerade, `left_click` gjorde det inte)
+
+**Problem och lösningar:**
+- Tre separata gånger behövde en `project/canvas.json`-publicering till Artifact-canvasen korrigeras efter att en felaktig `root`/`file_path`-kombination skapade en felaktig duplicerad sökväg (`artifact-files/<id>/project/canvas.json` istället för `project/canvas.json`) — löst genom att smalna `root` till mappen som faktiskt innehåller `project/`-undermappen, och nollställa (`null`) den felaktiga dubblettfilen i nästa publicering
+- Lokal `dotnet run --no-launch-profile` kraschade med `StartupSecretsGuard`-felet ("JWT_SECRET/VAPID-nycklar saknas") eftersom `--no-launch-profile` hoppar över `launchSettings.json`s `ASPNETCORE_ENVIRONMENT=Development` — appen startade då i `Production`-läge och triggade den striktare hemlighets-valideringen. Löst genom att sätta `ASPNETCORE_ENVIRONMENT=Development` explicit som miljövariabel
+- Webbläsarautomationen (`mcp__claude-in-chrome`) flakade specifikt på `left_click` (skärmdumpar fungerade pålitligt) när den skulle styra en redan inloggad produktions-Chrome-flik åt användaren utan att behöva produktionslösenordet — efter ett par omförsök löst genom att användaren gjorde de två admin-klicken manuellt istället, med exakt text från Claude att klistra in
+
+**Etablerat mönster:**
+- En Obsidian idé-nots `status: redo-for-pipeline` betyder ordagrant "redo att skapas som en riktig post i adminpanelens Funktionsidéer" — Obsidian-planeringen och den databas-backade pipelinen är kopplade men separata system, inget synkas automatiskt mellan dem
+- UI-beslut i det här projektet går snabbare och träffar rätt oftare när de visas som en klickbar Artifact-skiss istället för att diskuteras i text — användaren itererade snabbt ("jag gillar en kombo av B och C") när hen kunde klicka runt själv, något som hade tagit betydligt fler textrundor att komma fram till annars
+- Vid webbläsarautomation mot produktion: föredra att styra användarens redan inloggade session istället för att be om lösenord, men fall snabbt tillbaka (efter 2-3 försök, inte fler) till att be användaren göra specifika klick manuellt när verktyget flakar — se [[feedback_webblasarverktyg_testa_da_och_da]] i minnet för den fulla policyn (testa verktyget då och då i framtida sessioner, varken tvinga igenom eller undvika helt)
+
+**Next session:**
+- Kommun→län-referenstabellen (konsekvens av platsfiltrets beslut 2) är inte byggd — behövs innan platsfiltret kan gå från Triage till Bygger
+- Platsfiltret och Schemalagd lanserings Ny version-tillägg ligger i Triage i produktion, redo att plockas upp för faktisk implementation när användaren vill
+- Dela-till-kontakter-grupper (session 38-idén) väntar fortfarande på att användaren delar sin egen idé om hur den ska fungera tekniskt — medvetet inte påbörjad
+
 ### Session 51 — 2026-10-01
 **Obs:** Sessionerna 48–50 (Dela händelse + kundtjänstbot-sök-endpoint, launch-avslut (login/register-knappar bekräftat live) + Uppdateringar databas-backad, hela kodbasens code review + FIXPLAN med 59/60 PR:ar mergade) skedde men loggades bara i minnessystemet, aldrig hit. Se `project_session48_dela_kundtjanstbot_2026-09-13.md`, `project_session49_launch_och_uppdateringar_databas_2026-09-15.md` och `project_code_review_fixplan_2026-09-25.md` i minnet för detaljerna.
 
