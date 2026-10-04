@@ -42,9 +42,9 @@ finns) — se `Verktyg/Lansering - Direction E + tre ikoner.md`, punkt 2.
 
 ## Koppling till en äldre idé (session 38, 2026-08)
 En extern testare föreslog något liknande då — dela en händelse till
-sparade kontakter/sociala grupper med ett klick. Fortfarande oklart om
-det här är samma idé i mindre skala eller ett medvetet enklare första
-steg — se kvarvarande öppna fråga.
+sparade kontakter/sociala grupper med ett klick. Beslutat 2026-10-04
+(se nedan): det här är ett medvetet enklare första steg, inte samma
+idé i mindre skala.
 
 ## Frågor — besvarade/lösta 2026-09-13
 - **Vad delas?** → Källänken. Besvarat, byggt.
