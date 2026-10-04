@@ -1,7 +1,7 @@
 ---
 typ: ide
 status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
-uiGodkand: ej-bedomd
+uiGodkand: ja
 beroenden: ""
 prioritet: ej-bedomd
 pipelineNr: ""
@@ -28,9 +28,11 @@ Sveriges kommunindelning ändras i praktiken aldrig) — ett engångsjobb,
 inte löpande underhåll, men ett genuint datajobb utöver att bara
 aggregera `Geography`-strängar rakt av.
 
-Status: alla 11 ursprungliga scenarier beslutade, plus två tillkomna
-mobil-frågor (12-13). Redo för pipelinen — se Kopplat för kvarvarande
-tekniska förberedelser (referenstabellen) innan byggstart.
+Status: alla 11 ursprungliga scenarier beslutade, plus tre tillkomna
+UI-frågor (12-14). **UI-riktning godkänd 2026-10-04** — Variant E
+(B+C-kombo) för både desktop och mobil, se beslut 14. Redo för
+pipelinen — se Kopplat för kvarvarande tekniska förberedelser
+(referenstabellen) innan byggstart.
 
 ## Beslut 2026-10-04 (efter dina svar)
 
@@ -111,16 +113,32 @@ tekniska förberedelser (referenstabellen) innan byggstart.
     kommun→län-mappningen (beslut 2) — i praktiken bara en extra
     "har en aktiv händelse just nu"-flagga på den tabellen, ingen ny
     separat datakälla.
+14. **Slutgiltig UI-riktning, godkänd 2026-10-04** — Variant E
+    (chip-baserad B+C-kombo) för BÅDE desktop och mobil, inte någon av
+    de andra renodlade varianterna. En alternativ presentation (Variant
+    F, en riktig autocomplete-dropdown med namn+antal per rad, t.ex.
+    "Kungälv — 0") byggdes och testades också, men chip-varianten (E)
+    är den godkända — F ligger kvar i skissen som ett övervägt men
+    avfärdat alternativ, inte byggstart-underlag.
+    Konkret uppbyggnad (båda bredderna): sökfält alltid överst (sök mot
+    ALLA platser, grå streckad "(0)"-plupp för de utan aktuell händelse
+    — beslut 13) + en kort rad redan-aktiva platser (8 på desktop, 6 på
+    mobil) med en "Visa fler (+N)"-knapp som expanderar resten. Skriver
+    man i sökfältet vinner sökningen över "Visa fler" och söker alltid
+    mot hela listan, inte bara de redan synliga pluckarna.
 
 ## UI-skiss
 
 Claude Artifact (Design-canvas, interaktiv): https://claude.ai/artifact/NRitLhJURPuw69QcJUsACA
-— ett "Nuläge"-skärm (ingångspunkten, "📍 Filtrera på plats"-fliken),
-fyra renodlade desktop/mobil-varianter (A skrollbar rad, B visa fler,
-C sökfält, D fri radbrytning) och en femte, vald mobil-kombo (E · B+C)
-med sök-mot-alla-platser + gråmarkerade inaktiva pluppar (beslut 13).
-Alla pluppar klickbara, sektionerad resultatvy inkl. SMHI:s länsvarning
-som ärvs in under både Botkyrka och Haninge (beslut 2+3).
+— **godkänd 2026-10-04.** Innehåller: ett "Nuläge"-skärm (ingångspunkten,
+"📍 Filtrera på plats"-fliken), fyra renodlade desktop/mobil-varianter
+(A skrollbar rad, B visa fler, C sökfält, D fri radbrytning) byggda
+under utforskningen, **Variant E i både desktop- och mobilbredd — den
+godkända, slutgiltiga riktningen** (beslut 14), ett exempelresultat
+("sök Kungälv → 0 träffar") och Variant F (autocomplete-dropdown,
+övervägd men inte vald). Alla pluppar klickbara, sektionerad resultatvy
+inkl. SMHI:s länsvarning som ärvs in under både Botkyrka och Haninge
+(beslut 2+3).
 
 ## Kopplat
 - [[../Verktyg/Schemalagd-lansering|Schemalagd lansering]] — samma

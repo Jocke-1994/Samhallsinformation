@@ -37,9 +37,9 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   manuell knapp behålls för ad-hoc), en ny "Synas för besökare?" som
   styr en "Ny version"-banner via MaintenanceBanner-systemet.
 - **[[../Ideer/Geografiskt-platsfilter-besokare|Geografiskt
-  platsfilter för besökare]]** — alla 13 scenarier beslutade, redo för
-  pipelinen. UI-skiss (Artifact, desktop+mobil) klar, mobil-favoriten är
-  en B+C-kombo med sök-mot-alla-platser + gråmarkerade inaktiva orter.
+  platsfilter för besökare]]** — alla 14 scenarier beslutade, UI
+  godkänd 2026-10-04 (Variant E, B+C-kombo, både desktop och mobil).
+  Redo för pipelinen.
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,
