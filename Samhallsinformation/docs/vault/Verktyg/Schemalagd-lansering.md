@@ -70,10 +70,19 @@ resonemanget bakom valen nedan).
   `AdminUppdateringar.tsx` → `FormPanel` (hela schemaläggningsflödet).
 
 ## Beslut 2026-10-04
-Lägg till en checkbox i schemaläggningsflödet (steg 3, Uppdateringar) som
-auto-triggar "Ny version"-pushen när den schemalagda posten publiceras.
-Den befintliga manuella knappen behålls — för ad-hoc-pushar som inte hör
-till en schemalagd post. Inte byggt än.
+Två separata kryssrutor i schemaläggningsflödet (steg 3, Uppdateringar),
+inte en delad:
+- **Push-kryssrutan** — auto-triggar "Ny version"-pushen till inloggade
+  (push gäller bara dem) när den schemalagda posten publiceras. Den
+  befintliga manuella knappen behålls för ad-hoc-pushar utanför en
+  schemalagd post.
+- **"Synas för besökare?"-kryssrutan** — "Ny version" gäller specifikt
+  besökare (utloggade har ingen push att ta emot). Ikryssad: en
+  "Ny version"-banner visas för besökare via det befintliga
+  MaintenanceBanner-systemet (`App.tsx`/`MaintenanceBannerAdmin.tsx`,
+  målgrupp Besökare, schemalagd till samma publiceringstidpunkt).
+
+Inget av detta byggt än.
 
 ## Kopplat
 - [[../Ideer/Uppdateringar-schemalagd-publicering|Uppdateringar

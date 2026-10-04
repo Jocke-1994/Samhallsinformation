@@ -33,9 +33,15 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   framtida steg ovanpå det redan byggda (OS-delningsmenyn), inte en
   separat idé.
 - **[[../Verktyg/Schemalagd-lansering|Schemalagd lansering]]** — beslutat:
-  lägg till en checkbox i schemaläggningsflödet som auto-triggar
-  "Ny version"-pushen, behåll den befintliga manuella knappen för
-  ad-hoc-pushar utanför en schemalagd post.
+  två separata kryssrutor i schemaläggningsflödet — en för push (redan
+  manuell knapp behålls för ad-hoc), en ny "Synas för besökare?" som
+  styr en "Ny version"-banner via MaintenanceBanner-systemet.
+
+## Väntar på ditt svar
+
+- **[[../Ideer/Geografiskt-platsfilter-besokare|Geografiskt
+  platsfilter för besökare]]** — 11 konkreta scenarier skrivna, väntar
+  på dina svar innan omfattning/UI-skiss kan låsas.
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,
