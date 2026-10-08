@@ -111,10 +111,20 @@ godkända). Ersätter och bygger ut Beslut 2026-10-04 på följande punkter:
   "Skicka vid": Annonsering / Lansering / Båda. Annonseringspushen har
   rubriken "Kommer 15 oktober", lanseringspushen "Ny version: X". Den
   manuella knappen finns kvar för ad-hoc.
-- **Banderoll för ALLA, inte bara besökare** (ändrat från 2026-10-04):
-  inloggade utan push skulle annars aldrig få veta om nyheten.
-  Målgrupp "Alla" i MaintenanceBanner. Kryssrutan heter därför "Visa
-  banderoll på sajten" istället för "Synas för besökare?".
+- **Banderollen når de som berörs av nyheten** (ändrat från
+  2026-10-04, där den bara var för besökare):
+  - Berör nyheten alla (besökare, användare, support, admin) → målgrupp
+    "Alla" i MaintenanceBanner. Inloggade utan push hade annars aldrig
+    fått veta om den.
+  - Berör den bara inloggade → målgrupp "Användare" (inloggade, alla
+    roller). Ingen banderoll till besökare.
+  - Målgruppen härleds automatiskt från punkternas befintliga "Syns
+    för"-val: minst en punkt "Alla (även besökare)" → Alla, bara
+    "Endast inloggade" → Användare. Formuläret visar resultatet ("Visas
+    för: alla" / "Visas för: inloggade") så det aldrig är en gissning.
+  - Kryssrutan heter "Visa banderoll på sajten" istället för "Synas för
+    besökare?". En post utan punkter (ren flagg-aktivering) kan inte få
+    banderoll — det finns inget att visa.
   - Två rader: rubrik + vad som är nytt (fritext, förifylld från
     titeln) + länken **"Läs mer"** till `/uppdateringar`. På dator på
     en rad, på mobil på varsin rad.
