@@ -536,11 +536,21 @@ namespace Samhallsinformation.Migrations
                     b.Property<DateTime>("EndUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("LankUrl")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Rubrik")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("StartUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Stil")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

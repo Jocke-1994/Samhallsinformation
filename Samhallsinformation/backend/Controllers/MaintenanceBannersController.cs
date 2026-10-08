@@ -18,6 +18,7 @@ using Samhallsinformation.Models;
 public class MaintenanceBannersController : ControllerBase
 {
     private static readonly string[] GiltigaMålgrupper = ["Alla", "Besökare", "Användare"];
+    private static readonly string[] GiltigaStilar     = ["Drift", "Nyhet", "Kommande"];
 
     private readonly AppDbContext _db;
     private readonly IAktivitetsloggService _aktivitetslogg;
@@ -75,13 +76,16 @@ public class MaintenanceBannersController : ControllerBase
             StartUtc  = req.StartUtc,
             EndUtc    = req.EndUtc,
             Audience  = req.Audience,
+            Stil      = req.Stil!,
+            Rubrik    = req.Rubrik,
+            LankUrl   = req.LankUrl,
             CreatedAt = DateTime.UtcNow,
         };
         _db.MaintenanceBanners.Add(banner);
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Konfiguration,
-            "Driftmeddelande skapat", $"{banner.Audience}: {banner.Message}");
+            "Driftmeddelande skapat", LoggDetalj(banner));
         return Ok(ToDto(banner));
     }
 
@@ -89,21 +93,30 @@ public class MaintenanceBannersController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(Guid id, [FromBody] MaintenanceBannerRequest req)
     {
+        var banner = await _db.MaintenanceBanners.FindAsync(id);
+        if (banner == null) return NotFound();
+
+        // En äldre adminflik (öppen sedan innan stilfältet fanns) skickar inte
+        // Stil/Rubrik/LankUrl alls — behåll då de sparade värdena istället för
+        // att tyst nollställa en nyhetsbanderoll till en orange driftbanderoll.
+        if (req.Stil == null)
+            req = req with { Stil = banner.Stil, Rubrik = banner.Rubrik, LankUrl = banner.LankUrl };
+
         req = NormaliseraTider(req);
         var fel = Validera(req);
         if (fel != null) return BadRequest(fel);
-
-        var banner = await _db.MaintenanceBanners.FindAsync(id);
-        if (banner == null) return NotFound();
 
         banner.Message  = req.Message.Trim();
         banner.StartUtc = req.StartUtc;
         banner.EndUtc   = req.EndUtc;
         banner.Audience = req.Audience;
+        banner.Stil     = req.Stil!;
+        banner.Rubrik   = req.Rubrik;
+        banner.LankUrl  = req.LankUrl;
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Konfiguration,
-            "Driftmeddelande redigerat", $"{banner.Audience}: {banner.Message}");
+            "Driftmeddelande redigerat", LoggDetalj(banner));
         return Ok(ToDto(banner));
     }
 
@@ -123,19 +136,42 @@ public class MaintenanceBannersController : ControllerBase
     }
 
     // V3-6: en JSON-sträng utan "Z" ger Kind=Unspecified, som Npgsql vägrar mot timestamptz.
+    // Tomma valfria fält blir null, och en klient som inte skickar Stil
+    // (äldre frontend) får "Drift" — samma beteende som innan fältet fanns.
     private static MaintenanceBannerRequest NormaliseraTider(MaintenanceBannerRequest req) => req with
     {
         StartUtc = UtcDateTime.Ensure(req.StartUtc),
         EndUtc   = UtcDateTime.Ensure(req.EndUtc),
+        Stil     = string.IsNullOrWhiteSpace(req.Stil) ? "Drift" : req.Stil.Trim(),
+        // Banderollen sätter själv ":" efter rubriken på dator — ett avslutande
+        // kolon i rubriken skulle annars visas dubbelt.
+        Rubrik   = string.IsNullOrWhiteSpace(req.Rubrik) ? null : req.Rubrik.Trim().TrimEnd(':').TrimEnd() is { Length: > 0 } r ? r : null,
+        LankUrl  = string.IsNullOrWhiteSpace(req.LankUrl) ? null : req.LankUrl.Trim(),
     };
 
     private static string? Validera(MaintenanceBannerRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.Message))         return "Meddelande krävs.";
         if (!GiltigaMålgrupper.Contains(req.Audience))      return "Ogiltig målgrupp.";
+        if (!GiltigaStilar.Contains(req.Stil))              return "Ogiltig stil.";
         if (req.EndUtc <= req.StartUtc)                     return "Sluttid måste vara efter starttid.";
+        if (req.LankUrl != null && !ArInternSokvag(req.LankUrl))
+            return "Länken måste vara en sökväg på sajten, t.ex. /uppdateringar.";
         return null;
     }
+
+    // "/uppdateringar" och "/uppdateringar#v0.8:nyheter" ja; "//evil.se", "/\evil.se",
+    // "https://…", "javascript:…" nej. Mellanslag och kontrolltecken (tabb, radbrytning)
+    // nekas helt — webbläsaren stryker dem vid URL-tolkning, så "/<TAB>/evil.se" blir
+    // annars "//evil.se". Ett schema ("x:") kan aldrig komma före en inledande "/".
+    // Samma regel i frontend: lib/banderoll.ts (arInternSokvag).
+    private static bool ArInternSokvag(string url) =>
+        url.StartsWith('/') && !url.StartsWith("//")
+        && !url.Contains('\\') && !url.Any(c => char.IsControl(c) || char.IsWhiteSpace(c));
+
+    private static string LoggDetalj(MaintenanceBanner b) =>
+        $"{b.Audience}, {b.Stil}: {(b.Rubrik != null ? b.Rubrik + ": " : "")}{b.Message}"
+        + (b.LankUrl != null ? $" (Läs mer → {b.LankUrl})" : "");
 
     private static object ToDto(MaintenanceBanner b) => new
     {
@@ -144,7 +180,12 @@ public class MaintenanceBannersController : ControllerBase
         b.StartUtc,
         b.EndUtc,
         b.Audience,
+        b.Stil,
+        b.Rubrik,
+        b.LankUrl,
     };
 }
 
-public record MaintenanceBannerRequest(string Message, DateTime StartUtc, DateTime EndUtc, string Audience);
+public record MaintenanceBannerRequest(
+    string Message, DateTime StartUtc, DateTime EndUtc, string Audience,
+    string? Stil = null, string? Rubrik = null, string? LankUrl = null);

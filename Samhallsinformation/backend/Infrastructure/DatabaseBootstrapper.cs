@@ -1032,6 +1032,22 @@ public static class DatabaseBootstrapper
                         ON CONFLICT DO NOTHING;
                     ");
                 }
+
+                // MaintenanceBanners.Stil/Rubrik/LankUrl — nyhetsbanderoll (Drift/Nyhet/Kommande),
+                // se Verktyg/Schemalagd-lansering i valvet. Befintliga rader är driftmeddelanden,
+                // därav DEFAULT 'Drift'. Bara text-kolumner, men samma raw-SQL-mönster som övriga.
+                if (pendingMigrations.Contains("20261008175113_AddMaintenanceBannerStil"))
+                {
+                    await db.Database.ExecuteSqlRawAsync(@"
+                        ALTER TABLE ""MaintenanceBanners"" ADD COLUMN IF NOT EXISTS ""Stil""    text NOT NULL DEFAULT 'Drift';
+                        ALTER TABLE ""MaintenanceBanners"" ADD COLUMN IF NOT EXISTS ""Rubrik""  text;
+                        ALTER TABLE ""MaintenanceBanners"" ADD COLUMN IF NOT EXISTS ""LankUrl"" text;
+
+                        INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                        VALUES ('20261008175113_AddMaintenanceBannerStil', '10.0.12')
+                        ON CONFLICT DO NOTHING;
+                    ");
+                }
             }
 
             // Rensa dubbletter av (SourceId, ExternalId) i Events INNAN det unika indexet skapas (V3-2). Gäller både

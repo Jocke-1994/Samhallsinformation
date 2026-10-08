@@ -21,6 +21,7 @@ import UppdateringarPage from './pages/UppdateringarPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import EmailVerificationBanner from './components/common/EmailVerificationBanner'
+import Banderoll from './components/common/Banderoll'
 import { fetchSources } from './api/sources'
 import { useAuth } from './context/AuthContext'
 import { fetchMaintenanceBanners } from './api/maintenanceBanners'
@@ -77,8 +78,6 @@ function HomePage() {
   )
 }
 
-const MAINTENANCE_DISMISS_PREFIX = 'si_maintenance_dismissed_'
-
 // Global driftmeddelande-banderoll för planerade drifttillfällen (t.ex.
 // Railways underhållsfönster). Flera meddelanden kan vara aktiva samtidigt
 // (olika målgrupper, olika tidsfönster) — varje rad från backend renderas
@@ -104,37 +103,8 @@ function MaintenanceBanners() {
 
   return (
     <>
-      {aktiva.map(b => <EnMaintenanceBanner key={b.id} banner={b} />)}
+      {aktiva.map(b => <Banderoll key={b.id} banner={b} />)}
     </>
-  )
-}
-
-// Stängs-nyckeln innehåller innehållet, inte bara id:t — annars skulle en
-// admin-redigering av ett redan stängt meddelandes text/tider aldrig synas
-// igen för den som redan stängt bort den ursprungliga texten.
-function bannerAvtryck(b: { message: string; startUtc: string; endUtc: string }): string {
-  return `${b.message}|${b.startUtc}|${b.endUtc}`
-}
-
-function EnMaintenanceBanner({ banner }: { banner: { id: string; message: string; startUtc: string; endUtc: string } }) {
-  const dismissKey = MAINTENANCE_DISMISS_PREFIX + banner.id
-  const avtryck = bannerAvtryck(banner)
-  const [dismissatAvtryck, setDismissatAvtryck] = useState(() => localStorage.getItem(dismissKey))
-
-  if (dismissatAvtryck === avtryck) return null
-
-  return (
-    <div className="bg-orange-600 px-6 py-2.5 flex items-center justify-between gap-3 shadow-md flex-wrap">
-      <span className="text-[18px] text-white flex-1 text-center">
-        {banner.message}
-      </span>
-      <button
-        onClick={() => { localStorage.setItem(dismissKey, avtryck); setDismissatAvtryck(avtryck) }}
-        className="text-xs font-semibold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg transition-colors shrink-0"
-      >
-        Stäng
-      </button>
-    </div>
   )
 }
 

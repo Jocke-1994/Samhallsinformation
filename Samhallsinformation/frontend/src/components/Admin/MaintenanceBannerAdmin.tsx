@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  type MaintenanceBanner, type BannerÅskådare, type MaintenanceBannerRequest,
+  type MaintenanceBanner, type BannerÅskådare, type BannerStil, type MaintenanceBannerRequest,
   fetchAdminMaintenanceBanners, createMaintenanceBanner, updateMaintenanceBanner, deleteMaintenanceBanner,
 } from '../../api/maintenanceBanners'
 import { formatSvensktDatumTid, isoTillDatetimeLocal } from '../../lib/tid'
+import { arInternSokvag } from '../../lib/banderoll'
 import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
 
 const ÅSKÅDARE: BannerÅskådare[] = ['Alla', 'Besökare', 'Användare']
@@ -13,6 +14,14 @@ const ÅSKÅDARE_BESKRIVNING: Record<BannerÅskådare, string> = {
   'Alla':      'Alla besökare, inloggade som utloggade',
   'Besökare':  'Bara utloggade besökare',
   'Användare': 'Bara inloggade användare',
+}
+
+const STILAR: BannerStil[] = ['Drift', 'Nyhet', 'Kommande']
+
+const STIL_INFO: Record<BannerStil, { beskrivning: string; prick: string; pill: string }> = {
+  Drift:    { beskrivning: 'Orange — underhåll och störningar', prick: 'bg-orange-600',  pill: 'bg-orange-50 text-orange-700 border-orange-200' },
+  Nyhet:    { beskrivning: 'Violett — en funktion som just släppts', prick: 'bg-violet-700', pill: 'bg-violet-50 text-violet-700 border-violet-200' },
+  Kommande: { beskrivning: 'Grön — en funktion som annonserats men inte släppts', prick: 'bg-emerald-700', pill: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
 }
 
 // Enda standardtexten som finns idag — fler kan läggas till som egna
@@ -74,6 +83,9 @@ function FormModal({ redigerar, onSpara, onStäng, sparar, fel }: {
   const [start, setStart]           = useState(redigerar ? isoTillDatetimeLocal(redigerar.startUtc) : '')
   const [slut, setSlut]             = useState(redigerar ? isoTillDatetimeLocal(redigerar.endUtc) : '')
   const [åskådare, setÅskådare]     = useState<BannerÅskådare>(redigerar?.audience ?? 'Alla')
+  const [stil, setStil]             = useState<BannerStil>(redigerar?.stil ?? 'Drift')
+  const [rubrik, setRubrik]         = useState(redigerar?.rubrik ?? '')
+  const [länk, setLänk]             = useState(redigerar?.lankUrl ?? '')
   const [utcStart, setUtcStart]     = useState('')
   const [utcSlut, setUtcSlut]       = useState('')
 
@@ -85,7 +97,9 @@ function FormModal({ redigerar, onSpara, onStäng, sparar, fel }: {
     return isoTillDatetimeLocal(`${utcDatetimeLocal}:00Z`)
   }
 
-  const kanSpara = meddelande.trim() !== '' && start !== '' && slut !== '' && new Date(slut) > new Date(start)
+  const länkTrim  = länk.trim()
+  const länkGiltig = länkTrim === '' || arInternSokvag(länkTrim)
+  const kanSpara = meddelande.trim() !== '' && start !== '' && slut !== '' && new Date(slut) > new Date(start) && länkGiltig
   const kanAnvändaStandardtext = start !== '' && slut !== '' && new Date(slut) > new Date(start)
 
   function spara() {
@@ -95,6 +109,9 @@ function FormModal({ redigerar, onSpara, onStäng, sparar, fel }: {
       startUtc: new Date(start).toISOString(),
       endUtc: new Date(slut).toISOString(),
       audience: åskådare,
+      stil,
+      rubrik: rubrik.trim() || null,
+      lankUrl: länkTrim || null,
     })
   }
 
@@ -108,7 +125,39 @@ function FormModal({ redigerar, onSpara, onStäng, sparar, fel }: {
           <button onClick={onStäng} className="text-slate-300 hover:text-slate-600 text-xl leading-none transition-colors">×</button>
         </div>
 
-        <div className="px-6 py-5 flex flex-col gap-4">
+        <div className="px-6 py-5 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+          <div className="flex flex-col gap-1.5">
+            <span id="banderoll-stil-rubrik" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Stil</span>
+            <div role="radiogroup" aria-labelledby="banderoll-stil-rubrik" className="flex flex-col gap-2">
+              {STILAR.map(s => (
+                <label key={s} className="flex items-center gap-2.5 cursor-pointer py-1">
+                  <input
+                    type="radio"
+                    name="banderoll-stil"
+                    checked={stil === s}
+                    onChange={() => setStil(s)}
+                    className="accent-violet-600 w-4 h-4"
+                  />
+                  <span className={`w-3 h-3 rounded-full shrink-0 ${STIL_INFO[s].prick}`} />
+                  <span className="text-sm text-slate-700">{s}</span>
+                  <span className="text-xs text-slate-400">— {STIL_INFO[s].beskrivning}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Rubrik (valfritt)</label>
+            <input
+              type="text"
+              value={rubrik}
+              onChange={e => setRubrik(e.target.value)}
+              placeholder="T.ex. 'Nytt på Samhällsinformation'"
+              className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            />
+            <p className="text-xs text-slate-400">Visas före meddelandet på dator, och på en egen rad ovanför på mobil.</p>
+          </div>
+
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Meddelande</label>
@@ -129,6 +178,29 @@ function FormModal({ redigerar, onSpara, onStäng, sparar, fel }: {
               placeholder="Vi gör en planerad tjänsteuppdatering — sajten kan vara tillfälligt otillgänglig."
               className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">"Läs mer"-länk (valfritt)</label>
+              <button
+                type="button"
+                onClick={() => setLänk('/uppdateringar')}
+                className="text-xs font-medium text-violet-600 hover:text-violet-500 transition-colors"
+              >
+                Använd /uppdateringar
+              </button>
+            </div>
+            <input
+              type="text"
+              value={länk}
+              onChange={e => setLänk(e.target.value)}
+              placeholder="/uppdateringar"
+              className={`text-sm border rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 ${länkGiltig ? 'border-slate-200 focus:border-violet-400 focus:ring-violet-100' : 'border-red-300 focus:border-red-400 focus:ring-red-100'}`}
+            />
+            {!länkGiltig && (
+              <p role="alert" className="text-xs text-red-500">Länken måste vara en sökväg på sajten och börja med /, t.ex. /uppdateringar.</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-xl px-3 py-3 border border-slate-100">
@@ -183,6 +255,7 @@ function FormModal({ redigerar, onSpara, onStäng, sparar, fel }: {
                 <label key={a} className="flex items-center gap-2.5 cursor-pointer py-1">
                   <input
                     type="radio"
+                    name="banderoll-malgrupp"
                     checked={åskådare === a}
                     onChange={() => setÅskådare(a)}
                     className="accent-violet-600 w-4 h-4"
@@ -320,11 +393,18 @@ export default function MaintenanceBannerAdmin() {
             return (
               <div key={b.id} className="flex items-center justify-between gap-4 px-6 py-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-slate-800 truncate">{b.message}</p>
+                  <p className="text-sm text-slate-800 truncate">
+                    {b.rubrik && <span className="text-slate-500">{b.rubrik}: </span>}
+                    {b.message}
+                  </p>
                   <p className="text-xs text-slate-400 mt-0.5">
                     {formatSvensktDatumTid(b.startUtc)} – {formatSvensktDatumTid(b.endUtc)} · {b.audience}
+                    {b.lankUrl && <> · Läs mer → {b.lankUrl}</>}
                   </p>
                 </div>
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${(STIL_INFO[b.stil] ?? STIL_INFO.Drift).pill}`}>
+                  {b.stil}
+                </span>
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${s.färg}`}>
                   {s.text}
                 </span>
