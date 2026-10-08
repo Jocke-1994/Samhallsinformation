@@ -179,6 +179,31 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 53 — 2026-10-08
+**What was done:**
+- **Schemalagd lanserings "Ny version"-tillägg designat om och UI-godkänt** — klickbar Artifact-skiss i två rundor: https://claude.ai/artifact/LbFxKHDWR2t4xsvVWDbJhb (version 2 godkänd). Användarens feedback på v1 gav tre stora tillägg: **annonsering i förväg** (eget datum; nyheten publiceras som "Kommer snart"/"Släpps 15 oktober", byts automatiskt till "Ny funktion" vid lansering), **kopplade FAQ-frågor listade** i formuläret, och banderollen med "Läs mer" + rubrik på egen rad på mobil
+- **Banderollens målgrupp ändrad** från bara besökare till: de som nyheten berör. Berör den alla → "Alla"; bara inloggade → "Användare". Härleds automatiskt från punkternas befintliga "Syns för"-val. Kryssrutan heter "Visa banderoll på sajten"
+- **Beslut 2026-10-08** inskrivet i `docs/vault/Verktyg/Schemalagd-lansering.md` (`uiGodkand: ja`, `pipelineNr: "2"`) + `Öppna frågor.md` uppdaterad, pushat direkt mot main
+- **Del 1 byggd och mergad** (PR #673): `MaintenanceBanner` fick `Stil` (Drift/Nyhet/Kommande), `Rubrik`, `LankUrl` — migration `AddMaintenanceBannerStil` + raw-SQL-block i `DatabaseBootstrapper`. Ny `components/common/Banderoll.tsx` (utbruten ur `App.tsx`), delad `lib/banderoll.ts` (stängs-avtryck + `arInternSokvag`). Adminformuläret för driftmeddelanden fick stil/rubrik/länk. Backend 1118/1118, frontend 526/526 gröna, verifierat live lokalt med Playwright-skärmdumpar (dator 1280px, mobil 384px, admin)
+- **Code review (medium) hittade 9 fynd, alla åtgärdade före push** — viktigast: en tabb mitt i länken (`/<TAB>/evil.se`) slapp förbi intern-länk-spärren (webbläsaren stryker tabben → `//evil.se`), och en PUT från en äldre adminflik utan `Stil` nollställde tyst en nyhetsbanderoll till orange drift
+- **Platshållartext i mörkt läge** (PR #674, egen PR): användaren såg att exempeltext i tomma fält var nästan osynlig. Tailwinds preflight ritar `::placeholder` som 50 % `currentColor` — gällde ALLA fält i appen i mörkt läge. Explicit regel i `index.css`
+
+**Problem och lösningar:**
+- Bash-heredoc/`node -e`-redigering av TS-filer åt upp backslash-escapes (`'\\'` blev `'\'`) två gånger — upptäckt av `tsc -b`, rättat med Edit-verktyget. För strängar med `\\`, `\t`, `\n`: använd Edit/Write, inte skript genom Bash
+- Ett ändrat stängs-avtryck för banderoller hade fått alla redan stängda driftbanderoller att dyka upp igen — löst genom att behålla det gamla avtrycksformatet för vanliga driftbanderoller och bara utöka det när stil/rubrik/länk används
+
+**Etablerat mönster:**
+- En valfri ny fält-trio på en befintlig PUT-endpoint: behandla "fältet saknas helt" (äldre klient) som "behåll sparat värde", inte som "nollställ till default" — annars förstör en gammal öppen flik data direkt efter en deploy
+- Intern-länk-validering måste neka mellanslag/kontrolltecken, inte bara `//` och scheman — webbläsarens URL-parser stryker dem
+
+**Next session:**
+- **Pipeline:** flytta Funktionsidé #2 (Schemalagd lansering "Ny version") från Triage till **Bygger** i produktionens adminpanel — kodarbetet har startat
+- **Del 2:** kryssrutorna "Skicka push till inloggade" + "Visa banderoll på sajten" i Uppdateringars schemaläggning, körda av `ScheduledReleaseBackgroundService` vid lanseringstid (banderollen skapas av bakgrundstjänsten, målgrupp härledd från punkternas "Syns för")
+- **Del 3:** annonsering i förväg — andra nullable datumfält på `Uppdatering`, två faser i bakgrundstjänsten, Kommer snart → Ny funktion, banderollen byter från Kommande till Nyhet, push "Skicka vid" Annonsering/Lansering/Båda
+- **Del 4:** kopplade FAQ-frågor listade i formuläret (fristående, liten)
+- Litet, ej åtgärdat: "Använd standardtext (underhåll)" ser klickbar ut i mörkt läge även när den är avstängd (fanns sedan tidigare)
+- Platsfiltret (Funktionsidé #1) väntar fortfarande på kommun→län-tabellen
+
 ### Session 52 — 2026-10-04
 **What was done:**
 - Ren planerings-/designsession, ingen kod skriven. Tre trådar användaren bad om en genomgång av: möjligheten att filtrera på län redan som besökare, en "Ny version"-banner för besökare, och skisser på nya vyer — alla tre landade i konkreta beslut

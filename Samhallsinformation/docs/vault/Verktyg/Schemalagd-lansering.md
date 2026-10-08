@@ -146,6 +146,25 @@ godkända). Ersätter och bygger ut Beslut 2026-10-04 på följande punkter:
 Redo att gå från Triage till Bygger när kodarbetet faktiskt startar
 (se [[../1. Öppna_tankar/Flöde ny idé|Rutin per pipeline-steg]]).
 
+## Byggstatus
+Byggs i fyra delar, en PR per del, mergade i tur och ordning.
+
+- [x] **Del 1 — banderollens stil** (PR #673, mergad 2026-10-08):
+  `MaintenanceBanner.Stil` (Drift/Nyhet/Kommande), `Rubrik`, `LankUrl`
+  (bara intern sökväg). Ny `Banderoll`-komponent, adminformuläret för
+  driftmeddelanden fick stil/rubrik/länk. Går redan att använda manuellt.
+- [ ] **Del 2 — push + banderoll vid lansering**: de två kryssrutorna i
+  Uppdateringar, körda av `ScheduledReleaseBackgroundService`. Banderollen
+  skapas av tjänsten (inte vid sparande), målgrupp härledd från
+  punkternas "Syns för".
+- [ ] **Del 3 — annonsering i förväg**: andra datumfält på `Uppdatering`,
+  två faser, Kommer snart → Ny funktion, Kommande → Nyhet, push "Skicka
+  vid".
+- [ ] **Del 4 — FAQ-listan** i formuläret.
+
+Pipeline: ska flyttas från Triage till **Bygger** (kod påbörjad
+2026-10-08) — görs manuellt i produktionens adminpanel.
+
 ## Kopplat
 - [[../Ideer/Uppdateringar-schemalagd-publicering|Uppdateringar
   schemalagd publicering]] — ursprungsidén (session 24, aldrig migrerad
