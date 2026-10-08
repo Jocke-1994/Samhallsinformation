@@ -36,6 +36,8 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   två separata kryssrutor i schemaläggningsflödet — en för push (redan
   manuell knapp behålls för ad-hoc), en ny "Synas för besökare?" som
   styr en "Ny version"-banner via MaintenanceBanner-systemet.
+  Utökat och UI godkänt 2026-10-08: annonsering i förväg, banderoll
+  för alla (inte bara besökare), FAQ-lista. Redo att byggas.
 - **[[../Ideer/Geografiskt-platsfilter-besokare|Geografiskt
   platsfilter för besökare]]** — alla 14 scenarier beslutade, UI
   godkänd 2026-10-04 (Variant E, B+C-kombo, både desktop och mobil).

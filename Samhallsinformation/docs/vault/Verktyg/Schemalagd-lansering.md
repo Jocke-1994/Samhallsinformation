@@ -1,6 +1,8 @@
 ---
 typ: verktyg
 status: klart  # giltiga värden: att-gora | pagaende | klart
+uiGodkand: ja  # gäller "Ny version"-tillägget, godkänt 2026-10-08 (se Beslut 2026-10-08)
+pipelineNr: "2"  # Funktionsidé #2 i adminpanelens pipeline, stadie: Triage
 ---
 
 # Schemalagd lansering — så fungerar det
@@ -36,7 +38,8 @@ resonemanget bakom valen nedan).
    Uppdateringar finns kvar för ad-hoc-pushar. Sedan 2026-10-04 beslutat
    att även lägga till en checkbox i schemaläggningsflödet som auto-
    triggar pushen när den schemalagda posten publiceras (se Beslut
-   2026-10-04 nedan) — inte byggt än.
+   2026-10-04 nedan) — inte byggt än. Utökat 2026-10-08 med annonsering
+   i förväg och en banderoll för alla (se Beslut 2026-10-08).
 
 ## Varför designen ser ut såhär (beslut från dialogen)
 
@@ -84,6 +87,54 @@ inte en delad:
 
 Inget av detta byggt än. Inlagt som Funktionsidé #2 i adminpanelens
 pipeline (lokal, 2026-10-04), stadie: Triage.
+
+## Beslut 2026-10-08
+UI godkänt efter två skissrundor i en klickbar Artifact:
+https://claude.ai/artifact/LbFxKHDWR2t4xsvVWDbJhb (version 2 är den
+godkända). Ersätter och bygger ut Beslut 2026-10-04 på följande punkter:
+
+- **Inget syns när man sparar.** Allt sker vid de schemalagda tiderna.
+  Formulärets sidfot visar en sammanfattning av exakt vad som händer
+  vid varje tidpunkt.
+- **Annonsera i förväg** (ny kryssruta, eget datum). Två tidpunkter
+  istället för en:
+  - *Annonsering* (t.ex. 10 okt): posten publiceras med punkttypen
+    "Kommer snart" (finns redan) och texten "Släpps 15 oktober".
+  - *Lansering* (t.ex. 15 okt): flaggorna slås på, punkterna byts
+    automatiskt från "Kommer snart" till "Ny funktion" och
+    "Släpps …"-texten tas bort.
+  - Utan kryssrutan: som idag, en enda tidpunkt.
+  - Kräver ett andra nullable datumfält på `Uppdatering` och att
+    `ScheduledReleaseBackgroundService` hanterar två faser.
+- **Push** ("Skicka push till inloggade"): version + meddelande
+  (meddelandet förifyllt från titeln). Med annonsering väljer man
+  "Skicka vid": Annonsering / Lansering / Båda. Annonseringspushen har
+  rubriken "Kommer 15 oktober", lanseringspushen "Ny version: X". Den
+  manuella knappen finns kvar för ad-hoc.
+- **Banderoll för ALLA, inte bara besökare** (ändrat från 2026-10-04):
+  inloggade utan push skulle annars aldrig få veta om nyheten.
+  Målgrupp "Alla" i MaintenanceBanner. Kryssrutan heter därför "Visa
+  banderoll på sajten" istället för "Synas för besökare?".
+  - Två rader: rubrik + vad som är nytt (fritext, förifylld från
+    titeln) + länken **"Läs mer"** till `/uppdateringar`. På dator på
+    en rad, på mobil på varsin rad.
+  - Rubriken följer fasen: grön **"Kommer 15 oktober"** från
+    annonsering till lansering, violett **"Nytt på
+    Samhällsinformation"** från lansering och 3/7/14 dagar framåt.
+  - Kräver ett nytt fält på `MaintenanceBanner` (Drift / Nyhet) så
+    nyhetsbanderollen inte blir orange som driftmeddelanden.
+  - Skapas av bakgrundstjänsten när fasen körs, inte när posten sparas
+    — tas schemat bort i förväg blir inget kvar att städa. Märks "Från
+    lansering" i Driftmeddelanden.
+  - Den som stängde "Kommer"-banderollen ser "Nytt"-banderollen en gång
+    till (nytt innehåll = ny stängs-nyckel, redan så det fungerar).
+- **Kopplade FAQ-frågor listas** i formuläret (inte bara ett antal)
+  med vad som händer med var och en: publicerad → "Syns vid
+  lansering", utkast → "Förblir dold". Inget nytt beteende, bara
+  synliggjort — `FaqItem.FlagKey` styr redan visningen.
+
+Redo att gå från Triage till Bygger när kodarbetet faktiskt startar
+(se [[../1. Öppna_tankar/Flöde ny idé|Rutin per pipeline-steg]]).
 
 ## Kopplat
 - [[../Ideer/Uppdateringar-schemalagd-publicering|Uppdateringar
