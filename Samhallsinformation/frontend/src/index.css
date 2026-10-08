@@ -26,6 +26,12 @@ html.dark .dark\:bg-slate-600             { background-color: #475569; }
 html.dark .dark\:hover\:bg-slate-500:hover { background-color: #64748b; }
 html.dark .dark\:text-slate-100           { color: #f1f5f9; }
 
+/* Tailwinds preflight ritar platshållartext som halvgenomskinlig currentColor,
+   vilket i mörkt läge blir mörkgrått mot mörkgrå fältbakgrund (svårläst). Ljusare
+   än så här blir den svår att skilja från ifylld text. */
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: #94a3b8; opacity: 1; }
+
 /* ── True Black ──────────────────────────────────────────── */
 html[data-theme="true-black"] body                         { background-color: #000000; }
 html[data-theme="true-black"] .bg-white                    { background-color: #111111; }
