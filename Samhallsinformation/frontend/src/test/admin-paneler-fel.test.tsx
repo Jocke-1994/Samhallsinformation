@@ -40,7 +40,7 @@ const väntaLite = () => new Promise(r => setTimeout(r, 50))
 const modalRuta = (rubrik: string) => screen.getByText(rubrik).closest('.fixed') as HTMLElement
 
 const FRÅGA: FaqItem = { id: 'f1', kategori: 'Konto', publicerad: true, fraga: 'Hur byter jag lösenord?', svar: 'Under Konto.', flagKey: null }
-const BANNER: MaintenanceBanner = { id: 'b1', message: 'Underhåll på lördag', startUtc: '2026-10-03T08:00:00Z', endUtc: '2026-10-03T12:00:00Z', audience: 'Alla' }
+const BANNER: MaintenanceBanner = { id: 'b1', message: 'Underhåll på lördag', startUtc: '2026-10-03T08:00:00Z', endUtc: '2026-10-03T12:00:00Z', audience: 'Alla', stil: 'Drift', rubrik: null, lankUrl: null }
 const UPPD: Uppdatering = {
   id: 'u1', titel: 'Version 0.7', datum: '2026-09-20T00:00:00Z', publicerad: false, schemalagdPubliceringUtc: null,
   schemalagdaFlaggor: [], punkter: [{ id: 'p1', typ: 'buggfix', plats: 'Allmänt', text: 'Fixade en bugg', synlighet: 'alla' }],

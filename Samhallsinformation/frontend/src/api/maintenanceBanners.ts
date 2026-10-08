@@ -3,12 +3,19 @@ import { felFranSvar, publikFetch } from './hamta'
 
 export type BannerÅskådare = 'Alla' | 'Besökare' | 'Användare'
 
+// Drift = orange underhåll/störning, Nyhet = violett lanserad funktion,
+// Kommande = grön annonserad funktion som inte släppts än.
+export type BannerStil = 'Drift' | 'Nyhet' | 'Kommande'
+
 export interface MaintenanceBanner {
   id: string
   message: string
   startUtc: string
   endUtc: string
   audience: BannerÅskådare
+  stil: BannerStil
+  rubrik: string | null
+  lankUrl: string | null
 }
 
 export interface MaintenanceBannerRequest {
@@ -16,6 +23,9 @@ export interface MaintenanceBannerRequest {
   startUtc: string
   endUtc: string
   audience: BannerÅskådare
+  stil: BannerStil
+  rubrik: string | null
+  lankUrl: string | null
 }
 
 // Publik lista — servern filtrerar på tid och målgrupp. Token skickas om den finns

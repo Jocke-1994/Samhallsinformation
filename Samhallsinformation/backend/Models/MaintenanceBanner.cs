@@ -14,4 +14,16 @@ public class MaintenanceBanner
     // fritextsträng-konvention som User.Role, inget separat enum-lager.
     public string   Audience  { get; set; } = "Alla";
     public DateTime CreatedAt { get; set; }
+
+    // "Drift" (orange, underhåll/störning) | "Nyhet" (violett, lanserad
+    // funktion) | "Kommande" (grön, annonserad men inte släppt funktion).
+    // Samma fritextsträng-konvention som Audience.
+    public string   Stil      { get; set; } = "Drift";
+
+    // Valfri första rad ovanför Message, t.ex. "Nytt på Samhällsinformation".
+    public string?  Rubrik    { get; set; }
+
+    // Valfri "Läs mer"-länk. Bara interna sökvägar ("/uppdateringar") —
+    // validerat i controllern så en banderoll aldrig kan peka ut ur sajten.
+    public string?  LankUrl   { get; set; }
 }
