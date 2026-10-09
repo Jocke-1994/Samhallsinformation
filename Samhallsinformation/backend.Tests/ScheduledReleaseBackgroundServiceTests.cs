@@ -243,4 +243,162 @@ public class ScheduledReleaseBackgroundServiceTests
 
         Assert.Empty(db.MaintenanceBanners);
     }
+
+    // ------------------------------------------------------------------
+    // Del 3: annonsering i förväg, två faser (Beslut 2026-10-08)
+    // ------------------------------------------------------------------
+
+    private static Uppdatering SeedaAnnonseradLansering(AppDbContext db, DateTime annonsering, DateTime lansering, string pushSkickaVid = "Lansering", bool skickaPush = false, bool visaBanderoll = false)
+    {
+        var uppdatering = new Uppdatering
+        {
+            Titel = "Nytt platsfilter", Publicerad = false,
+            AnnonseringUtc = annonsering, SchemalagdPubliceringUtc = lansering,
+            SkickaPush = skickaPush, PushVersion = "1.0.0", PushMeddelande = "Nu kan du filtrera på plats",
+            PushSkickaVid = pushSkickaVid, VisaBanderoll = visaBanderoll,
+        };
+        db.Uppdateringar.Add(uppdatering);
+        db.UppdateringsPunkter.Add(new UppdateringsPunkt { UppdateringId = uppdatering.Id, Typ = "ny-funktion", Text = "...", Synlighet = "alla" });
+        db.SaveChanges();
+        return uppdatering;
+    }
+
+    [Fact]
+    public async Task ExecuteDueAsync_AnnonseringDue_LanseringInteAn_PublicerarUtanAttAktiveraFlaggor()
+    {
+        using var db = NewDb();
+        var uppdatering = SeedaAnnonseradLansering(db, DateTime.UtcNow.AddMinutes(-1), DateTime.UtcNow.AddDays(3));
+        uppdatering.SchemalagdaFlaggorJson = Json("kallor_lan_filter");
+        await db.SaveChangesAsync();
+
+        await ScheduledReleaseBackgroundService.ExecuteDueAsync(db, Substitute.For<IAktivitetsloggService>());
+
+        var sparad = db.Uppdateringar.Single();
+        Assert.True(sparad.Publicerad);
+        Assert.NotNull(sparad.AnnonseradUtc);
+        Assert.NotNull(sparad.SchemalagdPubliceringUtc); // fas 2 väntar fortfarande
+        Assert.NotNull(sparad.AnnonseringUtc);
+        Assert.Empty(db.FeatureFlagOverrides); // flaggor aktiveras bara vid fas 2
+    }
+
+    [Fact]
+    public async Task ExecuteDueAsync_AnnonseringRedanKord_KorsInteOmVidNastaPoll()
+    {
+        using var db = NewDb();
+        SeedPushMottagare(db);
+        SeedaAnnonseradLansering(db, DateTime.UtcNow.AddMinutes(-1), DateTime.UtcNow.AddDays(3), skickaPush: true, pushSkickaVid: "Annonsering");
+        var push = Substitute.For<IPushNotificationService>();
+
+        await ScheduledReleaseBackgroundService.ExecuteDueAsync(db, Substitute.For<IAktivitetsloggService>(), push: push);
+        await ScheduledReleaseBackgroundService.ExecuteDueAsync(db, Substitute.For<IAktivitetsloggService>(), push: push);
+
+        // Andra pollen ska INTE skicka push igen — AnnonseradUtc redan satt.
+        await push.Received(1).SendAsync(
+            Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ExecuteDueAsync_PushSkickaVidAnnonsering_SkickarKommerPushMenInteVidLansering()
+    {
+        using var db = NewDb();
+        SeedPushMottagare(db);
+        var push = Substitute.For<IPushNotificationService>();
+
+        // Fas 1 — due nu, fas 2 i framtiden.
+        SeedaAnnonseradLansering(db, DateTime.UtcNow.AddMinutes(-1), DateTime.UtcNow.AddDays(3), skickaPush: true, pushSkickaVid: "Annonsering");
+        await ScheduledReleaseBackgroundService.ExecuteDueAsync(db, Substitute.For<IAktivitetsloggService>(), push: push);
+
+        await push.Received(1).SendAsync(
+            Arg.Any<UserDevice>(), Arg.Is<string>(t => t!.StartsWith("Kommer ")),
+            Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+
+        // Flytta fram lanseringstiden till nu och köra om — ska INTE skicka
+        // ännu en push (PushSkickaVid är bara "Annonsering", inte "Lansering").
+        var uppdatering = db.Uppdateringar.Single();
+        uppdatering.SchemalagdPubliceringUtc = DateTime.UtcNow.AddMinutes(-1);
+        await db.SaveChangesAsync();
+        await ScheduledReleaseBackgroundService.ExecuteDueAsync(db, Substitute.For<IAktivitetsloggService>(), push: push);
+
+        await push.Received(1).SendAsync( // fortfarande bara 1 — inte 2
+            Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ExecuteDueAsync_PushSkickaVidBada_SkickarVidBadaFaserna()
+    {
+        using var db = NewDb();
+        SeedPushMottagare(db);
+        var push = Substitute.For<IPushNotificationService>();
+        SeedaAnnonseradLansering(db, DateTime.UtcNow.AddMinutes(-1), DateTime.UtcNow.AddDays(3), skickaPush: true, pushSkickaVid: "Båda");
+
+        await ScheduledReleaseBackgroundService.ExecuteDueAsync(db, Substitute.For<IAktivitetsloggService>(), push: push);
+        var uppdatering = db.Uppdateringar.Single();
+        uppdatering.SchemalagdPubliceringUtc = DateTime.UtcNow.AddMinutes(-1);
+        await db.SaveChangesAsync();
+        await ScheduledReleaseBackgroundService.ExecuteDueAsync(db, Substitute.For<IAktivitetsloggService>(), push: push);
+
+        await push.Received(2).SendAsync(
+            Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ExecuteDueAsync_VisaBanderollAnnonseringsfas_SkaparKommandeBannerSomSlutarVidLansering()
+    {
+        using var db = NewDb();
+        var lansering = DateTime.UtcNow.AddDays(3);
+        SeedaAnnonseradLansering(db, DateTime.UtcNow.AddMinutes(-1), lansering, visaBanderoll: true);
+
+        await ScheduledReleaseBackgroundService.ExecuteDueAsync(db, Substitute.For<IAktivitetsloggService>());
+
+        var banner = Assert.Single(db.MaintenanceBanners);
+        Assert.Equal("Kommande", banner.Stil);
+        Assert.StartsWith("Kommer ", banner.Rubrik);
+        Assert.Equal(lansering, banner.EndUtc);
+    }
+
+    [Fact]
+    public async Task ExecuteDueAsync_LanseringEfterAnnonsering_AktiverarFlaggorOchNollstallerAllt()
+    {
+        using var db = NewDb();
+        var uppdatering = SeedaAnnonseradLansering(db, DateTime.UtcNow.AddDays(-2), DateTime.UtcNow.AddMinutes(-1), visaBanderoll: true);
+        uppdatering.AnnonseradUtc = DateTime.UtcNow.AddDays(-2); // fas 1 redan körd tidigare
+        uppdatering.Publicerad = true;
+        uppdatering.SchemalagdaFlaggorJson = Json("kallor_lan_filter");
+        await db.SaveChangesAsync();
+
+        await ScheduledReleaseBackgroundService.ExecuteDueAsync(db, Substitute.For<IAktivitetsloggService>());
+
+        var sparad = db.Uppdateringar.Single();
+        Assert.True(db.FeatureFlagOverrides.Single().Value);
+        Assert.Null(sparad.SchemalagdPubliceringUtc);
+        Assert.Null(sparad.AnnonseringUtc);
+        Assert.Null(sparad.AnnonseradUtc);
+        var banner = Assert.Single(db.MaintenanceBanners); // bara "Nyhet" skapas nu, ingen ny "Kommande"
+        Assert.Equal("Nyhet", banner.Stil);
+    }
+
+    [Fact]
+    public async Task ExecuteDueAsync_BadaFasernaDuSamtidigt_KorBaddaIEnEndaPoll()
+    {
+        using var db = NewDb();
+        SeedPushMottagare(db);
+        var push = Substitute.For<IPushNotificationService>();
+        // Annonsering och lansering hamnar i samma poll-tick — ska hantera
+        // båda i tur och ordning utan att fastna.
+        SeedaAnnonseradLansering(db, DateTime.UtcNow.AddMinutes(-2), DateTime.UtcNow.AddMinutes(-1), skickaPush: true, pushSkickaVid: "Båda", visaBanderoll: true);
+
+        await ScheduledReleaseBackgroundService.ExecuteDueAsync(db, Substitute.For<IAktivitetsloggService>(), push: push);
+
+        var sparad = db.Uppdateringar.Single();
+        Assert.True(sparad.Publicerad);
+        Assert.Null(sparad.SchemalagdPubliceringUtc); // fas 2 körde och nollställde allt
+        Assert.Null(sparad.AnnonseringUtc);
+        Assert.Equal(2, db.MaintenanceBanners.Count()); // "Kommande" + "Nyhet"
+        await push.Received(2).SendAsync(
+            Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
 }

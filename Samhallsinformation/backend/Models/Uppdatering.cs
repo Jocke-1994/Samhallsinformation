@@ -29,4 +29,21 @@ public class Uppdatering
     public string? PushVersion    { get; set; }
     public string? PushMeddelande { get; set; }
     public bool    VisaBanderoll  { get; set; } = false;
+
+    // Del 3: annonsering i förväg (Beslut 2026-10-08). AnnonseringUtc är
+    // admins valda första tidpunkt (fas 1) — SchemalagdPubliceringUtc ovan
+    // återanvänds som fas 2 (lansering). AnnonseradUtc sätts av bakgrunds-
+    // tjänsten när fas 1 faktiskt körs (idempotens-vakt, samma mönster som
+    // att SchemalagdPubliceringUtc nollställs efter fas 2) — annars skulle
+    // en flerdagarsväntan mellan annonsering och lansering trigga om
+    // push/banderoll vid varje 60s-poll. Null = ingen annonsering vald,
+    // eller fas 1 har inte körts än.
+    public DateTime? AnnonseringUtc { get; set; }
+    public DateTime? AnnonseradUtc  { get; set; }
+
+    // "Annonsering" | "Lansering" | "Båda" — vilken fas SkickaPush gäller
+    // för. Bara meningsfullt när AnnonseringUtc är satt; annars är
+    // "Lansering" alltid det enda som faktiskt kan inträffa (bakåtkompatibelt
+    // med Del 2, som bara kände till en enda tidpunkt).
+    public string PushSkickaVid { get; set; } = "Lansering";
 }

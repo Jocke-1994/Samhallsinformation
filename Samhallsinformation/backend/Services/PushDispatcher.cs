@@ -229,7 +229,7 @@ public static class PushDispatcher
     // källor de följer). Returnerar antal enheter det skickades till.
     public static async Task<int> DispatchNewVersionAsync(
         AppDbContext db, IPushNotificationService push, string frontendUrl,
-        string version, string message, CancellationToken ct = default)
+        string version, string message, CancellationToken ct = default, string? customTitle = null)
     {
         var recipientIds = await PushEligibleUsers(db)
             .Where(u => u.PushNyVersion)
@@ -244,7 +244,10 @@ public static class PushDispatcher
 
         if (devices.Count == 0) return 0;
 
-        var title = $"Ny version: {version}";
+        // customTitle: Del 3 (Beslut 2026-10-08) — annonseringsfasens push har
+        // rubriken "Kommer 15 oktober" i stället för "Ny version: X", men delar
+        // samma mottagarkrets (User.PushNyVersion) och avsändarlogik.
+        var title = customTitle ?? $"Ny version: {version}";
         var url   = $"{frontendUrl.TrimEnd('/')}/profil?section=uppdateringar";
 
         await SendToDevicesAsync(db, push, devices, title, message, url, sourceId: null, ct);

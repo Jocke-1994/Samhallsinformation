@@ -156,6 +156,90 @@ public class UppdateringarControllerTests
         Assert.True(sparad.VisaBanderoll);
     }
 
+    // ── Del 3: annonsering i förväg (Beslut 2026-10-08) ──────────────────────
+
+    [Fact]
+    public async Task CreateUppdatering_AnnonseringUtanSchemalagdLansering_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var result = await controller.CreateUppdatering(new UppdateringRequest(
+            "Version 0.9.0", DateTime.UtcNow, false, [Punkt()], SchemalagdPubliceringUtc: null, [],
+            AnnonseringUtc: DateTime.UtcNow.AddDays(1)));
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task CreateUppdatering_AnnonseringEfterLansering_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+        var lansering = DateTime.UtcNow.AddDays(5);
+
+        var result = await controller.CreateUppdatering(new UppdateringRequest(
+            "Version 0.9.0", DateTime.UtcNow, false, [Punkt()], lansering, [],
+            AnnonseringUtc: lansering.AddDays(1))); // efter, inte före
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task CreateUppdatering_OgiltigPushSkickaVid_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var result = await controller.CreateUppdatering(new UppdateringRequest(
+            "Version 0.9.0", DateTime.UtcNow, false, [Punkt()], DateTime.UtcNow.AddDays(5), [],
+            PushSkickaVid: "Nagonsin"));
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task CreateUppdatering_GiltigAnnonsering_PersistsAnnonseringUtcOchPushSkickaVid()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+        var lansering = DateTime.UtcNow.AddDays(5);
+        var annonsering = DateTime.UtcNow.AddDays(1);
+
+        var result = (OkObjectResult)await controller.CreateUppdatering(new UppdateringRequest(
+            "Version 0.9.0", DateTime.UtcNow, false, [Punkt()], lansering, [],
+            AnnonseringUtc: annonsering, PushSkickaVid: "Båda"));
+        var dto = (UppdateringDto)result.Value!;
+
+        Assert.Equal(annonsering, dto.AnnonseringUtc);
+        Assert.Null(dto.AnnonseradUtc);
+        Assert.Equal("Båda", dto.PushSkickaVid);
+    }
+
+    [Fact]
+    public async Task UpdateUppdatering_AndratAnnonseringsdatum_NollstallerAnnonseradUtc()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+        var lansering = DateTime.UtcNow.AddDays(5);
+        var annonsering1 = DateTime.UtcNow.AddDays(1);
+        var annonsering2 = DateTime.UtcNow.AddDays(2);
+
+        var created = (OkObjectResult)await controller.CreateUppdatering(new UppdateringRequest(
+            "Version 0.9.0", DateTime.UtcNow, false, [Punkt()], lansering, [], AnnonseringUtc: annonsering1));
+        var dto = (UppdateringDto)created.Value!;
+
+        // Simulerar att fas 1 redan körts av bakgrundstjänsten.
+        var uppdatering = db.Uppdateringar.Single();
+        uppdatering.AnnonseradUtc = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        await controller.UpdateUppdatering(dto.Id, new UppdateringRequest(
+            dto.Titel, dto.Datum, false, [Punkt()], lansering, [], AnnonseringUtc: annonsering2));
+
+        Assert.Null(db.Uppdateringar.Single().AnnonseradUtc);
+    }
+
     // ── E4#1: publika GET filtrerar på Synlighet ─────────────────────────────
 
     private static UppdateringarController NewController(AppDbContext db, bool inloggad) => new(db, Substitute.For<IAktivitetsloggService>())
@@ -313,5 +397,70 @@ public class UppdateringarControllerTests
         // Admin-endpointen kraschar inte heller.
         var admin = (OkObjectResult)await NewController(db).GetAdminUppdateringar();
         Assert.Equal(2, Assert.Single(Assert.IsType<List<UppdateringDto>>(admin.Value)).Punkter.Count);
+    }
+
+    // ── Del 3: annonseringsteaser på PUBLIKA endpointen ──────────────────────
+
+    private static Uppdatering SeedaAnnonseradRelease(AppDbContext db)
+    {
+        var lansering = DateTime.UtcNow.AddDays(3);
+        var u = new Uppdatering
+        {
+            Titel = "Nytt platsfilter", Publicerad = true,
+            SchemalagdPubliceringUtc = lansering,
+            AnnonseringUtc = lansering.AddDays(-2),
+            AnnonseradUtc = DateTime.UtcNow.AddHours(-1), // fas 1 redan körd
+        };
+        db.Uppdateringar.Add(u);
+        db.UppdateringsPunkter.Add(new UppdateringsPunkt { UppdateringId = u.Id, Typ = "ny-funktion", Text = "Den riktiga, hemliga texten", Synlighet = "alla", Ordning = 0 });
+        db.SaveChanges();
+        return u;
+    }
+
+    [Fact]
+    public async Task GetUppdateringar_AnnonseradInteLanserad_VisarTeaserInteRiktigaPunkter()
+    {
+        using var db = NewDb();
+        SeedaAnnonseradRelease(db);
+
+        foreach (var inloggad in new[] { true, false })
+        {
+            var result = (OkObjectResult)await NewController(db, inloggad).GetUppdateringar();
+            var punkt = Assert.Single(Assert.Single(Assert.IsType<List<UppdateringDto>>(result.Value)).Punkter);
+            Assert.Equal("kommer-snart", punkt.Typ);
+            Assert.StartsWith("Släpps", punkt.Text);
+            Assert.DoesNotContain("hemliga", punkt.Text);
+        }
+    }
+
+    [Fact]
+    public async Task GetAdminUppdateringar_AnnonseradInteLanserad_VisarRiktigtInnehall()
+    {
+        using var db = NewDb();
+        SeedaAnnonseradRelease(db);
+
+        var result = (OkObjectResult)await NewController(db).GetAdminUppdateringar();
+        var punkt = Assert.Single(Assert.Single(Assert.IsType<List<UppdateringDto>>(result.Value)).Punkter);
+        Assert.Equal("ny-funktion", punkt.Typ);
+        Assert.Equal("Den riktiga, hemliga texten", punkt.Text);
+    }
+
+    [Fact]
+    public async Task GetUppdateringar_InteAnnonseradAn_VisarRiktigaPunkter()
+    {
+        using var db = NewDb();
+        var u = new Uppdatering
+        {
+            Titel = "Kommande funktion", Publicerad = true,
+            SchemalagdPubliceringUtc = DateTime.UtcNow.AddDays(5),
+            AnnonseringUtc = DateTime.UtcNow.AddDays(1), // satt men inte körd — AnnonseradUtc är null
+        };
+        db.Uppdateringar.Add(u);
+        db.UppdateringsPunkter.Add(new UppdateringsPunkt { UppdateringId = u.Id, Typ = "ny-funktion", Text = "Riktig text", Synlighet = "alla", Ordning = 0 });
+        db.SaveChanges();
+
+        var result = (OkObjectResult)await NewController(db, inloggad: false).GetUppdateringar();
+        var punkt = Assert.Single(Assert.Single(Assert.IsType<List<UppdateringDto>>(result.Value)).Punkter);
+        Assert.Equal("Riktig text", punkt.Text);
     }
 }
