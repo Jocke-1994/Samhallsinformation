@@ -197,7 +197,7 @@ Systemet hanterar information baserat på tillgänglig metadata:
 - Intern-länk-validering måste neka mellanslag/kontrolltecken, inte bara `//` och scheman — webbläsarens URL-parser stryker dem
 
 **Next session:**
-- **Pipeline:** flytta Funktionsidé #2 (Schemalagd lansering "Ny version") från Triage till **Bygger** i produktionens adminpanel — kodarbetet har startat
+- ~~**Pipeline:** flytta Funktionsidé #2 (Schemalagd lansering "Ny version") från Triage till **Bygger**~~ — klart, flyttad av användaren 2026-10-09 (id 8 i produktionens adminpanel)
 - **Del 2:** kryssrutorna "Skicka push till inloggade" + "Visa banderoll på sajten" i Uppdateringars schemaläggning, körda av `ScheduledReleaseBackgroundService` vid lanseringstid (banderollen skapas av bakgrundstjänsten, målgrupp härledd från punkternas "Syns för")
 - **Del 3:** annonsering i förväg — andra nullable datumfält på `Uppdatering`, två faser i bakgrundstjänsten, Kommer snart → Ny funktion, banderollen byter från Kommande till Nyhet, push "Skicka vid" Annonsering/Lansering/Båda
 - **Del 4:** kopplade FAQ-frågor listade i formuläret (fristående, liten)

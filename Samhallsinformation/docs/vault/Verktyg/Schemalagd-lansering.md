@@ -162,8 +162,8 @@ Byggs i fyra delar, en PR per del, mergade i tur och ordning.
   vid".
 - [ ] **Del 4 — FAQ-listan** i formuläret.
 
-Pipeline: ska flyttas från Triage till **Bygger** (kod påbörjad
-2026-10-08) — görs manuellt i produktionens adminpanel.
+Pipeline: flyttad från Triage till **Bygger** av användaren 2026-10-09
+(Funktionsidé id 8 i produktionens adminpanel).
 
 ## Kopplat
 - [[../Ideer/Uppdateringar-schemalagd-publicering|Uppdateringar
