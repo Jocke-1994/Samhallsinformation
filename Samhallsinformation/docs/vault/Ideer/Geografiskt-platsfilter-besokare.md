@@ -138,6 +138,43 @@ påbörjat och är ett betydligt större jobb, inte gjort i samma svep.
     man i sökfältet vinner sökningen över "Visa fler" och söker alltid
     mot hela listan, inte bara de redan synliga pluckarna.
 
+## Beslut 2026-10-09 — plupp-matchning, SMHI under utredning
+
+Verifierat mot riktig lokal data (inte bara antagande) innan matchningen
+byggdes: `backend/Application/Geografi/PlatsMatchare.cs`, enkel exakt
+(skiftlägesokänslig) matchning av `Geography` mot kommun/länsnamnen i
+`KommunLan` — ingen fuzzy-logik, ingen textutvinning ur fria meningar.
+
+- **Polisen** (~99% av händelserna): ren kommun- eller länstext
+  ("Botkyrka", "Hallands län") — matchar rent, bär huvuddelen av v1.
+- **Trafikverket**: länsnamn, ibland med en vägsträcka bakom
+  ("Stockholms län E4") — matchar när det bara är länet, annars null.
+- **Krisinformation**: har i praktiken aldrig en Geography just nu —
+  redan täckt av det befintliga "ingen plats = Nationellt"-fallet
+  (beslut 5), inget extra jobb.
+- **SMHI — medvetet under utredning för v1.** Dess `Geography` är fri
+  text (havsområden som "Skagerrak", hela meningar som "Delar av
+  Gävleborgs län", flerläns-beskrivningar) som nästan aldrig matchar en
+  exakt kommun/länssträng. En riktig SMHI-specifik tolkning (extrahera
+  länsnamn ur en mening, hantera havsområden, dela upp flerläns-
+  beskrivningar) är ett eget, separat jobb — inte löst här. Tills dess
+  deltar SMHI:s händelser inte i platsfiltret; de syns som vanligt i
+  det ofiltrerade flödet. **Konsekvens för UI-skissens exempel** (rad
+  140-141 nedan): en riktig SMHI-länsvarning triggar i praktiken sällan
+  ärvningen till Botkyrka/Haninge som visas i mockupen — mekaniken
+  (beslut 2) är fortfarande korrekt och fungerar redan för Polisen/
+  Trafikverkets länsnivå-träffar, det är bara SMHI specifikt som inte
+  bidrar förrän den egna tolkningen byggs.
+- En `Geography`-sträng som FINNS men inte går att tolka (SMHIs fall)
+  räknas INTE som "Nationellt" — det skulle vara missvisande (en
+  regional varning som påstås gälla hela Sverige). Den utesluts helt
+  enkelt ur platsfiltret, "Nationellt" gäller bara när `Geography`
+  helt saknas.
+
+18 egna tester, inkl. verifiering mot riktiga SMHI/Trafikverket-strängar
+hittade i den lokala databasen. Lokal gren
+`feat/kommun-lan-referenstabell`, väntar på granskning — inte pushad.
+
 ## UI-skiss
 
 Claude Artifact (Design-canvas, interaktiv): https://claude.ai/artifact/NRitLhJURPuw69QcJUsACA
@@ -158,6 +195,5 @@ inkl. SMHI:s länsvarning som ärvs in under både Botkyrka och Haninge
 - `backend/Models/CanonicalEvent.cs` (`Geography`-fältet) och
   `backend/Ingestors/*.cs` (hur varje källa fyller i det) — tekniska
   utgångsläget för vad som faktiskt går att aggregera idag
-- Ny, inte påbörjad: en statisk kommun→län-referenstabell (konsekvens
-  av beslut 2) — hör hemma i backend, troligen en seedad lookup-tabell
-  eller en inbäddad konstant-lista, inte en ingestor-ändring
+- Kommun→län-referenstabellen (konsekvens av beslut 2) och
+  plupp-matchningen (beslut 2026-10-09) är byggda — se ovan.
