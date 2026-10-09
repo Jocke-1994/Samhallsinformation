@@ -1048,6 +1048,24 @@ public static class DatabaseBootstrapper
                         ON CONFLICT DO NOTHING;
                     ");
                 }
+
+                // Uppdateringar.SkickaPush/PushVersion/PushMeddelande/VisaBanderoll — Del 2 av
+                // Schemalagd lanserings "Ny version"-tillägg (Beslut 2026-10-08, se Verktyg/
+                // Schemalagd-lansering.md). Två bool-kolumner, samma raw-SQL-mönster som alla
+                // tidigare EF-migrationer med bool/Guid/DateTime-kolumner.
+                if (pendingMigrations.Contains("20261009054001_AddUppdateringPushBanderoll"))
+                {
+                    await db.Database.ExecuteSqlRawAsync(@"
+                        ALTER TABLE ""Uppdateringar"" ADD COLUMN IF NOT EXISTS ""SkickaPush""     boolean NOT NULL DEFAULT false;
+                        ALTER TABLE ""Uppdateringar"" ADD COLUMN IF NOT EXISTS ""PushVersion""    text;
+                        ALTER TABLE ""Uppdateringar"" ADD COLUMN IF NOT EXISTS ""PushMeddelande"" text;
+                        ALTER TABLE ""Uppdateringar"" ADD COLUMN IF NOT EXISTS ""VisaBanderoll""  boolean NOT NULL DEFAULT false;
+
+                        INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                        VALUES ('20261009054001_AddUppdateringPushBanderoll', '10.0.12')
+                        ON CONFLICT DO NOTHING;
+                    ");
+                }
             }
 
             // Rensa dubbletter av (SourceId, ExternalId) i Events INNAN det unika indexet skapas (V3-2). Gäller både

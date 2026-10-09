@@ -71,7 +71,12 @@ public class UppdateringarController : ControllerBase
         var fel = ValideraPunkter(req);
         if (fel != null) return BadRequest(new { error = fel });
 
-        var uppdatering = new Uppdatering { Titel = req.Titel, Datum = req.Datum };
+        var uppdatering = new Uppdatering
+        {
+            Titel = req.Titel, Datum = req.Datum,
+            SkickaPush = req.SkickaPush, PushVersion = req.PushVersion?.Trim(), PushMeddelande = req.PushMeddelande?.Trim(),
+            VisaBanderoll = req.VisaBanderoll,
+        };
         _db.Uppdateringar.Add(uppdatering);
         LäggTillPunkter(uppdatering.Id, req.Punkter);
 
@@ -110,9 +115,13 @@ public class UppdateringarController : ControllerBase
             ? FeatureFlagActivation.DeserialiseraFlaggor(uppdatering.SchemalagdaFlaggorJson)
             : new List<string>();
 
-        uppdatering.Titel     = req.Titel;
-        uppdatering.Datum     = req.Datum;
-        uppdatering.UpdatedAt = DateTime.UtcNow;
+        uppdatering.Titel          = req.Titel;
+        uppdatering.Datum          = req.Datum;
+        uppdatering.UpdatedAt      = DateTime.UtcNow;
+        uppdatering.SkickaPush     = req.SkickaPush;
+        uppdatering.PushVersion    = req.PushVersion?.Trim();
+        uppdatering.PushMeddelande = req.PushMeddelande?.Trim();
+        uppdatering.VisaBanderoll  = req.VisaBanderoll;
 
         // Ersätter hela punkter-listan — samma helobjekt-PUT-UX som FAQ,
         // slipper spåra per-punkt-ID:n genom formuläret.
@@ -193,9 +202,23 @@ public class UppdateringarController : ControllerBase
         SchemalagdPubliceringUtc = UtcDateTime.Ensure(req.SchemalagdPubliceringUtc),
     };
 
-    private static string? ValideraPunkter(UppdateringRequest req) =>
-        UppdateringsVärden.ValideraPunkter(
+    private static string? ValideraPunkter(UppdateringRequest req)
+    {
+        var punktFel = UppdateringsVärden.ValideraPunkter(
             (req.Punkter ?? []).Select(p => ((string?)p.Typ, (string?)p.Synlighet)));
+        if (punktFel != null) return punktFel;
+
+        // Del 2 (Beslut 2026-10-08): en banderoll har ingenting att visa utan
+        // innehåll, och en push utan version/text skulle skicka en tom notis.
+        if (req.VisaBanderoll && (req.Punkter?.Count ?? 0) == 0)
+            return "Banderoll kräver minst en innehållsrad.";
+        if (req.SkickaPush && string.IsNullOrWhiteSpace(req.PushVersion))
+            return "Version krävs för att skicka push.";
+        if (req.SkickaPush && string.IsNullOrWhiteSpace(req.PushMeddelande))
+            return "Meddelande krävs för att skicka push.";
+
+        return null;
+    }
 
     private void LäggTillPunkter(Guid uppdateringId, List<PunktRequest> punkter)
     {
@@ -228,7 +251,8 @@ public class UppdateringarController : ControllerBase
                    .Select(p => new PunktDto(p.Id, p.Typ, p.Plats, p.Text, p.Synlighet))
                    .ToList(),
             u.SchemalagdPubliceringUtc,
-            FeatureFlagActivation.DeserialiseraFlaggor(u.SchemalagdaFlaggorJson)
+            FeatureFlagActivation.DeserialiseraFlaggor(u.SchemalagdaFlaggorJson),
+            u.SkickaPush, u.PushVersion, u.PushMeddelande, u.VisaBanderoll
         )).ToList();
     }
 }
@@ -236,9 +260,12 @@ public class UppdateringarController : ControllerBase
 public record PunktDto(Guid Id, string Typ, string Plats, string Text, string Synlighet);
 public record UppdateringDto(
     Guid Id, string Titel, DateTime Datum, bool Publicerad, List<PunktDto> Punkter,
-    DateTime? SchemalagdPubliceringUtc, List<string> SchemalagdaFlaggor);
+    DateTime? SchemalagdPubliceringUtc, List<string> SchemalagdaFlaggor,
+    bool SkickaPush, string? PushVersion, string? PushMeddelande, bool VisaBanderoll);
 
 public record PunktRequest(string Typ, string Plats, string Text, string Synlighet);
 public record UppdateringRequest(
     string Titel, DateTime Datum, bool Publicerad, List<PunktRequest> Punkter,
-    DateTime? SchemalagdPubliceringUtc = null, List<string>? SchemalagdaFlaggor = null);
+    DateTime? SchemalagdPubliceringUtc = null, List<string>? SchemalagdaFlaggor = null,
+    bool SkickaPush = false, string? PushVersion = null, string? PushMeddelande = null,
+    bool VisaBanderoll = false);
