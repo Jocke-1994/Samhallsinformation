@@ -34,6 +34,17 @@ UI-frågor (12-14). **UI-riktning godkänd 2026-10-04** — Variant E
 pipelinen — se Kopplat för kvarvarande tekniska förberedelser
 (referenstabellen) innan byggstart.
 
+**Kommun→län-referenstabellen byggd 2026-10-09** (lokal gren
+`feat/kommun-lan-referenstabell`, väntar på granskning — INTE pushad
+än): `backend/Application/Geografi/KommunLan.cs`, en inbäddad
+konstantlista (inte en databastabell) med Sveriges 290 kommuner mot
+sina 21 län, källa SCB via det öppna "kommunkoder"-npm-paketet,
+stickprovskontrollerad. 21 egna tester gröna. Sista tekniska
+förberedelsen innan Triage → Bygger är därmed klar — resten
+(aggregeringslogik mot `CanonicalEvent.Geography`, ny `NewsFeed`-vy,
+"har en aktiv händelse just nu"-flaggan från beslut 13) är inte
+påbörjat och är ett betydligt större jobb, inte gjort i samma svep.
+
 ## Beslut 2026-10-04 (efter dina svar)
 
 1. **Grupperingsnivå** — platta pluppar, ingen nästling/gruppering.
