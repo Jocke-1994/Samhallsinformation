@@ -36,6 +36,15 @@ annan än dig.
   helt avstängd flagga — ingen möjlighet att klicka runt i den mot skarp
   produktionsdata utan att slå på den för alla.
 
+## Beslut 2026-10-10
+- **Beta-testare = en roll.** En fjärde rollnivå (t.ex. `Beta`), likt
+  dagens `Admin`/`Support`/`Användare` (`User.Role`,
+  [[../Funktioner/Adminpanel-roller|Adminpanel-roller]]) — inte ett löst
+  konto-attribut ovanpå `Användare`. Konsekvens: kräver en riktig
+  utökning av rollmodellen (ny tillåten `Role`-sträng, nya
+  `[Authorize(Roles=...)]`-kombinationer där testmiljön ska vara nåbar)
+  när testmiljön faktiskt byggs — inte bara en flagga.
+
 ## Öppna frågor
 - **"Spegel av senaste versionen" — vad är det tekniskt?** En helt
   separat deploy av samma kod (egen URL, t.ex. en Railway-miljö eller en
@@ -54,9 +63,6 @@ annan än dig.
 - **Hur hålls den i synk med "senaste versionen"?** Automatiskt vid
   varje deploy (kräver en pipeline-koppling), eller en manuell
   uppdatering?
-- **Vem är beta-testare i framtiden, och hur bjuds de in?** En ny roll
-  (`Beta`, utöver dagens `Admin`/`Support`/`User`), eller ett
-  konto-attribut som ger extra flagg-synlighet utan en helt ny roll?
 - **Hur skiljer det sig från att bara bygga en synlighetsnivå i det
   befintliga flagg-systemet** (`FeatureFlagOverrides` får t.ex. "endast
   Admin"/"endast Beta"/"alla" istället för bara på/av), helt utan någon
