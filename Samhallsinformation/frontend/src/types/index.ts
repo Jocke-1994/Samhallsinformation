@@ -48,6 +48,22 @@ export interface EventsResponse {
   totalExakt?: boolean
 }
 
+// Geografiskt platsfilter (docs/vault/Ideer/Geografiskt-platsfilter-besokare.md).
+// Matchar PlatserController 1:1 — niva speglar backendens PlatsKatalogNivå-enum.
+export interface PlatsKatalogPost {
+  namn: string
+  niva: 'Kommun' | 'Lan' | 'Nationellt'
+  lan: string | null
+  antalHandelser: number
+  aktiv: boolean
+}
+
+export interface PlatsSektion {
+  plats: string
+  lan: string | null
+  handelser: CanonicalEvent[]
+}
+
 // ProfileNav
 export type ProfileSection =
   | 'mina-kallor'
