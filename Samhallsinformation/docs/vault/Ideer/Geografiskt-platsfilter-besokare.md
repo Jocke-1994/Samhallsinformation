@@ -172,8 +172,10 @@ byggdes: `backend/Application/Geografi/PlatsMatchare.cs`, enkel exakt
   helt saknas.
 
 18 egna tester, inkl. verifiering mot riktiga SMHI/Trafikverket-strängar
-hittade i den lokala databasen. Lokal gren
-`feat/kommun-lan-referenstabell`, väntar på granskning — inte pushad.
+hittade i den lokala databasen. Byggt och mergat i tre PR:ar: #675
+(kommun→län-referenstabell), #676 (sektionerad resultatvy/plupp-
+matchning), #677 (frontend-UI, Variant E) — väntar på granskning
+2026-10-10, bakom flaggan `flode_platsfilter` (av som standard).
 
 ## UI-skiss
 

@@ -50,7 +50,9 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
 - **[[../Ideer/Geografiskt-platsfilter-besokare|Geografiskt
   platsfilter för besökare]]** — alla 14 scenarier beslutade, UI
   godkänd 2026-10-04 (Variant E, B+C-kombo, både desktop och mobil).
-  Redo för pipelinen.
+  Byggt i tre PR:ar (#675, #676 mergade, #677 öppen 2026-10-10) bakom
+  flaggan `flode_platsfilter` (av). Väntar bara på #677s granskning,
+  sen ett lanseringsbeslut (flagga på).
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,
