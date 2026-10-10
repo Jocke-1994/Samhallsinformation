@@ -46,6 +46,7 @@ public class AnonymousEndpointsGuardTests
         new("FeatureFlagsController", "GetOverrides", "GET", "Globalt flaggtillstånd som alla besökare behöver; innehåller bara admins avvikelser från kodens default."),
         new("MaintenanceBannersController", "GetAll", "GET", "Driftbanderoll som visas för alla besökare."),
         new("PlatserController", "GetKatalog",      "GET",  "Pluppkatalogen för det geografiska platsfiltret; ska fungera redan för besökare utan konto (beslut 11)."),
+        new("PlatserController", "GetHändelserForPlatser", "GET", "Platsfiltrets sektionerade resultatvy; samma publika motivering som GetKatalog (beslut 11)."),
         new("SiteSettingsController", "GetSiteSettings", "GET", "Globala sajtinställningar (visa Logga in/Skapa konto-knappar) som utloggade besökare behöver."),
         new("SourcesController", "GetSources",      "GET",  "Publik källista i sidomenyn; bara publicerade källor."),
         new("UppdateringarController", "GetUppdateringar", "GET", "Publik changelog/Nyheter; bara publicerade poster. Anonyma får bara punkter med Synlighet=\"alla\"; giltig JWT (läses via User, ingen [Authorize]) ger även \"inloggade\"-punkter."),

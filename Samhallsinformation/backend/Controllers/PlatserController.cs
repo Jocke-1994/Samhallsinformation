@@ -53,4 +53,47 @@ public class PlatserController : ControllerBase
 
         return Ok(resultat);
     }
+
+    // Sektionerad resultatvy för en eller flera valda pluppar (beslut 3+4) —
+    // ELLER-logik mellan platserna, en egen sektion per vald plats. Samma
+    // senaste-50-fönster som katalogen (beslut 10: egen fristående vy, men
+    // samma delade dataunderlag — ingen anledning till en bredare fråga).
+    // En länsvarning dyker upp under VARJE vald kommun i länet (beslut 2) —
+    // en händelse kan alltså förekomma i flera sektioner samtidigt.
+    [HttpGet("handelser")]
+    public async Task<IActionResult> GetHändelserForPlatser([FromQuery] string? platser)
+    {
+        if (string.IsNullOrWhiteSpace(platser))
+            return BadRequest(new { error = "platser krävs (kommaseparerad lista)" });
+
+        var valdaPlatser = platser
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (valdaPlatser.Count == 0)
+            return BadRequest(new { error = "platser krävs (kommaseparerad lista)" });
+
+        var publishedSourceIds = await _db.Sources
+            .Where(s => s.IsPublished)
+            .Select(s => s.Id)
+            .ToListAsync();
+
+        var senasteHändelser = await _db.Events
+            .Where(e => publishedSourceIds.Contains(e.SourceId))
+            .OrderByDescending(e => e.PublishedAt)
+            .Take(50)
+            .ToListAsync();
+
+        var sektioner = valdaPlatser.Select(plats => new
+        {
+            plats,
+            lan = KommunLan.LanForKommun.GetValueOrDefault(plats),
+            handelser = senasteHändelser
+                .Where(e => PlatsHändelseFiltrerare.GällerPlats(plats, e.Geography, e.IsNational))
+                .ToList(),
+        });
+
+        return Ok(sektioner);
+    }
 }
