@@ -1,6 +1,6 @@
 ---
 typ: index
-uppdaterad: 2026-09-21
+uppdaterad: 2026-10-10
 ---
 
 # Öppna frågor — allt som väntar på ditt svar, på ett ställe
@@ -11,6 +11,14 @@ varje gång jag lägger en `## Öppna frågor`-sektion i en vault-not, lägger
 jag samtidigt till en rad här. När du besvarar frågan i notens egen fil,
 strimlar jag bort raden härifrån vid nästa genomgång — den här listan
 ska bara innehålla det som GENUINT väntar på dig just nu.
+
+## Väntar på ditt svar — aktiva frågor
+
+- **[[../Ideer/Testmiljö|Testmiljö]]** — ny idé (2026-10-10): en skarp
+  men osynlig vy av senaste versionen, bara synlig för Admin/framtida
+  beta-testare. Flera grundläggande tekniska vägval olösta — separat
+  deploy eller roll-styrd vy i befintlig drift, egen databas eller
+  samma, vad en "vy" konkret innebär. Se notens Öppna frågor.
 
 ## Väntar på en åtgärd från dig (inte en fråga — allt är redan beslutat)
 
