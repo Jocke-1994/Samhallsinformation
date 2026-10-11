@@ -12,6 +12,7 @@ import MobilTopBar from '../common/MobilTopBar'
 import { ALLA_HANDELSER_LABEL, MITT_FLODE_LABEL } from '../../lib/navLabels'
 import { useMittFlode, useSparatFlode, type ServerFlode } from '../../hooks/useServerFlode'
 import { useFlags } from '../../context/FeatureFlagsContext'
+import Platsfilter from './Platsfilter'
 
 type ViewMode = 'Allt' | 'Mitt'
 type MittUnderflik = 'Flöde' | 'Sparat'
@@ -107,8 +108,12 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
 
   const [readMap, setReadMap] = useState<Record<string, boolean>>({})
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('Alla')
+  // Platsfiltret (beslut 10) är en egen, fristående vy — inte AND-kombinerad
+  // med allvarlighetsfiltret. Bara meningsfullt mot det delade 50-händelser-
+  // fönstret (beslut 6), inte en enskild källas flöde.
+  const [flodevy, setFlodevy] = useState<'handelser' | 'plats'>('handelser')
 
-  useEffect(() => { setSeverityFilter('Alla') }, [shortName])
+  useEffect(() => { setSeverityFilter('Alla'); setFlodevy('handelser') }, [shortName])
 
   const sourceMap = useMemo(
     () => Object.fromEntries(sources.map(s => [s.id, s.shortName])),
@@ -216,8 +221,33 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
         </div>
       )}
 
+      {/* Platsfilter — egen, fristående vy (beslut 10), bara meningsfull mot
+          det delade "Alla källor"-fönstret, inte en enskild källas flöde. */}
+      {flaggor.flode_platsfilter && viewMode === 'Allt' && shortName === null && (
+        <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 py-2.5 shrink-0">
+          <div className="max-w-3xl mx-auto flex items-center gap-1 w-fit">
+            {([
+              { key: 'handelser' as const, label: 'Senaste nytt' },
+              { key: 'plats' as const, label: '📍 Filtrera på plats' },
+            ]).map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFlodevy(f.key)}
+                className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors ${
+                  flodevy === f.key
+                    ? 'bg-violet-600 text-white'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filter — visas alltid när det finns händelser, även allvarlighetsgrader med 0 träffar */}
-      {showFilters && viewMode === 'Allt' && (
+      {showFilters && viewMode === 'Allt' && flodevy === 'handelser' && (
         <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-10 shrink-0">
           <div className="max-w-3xl mx-auto flex gap-1.5">
             {(['Alla', 'Kritisk', 'Viktigt', 'Bra att veta'] as SeverityFilter[])
@@ -249,6 +279,9 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
 
       {/* Händelselista */}
       <div className="flex-1 overflow-y-auto px-4 md:px-10 py-4 md:py-6">
+        {viewMode === 'Allt' && flodevy === 'plats' ? (
+          <Platsfilter sources={sources} />
+        ) : (
         <div className="max-w-3xl mx-auto flex flex-col gap-1.5">
 
           {viewMode === 'Allt' && sortedEvents.length === 0 && (
@@ -360,6 +393,7 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
           )}
 
         </div>
+        )}
       </div>
     </div>
   )

@@ -2,6 +2,7 @@ export type FlagKey =
   | 'flode_olasta_badge'
   | 'flode_sparat'
   | 'flode_dela'
+  | 'flode_platsfilter'
   | 'kallor_lagg_till'
   | 'kallor_aktiva'
   | 'kallor_rekommenderade'
@@ -76,6 +77,8 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
         roadmapSedan: '2026-08-04', roadmapPrNummer: [380, 384, 385] },
       { key: 'flode_dela',         label: 'Dela',           beskrivning: 'Dela en händelses källänk via webbläsarens/enhetens egen delningsfunktion', defaultAktiv: false,
         roadmap: 'Nybyggd, väntar på ett lanseringsbeslut.', roadmapSedan: '2026-09-13' },
+      { key: 'flode_platsfilter',  label: 'Platsfilter',    beskrivning: 'Filtrera Senaste nytt på en eller flera platser (pluppar), fungerar redan för besökare utan konto', defaultAktiv: false,
+        roadmap: 'Nybyggd, väntar på ett lanseringsbeslut.', roadmapSedan: '2026-10-10' },
     ],
   },
   {
