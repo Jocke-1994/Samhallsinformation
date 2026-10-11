@@ -1066,6 +1066,23 @@ public static class DatabaseBootstrapper
                         ON CONFLICT DO NOTHING;
                     ");
                 }
+
+                // Uppdateringar.AnnonseringUtc/AnnonseradUtc/PushSkickaVid — Del 3 av
+                // Schemalagd lanserings "Ny version"-tillägg (Beslut 2026-10-08, se
+                // Verktyg/Schemalagd-lansering.md). Nullable timestamptz-kolumner,
+                // samma raw-SQL-mönster som alla tidigare migrationer.
+                if (pendingMigrations.Contains("20261009055620_AddUppdateringAnnonsering"))
+                {
+                    await db.Database.ExecuteSqlRawAsync(@"
+                        ALTER TABLE ""Uppdateringar"" ADD COLUMN IF NOT EXISTS ""AnnonseringUtc"" timestamptz;
+                        ALTER TABLE ""Uppdateringar"" ADD COLUMN IF NOT EXISTS ""AnnonseradUtc""  timestamptz;
+                        ALTER TABLE ""Uppdateringar"" ADD COLUMN IF NOT EXISTS ""PushSkickaVid""  text NOT NULL DEFAULT 'Lansering';
+
+                        INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                        VALUES ('20261009055620_AddUppdateringAnnonsering', '10.0.12')
+                        ON CONFLICT DO NOTHING;
+                    ");
+                }
             }
 
             // Rensa dubbletter av (SourceId, ExternalId) i Events INNAN det unika indexet skapas (V3-2). Gäller både

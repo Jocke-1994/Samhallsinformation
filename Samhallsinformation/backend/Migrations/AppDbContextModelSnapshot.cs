@@ -944,6 +944,12 @@ namespace Samhallsinformation.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("AnnonseradUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("AnnonseringUtc")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -954,6 +960,10 @@ namespace Samhallsinformation.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("PushMeddelande")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PushSkickaVid")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PushVersion")

@@ -41,7 +41,7 @@ public class UppdateringarController : ControllerBase
             .OrderByDescending(u => u.Datum)
             .ToListAsync();
 
-        var dtos = await ByggDtoAsync(releaser);
+        var dtos = MedAnnonseringsteaser(await ByggDtoAsync(releaser));
         if (inloggad) return Ok(dtos);
 
         var synliga = dtos
@@ -76,6 +76,7 @@ public class UppdateringarController : ControllerBase
             Titel = req.Titel, Datum = req.Datum,
             SkickaPush = req.SkickaPush, PushVersion = req.PushVersion?.Trim(), PushMeddelande = req.PushMeddelande?.Trim(),
             VisaBanderoll = req.VisaBanderoll,
+            AnnonseringUtc = req.AnnonseringUtc, PushSkickaVid = req.PushSkickaVid,
         };
         _db.Uppdateringar.Add(uppdatering);
         LäggTillPunkter(uppdatering.Id, req.Punkter);
@@ -115,6 +116,12 @@ public class UppdateringarController : ControllerBase
             ? FeatureFlagActivation.DeserialiseraFlaggor(uppdatering.SchemalagdaFlaggorJson)
             : new List<string>();
 
+        // Byter admin annonseringsdatumet (eller tar bort/lägger till det) räknas
+        // det som en helt ny fas 1 att vänta på — annars skulle en redan körd
+        // annonsering aldrig köras om trots ett medvetet nytt datum.
+        if (req.AnnonseringUtc != uppdatering.AnnonseringUtc)
+            uppdatering.AnnonseradUtc = null;
+
         uppdatering.Titel          = req.Titel;
         uppdatering.Datum          = req.Datum;
         uppdatering.UpdatedAt      = DateTime.UtcNow;
@@ -122,6 +129,8 @@ public class UppdateringarController : ControllerBase
         uppdatering.PushVersion    = req.PushVersion?.Trim();
         uppdatering.PushMeddelande = req.PushMeddelande?.Trim();
         uppdatering.VisaBanderoll  = req.VisaBanderoll;
+        uppdatering.AnnonseringUtc = req.AnnonseringUtc;
+        uppdatering.PushSkickaVid  = req.PushSkickaVid;
 
         // Ersätter hela punkter-listan — samma helobjekt-PUT-UX som FAQ,
         // slipper spåra per-punkt-ID:n genom formuläret.
@@ -168,6 +177,10 @@ public class UppdateringarController : ControllerBase
             uppdatering.Publicerad = req.Publicerad || req.Punkter.Count > 0;
             uppdatering.SchemalagdPubliceringUtc = null;
             uppdatering.SchemalagdaFlaggorJson   = null;
+            // En manuell publicering (eller ett redan förfallet schema) hoppar
+            // rakt till "lanserad" — ingen kvarvarande annonseringsfas att vänta på.
+            uppdatering.AnnonseringUtc = null;
+            uppdatering.AnnonseradUtc  = null;
         }
         else
         {
@@ -200,6 +213,7 @@ public class UppdateringarController : ControllerBase
     {
         Datum = UtcDateTime.Ensure(req.Datum),
         SchemalagdPubliceringUtc = UtcDateTime.Ensure(req.SchemalagdPubliceringUtc),
+        AnnonseringUtc = UtcDateTime.Ensure(req.AnnonseringUtc),
     };
 
     private static string? ValideraPunkter(UppdateringRequest req)
@@ -217,8 +231,19 @@ public class UppdateringarController : ControllerBase
         if (req.SkickaPush && string.IsNullOrWhiteSpace(req.PushMeddelande))
             return "Meddelande krävs för att skicka push.";
 
+        // Del 3: annonsering i förväg kräver en riktig lanseringstidpunkt att
+        // annonsera MOT, och måste ligga före den.
+        if (req.AnnonseringUtc != null && req.SchemalagdPubliceringUtc == null)
+            return "Annonsering i förväg kräver att lansering är schemalagd.";
+        if (req.AnnonseringUtc != null && req.SchemalagdPubliceringUtc != null && req.AnnonseringUtc >= req.SchemalagdPubliceringUtc)
+            return "Annonseringsdatumet måste vara före lanseringsdatumet.";
+        if (!GiltigaPushSkickaVid.Contains(req.PushSkickaVid))
+            return "Ogiltigt värde för 'Skicka vid'.";
+
         return null;
     }
+
+    private static readonly string[] GiltigaPushSkickaVid = ["Annonsering", "Lansering", "Båda"];
 
     private void LäggTillPunkter(Guid uppdateringId, List<PunktRequest> punkter)
     {
@@ -252,20 +277,35 @@ public class UppdateringarController : ControllerBase
                    .ToList(),
             u.SchemalagdPubliceringUtc,
             FeatureFlagActivation.DeserialiseraFlaggor(u.SchemalagdaFlaggorJson),
-            u.SkickaPush, u.PushVersion, u.PushMeddelande, u.VisaBanderoll
+            u.SkickaPush, u.PushVersion, u.PushMeddelande, u.VisaBanderoll,
+            u.AnnonseringUtc, u.AnnonseradUtc, u.PushSkickaVid
         )).ToList();
     }
+
+    // Del 3 (Beslut 2026-10-08): mellan fas 1 (annonsering) och fas 2
+    // (lansering) ska PUBLIKA läsare (inloggade som anonyma) se en enda
+    // teaser-punkt ("Kommer snart" / "Släpps X") i stället för de riktiga
+    // punkterna — admin ser alltid det verkliga innehållet (den här
+    // transformen körs bara i GetUppdateringar, aldrig i GetAdminUppdateringar).
+    private static List<UppdateringDto> MedAnnonseringsteaser(List<UppdateringDto> dtos) =>
+        dtos.Select(u => u.AnnonseradUtc != null && u.SchemalagdPubliceringUtc != null
+            ? u with { Punkter = [new PunktDto(
+                Guid.Empty, UppdateringsVärden.TypKommerSnart, "Allmänt",
+                $"Släpps {SvenskDatum.FormateraDag(u.SchemalagdPubliceringUtc.Value)}",
+                UppdateringsVärden.SynlighetAlla)] }
+            : u).ToList();
 }
 
 public record PunktDto(Guid Id, string Typ, string Plats, string Text, string Synlighet);
 public record UppdateringDto(
     Guid Id, string Titel, DateTime Datum, bool Publicerad, List<PunktDto> Punkter,
     DateTime? SchemalagdPubliceringUtc, List<string> SchemalagdaFlaggor,
-    bool SkickaPush, string? PushVersion, string? PushMeddelande, bool VisaBanderoll);
+    bool SkickaPush, string? PushVersion, string? PushMeddelande, bool VisaBanderoll,
+    DateTime? AnnonseringUtc, DateTime? AnnonseradUtc, string PushSkickaVid);
 
 public record PunktRequest(string Typ, string Plats, string Text, string Synlighet);
 public record UppdateringRequest(
     string Titel, DateTime Datum, bool Publicerad, List<PunktRequest> Punkter,
     DateTime? SchemalagdPubliceringUtc = null, List<string>? SchemalagdaFlaggor = null,
     bool SkickaPush = false, string? PushVersion = null, string? PushMeddelande = null,
-    bool VisaBanderoll = false);
+    bool VisaBanderoll = false, DateTime? AnnonseringUtc = null, string PushSkickaVid = "Lansering");

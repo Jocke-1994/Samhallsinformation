@@ -4,7 +4,7 @@ import { sendNewVersionNotice } from '../../api/push'
 import {
   fetchAdminUppdateringar, createUppdatering, updateUppdatering, deleteUppdatering,
   type Uppdatering, type UppdateringRequest, type UppdateringsPunkt, type PunktRequest,
-  type PunktTyp, type Synlighet,
+  type PunktTyp, type Synlighet, type PushSkickaVid,
 } from '../../api/uppdateringar'
 import { fetchAdminFeatureFlags } from '../../api/featureFlags'
 import { ADMIN_FLAGG_QUERY_KEY, invalideraFlaggor } from '../../lib/flaggCache'
@@ -202,6 +202,13 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   const [pushMeddelande, setPushMeddelande] = useState(redigerar?.pushMeddelande ?? '')
   const [visaBanderoll,  setVisaBanderoll]  = useState(redigerar?.visaBanderoll ?? false)
 
+  // Del 3: annonsering i förväg (Beslut 2026-10-08) — en andra, tidigare
+  // tidpunkt. Posten visas som en "Kommer snart"-teaser från den tidpunkten
+  // tills schemaDatum (lanseringen) ovan slår in.
+  const [annonsera,     setAnnonsera]     = useState(redigerar?.annonseringUtc != null)
+  const [annonseDatum,  setAnnonseDatum]  = useState(redigerar?.annonseringUtc ? isoTillDatetimeLocal(redigerar.annonseringUtc) : '')
+  const [pushSkickaVid, setPushSkickaVid] = useState<PushSkickaVid>(redigerar?.pushSkickaVid ?? 'Lansering')
+
   const flaggFråga = useQuery({ queryKey: ADMIN_FLAGG_QUERY_KEY, queryFn: fetchAdminFeatureFlags })
   const adminFlaggor = flaggFråga.data ?? []
   const redoFlaggor = adminFlaggor.filter(f => f.redoAttLanseras && !f.value)
@@ -244,7 +251,13 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   const kanVisaBanderoll = harInnehåll
   const banderollMålgrupp = punkter.some(p => p.synlighet === 'alla') ? 'alla (även besökare)' : 'bara inloggade'
   const pushGiltigt = !skickaPush || (pushVersion.trim() !== '' && pushMeddelande.trim() !== '')
-  const kanSpara = titel.trim() !== '' && datumGiltigt && schemaDatumGiltigt && pushGiltigt && (harInnehåll || rentFlaggSchema)
+  // Del 3: annonseringsdatumet måste vara giltigt OCH ligga före lanseringen
+  // (samma regel som backend, UppdateringarController.ValideraPunkter).
+  const annonseDatumGiltigt = !annonsera || (annonseDatum !== '' && !Number.isNaN(new Date(annonseDatum).getTime()))
+  const annonseFoeLansering = !annonsera || !schemaDatum || new Date(annonseDatum) < new Date(schemaDatum)
+  const kanSpara = titel.trim() !== '' && datumGiltigt && schemaDatumGiltigt && pushGiltigt
+    && (!schemalagd || (annonseDatumGiltigt && annonseFoeLansering))
+    && (harInnehåll || rentFlaggSchema)
 
   function spara(publicera: boolean) {
     if (sparar || !kanSpara) return
@@ -259,6 +272,8 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
       pushVersion:    schemalagd && skickaPush ? pushVersion.trim() : null,
       pushMeddelande: schemalagd && skickaPush ? pushMeddelande.trim() : null,
       visaBanderoll:  schemalagd && visaBanderoll && kanVisaBanderoll,
+      annonseringUtc: schemalagd && annonsera && annonseDatum ? new Date(annonseDatum).toISOString() : null,
+      pushSkickaVid:  schemalagd && annonsera ? pushSkickaVid : 'Lansering',
     })
   }
 
@@ -342,6 +357,35 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
                   />
                 </div>
 
+                {/* Del 3: annonsering i förväg (Beslut 2026-10-08) — en andra,
+                    tidigare tidpunkt. Posten visas som "Kommer snart" från
+                    den tidpunkten tills lanseringen ovan slår in. */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={annonsera}
+                      onChange={e => setAnnonsera(e.target.checked)}
+                      className="rounded border-slate-300 text-violet-600 focus:ring-violet-400"
+                    />
+                    Annonsera i förväg
+                  </label>
+                  {annonsera && (
+                    <div className="flex flex-col gap-1.5 pl-6">
+                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Annonseringsdatum/tid (din lokala tid)</label>
+                      <input
+                        type="datetime-local"
+                        value={annonseDatum}
+                        onChange={e => setAnnonseDatum(e.target.value)}
+                        className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                      />
+                      {!annonseFoeLansering && (
+                        <p className="text-xs text-red-500">Måste vara före lanseringsdatumet.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Flaggor att aktivera</label>
                   {flaggFråga.isError && flaggFråga.data === undefined ? (
@@ -415,6 +459,21 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
                         placeholder="Pushens meddelande"
                         className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                       />
+                    </div>
+                  )}
+                  {skickaPush && annonsera && (
+                    <div className="flex items-center gap-2 pl-6">
+                      <span className="text-[11px] text-slate-400 shrink-0">Skicka vid</span>
+                      {(['Annonsering', 'Lansering', 'Båda'] as PushSkickaVid[]).map(v => (
+                        <button key={v} type="button" onClick={() => setPushSkickaVid(v)}
+                          className={`text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
+                            pushSkickaVid === v
+                              ? 'bg-slate-800 text-white border-slate-800'
+                              : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+                          }`}>
+                          {v}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -531,12 +590,20 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
           <MutationFel fel={fel} reserv="Uppdateringen kunde inte sparas. Din text finns kvar — försök igen." />
 
           {/* Sammanfattning — inget syns förrän schemat slår in (Beslut 2026-10-08). */}
+          {schemalagd && annonsera && annonseDatum && (
+            <ul className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 flex flex-col gap-0.5">
+              <li>Vid {annonseDatum.replace('T', ' ')} (annonsering):</li>
+              {harInnehåll && <li>• Uppdateringen publiceras som "Kommer snart"</li>}
+              {skickaPush && (pushSkickaVid === 'Annonsering' || pushSkickaVid === 'Båda') && <li>• Push skickas till inloggade</li>}
+              {visaBanderoll && kanVisaBanderoll && <li>• Banderoll visas för {banderollMålgrupp}</li>}
+            </ul>
+          )}
           {schemalagd && schemaDatum && (
             <ul className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 flex flex-col gap-0.5">
-              <li>Vid {schemaDatum.replace('T', ' ')}:</li>
+              <li>Vid {schemaDatum.replace('T', ' ')} ({annonsera ? 'lansering' : 'publicering'}):</li>
               {valdaFlaggor.length > 0 && <li>• {valdaFlaggor.length} flagg{valdaFlaggor.length === 1 ? 'a' : 'or'} aktiveras</li>}
-              {harInnehåll && <li>• Uppdateringen publiceras</li>}
-              {skickaPush && <li>• Push skickas till inloggade med "Ny version"-notiser</li>}
+              {harInnehåll && <li>• Uppdateringen {annonsera ? 'byts till sitt riktiga innehåll' : 'publiceras'}</li>}
+              {skickaPush && (!annonsera || pushSkickaVid === 'Lansering' || pushSkickaVid === 'Båda') && <li>• Push skickas till inloggade med "Ny version"-notiser</li>}
               {visaBanderoll && kanVisaBanderoll && <li>• Banderoll visas för {banderollMålgrupp}</li>}
             </ul>
           )}

@@ -3,6 +3,7 @@ import { felFranSvar, publikFetch } from './hamta'
 
 export type PunktTyp = 'ny-funktion' | 'förbättring' | 'buggfix' | 'känt-problem' | 'kommer-snart'
 export type Synlighet = 'alla' | 'inloggade'
+export type PushSkickaVid = 'Annonsering' | 'Lansering' | 'Båda'
 
 export interface UppdateringsPunkt {
   id:        string
@@ -24,6 +25,9 @@ export interface Uppdatering {
   pushVersion:               string | null
   pushMeddelande:            string | null
   visaBanderoll:             boolean
+  annonseringUtc:            string | null
+  annonseradUtc:             string | null
+  pushSkickaVid:             PushSkickaVid
 }
 
 export interface PunktRequest {
@@ -44,6 +48,8 @@ export interface UppdateringRequest {
   pushVersion?:              string | null
   pushMeddelande?:           string | null
   visaBanderoll?:            boolean
+  annonseringUtc?:           string | null
+  pushSkickaVid?:            PushSkickaVid
 }
 
 // Publika endpointen filtrerar på Synlighet i backend: anonym får bara punkter

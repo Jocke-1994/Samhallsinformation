@@ -45,6 +45,7 @@ const UPPD: Uppdatering = {
   id: 'u1', titel: 'Version 0.7', datum: '2026-09-20T00:00:00Z', publicerad: false, schemalagdPubliceringUtc: null,
   schemalagdaFlaggor: [], punkter: [{ id: 'p1', typ: 'buggfix', plats: 'Allmänt', text: 'Fixade en bugg', synlighet: 'alla' }],
   skickaPush: false, pushVersion: null, pushMeddelande: null, visaBanderoll: false,
+  annonseringUtc: null, annonseradUtc: null, pushSkickaVid: 'Lansering',
 }
 
 beforeEach(() => {
