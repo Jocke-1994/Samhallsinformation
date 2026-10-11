@@ -420,10 +420,26 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
                   )}
                 </div>
 
+                {/* Del 4: FAQ-listan i formuläret (Beslut 2026-10-08) — inget
+                    nytt beteende, bara synliggjort. FaqItem.FlagKey styr
+                    redan den faktiska visningen (session 42). */}
                 {kopplatFaq.length > 0 && (
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                    {kopplatFaq.length} FAQ-{kopplatFaq.length === 1 ? 'fråga' : 'frågor'} kopplad{kopplatFaq.length === 1 ? '' : 'e'} till valda flaggor — värt att granska i FAQ-fliken innan lansering.
-                  </p>
+                  <div className="flex flex-col gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    <p className="text-xs font-medium text-amber-800">
+                      {kopplatFaq.length} FAQ-{kopplatFaq.length === 1 ? 'fråga' : 'frågor'} kopplad{kopplatFaq.length === 1 ? '' : 'e'} till valda flaggor:
+                    </p>
+                    <ul className="flex flex-col gap-1">
+                      {kopplatFaq.map(f => (
+                        <li key={f.id} className="text-xs text-amber-700 flex items-start justify-between gap-2">
+                          <span className="flex-1">{f.fraga}</span>
+                          <span className={`shrink-0 font-medium ${f.publicerad ? 'text-green-700' : 'text-slate-500'}`}>
+                            {f.publicerad ? 'Syns vid lansering' : 'Förblir dold'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-xs text-amber-600">Granska/uppdatera dem i FAQ-fliken innan lansering.</p>
+                  </div>
                 )}
 
                 {/* Del 2: push + banderoll vid lansering (Beslut 2026-10-08).
