@@ -179,6 +179,23 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 54 — 2026-10-11
+**What was done:**
+- **Schemalagd lanserings "Ny version"-tillägg: del 2, 3 och 4 upptäckta som redan byggda men opushade** sedan session 53 (lokala commits daterade 2026-10-09, aldrig pushade) — avvek från minnets "nästa session: del 2"-pekare. Alla tre rebasade, pushade och PR:ade: **PR #678** (del 2, push+banderoll-kryssrutor körda av `ScheduledReleaseBackgroundService`), **PR #679** (del 3, annonsering i förväg i två faser, `SvenskDatum`-hjälpare), **PR #680** (del 4, kopplade FAQ-frågor listade i formuläret) — alla tre mergade
+- **Vercel-"problemet" visade sig vara kosmetiskt**: `vercel inspect` gav "Git information retrieval failed for this deployment" — en övergående metadata-glitch, ingen trasig build. Det faktiska problemet (PR #677 gick inte att merga) berodde på att en icke-obligatorisk check (Vercel) var röd, inte på en konflikt — GitHub Free kan inte sätta branch protection på privata repon (403), så merge-knappen var aldrig faktiskt blockerad
+- **Ny bakgrundsbugg hittad och fixad** (PR #681, egen liten PR): PR #677 lade till flaggan `flode_platsfilter` i `frontend/featureFlags.ts` men glömde backend-motsvarigheten i `FeatureFlagDefaults.cs` — bröt `FeatureFlagFrontendParityTests` i CI på main och alla grenar skapade efter #677. Fixad som isolerad PR enligt en-PR-per-funktion, inte buntad in i del 2
+- **Staplade PR:ar (#679/#680 basade mot syskongrenar, inte main) visar bara Vercel-checks, inga Build & Test/Type Check** — rotorsak: `.github/workflows/ci.yml`/`ci-backend.yml` triggar bara på `pull_request: branches: [main]`. Inget fel, bara en synlighetslucka tills kedjan mergas mot main
+- **`gh pr merge` blockerades av auto-mode-klassificeraren** ("[Merge Without Review]") för PR #681 — följde instruktionen att inte försöka kringgå det, användaren mergade manuellt själv. Samma begränsning gäller troligen alla merges
+- **Lokala och fjärrgrenar städade** efter bekräftad merge: `feat/schemalagd-lansering-del2/3/4-*`, `fix/featureflagdefaults-platsfilter` borttagna lokalt och på origin (squash-mergade grenar kräver `git branch -D`, inte `-d` — git känner inte igen squash-commits som mergade)
+
+**Etablerat mönster:**
+- En staplad PR (`--base <syskongren>` istället för `main`) får inga riktiga CI-checks förrän kedjan mergar mot main — path/branch-filtrerade workflows triggar bara på PR:ar vars bas faktiskt är `main`
+- Efter en squash-merge: `git branch -d` vägrar ("not fully merged") trots att PR:en är bekräftat mergad — detta är förväntat, inte en varningssignal; `-D` är rätt verktyg här
+
+**Next session:**
+- Platsfiltret (Funktionsidé #1) och Schemalagd lanserings "Ny version"-tillägg (Funktionsidé #2) är nu BÅDA helt byggda och mergade — flytta pipeline-posterna till rätt stadie i adminpanelen om det inte redan skett
+- Ingen känd öppen tråd kvar från dessa två funktioner. Nästa session kan börja om från ett rent läge — kolla `docs/vault/1. Öppna_tankar/Flöde ny idé.md` / pipeline för vad som väntar näst
+
 ### Session 53 — 2026-10-08
 **What was done:**
 - **Schemalagd lanserings "Ny version"-tillägg designat om och UI-godkänt** — klickbar Artifact-skiss i två rundor: https://claude.ai/artifact/LbFxKHDWR2t4xsvVWDbJhb (version 2 godkänd). Användarens feedback på v1 gav tre stora tillägg: **annonsering i förväg** (eget datum; nyheten publiceras som "Kommer snart"/"Släpps 15 oktober", byts automatiskt till "Ny funktion" vid lansering), **kopplade FAQ-frågor listade** i formuläret, och banderollen med "Läs mer" + rubrik på egen rad på mobil

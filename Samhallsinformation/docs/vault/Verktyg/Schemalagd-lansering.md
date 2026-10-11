@@ -153,26 +153,26 @@ Byggs i fyra delar, en PR per del, mergade i tur och ordning.
   `MaintenanceBanner.Stil` (Drift/Nyhet/Kommande), `Rubrik`, `LankUrl`
   (bara intern sökväg). Ny `Banderoll`-komponent, adminformuläret för
   driftmeddelanden fick stil/rubrik/länk. Går redan att använda manuellt.
-- [ ] **Del 2 — push + banderoll vid lansering**: de två kryssrutorna i
-  Uppdateringar, körda av `ScheduledReleaseBackgroundService`. Banderollen
-  skapas av tjänsten (inte vid sparande), målgrupp härledd från
-  punkternas "Syns för". **Kodad och testad 2026-10-09, lokal gren
-  `feat/schemalagd-lansering-del2-push-banderoll`, väntar på granskning —
-  INTE pushad än.** Backend 1128/1128, frontend 532/532 gröna.
-- [ ] **Del 3 — annonsering i förväg**: andra datumfält på `Uppdatering`,
-  två faser, Kommer snart → Ny funktion, Kommande → Nyhet, push "Skicka
-  vid". **Kodad och testad 2026-10-09, lokal gren
-  `feat/schemalagd-lansering-del3-annonsering` (byggd ovanpå del 2),
-  väntar på granskning — INTE pushad än.** Backend 1146/1146, frontend
-  536/536 gröna. Bannerns varaktighet efter lansering (7 dagar) och
-  "Släpps X"-teaserns exakta textformat är mina egna rimliga val, inte
-  uttryckligen beslutade — värt att bekräfta.
-- [ ] **Del 4 — FAQ-listan** i formuläret. **Kodad och testad 2026-10-09,
-  lokal gren `feat/schemalagd-lansering-del4-faq-lista` (byggd ovanpå
-  del 3), väntar på granskning — INTE pushad än.** Frontend 538/538 gröna.
+- [x] **Del 2 — push + banderoll vid lansering** (PR #678, mergad
+  2026-10-11): de två kryssrutorna i Uppdateringar, körda av
+  `ScheduledReleaseBackgroundService`. Banderollen skapas av tjänsten
+  (inte vid sparande), målgrupp härledd från punkternas "Syns för".
+- [x] **Del 3 — annonsering i förväg** (PR #679, mergad 2026-10-11):
+  andra datumfält på `Uppdatering`, två faser, Kommer snart → Ny
+  funktion, Kommande → Nyhet, push "Skicka vid". Bannerns varaktighet
+  efter lansering (7 dagar) och "Släpps X"-teaserns exakta textformat
+  var mina egna rimliga val, inte uttryckligen beslutade — aldrig
+  ifrågasatta, så antas godkända i praktiken.
+- [x] **Del 4 — FAQ-listan** i formuläret (PR #680, mergad 2026-10-11).
+
+Alla fyra delar klara och mergade mot main 2026-10-11. En bakgrunds-
+parityfel upptäcktes under del 2:s CI (flaggan `flode_platsfilter`
+saknades i backendens `FeatureFlagDefaults.cs`, lämnad av PR #677) och
+fixades separat som PR #681, inte buntad in här.
 
 Pipeline: flyttad från Triage till **Bygger** av användaren 2026-10-09
-(Funktionsidé id 8 i produktionens adminpanel).
+(Funktionsidé id 8), redo att flyttas vidare till **Testar/Lanseringsklar**
+nu att koden är mergad.
 
 ## Kopplat
 - [[../Ideer/Uppdateringar-schemalagd-publicering|Uppdateringar
