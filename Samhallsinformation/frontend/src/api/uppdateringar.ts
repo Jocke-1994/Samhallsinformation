@@ -20,6 +20,10 @@ export interface Uppdatering {
   punkter:                   UppdateringsPunkt[]
   schemalagdPubliceringUtc:  string | null
   schemalagdaFlaggor:        string[]
+  skickaPush:                boolean
+  pushVersion:               string | null
+  pushMeddelande:            string | null
+  visaBanderoll:             boolean
 }
 
 export interface PunktRequest {
@@ -36,6 +40,10 @@ export interface UppdateringRequest {
   punkter:                   PunktRequest[]
   schemalagdPubliceringUtc?: string | null
   schemalagdaFlaggor?:       string[]
+  skickaPush?:               boolean
+  pushVersion?:              string | null
+  pushMeddelande?:           string | null
+  visaBanderoll?:            boolean
 }
 
 // Publika endpointen filtrerar på Synlighet i backend: anonym får bara punkter

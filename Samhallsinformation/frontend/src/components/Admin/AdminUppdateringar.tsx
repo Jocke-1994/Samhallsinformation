@@ -194,6 +194,14 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   const [schemaDatum,  setSchemaDatum]  = useState(redigerar?.schemalagdPubliceringUtc ? isoTillDatetimeLocal(redigerar.schemalagdPubliceringUtc) : '')
   const [valdaFlaggor, setValdaFlaggor] = useState<string[]>(redigerar?.schemalagdaFlaggor ?? [])
 
+  // Del 2 av Schemalagd lanserings "Ny version"-tillägg (Beslut 2026-10-08) —
+  // skapas av ScheduledReleaseBackgroundService vid lanseringstidpunkten,
+  // inte här vid sparande.
+  const [skickaPush,     setSkickaPush]     = useState(redigerar?.skickaPush ?? false)
+  const [pushVersion,    setPushVersion]    = useState(redigerar?.pushVersion ?? '')
+  const [pushMeddelande, setPushMeddelande] = useState(redigerar?.pushMeddelande ?? '')
+  const [visaBanderoll,  setVisaBanderoll]  = useState(redigerar?.visaBanderoll ?? false)
+
   const flaggFråga = useQuery({ queryKey: ADMIN_FLAGG_QUERY_KEY, queryFn: fetchAdminFeatureFlags })
   const adminFlaggor = flaggFråga.data ?? []
   const redoFlaggor = adminFlaggor.filter(f => f.redoAttLanseras && !f.value)
@@ -230,7 +238,13 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   // ev. schemalagt datum/tid valideras nu innan de får skickas.
   const datumGiltigt       = datum !== '' && !Number.isNaN(new Date(datum).getTime())
   const schemaDatumGiltigt = !schemalagd || (schemaDatum !== '' && !Number.isNaN(new Date(schemaDatum).getTime()))
-  const kanSpara = titel.trim() !== '' && datumGiltigt && schemaDatumGiltigt && (harInnehåll || rentFlaggSchema)
+  // En banderoll har ingenting att visa utan riktigt innehåll — samma spärr
+  // som backend (UppdateringarController.ValideraPunkter). Målgruppen
+  // härleds från punkternas "Syns för" så formuläret aldrig gissar.
+  const kanVisaBanderoll = harInnehåll
+  const banderollMålgrupp = punkter.some(p => p.synlighet === 'alla') ? 'alla (även besökare)' : 'bara inloggade'
+  const pushGiltigt = !skickaPush || (pushVersion.trim() !== '' && pushMeddelande.trim() !== '')
+  const kanSpara = titel.trim() !== '' && datumGiltigt && schemaDatumGiltigt && pushGiltigt && (harInnehåll || rentFlaggSchema)
 
   function spara(publicera: boolean) {
     if (sparar || !kanSpara) return
@@ -241,6 +255,10 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
       punkter: punkter.map(({ typ, plats, text, synlighet }) => ({ typ, plats, text, synlighet })),
       schemalagdPubliceringUtc: schemalagd && schemaDatum ? new Date(schemaDatum).toISOString() : null,
       schemalagdaFlaggor: schemalagd ? valdaFlaggor : [],
+      skickaPush:     schemalagd && skickaPush,
+      pushVersion:    schemalagd && skickaPush ? pushVersion.trim() : null,
+      pushMeddelande: schemalagd && skickaPush ? pushMeddelande.trim() : null,
+      visaBanderoll:  schemalagd && visaBanderoll && kanVisaBanderoll,
     })
   }
 
@@ -363,6 +381,61 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
                     {kopplatFaq.length} FAQ-{kopplatFaq.length === 1 ? 'fråga' : 'frågor'} kopplad{kopplatFaq.length === 1 ? '' : 'e'} till valda flaggor — värt att granska i FAQ-fliken innan lansering.
                   </p>
                 )}
+
+                {/* Del 2: push + banderoll vid lansering (Beslut 2026-10-08).
+                    Skapas av bakgrundstjänsten vid lanseringstidpunkten, inte
+                    nu vid sparande. */}
+                <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={skickaPush}
+                      onChange={e => {
+                        const checked = e.target.checked
+                        setSkickaPush(checked)
+                        if (checked && pushMeddelande.trim() === '') setPushMeddelande(titel)
+                      }}
+                      className="rounded border-slate-300 text-violet-600 focus:ring-violet-400"
+                    />
+                    Skicka push till inloggade
+                  </label>
+                  {skickaPush && (
+                    <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-2 pl-6">
+                      <input
+                        type="text"
+                        value={pushVersion}
+                        onChange={e => setPushVersion(e.target.value)}
+                        placeholder="Version, t.ex. 0.9.0"
+                        className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                      />
+                      <input
+                        type="text"
+                        value={pushMeddelande}
+                        onChange={e => setPushMeddelande(e.target.value)}
+                        placeholder="Pushens meddelande"
+                        className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className={`flex items-center gap-2 text-sm font-medium cursor-pointer ${kanVisaBanderoll ? 'text-slate-700' : 'text-slate-400 cursor-not-allowed'}`}>
+                    <input
+                      type="checkbox"
+                      checked={visaBanderoll}
+                      disabled={!kanVisaBanderoll}
+                      onChange={e => setVisaBanderoll(e.target.checked)}
+                      className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 disabled:opacity-40"
+                    />
+                    Visa banderoll på sajten
+                  </label>
+                  {!kanVisaBanderoll ? (
+                    <p className="text-xs text-slate-400 pl-6">Kräver minst en ifylld innehållsrad.</p>
+                  ) : visaBanderoll ? (
+                    <p className="text-xs text-slate-400 pl-6">Visas för: {banderollMålgrupp}</p>
+                  ) : null}
+                </div>
               </div>
             )}
           </div>
@@ -456,6 +529,17 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 shrink-0">
           <MutationFel fel={fel} reserv="Uppdateringen kunde inte sparas. Din text finns kvar — försök igen." />
+
+          {/* Sammanfattning — inget syns förrän schemat slår in (Beslut 2026-10-08). */}
+          {schemalagd && schemaDatum && (
+            <ul className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 flex flex-col gap-0.5">
+              <li>Vid {schemaDatum.replace('T', ' ')}:</li>
+              {valdaFlaggor.length > 0 && <li>• {valdaFlaggor.length} flagg{valdaFlaggor.length === 1 ? 'a' : 'or'} aktiveras</li>}
+              {harInnehåll && <li>• Uppdateringen publiceras</li>}
+              {skickaPush && <li>• Push skickas till inloggade med "Ny version"-notiser</li>}
+              {visaBanderoll && kanVisaBanderoll && <li>• Banderoll visas för {banderollMålgrupp}</li>}
+            </ul>
+          )}
           <div className="flex gap-3">
           <button onClick={onStäng} className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
             Avbryt

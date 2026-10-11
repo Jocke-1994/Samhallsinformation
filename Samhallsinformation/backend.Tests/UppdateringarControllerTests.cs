@@ -92,6 +92,70 @@ public class UppdateringarControllerTests
         Assert.Equal(framtida, db.Uppdateringar.Single().SchemalagdPubliceringUtc);
     }
 
+    // ── Del 2: push + banderoll-fälten (Beslut 2026-10-08) ───────────────────
+
+    [Fact]
+    public async Task CreateUppdatering_VisaBanderollUtanPunkter_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var result = await controller.CreateUppdatering(new UppdateringRequest(
+            "Bara flagg", DateTime.UtcNow, false, [], DateTime.UtcNow.AddDays(1), ["en_flagga"],
+            VisaBanderoll: true));
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task CreateUppdatering_SkickaPushUtanVersion_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var result = await controller.CreateUppdatering(new UppdateringRequest(
+            "Version 0.9.0", DateTime.UtcNow, false, [Punkt()], DateTime.UtcNow.AddDays(1), [],
+            SkickaPush: true, PushVersion: null, PushMeddelande: "Meddelande"));
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task CreateUppdatering_SkickaPushUtanMeddelande_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var result = await controller.CreateUppdatering(new UppdateringRequest(
+            "Version 0.9.0", DateTime.UtcNow, false, [Punkt()], DateTime.UtcNow.AddDays(1), [],
+            SkickaPush: true, PushVersion: "0.9.0", PushMeddelande: "  "));
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task CreateUppdatering_GiltigPushOchBanderoll_PersistsAllaFalt()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var result = (OkObjectResult)await controller.CreateUppdatering(new UppdateringRequest(
+            "Version 0.9.0", DateTime.UtcNow, false, [Punkt()], DateTime.UtcNow.AddDays(1), [],
+            SkickaPush: true, PushVersion: "0.9.0", PushMeddelande: "Nyheter!", VisaBanderoll: true));
+        var dto = (UppdateringDto)result.Value!;
+
+        Assert.True(dto.SkickaPush);
+        Assert.Equal("0.9.0", dto.PushVersion);
+        Assert.Equal("Nyheter!", dto.PushMeddelande);
+        Assert.True(dto.VisaBanderoll);
+
+        var sparad = db.Uppdateringar.Single();
+        Assert.True(sparad.SkickaPush);
+        Assert.Equal("0.9.0", sparad.PushVersion);
+        Assert.Equal("Nyheter!", sparad.PushMeddelande);
+        Assert.True(sparad.VisaBanderoll);
+    }
+
     // ── E4#1: publika GET filtrerar på Synlighet ─────────────────────────────
 
     private static UppdateringarController NewController(AppDbContext db, bool inloggad) => new(db, Substitute.For<IAktivitetsloggService>())

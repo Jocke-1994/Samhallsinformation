@@ -953,11 +953,20 @@ namespace Samhallsinformation.Migrations
                     b.Property<bool>("Publicerad")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("PushMeddelande")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PushVersion")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("SchemalagdPubliceringUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SchemalagdaFlaggorJson")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("SkickaPush")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Titel")
                         .IsRequired()
@@ -965,6 +974,9 @@ namespace Samhallsinformation.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("VisaBanderoll")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
