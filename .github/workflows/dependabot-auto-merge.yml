@@ -1,0 +1,41 @@
+name: Dependabot Auto-Merge
+
+# Repot är privat på GitHub Free, så det stödjer inte native "auto-merge" eller
+# branch protection (403 "Upgrade to GitHub Pro"). Denna workflow gör samma jobb
+# manuellt: väntar in CI/Backend CI för PR:en och mergar direkt om den är
+# patch/minor. Major-bumpar mergas aldrig automatiskt.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Wait for CI checks
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 20
+          running-workflow-name: "auto-merge"
+          allowed-conclusions: success,skipped
+
+      - name: Merge patch/minor updates
+        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --squash --delete-branch "$PR_URL"
