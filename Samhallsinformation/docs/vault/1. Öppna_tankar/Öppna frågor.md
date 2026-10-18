@@ -19,6 +19,11 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   beta-testare. Flera grundläggande tekniska vägval olösta — separat
   deploy eller roll-styrd vy i befintlig drift, egen databas eller
   samma, vad en "vy" konkret innebär. Se notens Öppna frågor.
+- **[[../Ideer/Uppdateringar-kalendervy|Kalendervy i Uppdateringar]]** —
+  ny idé (2026-10-18): plats/flik bestämd (inuti Uppdateringar, ingen
+  ny flik) och scope bestämt (bara schemalagda/publicerade poster),
+  men själva kalender-UI:t (månadsvy vs. agenda-lista, hur en post med
+  två datum visas) är inte skissat. Se notens Öppna frågor.
 
 ## Väntar på en åtgärd från dig (inte en fråga — allt är redan beslutat)
 
@@ -40,19 +45,12 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   session 38:s idé. Kontakter/grupper-delning INOM appen är ett medvetet
   framtida steg ovanpå det redan byggda (OS-delningsmenyn), inte en
   separat idé.
-- **[[../Verktyg/Schemalagd-lansering|Schemalagd lansering]]** — beslutat:
-  två separata kryssrutor i schemaläggningsflödet — en för push (redan
-  manuell knapp behålls för ad-hoc), en ny "Synas för besökare?" som
-  styr en "Ny version"-banner via MaintenanceBanner-systemet.
-  Utökat och UI godkänt 2026-10-08: annonsering i förväg, banderoll
-  till de som berörs (alla eller bara inloggade, härlett från
-  punkternas "Syns för"), FAQ-lista. Redo att byggas.
-- **[[../Ideer/Geografiskt-platsfilter-besokare|Geografiskt
-  platsfilter för besökare]]** — alla 14 scenarier beslutade, UI
-  godkänd 2026-10-04 (Variant E, B+C-kombo, både desktop och mobil).
-  Byggt i tre PR:ar (#675, #676 mergade, #677 öppen 2026-10-10) bakom
-  flaggan `flode_platsfilter` (av). Väntar bara på #677s granskning,
-  sen ett lanseringsbeslut (flagga på).
+
+Schemalagd lansering och Geografiskt platsfilter (båda tidigare listade
+här) är sedan session 54 (2026-10-11) helt byggda och mergade — se
+respektive nots egen Byggstatus/"Kopplat"-sektion. Kvarvarande steg
+(pipeline-stadie, ev. flagga på i produktion) är en åtgärd, inte en
+fråga, och hör hemma i adminpanelens egen pipeline, inte här.
 
 ## Avvaktas medvetet, inte en aktiv fråga just nu
 - **[[../Verktyg/Mobil-synk-Obsidian|Mobil-synk-Obsidian]]** — avvaktas,
