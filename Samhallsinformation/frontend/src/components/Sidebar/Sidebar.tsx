@@ -12,7 +12,6 @@ import { useFlags } from '../../context/FeatureFlagsContext'
 import { isSektionSynlig } from '../../lib/featureFlags'
 import { useSourceOrder } from '../../hooks/useSourceOrder'
 import { useSiteSettings } from '../../hooks/useSiteSettings'
-import BetaBadge from '../common/BetaBadge'
 import { ALLA_HANDELSER_LABEL, MITT_FLODE_LABEL } from '../../lib/navLabels'
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
@@ -182,7 +181,6 @@ export default function Sidebar({ selectedShortName, onSelectSource, viewMode, o
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-2 px-1">
             <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Konto</span>
-            <BetaBadge />
           </div>
           <div className="flex flex-col gap-2">
           {showLoginButton && (
