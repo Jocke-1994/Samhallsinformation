@@ -27,9 +27,12 @@ public static class FeatureFlagActivation
     }
 
     // Aktiverar varje flagga i listan (Value=true, RedoAttLanseras=false) och
-    // loggar — men bara för flaggor som faktiskt INTE redan var aktiva, så en
-    // omkörning (t.ex. en misslyckad batch som körs om) inte skriver
-    // dubblerade Aktivitetslogg-rader för flaggor som redan var på.
+    // loggar — men bara för flaggor som faktiskt INTE redan var fullt aktiva,
+    // så en omkörning (t.ex. en misslyckad batch som körs om) inte skriver
+    // dubblerade Aktivitetslogg-rader för flaggor som redan var på. En flagga
+    // som bara var aktiv för Admin (testad skarpt via Testmiljö-läget, se
+    // FeatureFlagOverride.EndastAdmin) räknas INTE som redan aktiv här — en
+    // riktig schemalagd lansering ska alltid gå fullt publik.
     public static async Task ActivateFlagsAsync(
         AppDbContext db, IAktivitetsloggService aktivitetslogg,
         IEnumerable<string> flaggnycklar, string kontext, string aktörTyp, CancellationToken ct = default)
@@ -37,10 +40,11 @@ public static class FeatureFlagActivation
         foreach (var key in flaggnycklar)
         {
             var flagg = await GetOrCreateOverrideAsync(db, key, ct);
-            if (flagg.Value) continue; // redan aktiv — inget att göra eller logga
+            if (flagg.Value && !flagg.EndastAdmin) continue; // redan fullt aktiv — inget att göra eller logga
 
             flagg.Value = true;
             flagg.RedoAttLanseras = false;
+            flagg.EndastAdmin = false;
 
             await aktivitetslogg.LogAsync(
                 aktörTyp, LoggTyper.Konfiguration,

@@ -45,6 +45,30 @@ annan än dig.
   `[Authorize(Roles=...)]`-kombinationer där testmiljön ska vara nåbar)
   när testmiljön faktiskt byggs — inte bara en flagga.
 
+## Beslut 2026-10-19 — delad i två spår
+Skillnaden mellan "en synlighetsnivå i flagg-systemet" och "en riktig
+separat testmiljö" klargjordes (den förra löser bara redan-deployad-men-
+dold kod, den senare kan förhandsgranska kod som inte ens är merged till
+`main`). Beslutat: **bygg det billiga spåret nu, lämna det stora spåret
+som en öppen idé** — inte avfärdad, bara inte prioriterad.
+
+## Byggstatus — spår 1 (synlighetsnivå i flagg-systemet)
+Byggt och mergat 2026-10-19 (PR väntar). Ny `EndastAdmin`-kolumn på
+`FeatureFlagOverride` — en flagga kan nu vara "på men bara synlig för
+Admin", inte bara på/av. `GET /api/feature-flags` räknar ut effektivt
+värde per anropare (`User.IsInRole("Admin")`), ny
+`PUT /api/admin/feature-flags/{key}/synlighet`, ny pill i
+`FeatureFlagsAdmin.tsx` ("🔒 Endast Admin", bara synlig när flaggan är på).
+En riktig schemalagd lansering (`FeatureFlagActivation.ActivateFlagsAsync`)
+nollställer alltid `EndastAdmin` — en funktion som bara testats av Admin
+kan aldrig tyst förbli dold vid en faktisk lansering. Löser det konkreta
+behovet som startade idén: platsfiltret kan nu testas skarpt mot
+produktionsdata utan att synas för besökare.
+
+**Spår 2 (riktig separat testmiljö)** — inte påbörjad. Kräver fortfarande
+en ny `Beta`-roll, ett eget inloggningsflöde och en driftskostnad (andra
+miljö). Öppen idé, ingen brådska enligt beslutet ovan.
+
 ## Öppna frågor
 - **"Spegel av senaste versionen" — vad är det tekniskt?** En helt
   separat deploy av samma kod (egen URL, t.ex. en Railway-miljö eller en
