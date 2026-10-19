@@ -452,6 +452,10 @@ namespace Samhallsinformation.Migrations
                     b.Property<Guid?>("DoneByUserId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Fas")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("FeatureIdeaId")
                         .HasColumnType("TEXT");
 
@@ -466,6 +470,29 @@ namespace Samhallsinformation.Migrations
                     b.HasIndex("FeatureIdeaId");
 
                     b.ToTable("FeatureIdeaChecklistItems");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.FeatureIdeaTestFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("FeatureIdeaId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeatureIdeaId");
+
+                    b.ToTable("FeatureIdeaTestFiles");
                 });
 
             modelBuilder.Entity("Samhallsinformation.Models.FeatureIdeaTester", b =>
@@ -1392,6 +1419,17 @@ namespace Samhallsinformation.Migrations
                         .IsRequired();
 
                     b.Navigation("DoneByUser");
+
+                    b.Navigation("Idea");
+                });
+
+            modelBuilder.Entity("Samhallsinformation.Models.FeatureIdeaTestFile", b =>
+                {
+                    b.HasOne("Samhallsinformation.Models.FeatureIdea", "Idea")
+                        .WithMany()
+                        .HasForeignKey("FeatureIdeaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Idea");
                 });

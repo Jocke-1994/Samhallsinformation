@@ -29,6 +29,7 @@ public class AppDbContext : DbContext
     public DbSet<FeatureIdea>                FeatureIdeas              => Set<FeatureIdea>();
     public DbSet<FeatureIdeaTester>          FeatureIdeaTesters        => Set<FeatureIdeaTester>();
     public DbSet<FeatureIdeaChecklistItem>   FeatureIdeaChecklistItems => Set<FeatureIdeaChecklistItem>();
+    public DbSet<FeatureIdeaTestFile>        FeatureIdeaTestFiles      => Set<FeatureIdeaTestFile>();
     public DbSet<IngestorRunLog>             IngestorRunLogs           => Set<IngestorRunLog>();
     public DbSet<AdminActivityLog>           AdminActivityLogs         => Set<AdminActivityLog>();
     public DbSet<FeatureFlagOverride>        FeatureFlagOverrides      => Set<FeatureFlagOverride>();

@@ -1,0 +1,2422 @@
+{
+  "generatedAt": "2026-10-19T06:34:09.685Z",
+  "backendTotal": 837,
+  "frontendTotal": 498,
+  "files": [
+    {
+      "path": "backend.Tests/AdminActivityLogIngestorWindowTests.cs",
+      "className": "AdminActivityLogIngestorWindowTests",
+      "project": "backend",
+      "count": 3,
+      "names": [
+        "GetLog_FlerAn1000RaderInomFonstret_RaknarAllaIngenAvkortning",
+        "GetLog_RaderUtanforFonstret_ExkluderasFranSammanfattningen",
+        "GetLog_FelInomFonstret_RaknasAvenBortomGamlaRadtaket"
+      ]
+    },
+    {
+      "path": "backend.Tests/AdminAlertEmailTests.cs",
+      "className": "AdminAlertEmailTests",
+      "project": "backend",
+      "count": 2,
+      "names": [
+        "SendAdminAlerts_HtmlInTitleDetailAndName_IsEncoded",
+        "SendAdminAlerts_SubjectIsSingleLine_AndCountsMultipleAlerts"
+      ]
+    },
+    {
+      "path": "backend.Tests/AdminAlertsControllerTests.cs",
+      "className": "AdminAlertsControllerTests",
+      "project": "backend",
+      "count": 8,
+      "names": [
+        "Controller_IsAdminOnly_NoAnonymousEscapeHatches",
+        "AdminOnlyPolicy_DeniesSupportAndAnonymous_AllowsAdmin",
+        "GetAlerts_ReturnsOpenAlertsSortedBySeverity_AndRecentlyResolvedOnly",
+        "GetAlerts_NoAlerts_ReturnsEmptyLists",
+        "Acknowledge_SetsAcknowledgedAtAndBy_AndKeepsAlertOpen",
+        "Acknowledge_IsIdempotent_FirstAcknowledgementWins",
+        "Acknowledge_OneShotAlert_ClosesIt",
+        "Acknowledge_UnknownId_Returns404"
+      ]
+    },
+    {
+      "path": "backend.Tests/AdminFeatureIdeaControllerTests.cs",
+      "className": "AdminFeatureIdeaControllerTests",
+      "project": "backend",
+      "count": 19,
+      "names": [
+        "CreateIdea_AssignsIncrementingIdeaNumber",
+        "CreateIdea_WithoutTitle_ReturnsBadRequest",
+        "CreateIdea_DefaultsToBrainstormStageAndAdminSource",
+        "CreateIdea_AssignsLowestPriorityLast",
+        "Reorder_SetsPriorityFromRequestedOrder",
+        "Reorder_MissingAnIdea_ReturnsBadRequestAndChangesNothing",
+        "Reorder_UnknownId_ReturnsBadRequest",
+        "SetTriage_SetsAllThreeFields",
+        "SetStage_ToLanseringsklar_SeedsDefaultChecklist",
+        "SetStage_ToLanseringsklarTwice_DoesNotDuplicateChecklist",
+        "AddTester_WithKnownEmail_LinksRealUser",
+        "AddTester_WithUnknownEmail_ReturnsNotFound",
+        "AddTester_AlreadyAdded_ReturnsConflict",
+        "RemoveTester_RemovesLink",
+        "ChecklistItem_ToggleDone_SetsDoneAtAndDoneBy",
+        "ChecklistItem_Remove_DeletesItem",
+        "AdminFeatureIdeaController_RequiresAdminRole",
+        "SetStage_ReClickingSameStage_DoesNotResetRedoAttLanseras",
+        "SetStage_DemotedFromLanseringsklar_ClearsRedoAttLanseras"
+      ]
+    },
+    {
+      "path": "backend.Tests/AdminSeederWarningTests.cs",
+      "className": "AdminSeederWarningTests",
+      "project": "backend",
+      "count": 5,
+      "names": [
+        "KontoFinnsMedAnnanRoll_LoggarWarning_OchÄndrarInteRollen",
+        "KontoFinnsMedAnnanRoll_OchAnnanVersalisering_LoggarÄndå",
+        "KontoFinnsRedanSomAdmin_LoggarInteWarning",
+        "NyttAdminKonto_OchSaknadKonfig_LoggarInteWarning",
+        "UtanLogger_KastarInte_NärKontotHarAnnanRoll"
+      ]
+    },
+    {
+      "path": "backend.Tests/AdminUserDetailsControllerTests.cs",
+      "className": "AdminUserDetailsControllerTests",
+      "project": "backend",
+      "count": 6,
+      "names": [
+        "GetPushSettings_UnknownUser_ReturnsNotFound",
+        "GetPushSettings_KnownUser_ReturnsFlagsAndDevices",
+        "SetPushSettings_UnknownUser_ReturnsNotFound",
+        "SetPushSettings_OnlySetsProvidedField_LeavesOthersUntouched",
+        "SetPushSettings_ActualChange_WritesAuditLogAsAdmin",
+        "SetPushSettings_NoActualChange_WritesNoAuditLog"
+      ]
+    },
+    {
+      "path": "backend.Tests/AdminUsersControllerTests.cs",
+      "className": "AdminUsersControllerTests",
+      "project": "backend",
+      "count": 20,
+      "names": [
+        "GetUsers_ReturnsAllUsers",
+        "SetStatus_Suspend_SetsFieldsCorrectly",
+        "SetStatus_Reactivate_ClearsSuspensionFields",
+        "SetStatus_SuspendWithReminder_SetsReminderFields",
+        "SetStatus_Reactivate_ClearsReminderFields",
+        "GetNotifications_OnlyReturnsOverdueSuspendedReminders",
+        "Delete_SchedulesDeletion_AndBlocksLoginImmediately",
+        "Delete_AlreadyScheduled_ReturnsBadRequest",
+        "Delete_AlreadyDeleted_ReturnsBadRequest",
+        "CancelDeletion_ClearsScheduleAndReactivatesAccount",
+        "CancelDeletion_NothingScheduled_ReturnsBadRequest",
+        "CancelDeletion_UnknownUser_ReturnsNotFound",
+        "Delete_OwnAccount_ReturnsBadRequest",
+        "Delete_UnknownUser_ReturnsNotFound",
+        "SetStatus_UnknownUser_ReturnsNotFound",
+        "SendPasswordReset_KnownUser_CallsAuthServiceWithUsersEmail",
+        "SendPasswordReset_UnknownUser_ReturnsNotFound",
+        "ResendVerification_KnownUser_CallsAuthServiceWithUsersId",
+        "ResendVerification_UnknownUser_ReturnsNotFound",
+        "AdminUsersController_ClassAllowsAdminAndSupport_EveryOtherActionIsAdminOnly"
+      ]
+    },
+    {
+      "path": "backend.Tests/AnonymousEndpointsGuardTests.cs",
+      "className": "AnonymousEndpointsGuardTests",
+      "project": "backend",
+      "count": 2,
+      "names": [
+        "AnonymousEndpoints_MatchApprovedList_NoneAddedNoneStale",
+        "ApprovedList_EveryRowHasMotivation"
+      ]
+    },
+    {
+      "path": "backend.Tests/AuthControllerTests.cs",
+      "className": "AuthControllerTests",
+      "project": "backend",
+      "count": 6,
+      "names": [
+        "Me_ReturnsDisplayNameFromDatabase",
+        "UpdateMe_SetsDisplayName",
+        "UpdateMe_EmptyDisplayName_ClearsIt",
+        "UpdateMe_DisplayNameByRegularUser_ReturnsForbiddenAndLeavesItUnset",
+        "UpdateMe_DisplayNameOmitted_LeavesItUnchanged",
+        "ExportMe_IncludesDeladeHandelser"
+      ]
+    },
+    {
+      "path": "backend.Tests/AuthHardeningTests.cs",
+      "className": "AuthHardeningTests",
+      "project": "backend",
+      "count": 36,
+      "names": [
+        "EmailNormalizer_TrimsAndLowercases",
+        "Register_MixedCaseAndWhitespace_IsStoredTrimmedAndLowercase",
+        "Register_SameEmailWithOtherCasing_Returns409_AndCreatesNoSecondAccount",
+        "Register_AgainstLegacyMixedCaseRow_Returns409",
+        "Register_TooShortPassword_Returns400_AndCreatesNoUser",
+        "Register_ShortNonEmptyPassword_GetsPolicyMessage",
+        "Register_TooLongPassword_Returns400_AndExactlyMaxLengthIsAccepted",
+        "Register_EmailWithoutAt_Returns400",
+        "Login_WorksRegardlessOfCasing_AfterRegisteringWithMixedCase",
+        "Login_FindsLegacyRowWithUppercase_WhenTypedInLowercase",
+        "Login_WrongPassword_StillReturns401_WithMixedCase",
+        "ForgotPassword_MixedCaseAddress_FindsAccountAndSendsMail",
+        "ForgotPassword_UnknownAddress_GivesSameGenericAnswer_AndSendsNothing",
+        "EmailChange_NewAddressIsNormalized_AndStoredLowercaseOnConfirm",
+        "EmailChange_AddressTakenWithOtherCasing_Returns409",
+        "EmailChange_SameAddressWithOtherCasing_IsRejectedAsAlreadyYours",
+        "Google_WithoutEmailVerified_IsRejected_AndCreatesNoAccount",
+        "Google_WithoutEmailVerified_DoesNotTouchExistingUnverifiedLocalAccount",
+        "Google_NewAccount_IsCreatedWithLowercaseEmail",
+        "Google_FindsAccountRegisteredWithUppercase_InsteadOfCreatingSecondAccount",
+        "Google_AgainstUnverifiedLocalAccount_NeutralizesAttackerAccess",
+        "Google_AgainstUnverifiedLocalAccount_WithMixedCaseRow_IsAlsoNeutralized",
+        "Google_AgainstVerifiedLocalAccount_KeepsTodaysBehaviour",
+        "Google_AgainstUnverifiedLocalAccount_ThatIsSuspended_StillNeutralizesButReturns403",
+        "Google_AgainstUnverifiedAdminOrSupport_KeepsPasswordAndProvider_ButVerifiesAndRevokesTokens",
+        "Google_AgainstUnverifiedOrdinaryUser_IsStillNeutralized",
+        "AdminSeeder_CreatesVerifiedAdmin_WithNormalizedEmail",
+        "AdminSeeder_DoesNothing_WhenAdminAlreadyExistsWithOtherCasing_OrConfigMissing",
+        "ResetPassword_RevokesAllActiveRefreshTokens",
+        "ResetPassword_TooLongPassword_Returns400_AndRevokesNothing",
+        "AdminLookup_IsCaseInsensitive",
+        "DataFix_LowercasesAndTrimsExistingEmails_WhenNoCollision",
+        "DataFix_Collision_AbortsWithoutChangingAnything_AndLogsTheCollidingAccounts",
+        "DataFix_IsIdempotent",
+        "DataFix_OnEmptyDatabase_DoesNothing",
+        "DataFix_AfterAbort_LoginResolvesToTheExactLowercaseAccount"
+      ]
+    },
+    {
+      "path": "backend.Tests/AuthServiceTests.cs",
+      "className": "AuthServiceTests",
+      "project": "backend",
+      "count": 37,
+      "names": [
+        "RegisterAsync_CreatesUser_AndReturnsTokens",
+        "RegisterAsync_CreatesUnverifiedUser_AndSendsVerificationEmail",
+        "VerifyEmailAsync_ValidToken_MarksUserVerified",
+        "VerifyEmailAsync_ExpiredToken_ReturnsBadRequest",
+        "VerifyEmailAsync_AlreadyUsedToken_ReturnsBadRequest",
+        "VerifyEmailAsync_UnknownToken_ReturnsBadRequest",
+        "ResendVerificationAsync_UnverifiedUser_SendsNewToken",
+        "ResendVerificationAsync_AlreadyVerified_DoesNotSendEmail",
+        "RequestEmailChangeAsync_ValidNewEmail_CreatesTokenAndSendsBothEmails",
+        "RequestEmailChangeAsync_WrongPassword_ReturnsUnauthorized",
+        "RequestEmailChangeAsync_MissingPassword_ReturnsBadRequest",
+        "RequestEmailChangeAsync_GoogleAccount_SkipsPasswordCheck",
+        "RequestEmailChangeAsync_AlreadyTakenEmail_ReturnsConflict",
+        "RequestEmailChangeAsync_NewRequestSupersedesOlderPendingToken",
+        "ConfirmEmailChangeAsync_ValidToken_SwapsEmailAndMarksVerified",
+        "ConfirmEmailChangeAsync_ValidToken_RevokesAllActiveRefreshTokens",
+        "ConfirmEmailChangeAsync_ExpiredToken_ReturnsBadRequest",
+        "ConfirmEmailChangeAsync_EmailTakenSinceRequest_ReturnsConflict",
+        "CancelEmailChangeAsync_MarksPendingTokensUsed",
+        "RegisterAsync_DuplicateEmail_ReturnsConflict",
+        "RegisterAsync_TermsNotAccepted_ReturnsBadRequest",
+        "LoginAsync_CorrectPassword_ReturnsTokens",
+        "LoginAsync_WrongPassword_ReturnsUnauthorized",
+        "LoginAsync_SuspendedAccount_ReturnsForbidden",
+        "LoginAsync_GoogleAccount_RejectsPasswordLogin",
+        "GoogleLoginAsync_InvalidToken_ReturnsUnauthorized",
+        "GoogleLoginAsync_NewUser_TermsNotAccepted_ReturnsBadRequest",
+        "GoogleLoginAsync_NewUser_CreatesAccountAndReturnsTokens",
+        "GoogleLoginAsync_ExistingEmail_LogsInWithoutCreatingDuplicate",
+        "RefreshAsync_ValidToken_RotatesAndReturnsNewPair",
+        "RefreshAsync_SuspendedAccount_ReturnsForbidden",
+        "RefreshAsync_ExpiredToken_ReturnsUnauthorized",
+        "RefreshAsync_RevokedToken_ReturnsUnauthorized",
+        "RefreshAsync_UnknownToken_ReturnsUnauthorized",
+        "CancelDeletionAsync_ValidToken_ReactivatesAccount",
+        "CancelDeletionAsync_UnknownToken_ReturnsBadRequest",
+        "CancelDeletionAsync_DeletionAlreadyPassed_ReturnsBadRequest"
+      ]
+    },
+    {
+      "path": "backend.Tests/ChangePasswordTests.cs",
+      "className": "ChangePasswordTests",
+      "project": "backend",
+      "count": 7,
+      "names": [
+        "ChangePasswordAsync_TooShortNewPassword_Returns400_AndChangesNothing",
+        "ChangePasswordAsync_WrongCurrentPassword_IsRejected_AndChangesNothing",
+        "ChangePasswordAsync_Success_UpdatesHash_RevokesOtherDevices_KeepsCallingDevice",
+        "ChangePasswordAsync_Success_WithoutRefreshToken_RevokesAllSessions",
+        "ChangePasswordAsync_GoogleAccountWithoutPassword_Returns400_InsteadOfThrowing",
+        "ChangePasswordAsync_UnknownUser_Returns404",
+        "Controller_ChangePassword_ForwardsRefreshToken_AndMapsFailureStatus"
+      ]
+    },
+    {
+      "path": "backend.Tests/CspReportTests.cs",
+      "className": "CspReportTests",
+      "project": "backend",
+      "count": 35,
+      "names": [
+        "Parser_LegacyReportUriFormat_ParsesDirectiveAndOrigin",
+        "Parser_ReportingApiFormat_ParsesDirectiveAndOrigin",
+        "Parser_StripsPathQueryFragmentAndUserInfo",
+        "Parser_KeepsKeywordsAndSchemeOnlyForDataAndBlob",
+        "Parser_SkipsBrowserExtensionsAndUnknownSchemes",
+        "Parser_DeeplyNestedJson_DoesNotThrow",
+        "Parser_ViolatedDirectiveWithSourceList_KeepsOnlyDirectiveName",
+        "Parser_RejectsMalformedDirective",
+        "Parser_CapsNumberOfViolationsPerBody",
+        "Service_ValidReport_StoresOneSanitizedRowWithoutPersonalData",
+        "Service_ReportingApiFormat_IsStoredToo",
+        "Service_SameReportTwice_GivesOneRow",
+        "Service_SameOriginDifferentDirective_GivesTwoRows",
+        "Service_SameViolationInOneBatch_IsLoggedOnce",
+        "Service_SameViolationAfterDedupeWindow_IsLoggedAgain",
+        "Service_CapsNumberOfScriptRows_AndKeepsLoggingNonScriptViolations",
+        "Service_ImageFlood_DoesNotCrowdOutAScriptSource",
+        "Service_CapResetsWhenWindowPasses",
+        "Service_ContentLengthOverLimit_IsIgnoredWithoutReadingOrThrowing",
+        "Service_OversizedBodyWithoutContentLength_IsIgnored",
+        "Service_EmptyOrGarbageBody_StoresNothingAndDoesNotThrow",
+        "Service_StreamFailure_IsSwallowed",
+        "Service_DatabaseFailure_IsSwallowed",
+        "Controller_ValidReport_Returns204AndOneRow",
+        "Controller_JunkOrEmptyBody_Returns204NotAnError",
+        "Controller_TooLargeBody_Returns204AndStoresNothing",
+        "Controller_IsAnonymous_PostOnly_AndRateLimited",
+        "RateLimit_Policy_Allows30PerMinutePerIp",
+        "RateLimit_PartitionsPerIp_AndNormalizesIpv6To64",
+        "Rule_UnexpectedScriptSource_Raises",
+        "Rule_NonScriptViolation_DoesNotRaise",
+        "Rule_ScriptKeywordWithoutOrigin_DoesNotRaise",
+        "Rule_OneAlertPerUniqueViolation",
+        "Rule_IgnoresRowsOfOtherTypesAndOldRows",
+        "Rule_ThroughAlertCycle_MailsOnceThenResolvesAfterQuietPeriod"
+      ]
+    },
+    {
+      "path": "backend.Tests/DeleteSourceTests.cs",
+      "className": "DeleteSourceTests",
+      "project": "backend",
+      "count": 11,
+      "names": [
+        "Delete_RegularSource_RemovesEventsAndAllDependentRows",
+        "Delete_RegularSource_LeavesNoOrphanedEventsOrSavedRows",
+        "Delete_RegularSource_LeavesOtherSourcesDataUntouched",
+        "Delete_SourceWithoutEvents_Works",
+        "Delete_UnknownId_Returns404",
+        "Delete_DedicatedIngestorSource_Returns400_AndDeletesNothing",
+        "Delete_SeededRssSource_Returns400_AndDeletesNothing",
+        "Delete_SeededSource_CanStillBeDeactivatedInstead",
+        "Delete_WhenSomethingFails_RollsBackEverything",
+        "Delete_WritesActivityLogWithCounts",
+        "SourceDeletion_ReturnsCountsPerTable"
+      ]
+    },
+    {
+      "path": "backend.Tests/EventsControllerLinkStatusTests.cs",
+      "className": "EventsControllerLinkStatusTests",
+      "project": "backend",
+      "count": 6,
+      "names": [
+        "GetLinkStatus_200_ArAlive",
+        "GetLinkStatus_404Och410_ArDead",
+        "GetLinkStatus_ForbiddenOch5xx_ArUnknown_InteDead",
+        "GetLinkStatus_Timeout_ArUnknown",
+        "GetLinkStatus_Natverksfel_ArUnknown",
+        "GetLinkStatus_OkandHandelse_Ger404_UtanUtgaendeAnrop"
+      ]
+    },
+    {
+      "path": "backend.Tests/EventsControllerTests.cs",
+      "className": "EventsControllerTests",
+      "project": "backend",
+      "count": 9,
+      "names": [
+        "LogShare_Anonymous_WritesLogWithNullUserId",
+        "LogShare_LoggedIn_WritesLogWithUserId",
+        "SearchPublic_ExcludesUnpublishedSources",
+        "SearchPublic_GeographyIsFuzzyMatch",
+        "SearchPublic_Sokord_MatchesTitleOrContent",
+        "SearchPublic_ShortNameFilter_ScopesSourcesSearchedToThatSourceOnly",
+        "SearchPublic_UnknownShortName_ReturnsEmptySourcesSearchedNotAllSources",
+        "SearchPublic_ResponseShape_MapsFieldsToBotContract",
+        "SearchPublic_DefaultPageSizeIsTen"
+      ]
+    },
+    {
+      "path": "backend.Tests/EventsUniqueIndexIngestTests.cs",
+      "className": "EventsUniqueIndexIngestTests",
+      "project": "backend",
+      "count": 4,
+      "names": [
+        "Ingest_UniqueViolationFromConcurrentRun_IsNotASourceError",
+        "Ingest_AfterConcurrentRace_NextCycleSyncsNormally",
+        "Ingest_OtherDbUpdateException_IsStillASourceError",
+        "Resync_UniqueViolationFromConcurrentRun_Returns409_WithoutMarkingSourceAsFailed"
+      ]
+    },
+    {
+      "path": "backend.Tests/EventsUniqueIndexTests.cs",
+      "className": "EventsUniqueIndexTests",
+      "project": "backend",
+      "count": 23,
+      "names": [
+        "Deduplicate_KeepsOldestRow_ByIngestedAt_AndDeletesSurplus",
+        "Deduplicate_SameIngestedAt_KeepsSmallestId",
+        "Deduplicate_MovesSavedEventsFromSurplusToKeptRow",
+        "Deduplicate_UserWhoSavedBoth_EndsUpWithOneRow_NoUniqueConflict",
+        "Deduplicate_UserSavedTwoSurplusRows_OnlyOneSurvives",
+        "Deduplicate_MovesShareLogsToKeptRow",
+        "Deduplicate_RepointsUndoReferenceInActivityLog",
+        "Deduplicate_HandlesMultipleGroups_AndLeavesUniqueRowsAlone",
+        "Deduplicate_EmptyExternalId_IsNeverTouched_EvenWhenManyExist",
+        "Deduplicate_OnlyEmptyExternalIds_DoesNothing",
+        "Deduplicate_SameExternalIdInDifferentSources_IsNotADuplicate",
+        "Deduplicate_NoDuplicates_WritesNothing_AndOpensNoTransaction",
+        "Deduplicate_IsIdempotent_SecondRunChangesNothing",
+        "Deduplicate_LogsOneWarningWithCounts_WhenItRemovedRows",
+        "Deduplicate_FailureMidway_RollsBackEverything_AndRethrows",
+        "Ensure_AfterDedupe_CreatesUniqueIndex_AndDuplicateInsertThrows",
+        "Ensure_IsIdempotent_CanRunEveryStart",
+        "Index_AllowsDuplicateEmptyExternalId_AndSameIdInOtherSources",
+        "Index_ModelCreatedDatabase_AlreadyHasUniqueIndex",
+        "Ensure_WithRemainingDuplicates_DoesNotThrow_LogsError_AndLeavesDataAlone",
+        "Prepare_WhenDedupeFails_ReturnsFalse_LogsError_AndDoesNotThrow",
+        "Prepare_WhenEventsTableDoesNotExist_IsANoOp_ReturnsTrue",
+        "IsEventDuplicateViolation_IsFalseForOtherErrors"
+      ]
+    },
+    {
+      "path": "backend.Tests/EventSyncDuplicateTests.cs",
+      "className": "EventSyncDuplicateTests",
+      "project": "backend",
+      "count": 14,
+      "names": [
+        "SyncAsync_TwoDbRowsWithSameExternalId_DoesNotThrow_AndProcessesRestOfBatch",
+        "SyncAsync_TwoDbRowsWithSameExternalId_RepeatedCycles_NeverThrow",
+        "SyncAsync_TwoDbRowsWithSameExternalId_LogsOneWarningWithSourceAndCount",
+        "SyncAsync_Overwrite_WithDbDuplicates_UpdatesOldestRowOnly_Deterministically",
+        "SyncAsync_SameExternalIdTwiceInBatch_CreatesOneRow_LastWins",
+        "SyncAsync_SameExternalIdTwiceInBatch_NextCycleDoesNotThrow",
+        "SyncAsync_BatchDuplicate_LogsWarning",
+        "SyncAsync_BlankExternalId_IsSkipped_AndDoesNotCreateRowEveryCycle",
+        "SyncAsync_BlankExternalId_LogsWarningWithSource_AndOverwriteModeAlsoSkips",
+        "SyncAsync_Normal_NewEventsCreated_UnchangedExistingRowUntouched",
+        "SyncAsync_Normal_ChangedExistingRow_IsUpdated_PublishedAtUntouched_UpdatedAtSet",
+        "SyncAsync_Normal_ChangedExistingRow_DoesNotAffectDedupOrInsertCounters",
+        "SyncAsync_Normal_OverwriteUpdatesExistingRow",
+        "SyncAsync_SameExternalIdInOtherSource_IsNotTreatedAsExisting"
+      ]
+    },
+    {
+      "path": "backend.Tests/FaqControllerTests.cs",
+      "className": "FaqControllerTests",
+      "project": "backend",
+      "count": 6,
+      "names": [
+        "GetFaq_Unpublished_NeverShown",
+        "GetFaq_PublishedNoFlagKey_AlwaysShown",
+        "GetFaq_FlagOffByDefault_HiddenEvenIfPublished",
+        "GetFaq_FlagOnByDefault_Shown",
+        "GetFaq_FlagOffByDefaultButOverriddenOn_Shown",
+        "UpdateFaq_SetsUpdatedAt"
+      ]
+    },
+    {
+      "path": "backend.Tests/FaqSeederTests.cs",
+      "className": "FaqSeederTests",
+      "project": "backend",
+      "count": 18,
+      "names": [
+        "SeedAsync_TomDatabas_SeedarAllaFragorOchMarkerarDem",
+        "SeedAsync_TomDatabas_GdprFragornaFarSinaEngangsuppdateringar",
+        "SeedAsync_TomDatabas_BehallerFlaggkopplingarOchPubliceringFranOriginalet",
+        "SeedAsync_AndraKorningen_AndrarInget",
+        "SeedAsync_AdminAndrarSvaret_SkrivsInteOver",
+        "SeedAsync_AdminAvpublicerarGdprFragorna_BliverAvpublicerade",
+        "SeedAsync_AdminRaderarSeedadFraga_ÅterskapasInte",
+        "SeedAsync_AdminRaderarAllaFragor_SeedasInteOmIgen",
+        "SeedAsync_AdminAndrarFrageTexten_GerIngenDubblett",
+        "SeedAsync_BefintligDatabasUtanMarkorer_SatterBaslinjeUtanAttRoraNagraRader",
+        "SeedAsync_ProduktionsfalletKortTvaGanger_ForblirOrort",
+        "SeedAsync_EngangsuppdateringenKorsBaraEnGang",
+        "SeedAsync_EngangsuppdateringenSaknarMalrad_MarkerasUtanFel",
+        "SeedAsync_NyFragaSaknarMarkor_SeedasEnGangMenInteDeAndra",
+        "SeedAsync_AvbrutenForstaSeedning_FullbordasUtanDubbletter",
+        "SeedAsync_FelIDatabasen_KastarInteOchLoggarError",
+        "SeedAsync_MarkortabellenSaknas_RorInteBefintligaFaqRader",
+        "SeedNycklar_AterAnvandsInteOchHarInteFragetexten"
+      ]
+    },
+    {
+      "path": "backend.Tests/FeatureFlagFrontendParityTests.cs",
+      "className": "FeatureFlagFrontendParityTests",
+      "project": "backend",
+      "count": 1,
+      "names": [
+        "BackendDefaults_MatchFrontendFlagKeysAndDefaults"
+      ]
+    },
+    {
+      "path": "backend.Tests/FeatureFlagsControllerTests.cs",
+      "className": "FeatureFlagsControllerTests",
+      "project": "backend",
+      "count": 2,
+      "names": [
+        "SetOverride_TurningOn_ClearsStaleRedoAttLanseras",
+        "SetOverride_TurningOff_DoesNotTouchRedoAttLanseras"
+      ]
+    },
+    {
+      "path": "backend.Tests/GenericRssIngestorTests.cs",
+      "className": "GenericRssIngestorTests",
+      "project": "backend",
+      "count": 4,
+      "names": [
+        "FetchEvents_HtmlContentType_ThrowsDescriptiveErrorWithContentTypeAndUrl",
+        "FetchEvents_AnyHtmlVariantContentType_Throws",
+        "FetchEvents_ValidRss_ParsesTitleLinkAndAppliesFallbacks",
+        "FetchEvents_EmptySourceUrl_ReturnsEmptyListWithoutCallingHttp"
+      ]
+    },
+    {
+      "path": "backend.Tests/HtmlTillTextTimeoutTests.cs",
+      "className": "HtmlTillTextTimeoutTests",
+      "project": "backend",
+      "count": 5,
+      "names": [
+        "HtmlTillText_RegexTimeout_DoesNotThrow_ReturnsTruncatedText",
+        "HtmlTillText_RegexTimeout_LogsWarning",
+        "HtmlTillText_RegexTimeout_FallbackStripsTags",
+        "HtmlTillText_NormalHtml_StillConvertsCorrectly_WithDefaultTimeout",
+        "HtmlTillText_NormalHtml_NeverLogsWarning"
+      ]
+    },
+    {
+      "path": "backend.Tests/IngestorIsActiveTests.cs",
+      "className": "IngestorIsActiveTests",
+      "project": "backend",
+      "count": 9,
+      "names": [
+        "IngestAsync_ActiveDedicatedSource_IsFetchedAndLogged",
+        "IngestAsync_InactiveDedicatedSource_IsNotFetched_AndWritesNoErrorOrRunLog",
+        "IngestAsync_UnpublishedButActiveDedicatedSource_IsStillFetched",
+        "IngestAsync_DedicatedSourceWithoutDbRow_IsFetchedAsBefore",
+        "IngestAsync_InactiveGenericRssSource_IsStillSkipped",
+        "IngestAsync_ActiveGenericRssSource_IsFetched",
+        "ResyncSource_InactiveDedicatedSource_IsRejected_AndNotFetched",
+        "ResyncSource_InactiveGenericRssSource_IsRejected_AndNotFetched",
+        "ResyncSource_ActiveButUnpublishedSource_IsStillRun"
+      ]
+    },
+    {
+      "path": "backend.Tests/IngestorIsolationTests.cs",
+      "className": "IngestorIsolationTests",
+      "project": "backend",
+      "count": 11,
+      "names": [
+        "BrokenSource_DoesNotStopNextSourceFromBeingFetchedAndSaved",
+        "BrokenSource_WritesLastFetchErrorAndFailedRunLog",
+        "BrokenSourceFirst_DoesNotPoisonTrackerForTheNextSource_WhichGetsSuccessStatus",
+        "ThrowingFetch_IsRecordedAndNextSourceContinues",
+        "LongErrorMessage_IsTruncatedTo500Chars",
+        "FailureLoggingThatItselfThrows_DoesNotStopTheLoop",
+        "HealthySourceAfterBroken_DoesNotClearTheBrokenSourcesError",
+        "PushSaveChangesFailure_DoesNotMarkFetchAsFailed_NorAffectNextSource",
+        "AllRunLogRowsInACycle_ShareTheSameRunAt",
+        "Cancellation_PropagatesAndIsNotRecordedAsSourceFailure",
+        "LegacySharedContextPattern_PoisonsNextSource_WhichIsWhyScopesAreIsolated"
+      ]
+    },
+    {
+      "path": "backend.Tests/KommunLanTests.cs",
+      "className": "KommunLanTests",
+      "project": "backend",
+      "count": 8,
+      "names": [
+        "Alla_InnehållerExakt290Kommuner",
+        "Alla_InnehållerExakt21Län",
+        "Alla_IngaDubblettKommuner",
+        "Alla_IngaDubblettKommunkoder",
+        "Alla_IngetFältÄrTomt",
+        "LanForKommun_ÄrSkiftlägesokänslig",
+        "AllaLan_ÄrSorteradOchInnehållerStockholmsLan",
+        "AllaKommuner_ÄrSorteradOchInnehåller290"
+      ]
+    },
+    {
+      "path": "backend.Tests/KontosparrIntegritetTests.cs",
+      "className": "KontosparrIntegritetTests",
+      "project": "backend",
+      "count": 14,
+      "names": [
+        "DeleteMe_AdminSuspendedUser_IsRejectedWith403_AndNothingIsScheduled",
+        "DeleteMe_ActiveUser_SchedulesDeletion",
+        "DeleteMe_LastActiveAdmin_IsRejected",
+        "CancelDeletion_AfterPureUserDeletion_Reactivates",
+        "CancelDeletion_AdminSuspendsAfterUserRequest_DoesNotLiftSuspension",
+        "CancelDeletion_AdminDeletesAlreadySuspendedUser_DoesNotLiftSuspension",
+        "AdminCancelDeletion_OnAdminSuspendedAccount_CancelsDeletionButKeepsSuspension",
+        "SetStatus_Reactivate_ScheduledDeletion_CancelsTheDeletion",
+        "SetStatus_Reactivate_AnonymizedAccount_IsRejected",
+        "SetStatus_AdminCannotSuspendThemselves_EvenWithOtherAdmins",
+        "SetStatus_LastActiveAdmin_CannotBeSuspended",
+        "SetStatus_SuspendAnotherAdmin_IsAllowedWhenAnotherActiveAdminRemains",
+        "Delete_LastActiveAdmin_IsRejected",
+        "Delete_AdminWhenAnotherActiveAdminRemains_IsAllowed"
+      ]
+    },
+    {
+      "path": "backend.Tests/KrisinformationIngestorTests.cs",
+      "className": "KrisinformationIngestorTests",
+      "project": "backend",
+      "count": 12,
+      "names": [
+        "FetchEvents_TomtOchSkrapPublished_HoppasOverOchGiltigPostTolkas",
+        "FetchEvents_TrasigPostFoereGiltig_NyarePosterBehalls",
+        "FetchEvents_NormalFil_OfoerandratBeteende",
+        "FetchEvents_AllaPosterOgiltiga_TomListaUtanUndantag",
+        "FetchEvents_PublishedSaknasHelt_HoppasOver",
+        "FetchEvents_OgiltigtDatum_LoggarWarningMedKaellaOchIdentifierare",
+        "FetchEvents_TomIdentifierareOchOgiltigtDatum_LoggarUtanAttKrascha",
+        "FetchEvents_TestpostOchNullPost_HoppasOverSomFoerr",
+        "FetchEvents_DatumMedOffset_OmvandlasTillUtcMedKindUtc",
+        "FetchEvents_DatumUtanOffset_TolkasSomUtcOavsettServernsTidszon",
+        "TryParsePublished_OgiltigtVaerde_ReturnerarFalse",
+        "TryParsePublished_GiltigtVaerde_GerUtcMedKindUtc"
+      ]
+    },
+    {
+      "path": "backend.Tests/LoginThrottleTests.cs",
+      "className": "LoginThrottleTests",
+      "project": "backend",
+      "count": 18,
+      "names": [
+        "TryAcquire_UpToMaxAttempts_AreAllowed_ThenNextIsBlocked",
+        "Reset_AfterSuccessfulLogin_ClearsTheCounter",
+        "TryAcquire_DifferentAddresses_HaveIndependentCounters",
+        "LoginAsync_CaseAndWhitespaceVariantsOfSameAddress_ShareOneCounter",
+        "TryAcquire_WindowExpires_AllowsAttemptsAgain",
+        "TryAcquire_RetryAfter_ShrinksAsTimePasses_AndRejectedAttemptsDoNotExtendTheLock",
+        "TryAcquire_SlidingWindow_OnlyRecentAttemptsCount",
+        "ExpiredEntries_AreSweptSoMemoryDoesNotGrow",
+        "LoginAsync_UnknownAndKnownAddress_GiveIdenticalThrottleResponse",
+        "LoginAsync_WhileThrottled_EvenCorrectPasswordIsRejected_AndLockExpires",
+        "LoginAsync_SuccessfulLogin_ResetsCounter",
+        "Login_Throttled_Returns429WithRetryAfterHeaderAndUnchangedErrorShape",
+        "ClientIpPartition_TwoAddressesInSame64_GiveSameKey",
+        "ClientIpPartition_Different64Prefixes_GiveDifferentKeys",
+        "ClientIpPartition_IPv4_IsUnchanged",
+        "ClientIpPartition_IPv4MappedIPv6_MapsToTheIPv4Key",
+        "ClientIpPartition_NullAddress_IsUnknown",
+        "SupportTicketPartition_AnonymousIPv6InSame64_SharesOneCounter"
+      ]
+    },
+    {
+      "path": "backend.Tests/MaintenanceBannerStilTests.cs",
+      "className": "MaintenanceBannerStilTests",
+      "project": "backend",
+      "count": 9,
+      "names": [
+        "Create_WithoutStil_DefaultsToDrift",
+        "Create_Nyhet_StoresRubrikAndLink_AndPublicGetReturnsThem",
+        "Create_BlankRubrikAndLink_StoredAsNull",
+        "Create_UnknownStil_IsRejected",
+        "Create_ExternalOrRelativeLink_IsRejected",
+        "Create_InternalLink_IsAccepted",
+        "Create_RubrikWithTrailingColon_IsStoredWithout",
+        "Update_FromOldClientWithoutStil_KeepsStoredStilRubrikAndLink",
+        "Update_ChangesStilRubrikAndLink"
+      ]
+    },
+    {
+      "path": "backend.Tests/MigrationRawSqlGuardTests.cs",
+      "className": "MigrationRawSqlGuardTests",
+      "project": "backend",
+      "count": 3,
+      "names": [
+        "MigrationsWithRiskColumns_HaveRawSqlBlockOrApprovedException",
+        "Undantag_MatchesExactlyKnownMigrations",
+        "EveryRawSqlBlockInProgramCs_CorrespondsToARealMigration"
+      ]
+    },
+    {
+      "path": "backend.Tests/ModelMigrationDriftGuardTests.cs",
+      "className": "ModelMigrationDriftGuardTests",
+      "project": "backend",
+      "count": 1,
+      "names": [
+        "CurrentModel_HasNoChangesPendingAMigration"
+      ]
+    },
+    {
+      "path": "backend.Tests/MonitoringTests.cs",
+      "className": "MonitoringTests",
+      "project": "backend",
+      "count": 23,
+      "names": [
+        "UsersThreshold_AtThreshold_Raises",
+        "UsersThreshold_BelowThreshold_DoesNotRaise",
+        "UsersThreshold_DeletedUsersAreNotCounted",
+        "MonitoringOptions_DefaultsTo500_AndReadsEnv",
+        "UsersThreshold_AlertsOnlyOnce_EvenAfterManyCycles_AndNeverAfterAcknowledge",
+        "SourceFailing_ThreeFailuresInARow_Raises",
+        "SourceFailing_TwoFailuresOnly_DoesNotRaise",
+        "SourceFailing_SuccessBreaksTheStreak",
+        "SourceFailing_NotFetchedForTooLong_Raises_AndFreshDoesNot",
+        "SourceFailing_IgnoresInactiveAndUnpublishedSources",
+        "SourceFailing_RaisesResolvesAndReopens_WithMailOnlyWhenRaised",
+        "PushFailures_HighFailureShare_Raises",
+        "PushFailures_LowFailureShare_DoesNotRaise",
+        "PushFailures_TooFewAttempts_DoesNotRaise",
+        "PushFailures_ExpiredSubscriptionsAndOldLogsAreNotCounted",
+        "Cycle_SameAlertAcrossCycles_IsDeduplicated_AndMailedOnce",
+        "Cycle_SeveralNewAlertsInOneCycle_GiveOneMailPerAdmin",
+        "Cycle_MailsOnlyActiveNonDeletedAdmins_WithNormalizedEmail",
+        "Cycle_MailFailure_DoesNotThrow_AndIsRetriedUntilItSucceeds_ThenNeverAgain",
+        "Cycle_AcknowledgedBeforeMailSent_IsNotMailed",
+        "Cycle_ThrowingRule_DoesNotStopOtherRules_AndDoesNotResolveItsAlerts",
+        "MonitoringService_RunOnce_SwallowsAnExceptionFromTheCycle",
+        "MonitoringService_RunOnce_RunsTheCycleWithTheProvidedClock"
+      ]
+    },
+    {
+      "path": "backend.Tests/PlatsHändelseFiltrerareTests.cs",
+      "className": "PlatsHändelseFiltrerareTests",
+      "project": "backend",
+      "count": 9,
+      "names": [
+        "GällerPlats_DirektKommunträff_Gäller",
+        "GällerPlats_AnnanKommun_GällerInte",
+        "GällerPlats_LänsvarningFörKommunensLän_ÄrvsInTillKommunen",
+        "GällerPlats_LänsvarningFörAnnatLän_GällerInteKommunen",
+        "GällerPlats_KommunhändelseGällerInteHelaLänet",
+        "GällerPlats_DirektLänsträffPåValtLän_Gäller",
+        "GällerPlats_Nationellt_MatcharBaraIsNationalFlaggan",
+        "GällerPlats_IsNational_GällerIngenPlats",
+        "GällerPlats_OlöstGeografi_GällerIngenPlats"
+      ]
+    },
+    {
+      "path": "backend.Tests/PlatsKatalogByggerTests.cs",
+      "className": "PlatsKatalogByggerTests",
+      "project": "backend",
+      "count": 6,
+      "names": [
+        "Bygg_IngaHändelser_InnehållerAllaKommunerLänOchNationelltMedNollAntal",
+        "Bygg_KommunTräff_RäknarBaraDenKommunen",
+        "Bygg_LänTräff_RäknasBådeFörLänetOchVarjeKommunILänet",
+        "Bygg_IsNational_RäknasBaraSomNationelltInteSomPlats",
+        "Bygg_OlöstGeografi_RäknasIngenstans",
+        "Bygg_BlandadeHändelser_RäknarVarjeKategoriOberoendeAvVarandra"
+      ]
+    },
+    {
+      "path": "backend.Tests/PlatsMatchareTests.cs",
+      "className": "PlatsMatchareTests",
+      "project": "backend",
+      "count": 7,
+      "names": [
+        "Matcha_KändaRiktigaPolisenVärden_GerRättTräff",
+        "Matcha_IngenGeografi_ReturnerarNull",
+        "Matcha_SmhiFritext_ReturnerarNullAldrigKrasch",
+        "Matcha_TrafikverketLänPlusVägnummer_ReturnerarNull",
+        "Matcha_OkäntOrtnamn_ReturnerarNull",
+        "KommunerILan_StockholmsLän_InnehållerBotkyrkaOchHaninge",
+        "KommunerILan_OkäntLän_ReturnerarTomLista"
+      ]
+    },
+    {
+      "path": "backend.Tests/PolisenBevakningGranserTests.cs",
+      "className": "PolisenBevakningGranserTests",
+      "project": "backend",
+      "count": 24,
+      "names": [
+        "Create_OverMaxBevakningar_Returns400",
+        "Create_ExactlyMaxBevakningar_Succeeds",
+        "Create_TooManyKategorier_Returns400_AndSavesNothing",
+        "Create_TooManyOmraden_Returns400_AndSavesNothing",
+        "Create_MegabyteSizedList_Returns400_WithoutSaving",
+        "Create_TooLongString_Returns400",
+        "Create_EmptyOrWhitespaceValue_Returns400",
+        "Create_NullEntryInList_Returns400_NotException",
+        "Create_UnknownKategori_Returns400",
+        "Create_UnknownOmrade_Returns400",
+        "Create_Duplicates_AreDeduplicated_KeepingFirstOrder",
+        "Create_NullLists_StayNull_MeaningAll",
+        "Create_EmptyLists_StayEmpty_ExplicitEmptySelection",
+        "Create_AllKommunerInALan_Succeeds",
+        "Create_AllKommunerExceptOne_Succeeds",
+        "Limits_NeverBelowTheLegitimateSets",
+        "Update_InvalidInput_Returns400_AndLeavesRowUnchanged",
+        "Update_Duplicates_AreDeduplicated",
+        "Get_ExistingOversizedBevakning_StillReadable_NoThrow",
+        "Update_ExistingOversizedBevakning_CanBeFixedToValidValues",
+        "Delete_ExistingOversizedBevakning_Works",
+        "Matcher_ExistingOversizedBevakning_StillMatchesAsBefore",
+        "AdminCreate_InvalidInput_Returns400_ValidIsDeduplicated",
+        "AdminUpdate_TooManyOmraden_Returns400"
+      ]
+    },
+    {
+      "path": "backend.Tests/PolisenBevakningMatcherTests.cs",
+      "className": "PolisenBevakningMatcherTests",
+      "project": "backend",
+      "count": 6,
+      "names": [
+        "Explain_NoBevakningar_MatchesEverything",
+        "Explain_KommunHandelseMatcharBevakningensOmrade",
+        "Explain_KommunHandelseUtanforBevakningensOmrade_MatcharInte",
+        "Explain_SammanfattningIBevakningensLan_Matchar",
+        "Explain_SammanfattningIAnnatLan_MatcharInte",
+        "Explain_TypRestriktionUtanOmradesrestriktion_AndarInteOmMatchning"
+      ]
+    },
+    {
+      "path": "backend.Tests/PolisenRssIngestorTests.cs",
+      "className": "PolisenRssIngestorTests",
+      "project": "backend",
+      "count": 6,
+      "names": [
+        "FetchEvents_StandardTitel_ExtraherarGeografiOchTyp",
+        "FetchEvents_TitelMedKvalificerare_TypenBehallerKvalificeraren",
+        "FetchEvents_TitelUtanTillrackligtManga_Kommadelningar_GerNullGeografiOchTyp",
+        "FetchEvents_TomTitel_KrascharInte",
+        "FetchEvents_MapparIdLankOchSeverityFallback",
+        "Source_ArAktivOchPublicerad"
+      ]
+    },
+    {
+      "path": "backend.Tests/PostgresSmokeTests.cs",
+      "className": "PostgresSmokeTests",
+      "project": "backend",
+      "count": 3,
+      "names": [
+        "Utc_DateTime_RoundTrips_Through_RealNpgsql",
+        "Source_IsPublished_BoolColumn_ReadableAfterMigrateAndRawSqlBlocks",
+        "DuplicateSourceIdExternalId_ThrowsRealPostgresUniqueViolation"
+      ]
+    },
+    {
+      "path": "backend.Tests/PublicDtoTests.cs",
+      "className": "PublicDtoTests",
+      "project": "backend",
+      "count": 7,
+      "names": [
+        "GetSources_PublicResponse_ContainsOnlyPublicFields",
+        "GetAll_ActiveAlla_IsIncluded",
+        "GetAll_FutureBanner_IsExcluded",
+        "GetAll_EndedBanner_IsExcluded",
+        "GetAll_AnvandareBanner_NotForAnonymous_ButForLoggedIn",
+        "GetAll_BesokareBanner_ForAnonymous_NotForLoggedIn",
+        "GetAllAdmin_ReturnsEverything_IncludingFutureEndedAndTargeted"
+      ]
+    },
+    {
+      "path": "backend.Tests/PushClaimsConcurrencyTests.cs",
+      "className": "PushClaimsConcurrencyTests",
+      "project": "backend",
+      "count": 2,
+      "names": [
+        "ConcurrentClaims_OnExistingRow_ExactlyOneWins",
+        "ConcurrentClaims_OnUnknownId_WithRegisteredDevices_ExactlyOneWins"
+      ]
+    },
+    {
+      "path": "backend.Tests/PushControllerTests.cs",
+      "className": "PushControllerTests",
+      "project": "backend",
+      "count": 5,
+      "names": [
+        "Claim_FirstDevice_ClaimsSuccessfully",
+        "Claim_AlreadyClaimedBySomeoneElse_ReturnsFalse",
+        "Claim_SecondDeviceAfterFirst_ReturnsFalse",
+        "Claim_UnknownClaimId_KnownDevice_FirstClaimsAndRowIsCreated_SecondGetsFalse",
+        "Claim_UnknownClaimId_UnknownDevice_ShowsAndCreatesNothing"
+      ]
+    },
+    {
+      "path": "backend.Tests/PushDispatcherTests.cs",
+      "className": "PushDispatcherTests",
+      "project": "backend",
+      "count": 31,
+      "names": [
+        "DispatchNewEventsAsync_ActiveSubscriberWithDevice_SendsPushAndLogsSent",
+        "DispatchNewEventsAsync_NyaHandelserMuted_SendsNothing",
+        "DispatchNewEventsAsync_SourceNotActiveForUser_SendsNothing",
+        "DispatchNewEventsAsync_NoNewEvents_SendsNothing",
+        "DispatchNewEventsAsync_ExpiredSubscription_RemovesDeviceAndLogsExpired",
+        "DispatchNewEventsAsync_OtherSendFailure_KeepsDeviceAndLogsFailed",
+        "DispatchNewEventsAsync_PolisenNoBevakningar_SendsAllLikeBefore",
+        "DispatchNewEventsAsync_PolisenBevakningMatchesOneEvent_MessageIncludesTypAndOmrade",
+        "DispatchNewEventsAsync_PolisenBevakningDoesNotMatch_SendsNothing",
+        "DispatchNewEventsAsync_PolisenSammanfattning_NeverPushesEvenWithMatchingBevakning",
+        "DispatchNewEventsAsync_PolisenMixOfSammanfattningAndRealEvent_OnlyPushesReal",
+        "DispatchNewEventsAsync_PolisenMultipleMatches_UsesGenericCountMessage",
+        "DispatchNewEventsAsync_PolisenEfterlysningarDelarShortNameMenInteId_AnvanderGeneriskBatchtext",
+        "DispatchNewVersionAsync_OptedInUser_SendsPushAndReturnsCount",
+        "DispatchNewVersionAsync_UserOptedOut_SendsNothing",
+        "DispatchNewTicketAsync_AdminWithDevice_SendsPush",
+        "DispatchNewTicketAsync_AdminHasPushMuted_SendsNothing",
+        "DispatchNewTicketAsync_RegularUserOnly_SendsNothing",
+        "DispatchNewTicketAsync_AdminWithTwoDevices_SharesOneClaimAcrossBothDevices",
+        "DispatchNewTicketAsync_FeedbackChannel_UsesFeedbackTitle",
+        "DispatchNewEventsAsync_IneligibleSubscriber_SendsNothing",
+        "DispatchNewEventsAsync_UnpublishedSource_SendsNothing",
+        "DispatchNewEventsAsync_OnlyEligibleSubscriberOfTwo_GetsPush",
+        "DispatchNewEventsAsync_PolisenIneligibleSubscriber_SendsNothing",
+        "DispatchNewEventsAsync_PolisenUnpublishedSource_SendsNothing",
+        "DispatchNewVersionAsync_IneligibleUser_SendsNothing",
+        "DispatchNewTicketAsync_IneligibleStaff_SendsNothing",
+        "DispatchTicketReplyAsync_IneligibleStaff_SendsNothing",
+        "DispatchNewUserAsync_IneligibleStaff_SendsNothing",
+        "DispatchNewUserAsync_ActiveAdmin_StillGetsPush",
+        "DispatchTicketReplyAsync_ActiveSupport_StillGetsPush"
+      ]
+    },
+    {
+      "path": "backend.Tests/PushEndpointValidatorTests.cs",
+      "className": "PushEndpointValidatorTests",
+      "project": "backend",
+      "count": 8,
+      "names": [
+        "GiltigaPushTjanster_Accepteras",
+        "ForLangUrl_Avvisas_MenGransvardetAccepteras",
+        "ExtraHostsFranKonfiguration_LaggsTillStandardlistan",
+        "ParseExtraHosts_TomEllerNull_GerTomLista",
+        "Subscribe_OgiltigEndpoint_Ger400_OchSpararInget",
+        "Subscribe_GiltigFcmEndpoint_Sparas",
+        "Subscribe_OgiltigEndpoint_KanInteOverskrivaBefintligPrenumeration",
+        "SendAsync_OgiltigEndpoint_BlockerasUtanUtgaendeAnrop"
+      ]
+    },
+    {
+      "path": "backend.Tests/PushFanOutTests.cs",
+      "className": "PushFanOutTests",
+      "project": "backend",
+      "count": 10,
+      "names": [
+        "HangingDevice_TimesOut_AndDoesNotBlockTheOthers",
+        "Timeout_CancelsTheTokenPassedToTheSend",
+        "SlowDevices_RunInParallel_NotSequentially",
+        "ThrowingDevice_DoesNotFailTheBatch",
+        "SynchronouslyThrowingSend_IsIsolatedToo",
+        "GoneSubscription_IsReportedAsExpired",
+        "Parallelism_NeverExceedsTheLimit_AndIsActuallyUsed",
+        "OuterCancellation_PropagatesInsteadOfBeingLoggedAsDeviceFailure",
+        "Dispatcher_ClaimRowIsCommittedBeforeFirstSend",
+        "Dispatcher_WithSlowAndFailingDevices_StillLogsEveryDevice"
+      ]
+    },
+    {
+      "path": "backend.Tests/ResendEmailServiceHtmlEscapeTests.cs",
+      "className": "ResendEmailServiceHtmlEscapeTests",
+      "project": "backend",
+      "count": 9,
+      "names": [
+        "Namn_MedHtml_RenderasSomKodadText",
+        "NyEpost_MedHtml_KodasIVarningsmejlet",
+        "Arendesvar_AmneMedHtml_KodasIRubrikOchAmnesradenArRenText",
+        "Arendesvar_AmneMedRadbrytning_NeutraliserasIAmnesradOchRubrik",
+        "Arendesvar_SvarstextMedHtml_ArFortfarandeKodad",
+        "Lank_MedCitatteckenOchTagg_KanInteBryta_UtUrHrefAttributet",
+        "VanligtNamn_MedSvenskaTecken_LamnasOforandrat",
+        "SingleLine_TarBortRadbrytningarOchKontrolltecken",
+        "UrlEncode_KodarTeckenSomBrytUtUrQuery"
+      ]
+    },
+    {
+      "path": "backend.Tests/RetentionTests.cs",
+      "className": "RetentionTests",
+      "project": "backend",
+      "count": 11,
+      "names": [
+        "Purge_IngestorRunLogs_RaderarÄldreÄn30Dagar_LämnarFärska",
+        "Purge_PushDispatchClaims_RaderarÄldreÄn14Dagar_LämnarFärska",
+        "Purge_RörInteEventShareLogsEllerNotificationDeliveryLogs",
+        "Purge_Batchar_RaderarAllaÖverBatchgränsen",
+        "Purge_ExaktEnFullBatch_TerminerarOchRaderarAlla",
+        "Purge_TomDatabas_GörInget",
+        "Purge_FelIEnTabell_LoggasOchDenAndraStädasÄndå",
+        "Service_RunOnce_StädarMedTjänstensKlocka",
+        "Service_RunOnce_FelKastarAldrig_LoggarError",
+        "Service_RunOnce_AvbrottPropageras",
+        "SourceFailing_PåverkasInteAvRetention_SenasteKörningarnaFinnsKvar"
+      ]
+    },
+    {
+      "path": "backend.Tests/ScheduledReleaseBackgroundServiceTests.cs",
+      "className": "ScheduledReleaseBackgroundServiceTests",
+      "project": "backend",
+      "count": 17,
+      "names": [
+        "ExecuteDueAsync_DueRelease_ActivatesFlagEvenWithoutExistingOverrideRow",
+        "ExecuteDueAsync_ReleaseWithoutPunkter_StaysUnpublishedButFlagActivates",
+        "ExecuteDueAsync_ReleaseWithPunkter_BecomesPublished",
+        "ExecuteDueAsync_AlwaysClearsScheduleAfterProcessing",
+        "ExecuteDueAsync_NotYetDue_IsSkipped",
+        "ExecuteDueAsync_SkickaPushTrue_DispatchesNewVersionPushToEligibleDevice",
+        "ExecuteDueAsync_SkickaPushFalse_SendsNoPush",
+        "ExecuteDueAsync_VisaBanderollWithAllaPunkt_CreatesBannerForAllaAudience",
+        "ExecuteDueAsync_VisaBanderollOnlyInloggadePunkter_CreatesBannerForAnvandareAudience",
+        "ExecuteDueAsync_VisaBanderollTrueButNoPunkter_CreatesNoBanner",
+        "ExecuteDueAsync_AnnonseringDue_LanseringInteAn_PublicerarUtanAttAktiveraFlaggor",
+        "ExecuteDueAsync_AnnonseringRedanKord_KorsInteOmVidNastaPoll",
+        "ExecuteDueAsync_PushSkickaVidAnnonsering_SkickarKommerPushMenInteVidLansering",
+        "ExecuteDueAsync_PushSkickaVidBada_SkickarVidBadaFaserna",
+        "ExecuteDueAsync_VisaBanderollAnnonseringsfas_SkaparKommandeBannerSomSlutarVidLansering",
+        "ExecuteDueAsync_LanseringEfterAnnonsering_AktiverarFlaggorOchNollstallerAllt",
+        "ExecuteDueAsync_BadaFasernaDuSamtidigt_KorBaddaIEnEndaPoll"
+      ]
+    },
+    {
+      "path": "backend.Tests/SourceIdCollisionTests.cs",
+      "className": "SourceIdCollisionTests",
+      "project": "backend",
+      "count": 10,
+      "names": [
+        "Seed_AdminKällaMedIngestorsId_SkrivsInteÖver_WarningLoggas",
+        "Seed_SammaIdentitet_UppdaterasSomFörut_OchIsPublishedBevaras",
+        "Seed_SammaIdentitet_MedAnnanBaseUrlMenSammaUrl_ÄrFortfarandeSammaKälla",
+        "Seed_SammaShortNameMenAnnanTyp_ÄrKollision",
+        "Seed_SaknasId_InfogasOchKollisionHoppasÖverUtanAttStoppaDeÖvriga",
+        "BuildSetvalSql_ÄrRättFormad",
+        "Sequence_Npgsql_KörSqlEnGång",
+        "Sequence_IckeNpgsql_KörInget",
+        "Sequence_SqlFelKastarAldrig_LoggarError",
+        "Sequence_MotSqliteKontext_HoppasÖver_UtanFelEllerLogg"
+      ]
+    },
+    {
+      "path": "backend.Tests/StartupEmptyPostgresTests.cs",
+      "className": "StartupEmptyPostgresTests",
+      "project": "backend",
+      "count": 1,
+      "names": [
+        "Startup_EmptyPostgres_BootstrapsAndAllDbSetsAreReadable"
+      ]
+    },
+    {
+      "path": "backend.Tests/StartupSchemaGuardTests.cs",
+      "className": "StartupSchemaGuardTests",
+      "project": "backend",
+      "count": 7,
+      "names": [
+        "Decide_ConnectionFailure_AbortsAndNeverResets",
+        "Decide_Timeout_AbortsAndNeverResets",
+        "Decide_UnknownException_Aborts",
+        "Decide_FailureWithEmptyLookingCounts_StillAborts",
+        "Decide_NoHistoryAndEmptyTables_ResetsLegacySchema",
+        "Decide_NoHistoryButData_AbortsAndNeverResets",
+        "Decide_HistoryExists_Migrates"
+      ]
+    },
+    {
+      "path": "backend.Tests/StartupSecretsGuardTests.cs",
+      "className": "StartupSecretsGuardTests",
+      "project": "backend",
+      "count": 23,
+      "names": [
+        "Validate_ProductionUtanJwtSecret_Kastar_MeddelandetNamnerVariabelnMenInteVarden",
+        "Validate_ProductionTomEllerBlankJwtSecret_Kastar",
+        "Validate_ProductionJwtSecretArDevFallbackSträngen_Kastar_UtanAttEchoaVarden",
+        "Validate_ProductionSaknarVapid_Kastar_OchNamnerRättVariabel",
+        "Validate_ProductionTomVapidPrivateKey_Kastar",
+        "Validate_ProductionVapidPublikNyckelArDenTidigareHardkodadeDevNyckeln_Kastar_UtanAttEchoaVarden",
+        "Validate_ProductionAllaHemligheterSaknas_NamnerAllaTreVariablerIEttFel",
+        "Validate_ProductionKorrektaVarden_Ok",
+        "Validate_ProductionKortJwtSecret_TvingarInteMinimilangd_MenLoggarWarning",
+        "Validate_ProductionLangJwtSecret_LoggarIngenWarning",
+        "Validate_IckeDevelopmentBehandlasSomProduction",
+        "Validate_DevelopmentMedAllaHemligheterSaknade_Ok",
+        "ApplyDevelopmentFallbacks_DevelopmentUtanVapid_GenererarNyttParOchLoggarWarning",
+        "ApplyDevelopmentFallbacks_DevelopmentMedBadaNycklarSatta_RörInte",
+        "ApplyDevelopmentFallbacks_Production_GenererarAldrigNycklar",
+        "KallkodenInnehallerInteLangreDenTidigareHardkodadePrivataVapidNyckeln",
+        "IsFormerDevVapidPrivateKey_AndraVardenAn_DenGamlaNyckeln_ArFalse",
+        "JwtSettings_FromConfiguration_DevelopmentUtanSecret_AnvanderDevFallback",
+        "JwtSettings_FromConfiguration_ProductionUtanSecret_KastarIstalletForAttFallbacka",
+        "JwtSettings_FromConfiguration_KonfigureratVardeAnvandsOfortandratIProduction",
+        "JwtTokenService_SigneradToken_ValiderasMedParametrarnaProgramCsByggerAvSammaSettings",
+        "JwtTokenService_TokenSigneradMedEnAnnanHemlighet_AvvisasAvValideringen",
+        "JwtTokenService_TokenSigneradMedDevFallback_AvvisasNarProductionHarEnRiktigHemlighet"
+      ]
+    },
+    {
+      "path": "backend.Tests/SupportControllerTests.cs",
+      "className": "SupportControllerTests",
+      "project": "backend",
+      "count": 8,
+      "names": [
+        "Create_AnonymousWithoutContactEmail_StillCreatesTicket",
+        "Create_WithoutMessage_ReturnsBadRequest",
+        "Create_AnonymousWithContactEmail_CreatesTicketWithNoOwner",
+        "Create_Authenticated_LinksTicketToUserAndUsesAccountContactInfo",
+        "GetMyTickets_OnlyReturnsCurrentUsersOwnTickets",
+        "Create_MultipleTickets_TicketNumberIncrements",
+        "GetMyTicket_AgentReply_UsesDisplayNameOrFallsBackToSupport",
+        "AdminSupportController_AllowsAdminAndSupportRoles"
+      ]
+    },
+    {
+      "path": "backend.Tests/SupportRollBehorighetTests.cs",
+      "className": "SupportRollBehorighetTests",
+      "project": "backend",
+      "count": 21,
+      "names": [
+        "AdminRoller_MatchesLiteralRoleNames",
+        "SupportInboxLista_TäckerHelaControllern",
+        "Inbox_Support_TillåtsPåVarjeAction",
+        "Inbox_Admin_ÄrOförändrat",
+        "Inbox_VanligAnvändareOchAnonym_Nekas",
+        "Användarlista_Läs_SupportOchAdminTillåts",
+        "Användarlista_SkrivOchAdminArbetsflöde_SupportFår403_AdminTillåts",
+        "Användarlista_ListorTäckerHelaControllern",
+        "Användardetalj_Läs_SupportOchAdminTillåts",
+        "Användardetalj_Skriv_SupportFår403_AdminTillåts",
+        "Användardetalj_ListorTäckerHelaControllern",
+        "Händelsesök_SupportOchAdminTillåts",
+        "Uppdateringar_Admin_SkrivåtgärderÄrAdminOnly",
+        "SupportYtan_ÄrExaktDenGodkändaListan_IngenNyActionBlirÖppenAvMisstag",
+        "SupportYtan_SkrivandeActionsUtanförInboxen_ÄrBaraLoggningen",
+        "VanligAnvändare_NårIngenRollstyrdAction",
+        "Admin_NårAllaRollstyrdaActions_Oförändrat",
+        "Inbox_SupportAgent_KanListaOchÖppnaÄrenden",
+        "Inbox_SupportAgent_KanSvaraMedEgetAnvändarIdSomAvsändare",
+        "Inbox_SupportAgent_KanTilldelaOchÄndraStatus",
+        "Inbox_SupportAgent_NotisernaÄrSina_TilldeladTillMig"
+      ]
+    },
+    {
+      "path": "backend.Tests/SupportScheduledActionServiceTests.cs",
+      "className": "SupportScheduledActionServiceTests",
+      "project": "backend",
+      "count": 5,
+      "names": [
+        "ExecuteDueActionsAsync_SvarType_PostsPublicMessage",
+        "ExecuteDueActionsAsync_InternType_PostsInternalMessage",
+        "ExecuteDueActionsAsync_TilldelaType_ReassignsAndLogsInternalNote",
+        "ExecuteDueActionsAsync_NotYetDue_IsSkipped",
+        "ExecuteDueActionsAsync_AlreadyExecuted_IsSkipped"
+      ]
+    },
+    {
+      "path": "backend.Tests/SupportScheduledReplyTests.cs",
+      "className": "SupportScheduledReplyTests",
+      "project": "backend",
+      "count": 21,
+      "names": [
+        "ScheduledSvar_WithContactEmail_SendsMailExactlyOnce",
+        "ScheduledSvar_TicketWithoutAddress_SavesMessageSendsNoMailAndDoesNotThrow",
+        "ScheduledSvar_TicketWithoutContactEmailButWithAccount_MailsTheAccountAddress",
+        "ScheduledSvar_EmailFails_ActionStillExecutedErrorLoggedAndNoDuplicateOnRetry",
+        "ScheduledIntern_NeverSendsMail",
+        "ScheduledSvar_LogsActivityAsSystem",
+        "OneBrokenAction_DoesNotStopTheNextOne",
+        "Reply_And_ScheduledSvar_ProduceTheSameMessageAndMail",
+        "Reply_EmailFails_StillReturnsOkAndKeepsMessage",
+        "Reply_InternalNote_SendsNoMail",
+        "AddScheduledAction_UnknownType_Returns400",
+        "AddScheduledAction_InThePast_Returns400",
+        "AddScheduledAction_SvarWithEmptyText_Returns400",
+        "AddScheduledAction_SvarOver5000Chars_Returns400",
+        "AddScheduledAction_UnknownTicket_Returns400",
+        "AddScheduledAction_ClosedTicket_Returns400",
+        "AddScheduledAction_TilldelaWithoutOrUnknownAgent_Returns400",
+        "AddScheduledAction_Valid_Returns200AndStoresUtcAction",
+        "AddScheduledAction_ValidTilldela_Returns200",
+        "AddScheduledAction_UnspecifiedAndLocalKinds_AreNormalizedToUtc",
+        "AddScheduledAction_LocalTimeInThePastEvenIfLooksFuture_IsRejected"
+      ]
+    },
+    {
+      "path": "backend.Tests/SupportTicketAbuseProtectionTests.cs",
+      "className": "SupportTicketAbuseProtectionTests",
+      "project": "backend",
+      "count": 15,
+      "names": [
+        "Create_ValidRequestPerAllowedChannel_ReturnsOk",
+        "Create_ValidRequestPerAllowedChannel_ReturnsOk",
+        "Create_AllCategoriesUsedByFrontend_AreAccepted",
+        "Create_ValuesAtExactLimits_AreAccepted",
+        "Create_BlankOptionalFields_FallBackToDefaultsAndNullContact",
+        "Create_BotMessage15000Chars_IsStoredInFull",
+        "Create_BotMessage50000Chars_IsTruncatedKeepingStartAndEnd",
+        "Create_BotWithInvalidEmail_CreatesTicketWithoutContactEmail",
+        "Create_BotWithValidEmail_KeepsContactEmail",
+        "Create_BotWithTooLongSubjectAndName_TruncatesInsteadOfRejecting",
+        "Create_BotWithEmptyMessage_StillReturnsBadRequest",
+        "Create_IsBoundToSupportTicketRateLimitPolicy",
+        "Create_IsBoundToSupportTicketRateLimitPolicy",
+        "RateLimit_Anonymous_AllowsOnlyPermitLimitPerHour",
+        "RateLimit_PartitionsPerIp_ButPerUserWhenAuthenticated"
+      ]
+    },
+    {
+      "path": "backend.Tests/SvenskDatumTests.cs",
+      "className": "SvenskDatumTests",
+      "project": "backend",
+      "count": 2,
+      "names": [
+        "FormateraDag_OktoberDatumUtanSommartid_GerSvenskMånad",
+        "FormateraDag_StraxEfterMidnattUtcUnderSommartid_RullarOverTillNastaDagLokalt"
+      ]
+    },
+    {
+      "path": "backend.Tests/TestDbTests.cs",
+      "className": "TestDbTests",
+      "project": "backend",
+      "count": 2,
+      "names": [
+        "SaveChanges_DuplicateUserEmail_ThrowsOnRealUniqueIndex",
+        "SaveChanges_RowPointingAtMissingUser_ThrowsOnForeignKeyAndSchemaIsComplete"
+      ]
+    },
+    {
+      "path": "backend.Tests/TicketReplyAddressTests.cs",
+      "className": "TicketReplyAddressTests",
+      "project": "backend",
+      "count": 14,
+      "names": [
+        "Build_GerTicketnummerOchAttaHexTecken",
+        "ComputeToken_ArDeterministiskForSammaNummerOchHemlighet",
+        "ComputeToken_SkiljerSigMellanArendenOchHemligheter",
+        "IsValid_AcceptarRattTokenOchAvvisarResten",
+        "Konstruktor_AvvisarTomHemlighet",
+        "Token_ArInteJwtHemligheten_ElleravleddRakt",
+        "Arendesvar_SattarReplyToMedToken",
+        "HamtatMejl_ParsarAutentiseringOchText",
+        "HamtatMejl_UtanAutentiseringsobjekt_GerNullAutentisering",
+        "HamtatMejl_OnlyHtml_FallerTillbakaPaTextMenBehallerAutentisering",
+        "HamtatMejl_HttpFel_GerNull",
+        "HamtatMejl_EmailIdMedSkraptecken_KodasISokvagen",
+        "GetReceivedEmailTextAsync_GerFortfarandeBaraTexten",
+        "IsSenderVerified_RaknarBaraDmarcEllerDkimPass"
+      ]
+    },
+    {
+      "path": "backend.Tests/TrafikverketIngestorTests.cs",
+      "className": "TrafikverketIngestorTests",
+      "project": "backend",
+      "count": 3,
+      "names": [
+        "FetchEvents_Query_InnehallerSorteringPaSenastAndrad",
+        "FetchEvents_Query_GransenArHojd_InteLangre100",
+        "FetchEvents_UtanApiNyckel_ReturnerarTomLista_UtanAttAnropaApi"
+      ]
+    },
+    {
+      "path": "backend.Tests/UpdateSourceTests.cs",
+      "className": "UpdateSourceTests",
+      "project": "backend",
+      "count": 3,
+      "names": [
+        "Patch_RedigeringsDelta_BevararIsPublishedOchIsActive",
+        "Patch_BaraIsPublished_AndrarInteNamnUrlKategoriEllerIsActive",
+        "Patch_BaraIsActive_AndrarInteIsPublished"
+      ]
+    },
+    {
+      "path": "backend.Tests/UppdateringarControllerTests.cs",
+      "className": "UppdateringarControllerTests",
+      "project": "backend",
+      "count": 22,
+      "names": [
+        "UpdateUppdatering_ManualPublishWithPendingSchedule_ActivatesFlagsAndClearsSchedule",
+        "UpdateUppdatering_PastDueScheduleResentOnSave_FiresImmediatelyInsteadOfWaiting",
+        "UpdateUppdatering_GenuineFutureSchedule_IsPersistedUntouched",
+        "CreateUppdatering_VisaBanderollUtanPunkter_ReturnsBadRequest",
+        "CreateUppdatering_SkickaPushUtanVersion_ReturnsBadRequest",
+        "CreateUppdatering_SkickaPushUtanMeddelande_ReturnsBadRequest",
+        "CreateUppdatering_GiltigPushOchBanderoll_PersistsAllaFalt",
+        "CreateUppdatering_AnnonseringUtanSchemalagdLansering_ReturnsBadRequest",
+        "CreateUppdatering_AnnonseringEfterLansering_ReturnsBadRequest",
+        "CreateUppdatering_OgiltigPushSkickaVid_ReturnsBadRequest",
+        "CreateUppdatering_GiltigAnnonsering_PersistsAnnonseringUtcOchPushSkickaVid",
+        "UpdateUppdatering_AndratAnnonseringsdatum_NollstallerAnnonseradUtc",
+        "GetUppdateringar_Anonym_SerBaraAllaPunkterOchSlapperTommaReleaser",
+        "GetUppdateringar_Inloggad_SerAvenInloggadePunkter",
+        "CreateUppdatering_OkandTypEllerSynlighet_Ger400OchSpararInget",
+        "UpdateUppdatering_OkandTyp_Ger400OchLamnarBefintligaPunkterOrorda",
+        "CreateOchUpdateUppdatering_GiltigaVarden_Godkanns",
+        "CreateUppdatering_TomPunktlista_Godkanns",
+        "GetUppdateringar_RadMedOkandTypOchSynlighet_KrascharInteOchReturnerasSomDen_Ar",
+        "GetUppdateringar_AnnonseradInteLanserad_VisarTeaserInteRiktigaPunkter",
+        "GetAdminUppdateringar_AnnonseradInteLanserad_VisarRiktigtInnehall",
+        "GetUppdateringar_InteAnnonseradAn_VisarRiktigaPunkter"
+      ]
+    },
+    {
+      "path": "backend.Tests/UserAnonymizerTests.cs",
+      "className": "UserAnonymizerTests",
+      "project": "backend",
+      "count": 20,
+      "names": [
+        "Anonymisering_RaderarAllaAnvandarensEgnaRader_iVarjeRaderbarTabell",
+        "Anonymisering_UserRaden_TommasPaAllaIdentifierare",
+        "Anonymisering_IngenTextkolumnIDatabasenInnehallerNamnEllerEpost",
+        "Anonymisering_FornamnRensasIAnvandarensArenden_menInteIAndraTabeller",
+        "Anonymisering_Supportarenden_BehallsMenKontaktuppgifterOchNamnBorta",
+        "Anonymisering_SchemalagdaAtgarder_OutfordaRaderasUtfordaRensas",
+        "Anonymisering_NyAnvandareNotisUnderAdminensUserId_ScrubbasMenRadenBehalls",
+        "Anonymisering_EgnaLeveransloggar_BehallsMenPushEndpointErsatts",
+        "Anonymisering_AktivitetsloggBehallsMedUserIdPseudonymMenNamnOchAnvandarensIpBorta",
+        "Anonymisering_PersonalSomAktor_FarNamnetOchEgenIpBortrensat",
+        "Anonymisering_InstallningsloggBehallsMenPersondataVardenRedigeras",
+        "Anonymisering_EventShareLog_UserIdNollasMenRadenBehalls",
+        "Anonymisering_AndraAnvandaresData_ArOrord",
+        "Anonymisering_KorningTvaGanger_GerSammaResultat",
+        "Anonymisering_DirektAnropTvaGanger_AndrarInteNagot",
+        "Anonymisering_FelMittIRullarTillbakaAllt_OchMarkerarInteKontotSomKlart",
+        "Anonymisering_FelHosEnAnvandare_FallerInteBatchenEllerSmittarNastaAnvandare",
+        "Anonymisering_HistoriskaAdresserOchNamn_FranInstallningsloggenRensasOckssa",
+        "Anonymisering_NamnSomOrdDelSkrivsInteOver_AdamBlirInteAdaBorttagen",
+        "Anonymisering_GenericaNamn_AnvandsInteSomSokterm"
+      ]
+    },
+    {
+      "path": "backend.Tests/UserDeletionBackgroundServiceTests.cs",
+      "className": "UserDeletionBackgroundServiceTests",
+      "project": "backend",
+      "count": 4,
+      "names": [
+        "ExecuteDueDeletionsAsync_WindowExpired_AnonymizesUser",
+        "ExecuteDueDeletionsAsync_WindowNotYetExpired_IsSkipped",
+        "ExecuteDueDeletionsAsync_AlreadyDeleted_IsSkipped",
+        "ExecuteDueDeletionsAsync_NoScheduledDeletions_DoesNothing"
+      ]
+    },
+    {
+      "path": "backend.Tests/UserFeedTests.cs",
+      "className": "UserFeedTests",
+      "project": "backend",
+      "count": 26,
+      "names": [
+        "Mitt_OnlySubscribedSourcesEvents",
+        "Mitt_UnpublishedSource_IsExcluded_EvenIfSubscribed",
+        "Mitt_InactivePreference_IsExcluded",
+        "Mitt_NoSubscriptions_IsEmptyAndExact",
+        "Mitt_OtherUsersPreferencesDoNotLeak",
+        "Mitt_RareSourceOutsideNewest50_IsStillShown",
+        "Mitt_PolisenWithBevakning_MatchesTypeAndArea_ExcludesTheRest",
+        "Mitt_PolisenMatchingIsOrAcrossBevakningar_AndAndWithinOne",
+        "Mitt_PolisenSammanfattning_MatchesViaLan",
+        "Mitt_PolisenWithoutBevakningar_ShowsAllPolisen_EvenOld",
+        "Mitt_BevakningOnlyFiltersPolisen_OtherSourcesUnaffected",
+        "Mitt_BevakningButPolisenNotSubscribed_ShowsNoPolisen",
+        "Mitt_OtherUsersBevakningarDoNotAffectMe",
+        "Mitt_BevakningMode_PolisenOlderThanWindow_IsNotMatched",
+        "Mitt_NarrowBevakning_FindsMatchesBehindMoreThanOneBatchOfNonMatches",
+        "Mitt_Pagination_NoBevakning_PagesAreDisjoint_TotalExact",
+        "Mitt_Pagination_IdenticalTimestamps_NoDuplicatesAcrossPages",
+        "Mitt_Pagination_BevakningMode_PagesCompleteWithoutDuplicates",
+        "Mitt_BevakningMode_TotalIsLowerBound_WhenMoreThanAPageRemainsUnscanned",
+        "Mitt_PageSizeIsClampedTo100_AndPageBelow1Becomes1",
+        "Sparat_ReturnsOldSavedEvents_BeyondNewest50",
+        "Sparat_OnlyMine_NewestFirst_ExcludesUnpublishedSources_Paginates",
+        "Sparat_Nothing_IsEmpty",
+        "Controller_ReturnsSameShapeAsEvents_PlusHasMore",
+        "UserFeedEndpoints_RequireAuthorization",
+        "PublicEvents_Unchanged_ReturnsAllPublishedEvents_RegardlessOfSubscriptions"
+      ]
+    },
+    {
+      "path": "backend.Tests/UserSourcesControllerTests.cs",
+      "className": "UserSourcesControllerTests",
+      "project": "backend",
+      "count": 11,
+      "names": [
+        "Save_UnknownSourceId_Returns400NamingTheId_AndSavesNothing",
+        "Save_UnpublishedSource_Returns400NamingTheId_AndSavesNothing",
+        "Save_DuplicateSourceIdInBody_DoesNotThrow_LastEntryWins",
+        "Save_ValidList_IsSaved_AndUpdatesExisting",
+        "Save_EmptyList_ReturnsOk_AndKeepsExistingPrefs",
+        "Save_AlreadySavedSourceLaterUnpublished_CanBeDeactivatedAndReordered",
+        "Save_ReactivatingUnpublishedSource_Returns400",
+        "Save_ActivatingOneOfTwoSiblingsWithSameShortName_ActivatesBothSiblings",
+        "Save_DeactivatingOneOfTwoSiblingsWithSameShortName_DeactivatesBothSiblings",
+        "Save_ActivatingSourceWithUnpublishedSibling_ActivatesOnlyThePublishedOne",
+        "Save_SourceWithoutSiblings_UnaffectedByGroupExpansion"
+      ]
+    },
+    {
+      "path": "backend.Tests/UtcDateTimeTests.cs",
+      "className": "UtcDateTimeTests",
+      "project": "backend",
+      "count": 10,
+      "names": [
+        "Ensure_UnspecifiedKind_BecomesUtc_WithoutShiftingTime",
+        "Ensure_LocalKind_IsConvertedToUtc",
+        "Ensure_AlreadyUtc_Unchanged",
+        "Ensure_Nullable_NullStaysNull_ValueIsNormalized",
+        "Converter_Write_Unspecified_IsTreatedAsUtc",
+        "Converter_Write_Local_IsConvertedToUtc",
+        "Converter_Write_Utc_IsUnchanged",
+        "NullableConverter_Write_NormalizesValue_AndKeepsNull",
+        "Converter_Read_StillMarksValuesAsUtc",
+        "EveryDateTimeProperty_InTheModel_UsesAUtcNormalizingConverter"
+      ]
+    },
+    {
+      "path": "backend.Tests/UtcKindGuardScenarioTests.cs",
+      "className": "UtcKindGuardScenarioTests",
+      "project": "backend",
+      "count": 10,
+      "names": [
+        "Guard_CatchesUnspecifiedParameter_SoItIsNotSilentlyIneffective",
+        "Guard_AcceptsUtcParameter",
+        "Save_EntityWithUnspecifiedAndLocalDateTimes_WritesUtc",
+        "Query_ComparedAgainstUnspecifiedParameter_SendsUtcParameter",
+        "MaintenanceBanner_CreateAndUpdate_WithUnspecifiedStartAndEnd_StoresUtc",
+        "SupportScheduledAction_WithUnspecifiedScheduledAt_IsAcceptedAndStoredUtc",
+        "SupportSetReminder_WithUnspecifiedReminderAt_StoresUtc",
+        "AdminUsers_SetStatusSuspend_WithUnspecifiedReminderAt_StoresUtc",
+        "Uppdatering_Create_WithUnspecifiedDatumAndSchedule_StoresUtc",
+        "AdminActivityLog_GetLog_WithUnspecifiedFrånAndTill_DoesNotFailAndKeepsDayBounds"
+      ]
+    },
+    {
+      "path": "backend.Tests/WebhooksControllerTests.cs",
+      "className": "WebhooksControllerTests",
+      "project": "backend",
+      "count": 41,
+      "names": [
+        "ResendInbound_MissingSignatureHeaders_Returns401",
+        "ResendInbound_WrongSignature_Returns401",
+        "ResendInbound_SignatureForDifferentBody_Returns401",
+        "ResendInbound_OldTimestamp_Returns401",
+        "ResendInbound_NoSecretConfigured_FailsClosedWith401",
+        "ResendInbound_TicketNumberOverflow_Returns200AndSavesNothing",
+        "ResendInbound_MalformedJson_Returns200NotThrow",
+        "ResendInbound_OtherEventType_Returns200AndSavesNothing",
+        "ResendInbound_InfoAddress_CreatesTicketWithMessage",
+        "ResendInbound_ReplyFromKnownSender_AddsMessageToExistingTicket",
+        "ResendInbound_ReplyFromOtherSender_IsIgnoredAndSavesNoMessage",
+        "ResendInbound_SameInfoMailDeliveredTwice_CreatesExactlyOneTicketAndMessage",
+        "ResendInbound_SameReplyDeliveredTwice_CreatesExactlyOneMessage",
+        "ResendInbound_SameReplyTextAfterDedupeWindow_IsSavedAsNewMessage",
+        "ResendInbound_DifferentTextsFromSameSender_AreBothSaved",
+        "ResendInbound_ActivityLogThrowsAfterSave_StillReturns200AndKeepsMessage",
+        "Svar_ForfalskadAvsandare_UtanAutentisering_LaggsInteInSomKundsvar",
+        "Svar_ForfalskadAvsandare_SparasSomFlaggadInternAnteckning",
+        "Svar_AutentiseringSaknasHelt_AccepterasSomKundsvarMedWarning",
+        "Svar_AutentiseringSaknasHelt_RaknasIEnRaknare",
+        "Svar_MejlSomInteKanHamtasAlls_SparasFortfarandeIngenting",
+        "Svar_RequireAuthAv_ForfalskatMejlAccepterasMenLoggas",
+        "Svar_RequireAuthPa_ForfalskatMejlFlaggasFortfarande",
+        "Svar_RequireAuthAv_PaverkarInteTokenkravet",
+        "Svar_OtillrackligtAutentiseringsutfall_LaggsInteInSomKundsvar",
+        "Svar_KorrektAvsandareMedGiltigtUtfall_LaggsInSomKundsvar",
+        "Svar_OverifieradeMejlFlaggasHogstEnGangPerTimmePerArende",
+        "Svar_MejlKanInteHamtas_SparasIngenting",
+        "Svar_AvsandarmatchningArSkiftlagesokanslig",
+        "Svar_AnnanAvsandare_AvvisasAvenMedGiltigTokenOchAutentisering",
+        "Svar_GiltigToken_LaggsIn",
+        "Svar_GiltigTokenIVersaler_LaggsIn",
+        "Svar_FelToken_AvvisasUtanAttHamtaMejlEllerSlaUppArendet",
+        "Svar_TokenFranAnnatArende_AvvisasDaTokenBaraGallerSittEttArendenummer",
+        "Svar_TokenFranAnnanHemlighet_Avvisas",
+        "Svar_AldreAdressUtanToken_FungerarMenLoggasSomEjTokenVerifierad",
+        "Svar_TokenverifieradAdress_LoggasInteSomEjTokenVerifierad",
+        "Svar_AldreAdressUtanToken_MedForfalskadAvsandare_AvvisasFortfarandeAvAutentiseringen",
+        "Svar_AldreAdressUtanToken_AvvisasNarAldreAdresserArAvstangda",
+        "Svar_TokenAdress_FungerarNarAldreAdresserArAvstangda",
+        "InfoMejl_HamtasFortfarandeViaTextmetoden_OchPaverkasInteAvAutentiseringskravet"
+      ]
+    },
+    {
+      "path": "frontend/src/test/admin-djuplank.test.tsx",
+      "className": "admin-djuplank",
+      "project": "frontend",
+      "count": 8,
+      "names": [
+        "öppnar rätt användare och nollställer djuplänken (konsumeras en gång)",
+        "hoppar inte tillbaka till den gamla användaren när listan hämtas om",
+        "en ny djuplänk till samma användare öppnar panelen igen",
+        "en obekräftad djuplänk (användaren finns inte) rensas när man lämnar sektionen",
+        "öppnar rätt ärende och nollställer djuplänken",
+        "öppnar inte ett gammalt ärende vid nytt besök utan djuplänk",
+        "samma ärende två gånger i rad öppnas båda gångerna",
+        "en djuplänk medan inboxen redan är öppen byter ärende"
+      ]
+    },
+    {
+      "path": "frontend/src/test/admin-hamtfel-oversikt-felsokning.test.tsx",
+      "className": "admin-hamtfel-oversikt-felsokning",
+      "project": "frontend",
+      "count": 10,
+      "names": [
+        "alla anrop misslyckas: ",
+        "Försök igen hämtar om och visar data när det lyckas",
+        "bekräftat tomt svar visar tomt-läge (0 användare, inga aktiva källor), inte fel",
+        "lyckat: riktiga siffror",
+        "hälso-anropet misslyckas: ",
+        "Försök igen efter hälsofel ger riktig status",
+        "lyckat hälsosvar med en tjänst nere visar Driftstörning (data visas)",
+        "källistan misslyckas: felmeddelande + Försök igen, inte tom lista",
+        "tom källista visar tomt-läge; lyckad visar källorna",
+        "misslyckad aktiv-toggle visas som fel vid källorna"
+      ]
+    },
+    {
+      "path": "frontend/src/test/admin-paneler-fel.test.tsx",
+      "className": "admin-paneler-fel",
+      "project": "frontend",
+      "count": 19,
+      "names": [
+        "hämtfel: felmeddelande + Försök igen, ",
+        "tomt svar: ",
+        "spara misslyckas: panelen och texten kvar, felet visas",
+        "spara lyckas: panelen stänger först när servern svarat",
+        "dubbelklick på Skapa fråga ger ETT anrop",
+        "publicera/dölj som misslyckas visas som fel",
+        "borttagning som misslyckas: modalen kvar med felet",
+        "hämtfel: felmeddelande + Försök igen, inte ",
+        "tomt svar: ",
+        "spara misslyckas: modalen och meddelandet kvar, felet visas",
+        "spara lyckas: modalen stänger först när servern svarat, dubbelklick ger ETT anrop",
+        "borttagning som misslyckas: modalen kvar med felet",
+        "hämtfel: felmeddelande + Försök igen, ",
+        "tomt svar: ",
+        "spara misslyckas: panelen och alla rader kvar, felet visas (serverns text)",
+        "spara lyckas: panelen stänger först när servern svarat",
+        "dubbelklick på Publicera ger ETT anrop",
+        "publicera-växling som misslyckas visas som fel",
+        "borttagning som misslyckas: modalen kvar med felet"
+      ]
+    },
+    {
+      "path": "frontend/src/test/adminfetch-401.test.tsx",
+      "className": "adminfetch-401",
+      "project": "frontend",
+      "count": 10,
+      "names": [
+        "401 -> refresh -> omförsök med den nya token lyckas",
+        "401 -> refresh misslyckas (ingen ny token) -> 401 returneras, inget omförsök",
+        "refresh som kastar eller lämnar token oförändrad -> 401 returneras, ingen loop",
+        "401 även efter omförsöket -> returneras, exakt ett omförsök och en refresh",
+        "två parallella 401 ger EN refresh (single-flight) och båda anropen lyckas",
+        "token redan förnyad av annan (timer) när 401 kommer -> omförsök utan ny refresh",
+        "icke-401-fel (403, 404, 500) och lyckade svar påverkas inte",
+        "401 utan skickad token (ej inloggad) förnyar inget",
+        "changePassword skickar den NYA refresh-token i omförsöket (body byggs om)",
+        "parallella 401 + providerns egen refresh ger exakt ett /api/auth/refresh-anrop"
+      ]
+    },
+    {
+      "path": "frontend/src/test/aktiv-vy-overlever-refresh.test.tsx",
+      "className": "aktiv-vy-overlever-refresh",
+      "project": "frontend",
+      "count": 6,
+      "names": [
+        "en admin som valt Support-vyn behåller den efter förnyelse",
+        "saknad vy sätts till rollen vid förnyelsen",
+        "en vy som blivit ogiltig för rollen (Admin -> Support-konto) ersätts av rollen",
+        "ett Support-konto med en gammal Admin-vy i lagringen hamnar aldrig på Admin-vyn",
+        "en annan användare som loggar in får sin rolls startvy, inte den förras val",
+        "behåller giltig vy och faller annars tillbaka på rollen"
+      ]
+    },
+    {
+      "path": "frontend/src/test/aktivitetslogg-csv-export.test.tsx",
+      "className": "aktivitetslogg-csv-export",
+      "project": "frontend",
+      "count": 8,
+      "names": [
+        "citattecken dubblas och cellen omsluts alltid i citattecken",
+        "kommatecken och radbrytning i värdet bevaras inom EN cell",
+        "ett värde som börjar med = neutraliseras med en apostrof (formelinjektion)",
+        "+, -, @, tabb och CR i cellens BÖRJAN neutraliseras också",
+        "= mitt i en sträng (inte i BÖRJAN) neutraliseras inte",
+        "en tom/odefinierad cell blir en tom, citerad sträng utan att krascha",
+        "bygger en Blob vars innehåll har escapade och neutraliserade celler, inga mockrader",
+        "en logg utan riktiga notisrader (backend saknar en global notislista) exporterar inga påhittade rader"
+      ]
+    },
+    {
+      "path": "frontend/src/test/aktivitetslogg-fel-och-angra.test.tsx",
+      "className": "aktivitetslogg-fel-och-angra",
+      "project": "frontend",
+      "count": 9,
+      "names": [
+        "fel: felmeddelande + Försök igen, ",
+        "Försök igen hämtar om och visar raderna",
+        "tomt svar: ",
+        "lyckat: rader och riktiga siffror",
+        "lyckat: ändringen görs, raden markeras ångrad och listan hämtas om",
+        "felet i själva ändringen: felmeddelande, raden markeras INTE ångrad, försök igen möjligt",
+        "teknisk felkod visas inte rått",
+        "halvt resultat: ändringen gjord men markeringen misslyckas -> tydligt besked, och nytt försök kör BARA markeringen",
+        "dubbelklick på "
+      ]
+    },
+    {
+      "path": "frontend/src/test/anvandare-massatgarder.test.tsx",
+      "className": "anvandare-massatgarder",
+      "project": "frontend",
+      "count": 13,
+      "names": [
+        "väljer inte egen rad eller Admin-konton",
+        "egen rad är inaktiverad med förklaring och går inte att markera",
+        "ett Admin-konto kan fortfarande markeras individuellt",
+        "rubrikcheckboxens läge stämmer med det som faktiskt kan markeras",
+        "rubrikcheckboxen är inaktiverad när inget går att massmarkera",
+        "2 av 3 lyckas: listan hämtas om, lyckade avmarkeras och sammanfattningen visar orsaken",
+        "alla lyckas: modalen stängs, markeringen rensas och listan hämtas om",
+        "alla misslyckas: felen visas per rad och alla förblir markerade",
+        "bekräftelsen visar antal och namn",
+        "bekräftelsen visar bara de första fem namnen och ",
+        "2 av 3 lyckas: refetch, lyckade avmarkeras och den misslyckade visas med orsak",
+        "alla lyckas: modalen stängs",
+        "alla misslyckas: felen visas per rad"
+      ]
+    },
+    {
+      "path": "frontend/src/test/anvandarlistor-fel.test.tsx",
+      "className": "anvandarlistor-fel",
+      "project": "frontend",
+      "count": 10,
+      "names": [
+        "misslyckad hämtning ger lage=fel, och Polisen-filtret faller INTE tillbaka på ",
+        "laddar medan omförsök pågår och matchar inte alla under tiden",
+        "omförsök med exponentiell backoff (1 s, 2 s, 4 s) och sedan stopp",
+        "ett omförsök som lyckar fyller listan och ger lage=klar",
+        "omhämtning efter token-byte (lyckad refresh/inloggning) fyller listan direkt",
+        "en lyckad tom lista (bekräftat ",
+        "misslyckad omhämtning efter lyckad hämtning behåller senast kända lista",
+        "misslyckad hämtning ger lage=fel, och toggle gör inget anrop (ingen gissning)",
+        "omhämtning efter token-byte fyller listan",
+        "toggle på känd lista är optimistisk och rullas tillbaka vid fel"
+      ]
+    },
+    {
+      "path": "frontend/src/test/api-timeout-och-felkropp.test.ts",
+      "className": "api-timeout-och-felkropp",
+      "project": "frontend",
+      "count": 16,
+      "names": [
+        "adminFetch avbryts efter standardgränsen med ett tydligt TimeoutError",
+        "ett anrop som svarar under gränsen påverkas inte, inte ens efter att gränsen passerat",
+        "per-anrop-override: en längre gräns avbryter inte förrän den passerat",
+        "timeoutMs: 0 stänger av timeouten",
+        "en medskickad signal avbryter fortfarande anropet",
+        "de publika hjälparna (fetchSources, fetchEvents) har samma standardtimeout",
+        "kända långa admin-anrop (resync av källa) får 120 s",
+        "JSON { error } från servern blir felets meddelande och visas av visaFel",
+        "ren text från servern (4xx) bevaras",
+        "publika anrop (fetchSources) bevarar också felkroppen",
+        "tom kropp ger som förut det tekniska namn: status, som visaFel byter mot reservtexten",
+        "HTML-felsidor och text från 5xx visas aldrig för användaren",
+        "429 utan kropp ger en läsbar svensk text i stället för reservtexten",
+        "dryRunSource ger statusfelet vid 5xx utan JSON-kropp, inte ett SyntaxError",
+        "dryRunSource behåller serverns { error } vid 400",
+        "publika signaturer och returvärden är oförändrade vid lyckat svar"
+      ]
+    },
+    {
+      "path": "frontend/src/test/auth-refresh.test.tsx",
+      "className": "auth-refresh",
+      "project": "frontend",
+      "count": 12,
+      "names": [
+        "401 från servern loggar ut och rensar lagrade tokens",
+        "403 (avstängt konto) loggar ut",
+        "429 behåller sessionen och försöker igen efter Retry-After",
+        "500 behåller sessionen och försöker igen med backoff",
+        "nätverksfel (fetch kastar) behåller sessionen och försöker igen",
+        "ger upp efter max antal försök men behåller sessionen",
+        "lyckad refresh sparar de nya tokens",
+        "utloggning under pågående refresh återupplivar inte sessionen",
+        "utgången token vid start (inläst ur localStorage) refreshas direkt, utan golv",
+        "nästan utgången token vid start (under marginalen) refreshas direkt",
+        "färsk token från login med klockan 20 min före ger golv 30 s, inte omedelbar refresh",
+        "refresh vid klockskillnad blir ingen tät loop: första direkt, sedan högst ett anrop per 30 s"
+      ]
+    },
+    {
+      "path": "frontend/src/test/banderoll-stil.test.tsx",
+      "className": "banderoll-stil",
+      "project": "frontend",
+      "count": 7,
+      "names": [
+        "vanlig driftbanderoll visar bara meddelandet, orange, utan länk",
+        "nyhetsbanderoll visar rubrik, meddelande och Läs mer-länk, violett",
+        "kommande-banderoll är grön",
+        "Stäng döljer banderollen och minns det",
+        "en stängd Kommande-banderoll visas igen när den byts till Nyhet",
+        "en driftbanderoll som stängdes innan stilfältet fanns förblir stängd",
+        "en tillagd Läs mer-länk ger ett nytt avtryck, så banderollen visas igen"
+      ]
+    },
+    {
+      "path": "frontend/src/test/bekraftelse-adminatgarder.test.tsx",
+      "className": "bekraftelse-adminatgarder",
+      "project": "frontend",
+      "count": 16,
+      "names": [
+        "visar en bekräftelsedialog som namnger källan och konsekvensen, utan att radera",
+        "har Avbryt som förvalt fokus",
+        "Avbryt stänger dialogen utan API-anrop",
+        "Esc stänger dialogen utan API-anrop",
+        "klick på bakgrunden stänger inte dialogen och raderar inget",
+        "Bekräfta raderar exakt en gång med rätt id",
+        "visar en dialog om att alla overrides tas bort, globalt, med antal berörda flaggor",
+        "Avbryt och Esc gör inget anrop",
+        "Bekräfta anropar återställ exakt en gång",
+        "visar en dialog med tydlig text om riktig notis till alla, utan att skicka",
+        "Avbryt och Esc skickar ingenting",
+        "Bekräfta skickar exakt en gång med rätt version och text",
+        "vid laddfel är reglagen inaktiverade, felet visas med ",
+        "en ändring kräver bekräftelse: dialog visas och inget skickas förrän Bekräfta",
+        "Avbryt och Esc skickar ingenting",
+        "Bekräfta skickar exakt ett anrop med det ändrade fältet"
+      ]
+    },
+    {
+      "path": "frontend/src/test/catchall-route.test.tsx",
+      "className": "catchall-route",
+      "project": "frontend",
+      "count": 7,
+      "names": [
+        "okänd URL renderar NotFound med länk till startsidan",
+        "okänd underväg under en känd route renderar också NotFound",
+        "känd URL renderar sin sida, inte NotFound (regression)",
+        "startsidan renderar sitt innehåll, inte NotFound (regression)",
+        "/cancel-deletion och /verify-email med token krockar inte med catch-all",
+        "en sida som kastar vid render ger felvy i route-ytan, inte vit skärm",
+        "felvyn nollställs vid navigering till en annan route"
+      ]
+    },
+    {
+      "path": "frontend/src/test/changepassword-api.test.ts",
+      "className": "changepassword-api",
+      "project": "frontend",
+      "count": 3,
+      "names": [
+        "gör PUT mot /api/auth/me/password med båda lösenorden och enhetens refresh-token",
+        "kastar serverns svenska felmeddelande vid 400",
+        "ger begripliga texter för 401, 429, 5xx och nätverksfel"
+      ]
+    },
+    {
+      "path": "frontend/src/test/createticket-api.test.ts",
+      "className": "createticket-api",
+      "project": "frontend",
+      "count": 3,
+      "names": [
+        "ger ett begripligt svenskt meddelande vid 429 (rate limit)",
+        "visar serverns svenska valideringsfel vid 400",
+        "ger ett generellt fel vid 5xx och returnerar svaret vid lyckat anrop"
+      ]
+    },
+    {
+      "path": "frontend/src/test/errorboundary.test.tsx",
+      "className": "errorboundary",
+      "project": "frontend",
+      "count": 5,
+      "names": [
+        "visar en svensk felvy i stället för vit skärm när ett barn kastar (utan providers)",
+        "loggar felet till console.error",
+        "renderar barnen orörda när inget kastar",
+        "återställs när resetKeys ändras (t.ex. vid route-byte)",
+        "återställs inte när resetKeys är oförändrade"
+      ]
+    },
+    {
+      "path": "frontend/src/test/featureflags-fallback-och-invalidering.test.tsx",
+      "className": "featureflags-fallback-och-invalidering",
+      "project": "frontend",
+      "count": 10,
+      "names": [
+        "normalfall: overrides från API:t slår igenom över defaults och läget blir klar",
+        "exponerar läget ",
+        "under laddning används senast kända overrides — en avstängd flagga blinkar inte fram som PÅ",
+        "behåller senast kända override (avstängd förblir avstängd) i stället för defaultAktiv",
+        "ett fel vid omhämtning behåller redan hämtade overrides i samma session",
+        "gör omförsök med backoff (1 s, 2 s, 4 s) och återhämtar sig när API:t svarar igen",
+        "ger upp efter begränsat antal omförsök (1 + 3) och rapporterar läget ",
+        "växlaFlagg (adminens toggle) uppdaterar både publik och admin-vy",
+        "återställ uppdaterar både publik och admin-vy (redo-markeringarna rensas)",
+        "publicering av en Uppdatering (aktiverar flaggor server-side) uppdaterar flagg-queryn direkt"
+      ]
+    },
+    {
+      "path": "frontend/src/test/felmeddelande.test.ts",
+      "className": "felmeddelande",
+      "project": "frontend",
+      "count": 4,
+      "names": [
+        "visar serverns egna svenska text",
+        "byter tekniska statusfel från API-lagret mot reservtexten",
+        "byter nätverksfel (TypeError från fetch) mot reservtexten",
+        "byter tomma och icke-Error-värden mot reservtexten"
+      ]
+    },
+    {
+      "path": "frontend/src/test/flikar-session-synk.test.tsx",
+      "className": "flikar-session-synk",
+      "project": "frontend",
+      "count": 19,
+      "names": [
+        "nya tokens från en annan flik adopteras utan nätanrop, och nästa refresh använder den nya refresh-token",
+        "adoption schemalägger nästa refresh utifrån den nya token (inte den gamla)",
+        "adoption nollställer ett väntande omförsök",
+        "när en annan flik loggar ut (nycklarna raderas) loggas den här ut lokalt utan /logout-anrop",
+        "localStorage.clear() i en annan flik (key === null) loggar också ut lokalt",
+        "orelaterade localStorage-nycklar påverkar inte sessionen",
+        "401 men lagringen har en nyare refresh-token: adopterar den och försöker en gång till, ingen utloggning",
+        "bara ETT nytt försök: avvisas även den adopterade token loggas användaren ut",
+        "401 utan nyare token i lagringen loggar fortfarande ut och tömmer cachen (V1-4 oförändrat)",
+        "två flikar som refreshar samtidigt ger EN /refresh-request; den andra adopterar resultatet",
+        "utan navigator.locks fungerar refresh som förut (fallback utan lås)",
+        "en annan flik loggade ut medan vi väntade på låset: ingen /refresh, lokal utloggning",
+        "logout tömmer användarspecifika queries men behåller publika (källistan)",
+        "en avvisad refresh (401) tömmer användarspecifika queries",
+        "en annan användare som loggas in via en annan flik (utan utloggning däremellan) ser inte förra användarens cache",
+        "samma användare via en annan flik behåller cachen (bara tokenbyte)",
+        "två användare delar aldrig cache-post: nycklarna skiljer sig men har samma prefix",
+        "cache-posten för användare A hittas inte av användare B (samma queryClient)",
+        "rensaAnvandardata tar bort okända/användarspecifika nycklar men behåller publika"
+      ]
+    },
+    {
+      "path": "frontend/src/test/flode-api.test.ts",
+      "className": "flode-api",
+      "project": "frontend",
+      "count": 4,
+      "names": [
+        "anropar /api/user/feed med sida och storlek och returnerar svaret",
+        "kastar vid felsvar (401/500) i stället för att returnera en tom lista",
+        "anropar /api/user/saved-events/events med sida och storlek",
+        "kastar vid felsvar"
+      ]
+    },
+    {
+      "path": "frontend/src/test/funktionside-procent-klart.test.tsx",
+      "className": "funktionside-procent-klart",
+      "project": "frontend",
+      "count": 2,
+      "names": [
+        "visar rätt procent per pipeline-stadie, och ett streck för avfärdade idéer",
+        "stadie-flikarna filtrerar listan, % klart-kolumnen följer med"
+      ]
+    },
+    {
+      "path": "frontend/src/test/gastprofil-cta-och-mobilmeny.test.tsx",
+      "className": "gastprofil-cta-och-mobilmeny",
+      "project": "frontend",
+      "count": 4,
+      "names": [
+        "länkar till /register (inte en modal som bara loggar in)",
+        "länkar till /login (samma sida som resten av appen, inte en modal)",
+        "respekterar showLoginButton/showRegisterButton",
+        "visar menyknappen och öppnar sidomenyn vid klick"
+      ]
+    },
+    {
+      "path": "frontend/src/test/handelsesok-massparning.test.tsx",
+      "className": "handelsesok-massparning",
+      "project": "frontend",
+      "count": 8,
+      "names": [
+        "delvis lyckat: ",
+        "alla misslyckas: ingen händelse avmarkeras, ingen loggning, tydligt fel (tidigare: obehandlat avslag)",
+        "allt lyckas: statusmeddelande ",
+        "sparat men loggen misslyckas: räknas som sparad, men loggfelet sägs",
+        "användarlistan går inte att hämta: fel + Försök igen i väljaren, inte ",
+        "bekräftat tom användarlista visar ",
+        "sökfel: felmeddelande + Försök igen (inte ",
+        "tomt svar: "
+      ]
+    },
+    {
+      "path": "frontend/src/test/idedetalj-triage-och-flagg.test.tsx",
+      "className": "idedetalj-triage-och-flagg",
+      "project": "frontend",
+      "count": 5,
+      "names": [
+        "rensat fält + blur skickar motivering: null (inte det gamla värdet)",
+        "en checkbox-ändring UTAN att textfältet rörts bevarar den gamla motiveringen",
+        "nytt värde skrivet i fältet skickas som det är (inte null, inte gamla värdet)",
+        "redigeringsläget visar en <select> med riktiga flaggnycklar, inget fritextfält",
+        "val av en riktig flagga och Spara skickar exakt den nyckeln"
+      ]
+    },
+    {
+      "path": "frontend/src/test/index-html-skriptvakt.test.ts",
+      "className": "index-html-skriptvakt",
+      "project": "frontend",
+      "count": 7,
+      "names": [
+        "laddar bara skript från tillåtelselistan",
+        "tillåtelselistan innehåller inga källor som inte längre används (håll den ärlig)",
+        "fångar en ny extern <script src>",
+        "fångar en extern modulepreload och preload as=script",
+        "fångar protokollrelativa URL:er (//domän/...)",
+        "släpper igenom egna relativa skript, tillåtna domäner och inline-skript",
+        "varningstexten är den avtalade"
+      ]
+    },
+    {
+      "path": "frontend/src/test/kallGrupper.test.ts",
+      "className": "kallGrupper",
+      "project": "frontend",
+      "count": 5,
+      "names": [
+        "källor med olika shortName hamnar i varsin grupp",
+        "källor med samma shortName hamnar i samma grupp, i ordningen de kom in",
+        "väljer källan vars Name exakt matchar ShortName (huvudkällan)",
+        "faller tillbaka på första källan om ingen Name matchar ShortName exakt",
+        "en ensam källa representerar sig själv"
+      ]
+    },
+    {
+      "path": "frontend/src/test/kallhantering-fel-visas-som-fel.test.tsx",
+      "className": "kallhantering-fel-visas-som-fel",
+      "project": "frontend",
+      "count": 8,
+      "names": [
+        "fel: felruta med Försök igen och ",
+        "tomt svar: ",
+        "FEL: formuläret förblir öppet med inmatningen kvar och serverns text visas",
+        "FEL utan serverns text: reservtext, inmatningen kvar",
+        "LYCKAT: formuläret stängs först när servern svarat",
+        "dubbelklick på Spara ger ETT anrop",
+        "misslyckad Aktiv-växel visas som fel",
+        "misslyckad "
+      ]
+    },
+    {
+      "path": "frontend/src/test/kallorUtils.test.ts",
+      "className": "kallorUtils",
+      "project": "frontend",
+      "count": 19,
+      "names": [
+        "null/undefined/tom sträng ger null",
+        "en exakt kategori matchar sig själv",
+        "en kvalificerare efter basen matchar ändå (startsWith), som riktig Polisen-data har (",
+        "matchar mot eventType, inte mot en titel med datumprefix — regressionstest för buggen som fanns innan PR #373/session 2026-08-19",
+        "en typ utanför den kuraterade listan (t.ex. ",
+        "täcker alla kuraterade kategorier (varje kategori matchar sig själv)",
+        "null ger null",
+        "en riktig kommun ger tillbaka kommunen oförändrad",
+        "en kommun med bindestreck (känd stavningsosäkerhet, E3/E5) matchar exakt eller inte alls",
+        "ett helt LÄN ger null — regressionstest för buggen med Polisens sammanfattningar (rad 182-191 i kallorUtils.ts)",
+        "en helt okänd/påhittad plats ger null",
+        "null ger null",
+        "ett riktigt län ges tillbaka oförändrat — täcker fallet extraheraPolisenOmrade missar",
+        "en kommun (fel nivå) ger null, inte en gissning på vilket län den ligger i",
+        "en okänd sträng ger null",
+        "ett känt län ger dess kommuner (matchar LÄN_KOMMUNER exakt)",
+        "ett okänt län ger en tom lista, aldrig undefined/krasch (används av matcharLän i PolisenBevakningarContext)",
+        "grupperar element efter nyckelfunktionens returvärde och behåller ordningen inom varje grupp",
+        "en tom lista ger ett tomt objekt"
+      ]
+    },
+    {
+      "path": "frontend/src/test/kallredigering-delta.test.tsx",
+      "className": "kallredigering-delta",
+      "project": "frontend",
+      "count": 8,
+      "names": [
+        "skickar bara ändrat namn — inte url, kategori, isPublished eller isActive",
+        "skickar isPublished bara när formulärets publicera-växel rörts",
+        "rör man inget skickas inget anrop",
+        "en isPublished-ändring i cachen mellan öppna och spara skrivs inte över",
+        "hämtar om källistan från servern efter lyckad sparning",
+        "Publicera-växeln i raden skickar bara isPublished",
+        "skickar bara isActive",
+        "utelämnar fält som är lika med aktuellt läge och aldrig isActive"
+      ]
+    },
+    {
+      "path": "frontend/src/test/konto-felvisning.test.tsx",
+      "className": "konto-felvisning",
+      "project": "frontend",
+      "count": 13,
+      "names": [
+        "misslyckat namnbyte: felmeddelande, inget ",
+        "lyckat namnbyte: ",
+        "misslyckat e-postbyte: svenskt fel (aldrig den tekniska texten) och ingen väntande-banner",
+        "visar serverns egen svenska text vid t.ex. upptagen e-post",
+        "låser ",
+        "misslyckad avbrytning av e-postbyte: felet syns och bannern står kvar",
+        "misslyckad växling: felmeddelande och reglaget står kvar i sitt gamla läge",
+        "lyckad växling: reglaget slår om, inget felmeddelande",
+        "låser reglagen under pågående anrop",
+        "misslyckad sparning: svenskt fel i stället för teknisk text, och inget ",
+        "misslyckad export: svenskt fel i stället för teknisk text",
+        "misslyckat utskick: felmeddelande, knappen aktiv igen (inte fast i ",
+        "lyckat utskick: "
+      ]
+    },
+    {
+      "path": "frontend/src/test/larm-kort.test.tsx",
+      "className": "larm-kort",
+      "project": "frontend",
+      "count": 5,
+      "names": [
+        "renderar öppna larm med allvarlighet, titel, antal och Kvittera-knapp",
+        "Kvittera anropar API:t med rätt id och hämtar om listan",
+        "visar ett fel vid larmet om kvitteringen misslyckas, och behåller Kvittera-knappen",
+        "laddfel visas som fel — inte som ",
+        "tom lista visar "
+      ]
+    },
+    {
+      "path": "frontend/src/test/las-mer-hos-kallan.test.tsx",
+      "className": "las-mer-hos-kallan",
+      "project": "frontend",
+      "count": 5,
+      "names": [
+        "är en riktig länk som öppnas i ny flik utan att vänta på länkkollen",
+        "öppnar länken även när länkkollen misslyckas (avvisas)",
+        "visar ",
+        "tolkar status unknown som unknown",
+        "ger unknown (inte dead) vid HTTP-fel, nätverksfel och okänt/saknat fält"
+      ]
+    },
+    {
+      "path": "frontend/src/test/losenordbyte.test.tsx",
+      "className": "losenordbyte",
+      "project": "frontend",
+      "count": 5,
+      "names": [
+        "visar bekräftelse och nollställer fälten först när servern svarat OK",
+        "visar serverfelet, ingen bekräftelse, och behåller det användaren skrivit",
+        "anropar inte servern när det lokala valideringen fallerar",
+        "låser knappen under pågående anrop så det inte går att skicka två gånger",
+        "döljer formuläret och förklarar för konton utan lösenord (Google)"
+      ]
+    },
+    {
+      "path": "frontend/src/test/losenordsaterstallning-felvisning.test.tsx",
+      "className": "losenordsaterstallning-felvisning",
+      "project": "frontend",
+      "count": 2,
+      "names": [
+        "nätverksfel: svensk text i stället för ",
+        "serverfel med egen svensk text: texten visas"
+      ]
+    },
+    {
+      "path": "frontend/src/test/mina-kallor-felvisning.test.tsx",
+      "className": "mina-kallor-felvisning",
+      "project": "frontend",
+      "count": 9,
+      "names": [
+        "misslyckad borttagning: felmeddelande syns och källan står kvar",
+        "lyckad borttagning: källan försvinner ur listan, inget felmeddelande",
+        "misslyckad tillägg: felmeddelande syns och källan blir inte aktiv",
+        "låser kortet under pågående anrop så det inte skickas två gånger",
+        "misslyckad ny bevakning: modalen står kvar med felmeddelande och Spara är aktiv igen",
+        "visar serverns egen text (BevakningError, V3-17) i modalen som står kvar",
+        "lyckad ny bevakning: modalen stängs och bevakningen listas",
+        "låser Spara under pågående anrop (ingen dubbel-submit)",
+        "misslyckad borttagning: felmeddelande syns och bevakningen står kvar"
+      ]
+    },
+    {
+      "path": "frontend/src/test/mitt-flode-pa-servern.test.tsx",
+      "className": "mitt-flode-pa-servern",
+      "project": "frontend",
+      "count": 14,
+      "names": [
+        "visar exakt det servern svarar med — ingen klientfiltrering på källa eller Polisen — och hämtar inte ",
+        "cache-nyckeln innehåller användaren och flödesläget (Mitt/Sparat skiljs åt)",
+        "fel är inte en tom lista: felmeddelande med ",
+        "laddar: visar varken lista eller ",
+        "tom lista visas bara när servern verkligen svarat tomt",
+        "ingen ",
+        "en händelse som förskjutits in på nästa sida visas inte två gånger",
+        "misslyckad ",
+        "Alla-läget hämtar fortfarande fönstret via fetchEvents och rör inte Mitt flöde-endpointen",
+        "visar äldre sparade händelser som servern returnerar och paginerar",
+        "en händelse vars bokmärke just tagits bort försvinner ur listan direkt",
+        "fel är inte ",
+        "tomt serversvar ger ",
+        "tom/odefinierad data ger tom lista och dubbletter tas bort i sidordning"
+      ]
+    },
+    {
+      "path": "frontend/src/test/mock-hygien-admin.test.tsx",
+      "className": "mock-hygien-admin",
+      "project": "frontend",
+      "count": 12,
+      "names": [
+        "MockBadge, MockBanner och IngetKopplatAn säger tydligt vad ytan är",
+        "MockYta stänger av varje knapp inuti",
+        "är märkt MOCK, lovar inget om loggning och har inga aktiva ",
+        "visar ingen påhittad sessionshistorik",
+        "märker Kommande kontroller, Kontrollhistorik och Felloggar som MOCK",
+        "torrkörning: bara RSS-källor kan testas, API-källor är avstängda",
+        "torrkörning visar bara det som uppmättes, inga påhittade pipeline-steg",
+        "torrkörning som misslyckas visar felet, inte gröna steg",
+        "Schemalagda ändringar och Externa statusflöden är MOCK med avstängda knappar",
+        "visar inga påhittade notisrader eller e-postadresser och kallar sig inte mock+live",
+        "Notifieringsinställningar säger ",
+        "Aktivitet säger "
+      ]
+    },
+    {
+      "path": "frontend/src/test/mock-hygien-medborgare.test.tsx",
+      "className": "mock-hygien-medborgare",
+      "project": "frontend",
+      "count": 14,
+      "names": [
+        "varje mock-flagga är märkt mock och har defaultAktiv=false",
+        "ingen flagga är märkt mock utöver de verifierade, och ingen mock-flagga har defaultAktiv=true",
+        "levande funktioner är inte märkta mock och behåller sitt defaultvärde",
+        "tvingar av alla mock-flaggor även när de är påslagna, utan att röra de levande",
+        "släpper igenom mock-flaggor när mock-UI uttryckligen är på",
+        "följer VITE_SHOW_MOCK_UI: bara strängen ",
+        "useFeatureFlags: UI-flaggorna har mock av, admin-vyns inställda visar påslaget",
+        "Notifieringar renderar inga mock-kort utan VITE_SHOW_MOCK_UI",
+        "Notifieringar renderar mock-korten när VITE_SHOW_MOCK_UI=true (lokal utveckling)",
+        "Support: Systemstatus (hårdkodad driftstatus) visas inte utan VITE_SHOW_MOCK_UI, men FAQ gör det",
+        "Support: Systemstatus visas när VITE_SHOW_MOCK_UI=true",
+        "Uppdateringar: hårdkodade ",
+        "Uppdateringar: korten visas när VITE_SHOW_MOCK_UI=true",
+        "lovar inga funktioner vars flagga är av (t.ex. Systemstatus, Obligatoriska källor)"
+      ]
+    },
+    {
+      "path": "frontend/src/test/notisklocka-en-kalla.test.tsx",
+      "className": "notisklocka-en-kalla",
+      "project": "frontend",
+      "count": 4,
+      "names": [
+        "visar både ärende- och kontonotiser direkt på Översikt, utan att Support-inbox eller Användare öppnats",
+        "listan är oförändrad när man byter flik (ingen flippande lista)",
+        "en gemensam query per sort: notiserna hämtas en gång var oavsett antal flikbyten",
+        "Support: bara ärendenotiser, kontospärr-notiserna (Admin-only, 403) hämtas aldrig"
+      ]
+    },
+    {
+      "path": "frontend/src/test/onboarding-friktion.test.tsx",
+      "className": "onboarding-friktion",
+      "project": "frontend",
+      "count": 2,
+      "names": [
+        "visar ett fel direkt vid blur på ett ogiltigt e-postformat, innan Nästa klickas",
+        "felet försvinner igen när adressen rättas"
+      ]
+    },
+    {
+      "path": "frontend/src/test/polisenBevakningar-api.test.ts",
+      "className": "polisenBevakningar-api",
+      "project": "frontend",
+      "count": 4,
+      "names": [
+        "createBevakning kastar BevakningError med serverns text vid 400",
+        "updateBevakning kastar BevakningError med serverns text vid 400",
+        "andra fel (500) blir ett vanligt Error, inte BevakningError",
+        "en 400 utan läsbar text faller tillbaka på ett vanligt Error"
+      ]
+    },
+    {
+      "path": "frontend/src/test/PrenumerationsKlocka.test.tsx",
+      "className": "PrenumerationsKlocka",
+      "project": "frontend",
+      "count": 8,
+      "names": [
+        "visar toast med Ångra efter borttagning, och Ångra återskapar bevakningen",
+        "visar serverfel vid borttagning och lämnar bevakningen kvar",
+        "visar fel om Ångra misslyckas",
+        "varnar innan den sista bevakningen tas bort, och Avbryt gör ingenting",
+        "tar bort den sista bevakningen efter bekräftelse och visar Ångra",
+        "frågar inte om bekräftelse när det finns fler bevakningar",
+        "visar bekräftelse även när båda raderna blir täckta och klockan försvinner",
+        "visar serverfel vid skapande i stället för att svälja det"
+      ]
+    },
+    {
+      "path": "frontend/src/test/profil-sektion-flagg-vid-djuplank.test.tsx",
+      "className": "profil-sektion-flagg-vid-djuplank",
+      "project": "frontend",
+      "count": 3,
+      "names": [
+        "en sektion vars flaggor alla är av visar INTE sektionen, utan landningssidan",
+        "samma sektion renderas normalt när minst en av dess flaggor är på",
+        "gäller flera sektioner (konto, support), inte bara uppdateringar"
+      ]
+    },
+    {
+      "path": "frontend/src/test/push-avregistrering-vid-utloggning.test.tsx",
+      "className": "push-avregistrering-vid-utloggning",
+      "project": "frontend",
+      "count": 6,
+      "names": [
+        "kontrollerad utloggning: servern får DELETE med användarens token och webbläsaren släpper prenumerationen",
+        "utan prenumeration i webbläsaren görs inget serveranrop",
+        "fel i webbläsarens unsubscribe blockerar inte utloggningen, och serveranropet går ändå",
+        "getRegistration som kastar blockerar inte utloggningen",
+        "webbläsare utan service worker: utloggningen fungerar som vanligt",
+        "refresh-token avvisad (401): sessionen slutar och enheten avregistreras i webbläsaren"
+      ]
+    },
+    {
+      "path": "frontend/src/test/push-kort-enhet-och-konto.test.tsx",
+      "className": "push-kort-enhet-och-konto",
+      "project": "frontend",
+      "count": 9,
+      "names": [
+        "hämtar kontots inställningar och visar dem, även utan prenumeration på enheten",
+        "visar enhetsstatus separat och skickar ingen inställningsändring av sig själv",
+        "växling av en kategori skickar BARA den ändringen, inte hela ",
+        "nekat tillstånd vid växling: kontots inställning ändras inte",
+        "kontoinställningarna kunde inte hämtas: inga reglage som ser ",
+        "visar att enheten är registrerad och kontots läge, utan aktiveringsknapp",
+        "avstängning av den enda aktiva kategorin sparar först, avregistrerar sedan enheten",
+        "misslyckad sparning: enheten avregistreras inte och reglaget står kvar",
+        "avstängning när en annan kategori är kvar på: enheten behålls"
+      ]
+    },
+    {
+      "path": "frontend/src/test/refreshPolicy.test.ts",
+      "className": "refreshPolicy",
+      "project": "frontend",
+      "count": 8,
+      "names": [
+        "försöker igen vid nätverksfel (null)",
+        "dubblar per försök och kapas vid taket",
+        "respekterar Retry-After när den är längre än backoff, men kapar den",
+        "ignorerar en Retry-After som inte är ett heltal (t.ex. HTTP-datum)",
+        "refreshar 2 min före utgång för en normal token",
+        "golv för en nyss erhållen token som ser utgången ut (klockskillnad)",
+        "inget golv när token lästs in vid start (null) eller erhölls för länge sedan",
+        "kapas av token-livslängden när iat finns (klockan går efter)"
+      ]
+    },
+    {
+      "path": "frontend/src/test/smoke.test.tsx",
+      "className": "smoke",
+      "project": "frontend",
+      "count": 3,
+      "names": [
+        "kör en ren funktion (isSektionSynlig)",
+        "renderar en komponent i jsdom med jest-dom-matchers",
+        "hanterar användarinteraktion via user-event"
+      ]
+    },
+    {
+      "path": "frontend/src/test/sparat-felvisning.test.tsx",
+      "className": "sparat-felvisning",
+      "project": "frontend",
+      "count": 4,
+      "names": [
+        "lyckad spara: ikonen slår om och inget felmeddelande visas",
+        "misslyckad spara: rullar tillbaka ikonen och visar ett felmeddelande",
+        "misslyckad borttagning: händelsen står kvar som sparad och felet visas",
+        "skickar bara ett anrop när man trycker två gånger medan det första pågår"
+      ]
+    },
+    {
+      "path": "frontend/src/test/support-formular.test.tsx",
+      "className": "support-formular",
+      "project": "frontend",
+      "count": 13,
+      "names": [
+        "kategoribyte raderar varken ämne eller meddelande",
+        "betamallen fylls bara i ett tomt fält och skriver aldrig över egen text",
+        "betamallen tas bort igen bara om den är orörd när man byter bort från Testare",
+        "behåller maxLength på ämne och meddelande (V2-9)",
+        "misslyckat anrop: felmeddelande syns, ingen bekräftelse, texten finns kvar",
+        "visar 429-meddelandet från TicketError (V2-9)",
+        "lyckat anrop: bekräftelse med ärendenummer och nollställt formulär",
+        "låser knappen under pågående anrop (ingen dubbel-submit)",
+        "misslyckat svar: felmeddelande syns, ingen bekräftelse, texten finns kvar",
+        "lyckat svar: bekräftelse och inget felmeddelande",
+        "låser Skicka svar under pågående anrop",
+        "misslyckat anrop: felmeddelandet syns och det skrivna behålls",
+        "låser knappen under pågående anrop och visar tack när det lyckats"
+      ]
+    },
+    {
+      "path": "frontend/src/test/support-rollen-innehall.test.tsx",
+      "className": "support-rollen-innehall",
+      "project": "frontend",
+      "count": 13,
+      "names": [
+        "visar listan men ingen massmarkering",
+        "detaljpanelen visar uppgifterna men inga åtgärdsknappar för en aktiv användare",
+        "avstängd användare: ingen ",
+        "användare med schemalagd radering: ingen ",
+        "en Admin i Support-vyn ser samma skrivskyddade UI (förhandsvisning av rollen)",
+        "ett riktigt Support-konto är skrivskyddat även med en gammal Admin-vy i localStorage",
+        "listan har massmarkering",
+        "detaljpanelen har alla åtgärder",
+        "avstängd användare: ",
+        "Support: söker och läser, men kan inte markera eller spara till en användare",
+        "Admin: kan markera och spara (oförändrat)",
+        "Support kan svara/ändra status men ser inte ",
+        "Admin ser "
+      ]
+    },
+    {
+      "path": "frontend/src/test/support-rollen-menyer.test.tsx",
+      "className": "support-rollen-menyer",
+      "project": "frontend",
+      "count": 11,
+      "names": [
+        "Support når exakt Användare, Support-inbox och Händelsesök",
+        "Admin når alla sektioner",
+        "Support startar i Support-inbox, Admin i Översikt",
+        "ett riktigt Support-konto är Support oavsett sparad vy; en Admin i Support-vyn förhandsvisar Support",
+        "Support ser bara de tre tillåtna flikarna",
+        "Admin ser alla flikar (oförändrat)",
+        "Support landar i Support-inbox och ser bara sina tre flikar",
+        "Support kan bläddra mellan sina flikar",
+        "ett Support-konto med en gammal Admin-vy i localStorage får ändå Support-menyerna och aldrig en admin-sektion",
+        "Admin landar i Översikt och ser alla flikar (oförändrat)",
+        "en Admin som byter till Support-vyn flyttas till Support-inbox och ser Support-menyerna"
+      ]
+    },
+    {
+      "path": "frontend/src/test/supportinbox-fel-visas-som-fel.test.tsx",
+      "className": "supportinbox-fel-visas-som-fel",
+      "project": "frontend",
+      "count": 15,
+      "names": [
+        "listan misslyckas: felmeddelande + Försök igen, ",
+        "tomt svar: ",
+        "klick på en rad när ärendet inte går att hämta ger en modal med fel och Försök igen (tidigare: ingenting)",
+        "agentlistan misslyckas: felet sägs i modalen (inte bara en tom Tilldelad-lista)",
+        "FEL: texten finns kvar i rutan, modalen är öppen och felet visas (serverns text)",
+        "FEL utan serverns text: reservtext med besked att texten finns kvar",
+        "LYCKAT: rutan töms först när servern svarat",
+        "dubbelklick på Skicka ger ETT anrop",
+        "påminnelse: fel -> formuläret öppet med inmatningen kvar och felet visat",
+        "påminnelse: lyckat -> formuläret stängs",
+        "schemalagd åtgärd: fel -> formuläret och texten kvar, felet visat",
+        "schemalagd åtgärd: dubbelklick ger ETT anrop",
+        "statusändring som misslyckas visas som fel",
+        "tilldelning som misslyckas visas som fel",
+        "arkivering som misslyckas visas som fel"
+      ]
+    },
+    {
+      "path": "frontend/src/test/supportinbox-redigera-schema-tomt-datum.test.tsx",
+      "className": "supportinbox-redigera-schema-tomt-datum",
+      "project": "frontend",
+      "count": 7,
+      "names": [
+        "lyckad redigering: den nya åtgärden skapas FÖRST, sedan avbryts den gamla (i den ordningen)",
+        "tom text för en ",
+        "en ",
+        "tömt datumfält vid redigering: Spara är disabled, klick kastar inget",
+        "tömt tidsfält vid redigering: Spara är disabled",
+        "påminnelse: tömt tidsfält håller Spara disabled i stället för att kasta",
+        "schemalägg: tömt tidsfält håller Schemalägg disabled"
+      ]
+    },
+    {
+      "path": "frontend/src/test/tid.test.ts",
+      "className": "tid",
+      "project": "frontend",
+      "count": 7,
+      "names": [
+        "formaterar UTC-vintertid till svensk lokal tid (CET, +1h)",
+        "formaterar UTC-sommartid till svensk lokal tid (CEST, +2h) — samma UTC-klockslag ger en annan lokal tid än på vintern",
+        "en tid nära midnatt kan hoppa till nästa dag lokalt",
+        "konverterar en UTC-tidsstämpel till datetime-local-formatet (vintertid, CET)",
+        "konverterar en UTC-tidsstämpel till datetime-local-formatet (sommartid, CEST)",
+        "nollpaddar ensiffriga månad/dag/timme/minut",
+        "går att mata rakt in i formatSvensktDatumTid-liknande dygnsgräns utan att tappa ett håll"
+      ]
+    },
+    {
+      "path": "frontend/src/test/uppdateringar-annonsering.test.tsx",
+      "className": "uppdateringar-annonsering",
+      "project": "frontend",
+      "count": 3,
+      "names": [
+        "kryssrutan visar ett eget datumfält, och Schemalägg är disabled om annonseringen ligger EFTER lanseringen",
+        "sparar annonseringUtc och pushSkickaVid korrekt",
+        "utan "
+      ]
+    },
+    {
+      "path": "frontend/src/test/uppdateringar-faq-lista.test.tsx",
+      "className": "uppdateringar-faq-lista",
+      "project": "frontend",
+      "count": 2,
+      "names": [
+        "listar varje kopplad fråga med vad som händer med den vid lansering",
+        "visar ingen FAQ-sektion när inga flaggor är valda"
+      ]
+    },
+    {
+      "path": "frontend/src/test/uppdateringar-push-banderoll.test.tsx",
+      "className": "uppdateringar-push-banderoll",
+      "project": "frontend",
+      "count": 6,
+      "names": [
+        "kryssrutan förifyller meddelandet från titeln, och Schemalägg är disabled utan version",
+        "sparar skickaPush/pushVersion/pushMeddelande när kryssrutan är ikryssad",
+        "kryssrutan är disabled tills minst en innehållsrad är ifylld",
+        "visar härledd målgrupp ",
+        "visar härledd målgrupp ",
+        "sparar visaBanderoll=true när ikryssad och innehåll finns"
+      ]
+    },
+    {
+      "path": "frontend/src/test/uppdateringar-tomt-datumfalt.test.tsx",
+      "className": "uppdateringar-tomt-datumfalt",
+      "project": "frontend",
+      "count": 2,
+      "names": [
+        "ett tömt Datum-fält gör Publicera/Spara-knapparna disabled i stället för att kasta vid klick",
+        "ett tomt schemalagt datum/tid håller Schemalägg-knappen disabled"
+      ]
+    },
+    {
+      "path": "frontend/src/test/uppdateringar-typ-och-token.test.tsx",
+      "className": "uppdateringar-typ-och-token",
+      "project": "frontend",
+      "count": 9,
+      "names": [
+        "ger fallback (ingen krasch) för okända, tomma och null-typer",
+        "känner igen alla fem riktiga typer",
+        "Nyheter-sidan renderar alla punkter, okänd typ får neutral etikett",
+        "Profil → Uppdateringar renderar senaste-kortet och den expanderade historiken",
+        "Admin → Uppdateringar renderar listan (typ-sammanfattning) utan vit skärm",
+        "skickar Authorization när användaren är inloggad",
+        "skickar ingen Authorization-header för anonyma besökare",
+        "query-nyckeln skiljer inloggad från anonym men delar prefix med admins invalidering",
+        "Nyheter-sidan och Profil-fliken delar inte cache-post mellan anonym och inloggad"
+      ]
+    },
+    {
+      "path": "frontend/src/test/useSourceOrder-optimistisk.test.tsx",
+      "className": "useSourceOrder-optimistisk",
+      "project": "frontend",
+      "count": 7,
+      "names": [
+        "den nya ordningen syns direkt, innan servern svarat",
+        "servern får ändringen och listan ligger kvar efter bekräftelsen",
+        "misslyckas anropet rullas listan tillbaka och serverns svenska text visas",
+        "tekniskt statusfel ger den reservtext som visaFel väljer",
+        "snabb dubbel-omsortering: bara det senaste önskemålet skickas efter det pågående, slutordningen blir rätt",
+        "omsortering tillbaka till startordningen medan första anropet pågår når också servern",
+        "första anropet misslyckas men en nyare ordning väntar: den skickas i stället och inget fel visas"
+      ]
+    },
+    {
+      "path": "frontend/src/test/vercel-csp-rapportera-lage.test.ts",
+      "className": "vercel-csp-rapportera-lage",
+      "project": "frontend",
+      "count": 8,
+      "names": [
+        "är giltig JSON med en headers-sektion som gäller alla routes",
+        "har Content-Security-Policy-Report-Only",
+        "har INGEN enforcing Content-Security-Policy (bara report-only, får inte kunna blockera något)",
+        "tillåter exakt de externa skriptkällorna som skript-vakten godkänner (plus Google Identity)",
+        "script-src har ingen bred källa (ingen jokertecken, ingen bar https:, ingen unsafe-eval)",
+        "täcker de källtyper sidan faktiskt använder",
+        "backend-API:t som service workern anropar (public/sw.js) står i connect-src",
+        "rapporterar till backend-endpointen, både report-uri (legacy) och report-to (Reporting API)"
+      ]
+    }
+  ]
+}

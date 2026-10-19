@@ -20,4 +20,14 @@
     <InternalsVisibleTo Include="Samhallsinformation.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Genererad testkatalog (se Application/Dev/TestCatalog.cs) — måste
+         kopieras med till publish-output, annars finns filen inte i
+         produktion (test-projektets egna DLL gör det aldrig). -->
+    <None Include="Data\test-catalog.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
