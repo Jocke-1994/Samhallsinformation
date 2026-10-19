@@ -28,6 +28,7 @@ export interface Uppdatering {
   annonseringUtc:            string | null
   annonseradUtc:             string | null
   pushSkickaVid:             PushSkickaVid
+  createdAt:                 string
 }
 
 export interface PunktRequest {
