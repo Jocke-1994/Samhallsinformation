@@ -179,6 +179,30 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 55 — 2026-10-19
+**What was done:**
+- **Testchecklistan för Funktionsidé #7 (Geografiskt platsfilter) och #8 (Schemalagd lansering) färdigställd** — manuella testpunkter avbockade (lokal flaggväxling + Playwright, aldrig mot produktionens flagga), automatiska testfiler kompletterade. Pipeline flyttad av användaren: **#7 → Lanseringsklar** (`flode_platsfilter` bekräftat av i produktion), **#8 → Lanserad** (inte flaggstyrd alls)
+- **Kalendervy i Uppdateringar byggd och mergad** (**PR #692**): återanvände en befintlig Artifact-skiss (klickbar design-canvas, länk i Testmiljö-idéns föregångare) för en Månadsvy + Agenda-vy ovanpå `AdminUppdateringar`. Kalenderposter härleds klient-sidan ur redan hämtad `Uppdatering[]`-data (ingen ny endpoint) — en post med både annonserings- och lanseringsdatum ger två separata poster
+- **Scope-avvikelse från skissen beslutad medvetet**: skissens tredje "Historik"-flik visade en fiktiv Brainstorm→Triage→Bygger→Testar-pipeline som inte finns i datamodellen. Flaggat till användaren innan bygg, byggd som en enklare flik med bara riktiga, lagrade tidsstämplar istället ("Ja, kör på den enklare historiken med riktig data")
+- **Mörkt-läge-kontrastbugg hittad och fixad före commit** (live Playwright-skärmdump, inte gissad): `bg-violet-50`/`bg-violet-50/60` i de nya komponenterna täcks inte av sajtens `html.dark .bg-*`-ersättningslista i `index.css`, så den mörkläges-ommappade texten blev oläslig mot den fortsatt ljusa bakgrunden. Bytt till `bg-slate-50` (som faktiskt ommappas)
+- **Testmiljö-idén: den stora öppna frågan löst.** Skillnaden mellan en billig "synlighetsnivå i flagg-systemet" (kan bara dölja/visa redan deployad kod) och en riktig separat testmiljö (kan förhandsgranska kod som inte är mergad till `main`) förklarades i klartext efter att användaren signalerat att hen inte hängde med — beslut: **"Båda, börja med flaggan"**
+- **Testmiljö spår 1 byggt, testat och mergat** (**PR #693**): ny `EndastAdmin`-kolumn på `FeatureFlagOverride` — en flagga kan nu vara på men bara synlig för Admin. `GET /api/feature-flags` räknar ut effektivt värde per anropare (`User.IsInRole("Admin")`), ny `PUT /api/admin/feature-flags/{key}/synlighet`, ny pill i `FeatureFlagsAdmin.tsx`. En riktig schemalagd lansering (`FeatureFlagActivation.ActivateFlagsAsync`) nollställer alltid `EndastAdmin` — en funktion som bara testats av Admin kan inte tyst förbli dold vid faktisk lansering. Löste det konkreta ursprungsbehovet: platsfiltret kan nu testas skarpt mot produktionsdata utan att synas för besökare
+- **"Riktig app"-idén medvetet lagd åt sidan för den här sessionen** — användarens egen prioritering ("Vi lägger egen app åt sidan för nu. Annars är jag nöjd med ordningen")
+- Lokala och fjärrgrenar städade efter båda bekräftade merges (`feat/testmiljo-flagg-synlighet` m.fl.)
+
+**Problem och lösningar:**
+- Ett första `Artifact action:"read"` på design-canvas-länken gav bara typens generiska författarinstruktioner, inte skissens innehåll — löst genom att följa typens egen regel: `list` med `scope:"files"` först, sedan `read` varje `project/*.dc.html`-fil individuellt
+- En stor skiss-fil (20KB) inlinades inte i läs-svaret — löst genom att läsa den sparade lokala filen direkt med `Read`-verktyget istället
+
+**Etablerat mönster:**
+- En ny `bg-violet-*`/annan rå färgklass i en komponent är inte automatiskt mörkläges-säker bara för att resten av sajten är det — sajtens mörka läge bygger på en exakt klassnamnslista i `index.css`, inte Tailwinds `dark:`-variant; verifiera alltid med en live-skärmdump innan commit
+- Vid en design-canvas-skiss som visar fiktiv/påhittad data: flagga scope-avvikelsen till användaren INNAN bygg, bygg aldrig tyst mot verklig data istället och hoppas det är det som menades
+
+**Next session:**
+- **Testmiljö spår 2** (riktig separat testmiljö: ny `Beta`-roll, eget inloggningsflöde med mejlade uppgifter, driftskostnad för en till miljö) kvarstår som en öppen, oprioriterad idé — bygg bara om användaren uttryckligen tar upp den igen
+- **"Riktig app"** kvarstår som en medvetet åtsidosatt idé, ingen brådska
+- Ingen känd öppen tråd kvar från Platsfiltret, Schemalagd lansering eller Kalendervyn
+
 ### Session 54 — 2026-10-11
 **What was done:**
 - **Schemalagd lanserings "Ny version"-tillägg: del 2, 3 och 4 upptäckta som redan byggda men opushade** sedan session 53 (lokala commits daterade 2026-10-09, aldrig pushade) — avvek från minnets "nästa session: del 2"-pekare. Alla tre rebasade, pushade och PR:ade: **PR #678** (del 2, push+banderoll-kryssrutor körda av `ScheduledReleaseBackgroundService`), **PR #679** (del 3, annonsering i förväg i två faser, `SvenskDatum`-hjälpare), **PR #680** (del 4, kopplade FAQ-frågor listade i formuläret) — alla tre mergade
