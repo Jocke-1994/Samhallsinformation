@@ -28,7 +28,7 @@ const { default: IdeDetaljModal } = await import('../components/Admin/IdeDetaljM
 
 const detalj = (over: Partial<FeatureIdeaDetailDto['idea']> = {}): FeatureIdeaDetailDto => ({
   idea: {
-    id: 'i1', ideaNumber: 12, title: 'Dela händelse', stage: 'triage', källaTyp: 'admin',
+    id: 'i1', ideaNumber: 12, title: 'Dela händelse', stage: 'triage', priority: 0, källaTyp: 'admin',
     flagKey: null, createdAt: '2026-09-01T00:00:00Z', updatedAt: '2026-09-01T00:00:00Z',
     description: 'En bra idé', triageKanGoras: true, triageBorGoras: true,
     triageMotivering: 'Redan efterfrågat av flera användare', createdByName: 'Admin',

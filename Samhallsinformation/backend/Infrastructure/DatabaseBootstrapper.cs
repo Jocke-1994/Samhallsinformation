@@ -1083,6 +1083,26 @@ public static class DatabaseBootstrapper
                         ON CONFLICT DO NOTHING;
                     ");
                 }
+
+                if (pendingMigrations.Contains("20261019043726_AddFeatureIdeaPriority"))
+                {
+                    await db.Database.ExecuteSqlRawAsync(@"
+                        ALTER TABLE ""FeatureIdeas"" ADD COLUMN IF NOT EXISTS ""Priority"" integer NOT NULL DEFAULT 0;
+
+                        -- Backfyll en deterministisk startordning (IdeaNumber-ordning) så alla
+                        -- rader inte delar samma Priority=0 — admin drar om den fritt sen.
+                        WITH ranked AS (
+                            SELECT ""Id"", ROW_NUMBER() OVER (ORDER BY ""IdeaNumber"") - 1 AS rn
+                            FROM ""FeatureIdeas""
+                        )
+                        UPDATE ""FeatureIdeas"" fi SET ""Priority"" = ranked.rn
+                        FROM ranked WHERE fi.""Id"" = ranked.""Id"";
+
+                        INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                        VALUES ('20261019043726_AddFeatureIdeaPriority', '10.0.12')
+                        ON CONFLICT DO NOTHING;
+                    ");
+                }
             }
 
             // Rensa dubbletter av (SourceId, ExternalId) i Events INNAN det unika indexet skapas (V3-2). Gäller både
