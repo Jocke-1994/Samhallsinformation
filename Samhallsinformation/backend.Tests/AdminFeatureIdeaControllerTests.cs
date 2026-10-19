@@ -3,13 +3,29 @@ namespace Samhallsinformation.Tests;
 using System.Reflection;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Samhallsinformation.Controllers;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 using Xunit;
+
+// Minimal IWebHostEnvironment-dubbel — bara ContentRootPath används
+// (av TestCatalog.Load). Pekar som standard mot en tom, nyskapad
+// temp-mapp utan test-catalog.json, så TestCatalog.Load returnerar en
+// tom katalog om inte testet skriver en egen fil dit (se MedKatalog).
+file sealed class FakeWebHostEnvironment : IWebHostEnvironment
+{
+    public string ContentRootPath { get; set; } = Directory.CreateTempSubdirectory().FullName;
+    public string EnvironmentName { get; set; } = "Test";
+    public string ApplicationName { get; set; } = "Samhallsinformation.Tests";
+    public string WebRootPath { get; set; } = "";
+    public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+    public Microsoft.Extensions.FileProviders.IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
+}
 
 public class AdminFeatureIdeaControllerTests
 {
@@ -24,10 +40,24 @@ public class AdminFeatureIdeaControllerTests
     private static ClaimsPrincipal Authenticated(Guid userId) => new(
         new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }, "TestAuth"));
 
-    private static AdminFeatureIdeaController NewController(AppDbContext db, Guid adminId) => new(db)
+    private static AdminFeatureIdeaController NewController(AppDbContext db, Guid adminId) => new(db, new FakeWebHostEnvironment())
     {
         ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = Authenticated(adminId) } },
     };
+
+    // Skriver en liten, egen test-catalog.json i en temp-mapp och returnerar
+    // en controller vars TestCatalog.Load läser just den — isolerad från
+    // repots riktiga katalog och från andra tester.
+    private static AdminFeatureIdeaController NewControllerMedKatalog(AppDbContext db, Guid adminId, string json)
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        Directory.CreateDirectory(Path.Combine(dir, "Data"));
+        File.WriteAllText(Path.Combine(dir, "Data", "test-catalog.json"), json);
+        return new AdminFeatureIdeaController(db, new FakeWebHostEnvironment { ContentRootPath = dir })
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = Authenticated(adminId) } },
+        };
+    }
 
     private static async Task<User> NewAdmin(AppDbContext db)
     {
@@ -280,7 +310,7 @@ public class AdminFeatureIdeaControllerTests
         db.FeatureIdeas.Add(idea);
         await db.SaveChangesAsync();
         var controller = NewController(db, admin.Id);
-        var addResult = Assert.IsType<OkObjectResult>(await controller.AddChecklistItem(idea.Id, new AddChecklistItemRequest("FAQ uppdaterad")));
+        var addResult = Assert.IsType<OkObjectResult>(await controller.AddChecklistItem(idea.Id, new AddChecklistItemRequest("FAQ uppdaterad", null)));
         var itemId = (Guid)addResult.Value!.GetType().GetProperty("Id")!.GetValue(addResult.Value)!;
 
         await controller.ToggleChecklistItem(idea.Id, itemId, new ToggleChecklistItemRequest(true));
@@ -292,6 +322,158 @@ public class AdminFeatureIdeaControllerTests
     }
 
     [Fact]
+    public async Task AddChecklistItem_DefaultsToLanseringFas()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var idea = new FeatureIdea { IdeaNumber = 1, Title = "Idé", CreatedByUserId = admin.Id };
+        db.FeatureIdeas.Add(idea);
+        await db.SaveChangesAsync();
+        var controller = NewController(db, admin.Id);
+
+        await controller.AddChecklistItem(idea.Id, new AddChecklistItemRequest("FAQ uppdaterad", null));
+
+        var item = Assert.Single(db.FeatureIdeaChecklistItems);
+        Assert.Equal("lansering", item.Fas);
+    }
+
+    [Fact]
+    public async Task AddChecklistItem_FasTestning_SparasSomTestning()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var idea = new FeatureIdea { IdeaNumber = 1, Title = "Idé", CreatedByUserId = admin.Id };
+        db.FeatureIdeas.Add(idea);
+        await db.SaveChangesAsync();
+        var controller = NewController(db, admin.Id);
+
+        await controller.AddChecklistItem(idea.Id, new AddChecklistItemRequest("Testa på mobil", "testning"));
+
+        var item = Assert.Single(db.FeatureIdeaChecklistItems);
+        Assert.Equal("testning", item.Fas);
+    }
+
+    [Fact]
+    public async Task AddChecklistItem_OkäntFasVärde_FallerTillbakaPåLansering()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var idea = new FeatureIdea { IdeaNumber = 1, Title = "Idé", CreatedByUserId = admin.Id };
+        db.FeatureIdeas.Add(idea);
+        await db.SaveChangesAsync();
+        var controller = NewController(db, admin.Id);
+
+        await controller.AddChecklistItem(idea.Id, new AddChecklistItemRequest("Punkt", "nåt-okänt"));
+
+        var item = Assert.Single(db.FeatureIdeaChecklistItems);
+        Assert.Equal("lansering", item.Fas);
+    }
+
+    private const string ExempelKatalog = """
+        {
+          "generatedAt": "2026-10-19T00:00:00Z",
+          "backendTotal": 7,
+          "frontendTotal": 0,
+          "files": [
+            {
+              "path": "backend.Tests/PlatsMatchareTests.cs",
+              "className": "PlatsMatchareTests",
+              "project": "backend",
+              "count": 7,
+              "names": ["Matcha_KändaRiktigaPolisenVärden_GerRättTräff", "Matcha_SmhiFritext_ReturnerarNullAldrigKrasch"]
+            }
+          ]
+        }
+        """;
+
+    [Fact]
+    public async Task AddTestFile_KäntSökväg_LäggsTill()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var idea = new FeatureIdea { IdeaNumber = 1, Title = "Idé", CreatedByUserId = admin.Id };
+        db.FeatureIdeas.Add(idea);
+        await db.SaveChangesAsync();
+        var controller = NewControllerMedKatalog(db, admin.Id, ExempelKatalog);
+
+        var result = await controller.AddTestFile(idea.Id, new AddTestFileRequest("backend.Tests/PlatsMatchareTests.cs"));
+
+        Assert.IsType<OkResult>(result);
+        var rad = Assert.Single(db.FeatureIdeaTestFiles);
+        Assert.Equal("backend.Tests/PlatsMatchareTests.cs", rad.FilePath);
+    }
+
+    [Fact]
+    public async Task AddTestFile_OkändSökväg_ReturnerarBadRequest()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var idea = new FeatureIdea { IdeaNumber = 1, Title = "Idé", CreatedByUserId = admin.Id };
+        db.FeatureIdeas.Add(idea);
+        await db.SaveChangesAsync();
+        var controller = NewControllerMedKatalog(db, admin.Id, ExempelKatalog);
+
+        var result = await controller.AddTestFile(idea.Id, new AddTestFileRequest("backend.Tests/PåhittadFil.cs"));
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(db.FeatureIdeaTestFiles);
+    }
+
+    [Fact]
+    public async Task AddTestFile_RedanKopplad_ReturnerarConflict()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var idea = new FeatureIdea { IdeaNumber = 1, Title = "Idé", CreatedByUserId = admin.Id };
+        db.FeatureIdeas.Add(idea);
+        await db.SaveChangesAsync();
+        var controller = NewControllerMedKatalog(db, admin.Id, ExempelKatalog);
+        await controller.AddTestFile(idea.Id, new AddTestFileRequest("backend.Tests/PlatsMatchareTests.cs"));
+
+        var result = await controller.AddTestFile(idea.Id, new AddTestFileRequest("backend.Tests/PlatsMatchareTests.cs"));
+
+        Assert.IsType<ConflictObjectResult>(result);
+        Assert.Single(db.FeatureIdeaTestFiles);
+    }
+
+    [Fact]
+    public async Task RemoveTestFile_TarBortRad()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var idea = new FeatureIdea { IdeaNumber = 1, Title = "Idé", CreatedByUserId = admin.Id };
+        db.FeatureIdeas.Add(idea);
+        await db.SaveChangesAsync();
+        var controller = NewControllerMedKatalog(db, admin.Id, ExempelKatalog);
+        await controller.AddTestFile(idea.Id, new AddTestFileRequest("backend.Tests/PlatsMatchareTests.cs"));
+        var testFileId = db.FeatureIdeaTestFiles.Single().Id;
+
+        var result = await controller.RemoveTestFile(idea.Id, testFileId);
+
+        Assert.IsType<OkResult>(result);
+        Assert.Empty(db.FeatureIdeaTestFiles);
+    }
+
+    [Fact]
+    public async Task GetIdea_InnehållerTestFilerMedAntalFrånKatalogen()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var idea = new FeatureIdea { IdeaNumber = 1, Title = "Idé", CreatedByUserId = admin.Id };
+        db.FeatureIdeas.Add(idea);
+        await db.SaveChangesAsync();
+        var controller = NewControllerMedKatalog(db, admin.Id, ExempelKatalog);
+        await controller.AddTestFile(idea.Id, new AddTestFileRequest("backend.Tests/PlatsMatchareTests.cs"));
+
+        var result = Assert.IsType<OkObjectResult>(await controller.GetIdea(idea.Id));
+        var testFiles = (System.Collections.IEnumerable)result.Value!.GetType().GetProperty("TestFiles")!.GetValue(result.Value)!;
+        var rad = testFiles.Cast<object>().Single();
+        var antal = (int)rad.GetType().GetProperty("Count")!.GetValue(rad)!;
+
+        Assert.Equal(7, antal);
+    }
+
+    [Fact]
     public async Task ChecklistItem_Remove_DeletesItem()
     {
         using var db = NewDb();
@@ -300,7 +482,7 @@ public class AdminFeatureIdeaControllerTests
         db.FeatureIdeas.Add(idea);
         await db.SaveChangesAsync();
         var controller = NewController(db, admin.Id);
-        var addResult = Assert.IsType<OkObjectResult>(await controller.AddChecklistItem(idea.Id, new AddChecklistItemRequest("Eget item")));
+        var addResult = Assert.IsType<OkObjectResult>(await controller.AddChecklistItem(idea.Id, new AddChecklistItemRequest("Eget item", null)));
         var itemId = (Guid)addResult.Value!.GetType().GetProperty("Id")!.GetValue(addResult.Value)!;
 
         await controller.RemoveChecklistItem(idea.Id, itemId);

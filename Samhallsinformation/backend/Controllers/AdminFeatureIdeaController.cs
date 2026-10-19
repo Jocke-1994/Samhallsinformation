@@ -4,7 +4,9 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Hosting;
 using Samhallsinformation.Application.Auth;
+using Samhallsinformation.Application.Dev;
 using Samhallsinformation.Application.FeatureFlags;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -26,8 +28,13 @@ public class AdminFeatureIdeaController : ControllerBase
     ];
 
     private readonly AppDbContext _db;
+    private readonly IWebHostEnvironment _env;
 
-    public AdminFeatureIdeaController(AppDbContext db) => _db = db;
+    public AdminFeatureIdeaController(AppDbContext db, IWebHostEnvironment env)
+    {
+        _db = db;
+        _env = env;
+    }
 
     private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -143,6 +150,7 @@ public class AdminFeatureIdeaController : ControllerBase
             .Select(c => new
             {
                 c.Id,
+                c.Fas,
                 c.Label,
                 c.Done,
                 c.DoneAt,
@@ -150,7 +158,29 @@ public class AdminFeatureIdeaController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(new { Idea = idea, Testers = testers, Checklist = checklist });
+        // Testfilerna pekar bara på en sökväg — antal/testnamn slås upp mot
+        // katalogen vid varje hämtning (inte cachat på raden), så siffran
+        // alltid matchar senast genererade test-catalog.json.
+        var catalog = TestCatalog.Load(_env.ContentRootPath);
+        var testFiles = await _db.FeatureIdeaTestFiles
+            .Where(t => t.FeatureIdeaId == id)
+            .OrderBy(t => t.FilePath)
+            .ToListAsync();
+        var testFilesMedAntal = testFiles.Select(t =>
+        {
+            var post = TestCatalog.Find(catalog, t.FilePath);
+            return new
+            {
+                t.Id,
+                t.FilePath,
+                ClassName = post?.ClassName,
+                Count     = post?.Count ?? 0,
+                Names     = post?.Names ?? [],
+                Okänd     = post == null,
+            };
+        }).ToList();
+
+        return Ok(new { Idea = idea, Testers = testers, Checklist = checklist, TestFiles = testFilesMedAntal });
     }
 
     [HttpPut("{id}")]
@@ -190,7 +220,7 @@ public class AdminFeatureIdeaController : ControllerBase
             if (!harChecklista)
             {
                 foreach (var label in StandardChecklista)
-                    _db.FeatureIdeaChecklistItems.Add(new FeatureIdeaChecklistItem { FeatureIdeaId = id, Label = label });
+                    _db.FeatureIdeaChecklistItems.Add(new FeatureIdeaChecklistItem { FeatureIdeaId = id, Label = label, Fas = "lansering" });
             }
 
             // Markera den kopplade flaggan "redo att lanseras" automatiskt —
@@ -264,13 +294,48 @@ public class AdminFeatureIdeaController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(req.Label)) return BadRequest("Label krävs.");
 
+        var fas = req.Fas == "testning" ? "testning" : "lansering";
+
         var idea = await _db.FeatureIdeas.FindAsync(id);
         if (idea == null) return NotFound();
 
-        var item = new FeatureIdeaChecklistItem { FeatureIdeaId = id, Label = req.Label };
+        var item = new FeatureIdeaChecklistItem { FeatureIdeaId = id, Label = req.Label, Fas = fas };
         _db.FeatureIdeaChecklistItems.Add(item);
         await _db.SaveChangesAsync();
         return Ok(new { item.Id });
+    }
+
+    // Automatiska tester — admin kopplar en RIKTIG testfil (sökväg måste
+    // finnas i test-catalog.json) till idén, i stället för fri text.
+    [HttpPost("{id}/test-files")]
+    public async Task<IActionResult> AddTestFile(Guid id, [FromBody] AddTestFileRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.FilePath)) return BadRequest("FilePath krävs.");
+
+        var idea = await _db.FeatureIdeas.FindAsync(id);
+        if (idea == null) return NotFound();
+
+        var catalog = TestCatalog.Load(_env.ContentRootPath);
+        if (TestCatalog.Find(catalog, req.FilePath) == null)
+            return BadRequest("Okänd testfil — finns inte i test-catalog.json.");
+
+        var finnsRedan = await _db.FeatureIdeaTestFiles.AnyAsync(t => t.FeatureIdeaId == id && t.FilePath == req.FilePath);
+        if (finnsRedan) return Conflict("Testfilen är redan kopplad till den här idén.");
+
+        _db.FeatureIdeaTestFiles.Add(new FeatureIdeaTestFile { FeatureIdeaId = id, FilePath = req.FilePath });
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
+    [HttpDelete("{id}/test-files/{testFileId}")]
+    public async Task<IActionResult> RemoveTestFile(Guid id, Guid testFileId)
+    {
+        var rad = await _db.FeatureIdeaTestFiles.FirstOrDefaultAsync(t => t.Id == testFileId && t.FeatureIdeaId == id);
+        if (rad == null) return NotFound();
+
+        _db.FeatureIdeaTestFiles.Remove(rad);
+        await _db.SaveChangesAsync();
+        return Ok();
     }
 
     [HttpPut("{id}/checklist/{itemId}")]
@@ -315,5 +380,6 @@ public record UpdateFeatureIdeaRequest(string? Title, string? Description, strin
 public record SetStageRequest(string Stage);
 public record SetTriageRequest(bool? KanGoras, bool? BorGoras, string? Motivering);
 public record AddTesterRequest(string Email);
-public record AddChecklistItemRequest(string Label);
+public record AddChecklistItemRequest(string Label, string? Fas = null);
 public record ToggleChecklistItemRequest(bool Done);
+public record AddTestFileRequest(string FilePath);

@@ -20,6 +20,9 @@ vi.mock('../api/featureIdeas', () => ({
   addChecklistItem: vi.fn(),
   toggleChecklistItem: vi.fn(),
   removeChecklistItem: vi.fn(),
+  addTestFile: vi.fn(),
+  removeTestFile: vi.fn(),
+  fetchTestCatalog: vi.fn().mockResolvedValue({ files: [] }),
   deleteFeatureIdea: vi.fn(),
 }))
 
@@ -36,6 +39,7 @@ const detalj = (over: Partial<FeatureIdeaDetailDto['idea']> = {}): FeatureIdeaDe
   },
   testers: [],
   checklist: [],
+  testFiles: [],
 })
 
 function rendera() {

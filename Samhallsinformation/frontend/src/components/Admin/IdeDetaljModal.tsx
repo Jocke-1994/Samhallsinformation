@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   fetchFeatureIdea, updateFeatureIdea, setIdeaStage, setIdeaTriage,
   addIdeaTester, removeIdeaTester, addChecklistItem, toggleChecklistItem, removeChecklistItem,
-  deleteFeatureIdea, type IdeaStage,
+  addTestFile, removeTestFile, fetchTestCatalog,
+  deleteFeatureIdea, type IdeaStage, type ChecklistFas,
 } from '../../api/featureIdeas'
 import { STAGE_LABELS, STAGE_ORDER } from './FunktionsIdePipeline'
 import { FLAG_DEFINITIONER } from '../../lib/featureFlags'
@@ -41,9 +42,11 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
   const triageMutation   = useMutation({ mutationFn: (p: { kanGoras: boolean | null; borGoras: boolean | null; motivering: string | null }) => setIdeaTriage(ideaId, p.kanGoras, p.borGoras, p.motivering), onSuccess: invalidateAll })
   const addTesterMutation = useMutation({ mutationFn: (email: string) => addIdeaTester(ideaId, email), onSuccess: invalidateAll })
   const removeTesterMutation = useMutation({ mutationFn: (userId: string) => removeIdeaTester(ideaId, userId), onSuccess: invalidateAll })
-  const addChecklistMutation = useMutation({ mutationFn: (label: string) => addChecklistItem(ideaId, label), onSuccess: invalidateAll })
+  const addChecklistMutation = useMutation({ mutationFn: (p: { label: string; fas: ChecklistFas }) => addChecklistItem(ideaId, p.label, p.fas), onSuccess: invalidateAll })
   const toggleChecklistMutation = useMutation({ mutationFn: (p: { itemId: string; done: boolean }) => toggleChecklistItem(ideaId, p.itemId, p.done), onSuccess: invalidateAll })
   const removeChecklistMutation = useMutation({ mutationFn: (itemId: string) => removeChecklistItem(ideaId, itemId), onSuccess: invalidateAll })
+  const addTestFileMutation = useMutation({ mutationFn: (filePath: string) => addTestFile(ideaId, filePath), onSuccess: invalidateAll })
+  const removeTestFileMutation = useMutation({ mutationFn: (testFileId: string) => removeTestFile(ideaId, testFileId), onSuccess: invalidateAll })
   const deleteMutation   = useMutation({ mutationFn: () => deleteFeatureIdea(ideaId), onSuccess: () => { invalidateAll(); onClose() } })
 
   const [redigerar, setRedigerar]     = useState(false)
@@ -61,6 +64,14 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
   const [testerFel, setTesterFel]     = useState<string | null>(null)
   const [visaChecklistForm, setVisaChecklistForm] = useState(false)
   const [nyttChecklistItem, setNyttChecklistItem] = useState('')
+  const [visaManuelltForm, setVisaManuelltForm] = useState(false)
+  const [nyttManuelltItem, setNyttManuelltItem] = useState('')
+  const [testSök, setTestSök] = useState('')
+  const testKatalogFråga = useQuery({
+    queryKey: ['test-catalog', testSök],
+    queryFn: () => fetchTestCatalog(testSök),
+    enabled: testSök.trim().length >= 2,
+  })
 
   // Ett klick på en idé ska aldrig ge "ingenting": vid laddning/fel visas en modal med besked.
   if (!data) {
@@ -91,7 +102,12 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
       document.body
     )
   }
-  const { idea, testers, checklist } = data
+  const { idea, testers, checklist, testFiles } = data
+  const lanseringsChecklist = checklist.filter(c => c.fas !== 'testning')
+  const manuellaTester      = checklist.filter(c => c.fas === 'testning')
+  // Testchecklistan (automatiska + manuella tester) är bara relevant från och
+  // med att idén faktiskt verifieras — döljs i Brainstorm/Triage/Bygger.
+  const visaTestchecklista = ['testas', 'lanseringsklar', 'lanserad'].includes(idea.stage)
 
   const länkadFlagg = idea.flagKey ? FLAG_DEFINITIONER.find(f => f.key === idea.flagKey) : undefined
   const flaggDagar   = länkadFlagg?.roadmapSedan ? dagarSedan(länkadFlagg.roadmapSedan) : null
@@ -134,6 +150,7 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
   // Fel från övriga åtgärder (stadie, triage, ta bort testare, checklista, radera).
   const åtgärdsFel = stageMutation.error ?? triageMutation.error ?? removeTesterMutation.error
     ?? toggleChecklistMutation.error ?? removeChecklistMutation.error ?? deleteMutation.error
+    ?? addTestFileMutation.error ?? removeTestFileMutation.error
   const nyttItemLås = addChecklistMutation.isPending
 
   return createPortal(
@@ -265,6 +282,109 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
             )}
           </div>
 
+          {/* Testchecklista — automatiska tester (riktiga filer ur
+              test-catalog.json) + manuella tester (vanlig checklista,
+              fas="testning"). Syns först från stadiet Testar, admin fyller
+              på manuellt (ingen auto-seedning, ingen AI-knapp i appen —
+              se feedback 2026-10-19 om varför). */}
+          {visaTestchecklista && (
+            <div className="border-2 border-violet-200 rounded-xl bg-violet-50/60 p-4 flex flex-col gap-5">
+
+              <div>
+                <p className="text-xs font-semibold text-violet-900 mb-0.5">Automatiska tester</p>
+                <p className="text-[11px] text-violet-400 mb-2 leading-snug">Riktiga testfiler ur kodbasen — sök och koppla, ingen fri text.</p>
+                <div className="flex flex-col gap-1.5">
+                  {testFiles.map(t => (
+                    <div key={t.id} className="flex items-center justify-between gap-2 bg-white rounded-lg px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-sm text-slate-700 truncate">{t.okänd ? t.filePath : `${t.className} — ${t.count} ${t.count === 1 ? 'test' : 'tester'}`}</p>
+                        <p className="text-[11px] font-mono text-slate-400 truncate">{t.filePath}{t.okänd ? ' (saknas i katalogen just nu)' : ''}</p>
+                      </div>
+                      <button onClick={() => removeTestFileMutation.mutate(t.id)} className="text-xs text-slate-300 hover:text-red-500 shrink-0">✕</button>
+                    </div>
+                  ))}
+                  {testFiles.length === 0 && <p className="text-xs text-violet-400">Inga testfiler kopplade än.</p>}
+                </div>
+
+                <div className="relative mt-2">
+                  <input
+                    value={testSök} onChange={e => setTestSök(e.target.value)}
+                    placeholder="Sök testfil (t.ex. &quot;SMHI&quot;, &quot;kommun&quot;)..."
+                    className="w-full text-xs border border-violet-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-violet-400"
+                  />
+                  {testSök.trim().length >= 2 && (
+                    <div className="mt-1 bg-white border border-violet-200 rounded-lg shadow-sm max-h-48 overflow-y-auto">
+                      {testKatalogFråga.isLoading && <p className="text-xs text-slate-400 px-3 py-2">Söker...</p>}
+                      {testKatalogFråga.data?.files.length === 0 && <p className="text-xs text-slate-400 px-3 py-2">Inga träffar.</p>}
+                      {testKatalogFråga.data?.files.map(f => {
+                        const redanTillagd = testFiles.some(t => t.filePath === f.path)
+                        return (
+                          <button
+                            key={f.path}
+                            disabled={redanTillagd || addTestFileMutation.isPending}
+                            onClick={() => { addTestFileMutation.mutate(f.path); setTestSök('') }}
+                            className="w-full text-left px-3 py-2 text-xs hover:bg-violet-50 disabled:opacity-40 disabled:hover:bg-white border-b border-slate-50 last:border-0"
+                          >
+                            <span className="text-slate-700 font-medium">{f.className}</span>
+                            <span className="text-slate-400"> — {f.count} {f.count === 1 ? 'test' : 'tester'} ({f.project})</span>
+                            {redanTillagd && <span className="text-violet-400"> · redan tillagd</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-violet-900">Manuella tester</p>
+                  <button onClick={() => setVisaManuelltForm(v => !v)} className="text-xs text-violet-600 hover:text-violet-500 font-medium">+ Eget item</button>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {manuellaTester.map(c => (
+                    <div key={c.id} className="flex items-center justify-between gap-2">
+                      <label className="flex items-center gap-2 text-sm text-slate-700 flex-1 min-w-0">
+                        <input
+                          type="checkbox" checked={c.done}
+                          onChange={e => toggleChecklistMutation.mutate({ itemId: c.id, done: e.target.checked })}
+                          className="rounded border-slate-300 text-violet-600 shrink-0"
+                        />
+                        <span className={c.done ? 'line-through text-slate-400' : ''}>{c.label}</span>
+                      </label>
+                      <button onClick={() => removeChecklistMutation.mutate(c.id)} className="text-xs text-slate-300 hover:text-red-500 shrink-0">✕</button>
+                    </div>
+                  ))}
+                  {manuellaTester.length === 0 && <p className="text-xs text-violet-400">Inga manuella testpunkter än.</p>}
+                </div>
+                {visaManuelltForm && (
+                  <div className="flex flex-col gap-2 mt-2">
+                    <div className="flex gap-2">
+                      <input
+                        value={nyttManuelltItem} onChange={e => setNyttManuelltItem(e.target.value)}
+                        placeholder="Ny manuell testpunkt"
+                        className="flex-1 text-sm border border-violet-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-violet-400"
+                      />
+                      <button
+                        onClick={() => {
+                          if (addChecklistMutation.isPending) return
+                          addChecklistMutation.mutate({ label: nyttManuelltItem.trim(), fas: 'testning' }, {
+                            onSuccess: () => { setNyttManuelltItem(''); setVisaManuelltForm(false) },
+                          })
+                        }}
+                        disabled={!nyttManuelltItem.trim() || nyttItemLås}
+                        className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium rounded-lg transition-colors"
+                      >
+                        {nyttItemLås ? 'Lägger till...' : 'Lägg till'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+
           {/* Triage */}
           <div>
             <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide mb-2">Triage</p>
@@ -329,7 +449,7 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
               <button onClick={() => setVisaChecklistForm(v => !v)} className="text-xs text-violet-600 hover:text-violet-500 font-medium">+ Eget item</button>
             </div>
             <div className="flex flex-col gap-1.5">
-              {checklist.map(c => (
+              {lanseringsChecklist.map(c => (
                 <div key={c.id} className="flex items-center justify-between gap-2">
                   <label className="flex items-center gap-2 text-sm text-slate-700 flex-1 min-w-0">
                     <input
@@ -342,7 +462,7 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
                   <button onClick={() => removeChecklistMutation.mutate(c.id)} className="text-xs text-slate-300 hover:text-red-500 shrink-0">✕</button>
                 </div>
               ))}
-              {checklist.length === 0 && <p className="text-xs text-slate-400">Ingen checklista än — läggs till automatiskt när stadiet sätts till Lanseringsklar.</p>}
+              {lanseringsChecklist.length === 0 && <p className="text-xs text-slate-400">Ingen checklista än — läggs till automatiskt när stadiet sätts till Lanseringsklar.</p>}
             </div>
             {visaChecklistForm && (
               <div className="flex flex-col gap-2 mt-2">
@@ -356,7 +476,7 @@ export default function IdeDetaljModal({ ideaId, onClose, onÖppnaÄrende }: Pro
                     onClick={() => {
                       if (addChecklistMutation.isPending) return
                       // Fältet töms och formuläret stängs först när servern bekräftat.
-                      addChecklistMutation.mutate(nyttChecklistItem.trim(), {
+                      addChecklistMutation.mutate({ label: nyttChecklistItem.trim(), fas: 'lansering' }, {
                         onSuccess: () => { setNyttChecklistItem(''); setVisaChecklistForm(false) },
                       })
                     }}

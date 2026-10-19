@@ -1103,6 +1103,28 @@ public static class DatabaseBootstrapper
                         ON CONFLICT DO NOTHING;
                     ");
                 }
+
+                if (pendingMigrations.Contains("20261019063657_AddFeatureIdeaTestChecklista"))
+                {
+                    await db.Database.ExecuteSqlRawAsync(@"
+                        ALTER TABLE ""FeatureIdeaChecklistItems"" ADD COLUMN IF NOT EXISTS ""Fas"" text NOT NULL DEFAULT 'lansering';
+
+                        CREATE TABLE IF NOT EXISTS ""FeatureIdeaTestFiles"" (
+                            ""Id""            uuid NOT NULL,
+                            ""FeatureIdeaId"" uuid NOT NULL,
+                            ""FilePath""      text NOT NULL,
+                            ""AddedAt""       timestamptz NOT NULL,
+                            CONSTRAINT ""PK_FeatureIdeaTestFiles"" PRIMARY KEY (""Id""),
+                            CONSTRAINT ""FK_FeatureIdeaTestFiles_FeatureIdeas_FeatureIdeaId""
+                                FOREIGN KEY (""FeatureIdeaId"") REFERENCES ""FeatureIdeas"" (""Id"") ON DELETE CASCADE
+                        );
+                        CREATE INDEX IF NOT EXISTS ""IX_FeatureIdeaTestFiles_FeatureIdeaId"" ON ""FeatureIdeaTestFiles"" (""FeatureIdeaId"");
+
+                        INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                        VALUES ('20261019063657_AddFeatureIdeaTestChecklista', '10.0.12')
+                        ON CONFLICT DO NOTHING;
+                    ");
+                }
             }
 
             // Rensa dubbletter av (SourceId, ExternalId) i Events INNAN det unika indexet skapas (V3-2). Gäller både
