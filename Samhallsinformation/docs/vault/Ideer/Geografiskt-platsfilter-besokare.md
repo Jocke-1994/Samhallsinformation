@@ -4,7 +4,7 @@ status: i-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline |
 uiGodkand: ja
 beroenden: ""
 prioritet: ej-bedomd
-pipelineNr: "1"  # Funktionsidé #1 i adminpanelens pipeline (lokal, 2026-10-04), stadie: Triage
+pipelineNr: "1"  # Funktionsidé #1 i adminpanelens pipeline (lokal, 2026-10-04), stadie: Testar
 kalla: "session 2026-10-04, användarens önskemål om att kunna filtrera redan som besökare"
 ---
 
@@ -174,8 +174,10 @@ byggdes: `backend/Application/Geografi/PlatsMatchare.cs`, enkel exakt
 18 egna tester, inkl. verifiering mot riktiga SMHI/Trafikverket-strängar
 hittade i den lokala databasen. Byggt och mergat i tre PR:ar: #675
 (kommun→län-referenstabell), #676 (sektionerad resultatvy/plupp-
-matchning), #677 (frontend-UI, Variant E) — väntar på granskning
-2026-10-10, bakom flaggan `flode_platsfilter` (av som standard).
+matchning), #677 (frontend-UI, Variant E), bakom flaggan
+`flode_platsfilter` (av som standard). Pipeline flyttad till **Testar**
+2026-10-19 — manuell/automatiserad verifiering (Checklista innan
+lansering) kvar innan Lanseringsklar.
 
 ## UI-skiss
 

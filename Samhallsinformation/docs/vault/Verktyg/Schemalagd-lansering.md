@@ -2,7 +2,7 @@
 typ: verktyg
 status: klart  # giltiga värden: att-gora | pagaende | klart
 uiGodkand: ja  # gäller "Ny version"-tillägget, godkänt 2026-10-08 (se Beslut 2026-10-08)
-pipelineNr: "2"  # Funktionsidé #2 i adminpanelens pipeline, stadie: Triage
+pipelineNr: "2"  # Funktionsidé #2 i adminpanelens pipeline, stadie: Testar
 ---
 
 # Schemalagd lansering — så fungerar det
@@ -171,8 +171,8 @@ saknades i backendens `FeatureFlagDefaults.cs`, lämnad av PR #677) och
 fixades separat som PR #681, inte buntad in här.
 
 Pipeline: flyttad från Triage till **Bygger** av användaren 2026-10-09
-(Funktionsidé id 8), redo att flyttas vidare till **Testar/Lanseringsklar**
-nu att koden är mergad.
+(Funktionsidé id 8), sedan till **Testar** 2026-10-19 (koden mergad,
+manuell/automatiserad verifiering kvar innan Lanseringsklar).
 
 ## Kopplat
 - [[../Ideer/Uppdateringar-schemalagd-publicering|Uppdateringar
