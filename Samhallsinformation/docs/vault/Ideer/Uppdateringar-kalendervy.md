@@ -1,6 +1,6 @@
 ---
 typ: ide
-status: ide  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
+status: lanserad  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ej-bedomd  # giltiga värden: ja | nej | ej-bedomd
 beroenden: ""
 prioritet: ej-bedomd
@@ -47,6 +47,16 @@ Vad måste vara svarat innan detta kan gå vidare till pipelinen?
 - UI inte skissad än — värt en Artifact-skiss innan kodning, samma
   mönster som Platsfiltret/Schemalagd lansering använde.
 -UI är skissad, använd det vi kom fram till där
+
+## Byggstatus
+Byggd och mergad 2026-10-19 (PR #692): `UppdateringarKalender.tsx` +
+`lib/uppdateringKalender.ts`. Alla fyra öppna frågor besvarade och
+implementerade som beslutat (Månadsvy+Agenda-växling, flikar i
+`AdminUppdateringar.tsx`, 2 kalenderposter för en post med två datum).
+En avvikelse från skissen: dess tredje "Historik"-flik (en hel
+Brainstorm/Triage/Bygger/Testar-pipeline) byggdes INTE — den datan
+finns inte lagrad på `Uppdatering`-posten. Historik-fliken visar istället
+bara riktiga, sparade tidpunkter (Skapad/Annonsering/Lansering/Publicerad).
 
 ## Kopplat
 - [[../Verktyg/Schemalagd-lansering|Schemalagd lansering]] — datakällan
