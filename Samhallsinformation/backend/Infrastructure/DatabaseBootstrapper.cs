@@ -1125,6 +1125,17 @@ public static class DatabaseBootstrapper
                         ON CONFLICT DO NOTHING;
                     ");
                 }
+
+                if (pendingMigrations.Contains("20261019112838_AddFeatureFlagOverrideEndastAdmin"))
+                {
+                    await db.Database.ExecuteSqlRawAsync(@"
+                        ALTER TABLE ""FeatureFlagOverrides"" ADD COLUMN IF NOT EXISTS ""EndastAdmin"" boolean NOT NULL DEFAULT false;
+
+                        INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                        VALUES ('20261019112838_AddFeatureFlagOverrideEndastAdmin', '10.0.13')
+                        ON CONFLICT DO NOTHING;
+                    ");
+                }
             }
 
             // Rensa dubbletter av (SourceId, ExternalId) i Events INNAN det unika indexet skapas (V3-2). Gäller både

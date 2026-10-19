@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FLAG_GRUPPER, FLAG_DEFINITIONER, type FlagKey, type FlagState } from '../../lib/featureFlags'
 import ConfirmDialog from '../common/ConfirmDialog'
 import { MockBadge } from '../common/MockBadge'
-import { fetchAdminFeatureFlags, setFeatureFlagRedo } from '../../api/featureFlags'
+import { fetchAdminFeatureFlags, setFeatureFlagRedo, setFeatureFlagEndastAdmin } from '../../api/featureFlags'
 import { ADMIN_FLAGG_QUERY_KEY, invalideraFlaggor } from '../../lib/flaggCache'
 import type { FlaggLäge } from '../../hooks/useFeatureFlags'
 import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
@@ -36,12 +36,23 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
   const redoMap: Record<string, boolean> = Object.fromEntries(
     adminFlaggor.map(f => [f.key, f.redoAttLanseras])
   )
+  const endastAdminMap: Record<string, boolean> = Object.fromEntries(
+    adminFlaggor.map(f => [f.key, f.endastAdmin])
+  )
 
   const redoMutation = useMutation({
     mutationFn: ({ key, redo }: { key: string; redo: boolean }) => setFeatureFlagRedo(key, redo),
     onSuccess: () => invalideraFlaggor(queryClient),
   })
   const växlaRedo = redoMutation.mutate
+
+  // Testmiljö-läget (Beslut 2026-10-19) — begränsar en redan aktiv flagga
+  // till bara inloggade Admin, utan att röra på/av-läget (onVäxla).
+  const synlighetMutation = useMutation({
+    mutationFn: ({ key, endastAdmin }: { key: string; endastAdmin: boolean }) => setFeatureFlagEndastAdmin(key, endastAdmin),
+    onSuccess: () => invalideraFlaggor(queryClient),
+  })
+  const växlaSynlighet = synlighetMutation.mutate
 
   function växlaGrupp(key: string) {
     setÖppna(prev => {
@@ -92,6 +103,7 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
       )}
       <MutationFel fel={ändringsFel} reserv="Ändringen kunde inte sparas. Flaggan är oförändrad — försök igen." className="bg-red-50 border border-red-200 rounded-xl px-5 py-3" />
       <MutationFel fel={redoMutation.error} reserv={'"Redo att lanseras"-markeringen kunde inte sparas. Försök igen.'} className="bg-red-50 border border-red-200 rounded-xl px-5 py-3" />
+      <MutationFel fel={synlighetMutation.error} reserv="Synligheten kunde inte sparas. Flaggan är oförändrad — försök igen." className="bg-red-50 border border-red-200 rounded-xl px-5 py-3" />
 
       {bekräftaÅterställ && (
         <ConfirmDialog
@@ -165,6 +177,11 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
                           <span className="text-sm font-medium text-slate-700 flex items-center gap-2">
                             {flagga.label}
                             {flagga.mock && <MockBadge />}
+                            {aktiv && endastAdminMap[flagga.key] && (
+                              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">
+                                🔒 Endast Admin
+                              </span>
+                            )}
                           </span>
                           <span className="text-xs text-slate-400">{flagga.beskrivning}</span>
                           {flagga.mock && (
@@ -186,6 +203,20 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
                               title="Styr om flaggan dyker upp i Uppdateringars schemaläggningslista"
                             >
                               {redoMap[flagga.key] ? '✓ Redo att lanseras' : 'Redo att lanseras?'}
+                            </button>
+                          )}
+                          {aktiv && !flagga.mock && (
+                            <button
+                              onClick={() => växlaSynlighet({ key: flagga.key, endastAdmin: !endastAdminMap[flagga.key] })}
+                              disabled={redoOkänt || synlighetMutation.isPending}
+                              className={`text-[11px] font-medium px-2 py-1 rounded-full border transition-colors ${
+                                endastAdminMap[flagga.key]
+                                  ? 'bg-violet-100 text-violet-700 border-violet-200'
+                                  : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-slate-300'
+                              }`}
+                              title="Testa skarpt mot produktionsdata utan att visa funktionen för besökare (Testmiljö-läge)"
+                            >
+                              {endastAdminMap[flagga.key] ? '🔒 Endast Admin' : 'Begränsa till Admin?'}
                             </button>
                           )}
                           <button

@@ -360,6 +360,9 @@ namespace Samhallsinformation.Migrations
                     b.Property<string>("Key")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("EndastAdmin")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("RedoAttLanseras")
                         .HasColumnType("INTEGER");
 

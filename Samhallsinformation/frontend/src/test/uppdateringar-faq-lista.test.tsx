@@ -10,7 +10,7 @@ import type { AdminFeatureFlagOverride } from '../api/featureFlags'
 // inte bara ett antal. Inget nytt beteende — FaqItem.FlagKey styr redan
 // visningen (session 42), det här bara synliggör den.
 
-const FLAGGA: AdminFeatureFlagOverride = { key: 'kallor_lan_filter', value: false, redoAttLanseras: true }
+const FLAGGA: AdminFeatureFlagOverride = { key: 'kallor_lan_filter', value: false, redoAttLanseras: true, endastAdmin: false }
 const FAQ_PUBLICERAD: FaqItem = { id: 'f1', kategori: 'Mina källor', publicerad: true, fraga: 'Hur filtrerar jag på län?', svar: '...', flagKey: 'kallor_lan_filter' }
 const FAQ_UTKAST: FaqItem = { id: 'f2', kategori: 'Mina källor', publicerad: false, fraga: 'Vad är ett länsfilter?', svar: '...', flagKey: 'kallor_lan_filter' }
 

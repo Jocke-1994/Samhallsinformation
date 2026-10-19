@@ -22,12 +22,20 @@ public class FeatureFlagsController : ControllerBase
     }
 
     // Publikt — alla besökare (inloggade eller inte) behöver samma globala
-    // flaggtillstånd. Returnerar bara flaggor som avviker från kodens eget
-    // default; frontend slår ihop med FLAG_DEFINITIONER precis som tidigare.
+    // flaggtillstånd, MED ETT UNDANTAG: en flagga markerad EndastAdmin visar
+    // sig som av (false) för alla utom en inloggad Admin (Testmiljö-läget,
+    // Beslut 2026-10-19) — effektiv per anropare, inte en global sanning.
+    // Ingen [Authorize] här (måste vara nåbar utan inloggning), men
+    // UseAuthentication körs globalt så User är ifylld när ett giltigt
+    // Bearer-token skickas med (samma mönster som fetchUppdateringar).
     [HttpGet]
     public async Task<IActionResult> GetOverrides()
     {
-        var overrides = await _db.FeatureFlagOverrides.ToDictionaryAsync(f => f.Key, f => f.Value);
+        var rader   = await _db.FeatureFlagOverrides.ToListAsync();
+        var ärAdmin = User.IsInRole("Admin");
+        var overrides = rader.ToDictionary(
+            f => f.Key,
+            f => f.EndastAdmin && f.Value && !ärAdmin ? false : f.Value);
         return Ok(overrides);
     }
 
@@ -45,6 +53,10 @@ public class FeatureFlagsController : ControllerBase
         // ✓-badgen ospärrat om flaggan senare stängs av igen (code
         // review-fynd, PR #590).
         if (req.Value) existing.RedoAttLanseras = false;
+        // EndastAdmin är bara meningsfull medan flaggan är på — en avstängd
+        // flagga ska inte tyst stå kvar admin-begränsad nästa gång den slås
+        // på igen via den här vanliga brytaren.
+        if (!req.Value) existing.EndastAdmin = false;
 
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
@@ -64,9 +76,28 @@ public class FeatureFlagsController : ControllerBase
     public async Task<IActionResult> GetAdminOverrides()
     {
         var overrides = await _db.FeatureFlagOverrides
-            .Select(f => new { f.Key, f.Value, f.RedoAttLanseras })
+            .Select(f => new { f.Key, f.Value, f.RedoAttLanseras, f.EndastAdmin })
             .ToListAsync();
         return Ok(overrides);
+    }
+
+    // Testmiljö-läget (Beslut 2026-10-19) — skiljs medvetet från SetOverride
+    // precis som /redo ovan, samma upsert-mönster, rör aldrig Value. En admin
+    // kan alltså begränsa en redan påslagen flagga till sig själv, eller
+    // öppna den för alla, utan att råka slå av/på själva flaggan.
+    [HttpPut("/api/admin/feature-flags/{key}/synlighet")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> SetEndastAdmin(string key, [FromBody] SetSynlighetRequest req)
+    {
+        var existing = await FeatureFlagActivation.GetOrCreateOverrideAsync(_db, key);
+        existing.EndastAdmin = req.EndastAdmin;
+
+        await _db.SaveChangesAsync();
+        await _aktivitetslogg.LogAsync(
+            AktörTyper.Admin, LoggTyper.Konfiguration,
+            $"Flaggans synlighet ändrad — {key}",
+            req.EndastAdmin ? "Begränsad till Admin (Testmiljö)" : "Öppnad för alla");
+        return Ok();
     }
 
     // Skiljs medvetet från SetOverride (Value) — en admin ska kunna
@@ -104,3 +135,4 @@ public class FeatureFlagsController : ControllerBase
 
 public record SetFlagRequest(bool Value);
 public record SetRedoRequest(bool RedoAttLanseras);
+public record SetSynlighetRequest(bool EndastAdmin);

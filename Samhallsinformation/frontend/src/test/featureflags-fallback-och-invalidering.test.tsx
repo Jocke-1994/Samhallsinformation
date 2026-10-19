@@ -16,6 +16,7 @@ vi.mock('../api/featureFlags', () => ({
   resetFeatureFlagOverrides: vi.fn(),
   fetchAdminFeatureFlags: vi.fn(),
   setFeatureFlagRedo: vi.fn(),
+  setFeatureFlagEndastAdmin: vi.fn(),
 }))
 vi.mock('../api/push', () => ({ sendNewVersionNotice: vi.fn() }))
 vi.mock('../api/uppdateringar', () => ({
@@ -57,6 +58,7 @@ beforeEach(() => {
   vi.mocked(api.resetFeatureFlagOverrides).mockReset().mockResolvedValue(undefined)
   vi.mocked(api.fetchAdminFeatureFlags).mockReset().mockResolvedValue([])
   vi.mocked(api.setFeatureFlagRedo).mockReset().mockResolvedValue(undefined)
+  vi.mocked(api.setFeatureFlagEndastAdmin).mockReset().mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -244,6 +246,33 @@ describe('Feature flags: mutationsvägarna invaliderar flagg-queryn', () => {
     await userEvent.click((await screen.findAllByRole('button', { name: 'Redo att lanseras?' }))[0])
 
     await vi.waitFor(() => expect(api.setFeatureFlagRedo).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(api.fetchAdminFeatureFlags).toHaveBeenCalledTimes(2))
+  })
+
+  // Testmiljö-läget (Beslut 2026-10-19) — en admin kan begränsa en REDAN
+  // aktiv flagga till bara sig själv, utan att röra på/av-brytaren.
+  it('"Begränsa till Admin?" i FeatureFlagsAdmin uppdaterar både admin- och publika flagg-queryn', async () => {
+    vi.mocked(api.fetchFeatureFlagOverrides).mockResolvedValue({})
+    const förstaFlagga = FLAG_GRUPPER[0].flaggor[0].key
+    const flaggor = Object.fromEntries(
+      FLAG_DEFINITIONER.map(f => [f.key, f.key === förstaFlagga])
+    ) as FlagState
+    vi.mocked(api.fetchAdminFeatureFlags).mockResolvedValue([
+      { key: förstaFlagga, value: true, redoAttLanseras: false, endastAdmin: false },
+    ])
+    render(
+      <QueryClientProvider client={nyKlient()}>
+        <FlaggProbe />
+        <FeatureFlagsAdmin flaggor={flaggor} onVäxla={vi.fn()} onÅterställ={vi.fn()} />
+      </QueryClientProvider>
+    )
+    await vi.waitFor(() => expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(1))
+
+    await userEvent.click(screen.getByText(FLAG_GRUPPER[0].label))
+    await userEvent.click(await screen.findByRole('button', { name: 'Begränsa till Admin?' }))
+
+    await vi.waitFor(() => expect(api.setFeatureFlagEndastAdmin).toHaveBeenCalledWith(förstaFlagga, true))
     await vi.waitFor(() => expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(2))
     await vi.waitFor(() => expect(api.fetchAdminFeatureFlags).toHaveBeenCalledTimes(2))
   })
