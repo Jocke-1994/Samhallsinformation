@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useAuth } from '../context/AuthContext'
 import GoogleSignInButton from '../components/Auth/GoogleSignInButton'
-import BetaBadge from '../components/common/BetaBadge'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -35,10 +34,7 @@ export default function LoginPage() {
 
         <div className="text-center mb-8">
           <span className="text-2xl font-bold text-violet-600">Samhällsinfo</span>
-          <div className="flex items-center justify-center gap-2 mt-1">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Logga in på ditt konto</p>
-            <BetaBadge />
-          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Logga in på ditt konto</p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8">
