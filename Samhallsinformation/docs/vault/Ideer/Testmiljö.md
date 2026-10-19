@@ -51,24 +51,31 @@ annan än dig.
   Vercel preview-deploy pekad mot samma/en annan backend), eller en vy
   INUTI den befintliga sajten som bara syns för dig (roll-styrd, ingen
   separat installation)? Olika kostnad, olika grad av isolering.
+
+-min tanke är att man ska kunna testa funktioner och annat så skarpt det bara går, utan att användare/besökare kan se det. Hur det blir bäst är jag inte säker på.
+
 - **Samma databas som produktion, eller en separat?** Skarp data direkt
   är enklast att bygga men innebär att en bugg i testkod kan röra riktiga
   rader. En separat/synkad databas är säkrare men är i sig ett eget
   byggprojekt (klon/synk-mekanism) och data blir inte lika "levande".
+-helst skarp MEN då måste vi komma ihåg att hålla det uppdaterat, om vi inte bara gör så att vi applicerar den senaste uppdateringen mot testmiljön när vi behöver använda miljön.
 - **Vad är en "vy" rent konkret?** Byter den bara vilken ROLL UI:t
   RENDERAR som (en admin-only växlare ovanpå din riktiga inloggning —
   tekniskt releaterat till Impersonation, fast tvärtom: du spelar en roll
   nedåt, inte in i ett specifikt konto), eller en riktig separat
   inloggning/session per vy?
+-förklara hur du menar. jag tänker att det blir som en riktig inloggningssession. för mig går jag bara in i miljön men för en betatestare så är tanken att de får ett mail med inloggningsuppgifter.
 - **Hur hålls den i synk med "senaste versionen"?** Automatiskt vid
   varje deploy (kräver en pipeline-koppling), eller en manuell
   uppdatering?
+-eventuellt blir det nog lättare med en manuell uppdatering.
 - **Hur skiljer det sig från att bara bygga en synlighetsnivå i det
   befintliga flagg-systemet** (`FeatureFlagOverrides` får t.ex. "endast
   Admin"/"endast Beta"/"alla" istället för bara på/av), helt utan någon
   separat miljö? Kan vara hela svaret — eller otillräckligt om poängen
   är att se sajten som en riktig utloggad besökare ser den, vilket en
   inloggad admin-session inte kan simulera rakt av.
+-jag hänger inte med alls vad du menar just nu.
 
 ## Kopplat
 - [[Geografiskt-platsfilter-besokare]] — den konkreta anledningen till
