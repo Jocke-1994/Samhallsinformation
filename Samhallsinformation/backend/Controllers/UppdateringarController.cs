@@ -278,7 +278,7 @@ public class UppdateringarController : ControllerBase
             u.SchemalagdPubliceringUtc,
             FeatureFlagActivation.DeserialiseraFlaggor(u.SchemalagdaFlaggorJson),
             u.SkickaPush, u.PushVersion, u.PushMeddelande, u.VisaBanderoll,
-            u.AnnonseringUtc, u.AnnonseradUtc, u.PushSkickaVid
+            u.AnnonseringUtc, u.AnnonseradUtc, u.PushSkickaVid, u.CreatedAt
         )).ToList();
     }
 
@@ -301,7 +301,7 @@ public record UppdateringDto(
     Guid Id, string Titel, DateTime Datum, bool Publicerad, List<PunktDto> Punkter,
     DateTime? SchemalagdPubliceringUtc, List<string> SchemalagdaFlaggor,
     bool SkickaPush, string? PushVersion, string? PushMeddelande, bool VisaBanderoll,
-    DateTime? AnnonseringUtc, DateTime? AnnonseradUtc, string PushSkickaVid);
+    DateTime? AnnonseringUtc, DateTime? AnnonseradUtc, string PushSkickaVid, DateTime CreatedAt);
 
 public record PunktRequest(string Typ, string Plats, string Text, string Synlighet);
 public record UppdateringRequest(

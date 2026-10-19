@@ -14,6 +14,7 @@ import ConfirmDialog from '../common/ConfirmDialog'
 import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
 import { visaFel } from '../../lib/felmeddelande'
 import { getTypConfig, PUNKT_TYPER } from '../../lib/uppdateringTyp'
+import UppdateringarKalender from './UppdateringarKalender'
 
 // ---------------------------------------------------------------------------
 // Konfiguration
@@ -673,7 +674,9 @@ export default function AdminUppdateringar() {
   })
   const uppdateringar = uppdFråga.data ?? []
   const uppdOkända = uppdFråga.data === undefined
+  const { data: faqItems = [] } = useQuery({ queryKey: ['admin-faq'], queryFn: fetchAdminFaq })
 
+  const [vy,            setVy]            = useState<'lista' | 'kalender'>('lista')
   const [typFilter,     setTypFilter]     = useState<PunktTyp | 'Alla'>('Alla')
   const [statusFilter,  setStatusFilter]  = useState<'publicerad' | 'utkast' | 'Alla'>('Alla')
   const [panelÖppen,    setPanelÖppen]    = useState(false)
@@ -785,7 +788,27 @@ export default function AdminUppdateringar() {
         ))}
       </div>
 
+      {/* Lista/Kalender-växling */}
+      <div className="inline-flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
+        {([['lista', '📋 Lista'], ['kalender', '📅 Kalender']] as const).map(([v, label]) => (
+          <button
+            key={v}
+            onClick={() => setVy(v)}
+            className={`text-xs font-bold px-4 py-2 rounded-lg transition-colors ${
+              vy === v ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {vy === 'kalender' && (
+        <UppdateringarKalender uppdateringar={uppdateringar} faqItems={faqItems} onRedigera={öppnaRedigera} />
+      )}
+
       {/* Lista */}
+      {vy === 'lista' && (
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
         {/* Verktygsfält */}
@@ -914,6 +937,7 @@ export default function AdminUppdateringar() {
           </tbody>
         </table>
       </div>
+      )}
 
     </div>
   )

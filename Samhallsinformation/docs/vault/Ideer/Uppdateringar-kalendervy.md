@@ -36,13 +36,17 @@ Vad måste vara svarat innan detta kan gå vidare till pipelinen?
 - Kalender-form: en månadsvy (rutnät) eller en kronologisk agenda-lista
   grupperad per dag? En månadsvy ger en riktig "kalenderkänsla" men få
   poster per månad kan göra den gles.
+-jag tänker att vi har båda, sen skiter jag i om det blir en händelse per månad eller kanske färre till och med. det är trevligt att ha en översikt.
 - Var sitter växlaren (Lista/Kalender) i `AdminUppdateringar.tsx` —
   flikar inom fliken, eller en enkel ikonknapp?
+-den skissen du gjorde var bra.
 - En post med TVÅ datum (annonsering + lansering, del 3 av Schemalagd
   lansering) — visas som två kalenderposter eller en post med båda
   tiderna synliga?
+-2 kalender poster.
 - UI inte skissad än — värt en Artifact-skiss innan kodning, samma
   mönster som Platsfiltret/Schemalagd lansering använde.
+-UI är skissad, använd det vi kom fram till där
 
 ## Kopplat
 - [[../Verktyg/Schemalagd-lansering|Schemalagd lansering]] — datakällan
