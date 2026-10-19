@@ -7,6 +7,7 @@ public class FeatureIdea
     public string   Title            { get; set; } = string.Empty;
     public string   Description      { get; set; } = string.Empty;
     public string   Stage            { get; set; } = "brainstorm";
+    public int      Priority         { get; set; } = 0;
     public bool?    TriageKanGoras   { get; set; }
     public bool?    TriageBorGoras   { get; set; }
     public string?  TriageMotivering { get; set; }

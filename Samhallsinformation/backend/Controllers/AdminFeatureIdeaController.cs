@@ -38,13 +38,15 @@ public class AdminFeatureIdeaController : ControllerBase
         if (!string.IsNullOrWhiteSpace(stage)) query = query.Where(i => i.Stage == stage);
 
         var ideas = await query
-            .OrderByDescending(i => i.UpdatedAt)
+            .OrderBy(i => i.Priority)
+            .ThenByDescending(i => i.UpdatedAt)
             .Select(i => new
             {
                 i.Id,
                 i.IdeaNumber,
                 i.Title,
                 i.Stage,
+                i.Priority,
                 i.KällaTyp,
                 i.FlagKey,
                 i.CreatedAt,
@@ -55,12 +57,39 @@ public class AdminFeatureIdeaController : ControllerBase
         return Ok(ideas);
     }
 
+    // Admin ordnar idéerna fritt genom att dra dem i listan — det här sätter hela
+    // prioritetsordningen i ett svep (index i OrderedIds blir Priority), inte en
+    // enstaka idés plats. Ren omordning bumpar INTE UpdatedAt — det är inte en
+    // innehållsändring, bara var idén råkar ligga i listan just nu.
+    [HttpPut("reorder")]
+    public async Task<IActionResult> Reorder([FromBody] ReorderFeatureIdeasRequest req)
+    {
+        if (req.OrderedIds == null || req.OrderedIds.Count == 0) return BadRequest("OrderedIds krävs.");
+        if (req.OrderedIds.Distinct().Count() != req.OrderedIds.Count) return BadRequest("OrderedIds innehåller dubbletter.");
+
+        var alla = await _db.FeatureIdeas.ToListAsync();
+        if (req.OrderedIds.Count != alla.Count) return BadRequest("OrderedIds måste innehålla samtliga idéer exakt en gång.");
+
+        var byId = alla.ToDictionary(i => i.Id);
+        foreach (var id in req.OrderedIds)
+            if (!byId.ContainsKey(id)) return BadRequest($"Okänd idé: {id}.");
+
+        for (var idx = 0; idx < req.OrderedIds.Count; idx++)
+            byId[req.OrderedIds[idx]].Priority = idx;
+
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateIdea([FromBody] CreateFeatureIdeaRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.Title)) return BadRequest("Title krävs.");
 
-        var nextNumber = (await _db.FeatureIdeas.MaxAsync(i => (int?)i.IdeaNumber) ?? 0) + 1;
+        var nextNumber   = (await _db.FeatureIdeas.MaxAsync(i => (int?)i.IdeaNumber) ?? 0) + 1;
+        // Nya idéer hamnar sist i prioritetsordningen (lägst prio) som standard —
+        // admin flyttar upp den manuellt om den faktiskt ska prioriteras högre.
+        var nextPriority = (await _db.FeatureIdeas.MaxAsync(i => (int?)i.Priority) ?? -1) + 1;
 
         var idea = new FeatureIdea
         {
@@ -70,6 +99,7 @@ public class AdminFeatureIdeaController : ControllerBase
             KällaTyp        = req.KällaTyp ?? "admin",
             SourceTicketId  = req.SourceTicketId,
             CreatedByUserId = CurrentUserId,
+            Priority        = nextPriority,
         };
         _db.FeatureIdeas.Add(idea);
         await _db.SaveChangesAsync();
@@ -280,6 +310,7 @@ public class AdminFeatureIdeaController : ControllerBase
 }
 
 public record CreateFeatureIdeaRequest(string Title, string? Description, string? KällaTyp, Guid? SourceTicketId);
+public record ReorderFeatureIdeasRequest(List<Guid> OrderedIds);
 public record UpdateFeatureIdeaRequest(string? Title, string? Description, string? FlagKey);
 public record SetStageRequest(string Stage);
 public record SetTriageRequest(bool? KanGoras, bool? BorGoras, string? Motivering);

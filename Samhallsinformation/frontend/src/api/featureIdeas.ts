@@ -8,6 +8,7 @@ export interface FeatureIdeaListItemDto {
   ideaNumber: number
   title: string
   stage: IdeaStage
+  priority: number
   källaTyp: 'admin' | 'feedback'
   flagKey?: string | null
   createdAt: string
@@ -77,6 +78,14 @@ export async function updateFeatureIdea(id: string, req: { title?: string; descr
     body: JSON.stringify(req),
   })
   if (!res.ok) throw await felFranSvar(res, 'updateFeatureIdea')
+}
+
+export async function reorderFeatureIdeas(orderedIds: string[]): Promise<void> {
+  const res = await adminFetch('/api/admin/feature-ideas/reorder', {
+    method: 'PUT',
+    body: JSON.stringify({ orderedIds }),
+  })
+  if (!res.ok) throw await felFranSvar(res, 'reorderFeatureIdeas')
 }
 
 export async function setIdeaStage(id: string, stage: IdeaStage): Promise<void> {

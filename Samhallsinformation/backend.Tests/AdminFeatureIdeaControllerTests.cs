@@ -80,6 +80,73 @@ public class AdminFeatureIdeaControllerTests
     }
 
     [Fact]
+    public async Task CreateIdea_AssignsLowestPriorityLast()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var controller = NewController(db, admin.Id);
+
+        await controller.CreateIdea(new CreateFeatureIdeaRequest("Första idén", null, null, null));
+        await controller.CreateIdea(new CreateFeatureIdeaRequest("Andra idén", null, null, null));
+
+        var priorities = db.FeatureIdeas.OrderBy(i => i.CreatedAt).Select(i => i.Priority).ToList();
+        Assert.Equal([0, 1], priorities);
+    }
+
+    [Fact]
+    public async Task Reorder_SetsPriorityFromRequestedOrder()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var a = new FeatureIdea { IdeaNumber = 1, Title = "A", CreatedByUserId = admin.Id, Priority = 0 };
+        var b = new FeatureIdea { IdeaNumber = 2, Title = "B", CreatedByUserId = admin.Id, Priority = 1 };
+        var c = new FeatureIdea { IdeaNumber = 3, Title = "C", CreatedByUserId = admin.Id, Priority = 2 };
+        db.FeatureIdeas.AddRange(a, b, c);
+        await db.SaveChangesAsync();
+        var controller = NewController(db, admin.Id);
+
+        var result = await controller.Reorder(new ReorderFeatureIdeasRequest([c.Id, a.Id, b.Id]));
+
+        Assert.IsType<OkResult>(result);
+        Assert.Equal(0, (await db.FeatureIdeas.FindAsync(c.Id))!.Priority);
+        Assert.Equal(1, (await db.FeatureIdeas.FindAsync(a.Id))!.Priority);
+        Assert.Equal(2, (await db.FeatureIdeas.FindAsync(b.Id))!.Priority);
+    }
+
+    [Fact]
+    public async Task Reorder_MissingAnIdea_ReturnsBadRequestAndChangesNothing()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var a = new FeatureIdea { IdeaNumber = 1, Title = "A", CreatedByUserId = admin.Id, Priority = 0 };
+        var b = new FeatureIdea { IdeaNumber = 2, Title = "B", CreatedByUserId = admin.Id, Priority = 1 };
+        db.FeatureIdeas.AddRange(a, b);
+        await db.SaveChangesAsync();
+        var controller = NewController(db, admin.Id);
+
+        var result = await controller.Reorder(new ReorderFeatureIdeasRequest([a.Id]));
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(0, (await db.FeatureIdeas.FindAsync(a.Id))!.Priority);
+        Assert.Equal(1, (await db.FeatureIdeas.FindAsync(b.Id))!.Priority);
+    }
+
+    [Fact]
+    public async Task Reorder_UnknownId_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var admin = await NewAdmin(db);
+        var a = new FeatureIdea { IdeaNumber = 1, Title = "A", CreatedByUserId = admin.Id, Priority = 0 };
+        db.FeatureIdeas.Add(a);
+        await db.SaveChangesAsync();
+        var controller = NewController(db, admin.Id);
+
+        var result = await controller.Reorder(new ReorderFeatureIdeasRequest([Guid.NewGuid()]));
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
     public async Task SetTriage_SetsAllThreeFields()
     {
         using var db = NewDb();
