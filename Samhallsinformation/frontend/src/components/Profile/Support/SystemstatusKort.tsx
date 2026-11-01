@@ -138,7 +138,8 @@ export default function SystemstatusKort() {
   const [highlighted,    setHighlighted]    = useState<string | null>(null)
   const location   = useLocation()
   const highlightRef = useRef<HTMLDivElement>(null)
-  const getPingDelay = () => `-${performance.now() % 1000}ms`
+  // Fast per montering — ett nytt värde varje render hoppade ping-animationens fas.
+  const [pingDelay] = useState(() => `-${performance.now() % 1000}ms`)
 
   useEffect(() => {
     const namn = location.state?.highlightNamn
@@ -181,7 +182,7 @@ export default function SystemstatusKort() {
                 </div>
                 <div className="flex items-center gap-2 whitespace-nowrap">
                   <span className="relative flex w-2.5 h-2.5 shrink-0">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${tj.dotColor} opacity-60`} style={{ animationDelay: getPingDelay() }} />
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${tj.dotColor} opacity-60`} style={{ animationDelay: pingDelay }} />
                     <span className={`relative inline-flex w-2.5 h-2.5 rounded-full ${tj.dotColor}`} />
                   </span>
                   <span className="text-xs text-slate-600">{tj.status}</span>
@@ -219,7 +220,7 @@ export default function SystemstatusKort() {
                     </div>
                     <div className="flex items-center gap-2 whitespace-nowrap">
                       <span className="relative flex w-2.5 h-2.5 shrink-0">
-                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${s.dotColor} opacity-60`} style={{ animationDelay: getPingDelay() }} />
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${s.dotColor} opacity-60`} style={{ animationDelay: pingDelay }} />
                         <span className={`relative inline-flex w-2.5 h-2.5 rounded-full ${s.dotColor}`} />
                       </span>
                       <span className="text-xs text-slate-500">{s.status}</span>

@@ -255,6 +255,12 @@ export function beräknaKällDelta(aktuell: Källa, utkast: KällUtkast): Parame
   return delta
 }
 
+// Simulerad kontrolltid (1–2,5 s). Ligger utanför komponenten så render förblir
+// ren — Math.random() i komponentkroppen flaggas av react-hooks/purity.
+function slumpadKontrollFördröjning() {
+  return 1000 + Math.random() * 1500
+}
+
 export default function Kallhantering() {
   const queryClient = useQueryClient()
 
@@ -392,7 +398,7 @@ export default function Kallhantering() {
 
   function kontrolleraFlöde(id: number) {
     setKontrollerarFlöde(prev => new Set(prev).add(id))
-    const delay = 1000 + Math.random() * 1500
+    const delay = slumpadKontrollFördröjning()
     setTimeout(() => {
       const nu = new Date().toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' })
       setFlöden(prev => prev.map(f => f.id === id ? { ...f, senastKontroll: nu } : f))

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNu } from '../../hooks/useNu'
 import type { AdminSection } from './AdminSidebar'
 import { fetchAdminStats } from '../../api/stats'
 import { fetchAdminUsers } from '../../api/adminUsers'
@@ -86,6 +87,7 @@ function Kort({ titel, sub, badge, children }: { titel: string; sub?: string; ba
 }
 
 export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection) => void }) {
+  const nu = useNu()
   const [felModalÖppen, setFelModalÖppen] = useState(false)
 
   // V3-8: en misslyckad hämtning får inte bli "0" — kortet visar "—" och en ruta överst
@@ -129,7 +131,7 @@ export default function Rapporter({ onNavigate }: { onNavigate: (s: AdminSection
   })) ?? []
 
   const riktigaAnvändare = adminUsers.filter(u => !u.deletedAt)
-  const sjuDagarSedan    = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const sjuDagarSedan    = new Date(nu - 7 * 24 * 60 * 60 * 1000)
   const nyaSenasteVeckan = riktigaAnvändare.filter(u => new Date(u.createdAt) >= sjuDagarSedan).length
 
   const notisPerKanal = KANAL_META.map(k => ({
