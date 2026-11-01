@@ -15,7 +15,10 @@ using Xunit;
 /// </summary>
 public class TrafikverketIngestorTests
 {
-    private sealed class CapturingHandler : HttpMessageHandler
+    private const string EnSituation =
+        """{"RESPONSE":{"RESULT":[{"Situation":[{"Id":"s1","Deviation":[{"Id":"d1","Header":"Vägarbete","CountyNo":[14]}]}]}]}}""";
+
+    private sealed class CapturingHandler(string json) : HttpMessageHandler
     {
         public string? RequestBody { get; private set; }
         public int Calls { get; private set; }
@@ -24,7 +27,6 @@ public class TrafikverketIngestorTests
         {
             Calls++;
             RequestBody = request.Content == null ? null : await request.Content.ReadAsStringAsync(ct);
-            const string json = """{"RESPONSE":{"RESULT":[{"Situation":[]}]}}""";
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json"),
@@ -32,9 +34,9 @@ public class TrafikverketIngestorTests
         }
     }
 
-    private static (TrafikverketApiIngestor Ingestor, CapturingHandler Handler) Build()
+    private static (TrafikverketApiIngestor Ingestor, CapturingHandler Handler) Build(string json = EnSituation)
     {
-        var handler = new CapturingHandler();
+        var handler = new CapturingHandler(json);
         var ingestor = new TrafikverketApiIngestor(new HttpClient(handler), NullLogger<TrafikverketApiIngestor>.Instance);
         return (ingestor, handler);
     }
@@ -79,6 +81,50 @@ public class TrafikverketIngestorTests
         Assert.NotNull(handler.RequestBody);
         Assert.DoesNotContain("limit=\"100\"", handler.RequestBody);
         Assert.Contains("limit=\"500\"", handler.RequestBody);
+    }
+
+    // Driftstörningen 2026-10-21: Trafikverket kan svara 200 OK med felet inbäddat i
+    // RESULT[].ERROR, eller med en tom lista. Båda måste kasta så IngestorBackgroundService
+    // loggar en misslyckad körning och SourceFailingRule kan larma — inte räknas som lyckad.
+    [Fact]
+    public async Task FetchEvents_ErrorIResultat_KastarMedTrafikverketsMeddelande()
+    {
+        using var _ = new MedApiNyckel();
+        var (ingestor, _) = Build("""{"RESPONSE":{"RESULT":[{"ERROR":{"SOURCE":"Request","MESSAGE":"Internal error"}}]}}""");
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(ingestor.FetchEventsAsync);
+
+        Assert.Contains("Internal error", ex.Message);
+    }
+
+    [Fact]
+    public async Task FetchEvents_NollSituationer_Kastar()
+    {
+        using var _ = new MedApiNyckel();
+        var (ingestor, _) = Build("""{"RESPONSE":{"RESULT":[{"Situation":[]}]}}""");
+
+        await Assert.ThrowsAsync<HttpRequestException>(ingestor.FetchEventsAsync);
+    }
+
+    [Fact]
+    public async Task FetchEvents_TomtSvar_Kastar()
+    {
+        using var _ = new MedApiNyckel();
+        var (ingestor, _) = Build("""{"RESPONSE":{"RESULT":[]}}""");
+
+        await Assert.ThrowsAsync<HttpRequestException>(ingestor.FetchEventsAsync);
+    }
+
+    [Fact]
+    public async Task FetchEvents_MedSituationer_ReturnerarHandelser()
+    {
+        using var _ = new MedApiNyckel();
+        var (ingestor, _) = Build();
+
+        var events = await ingestor.FetchEventsAsync();
+
+        var ev = Assert.Single(events);
+        Assert.Equal("Vägarbete", ev.Title);
     }
 
     [Fact]
