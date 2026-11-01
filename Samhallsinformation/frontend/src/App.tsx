@@ -5,6 +5,7 @@ import { useSwipeable } from 'react-swipeable'
 import Sidebar from './components/Sidebar/Sidebar'
 import NewsFeed from './components/NewsFeed/NewsFeed'
 import ProfilePage from './pages/ProfilePage'
+import { useNu } from './hooks/useNu'
 import AdminPage from './pages/AdminPage'
 import LoginPage from './pages/LoginPage'
 import OnboardingPage from './pages/OnboardingPage'
@@ -93,7 +94,7 @@ function MaintenanceBanners() {
     staleTime: 5 * 60_000,
   })
 
-  const nu = Date.now()
+  const nu = useNu()
   const aktiva = banners.filter(b => {
     if (nu < new Date(b.startUtc).getTime() || nu > new Date(b.endUtc).getTime()) return false
     if (b.audience === 'Besökare' && isLoggedIn)  return false

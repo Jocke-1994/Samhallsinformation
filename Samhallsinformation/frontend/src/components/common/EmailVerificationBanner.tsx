@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useFlags } from '../../context/FeatureFlagsContext'
 import { resendVerification } from '../../api/auth'
+import { useNu } from '../../hooks/useNu'
 
 const VERIFY_BANNER_SNOOZE_KEY = 'si_verify_banner_snoozed_until'
 const VERIFY_BANNER_SNOOZE_MS  = 24 * 60 * 60 * 1000
@@ -9,6 +10,7 @@ const VERIFY_BANNER_SNOOZE_MS  = 24 * 60 * 60 * 1000
 export default function EmailVerificationBanner() {
   const { isLoggedIn, emailVerified, email } = useAuth()
   const flaggor = useFlags()
+  const nu = useNu()
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'fel'>('idle')
   // Nyckeln måste vara kontospecifik (inte en enda global nyckel) — annars
   // slår ett snooze-klick på ETT konto igenom på VILKET konto som helst som
@@ -20,7 +22,7 @@ export default function EmailVerificationBanner() {
     setSnoozedUntil(Number(localStorage.getItem(`${VERIFY_BANNER_SNOOZE_KEY}:${email}`) ?? 0))
   }, [email])
 
-  if (!isLoggedIn || emailVerified || !flaggor.konto_epost_paminnelse || Date.now() < snoozedUntil) return null
+  if (!isLoggedIn || emailVerified || !flaggor.konto_epost_paminnelse || nu < snoozedUntil) return null
 
   async function handleResend() {
     if (status === 'sending') return

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNu } from '../../hooks/useNu'
 import type { AdminSection } from './AdminSidebar'
 import { fetchAdminSources } from '../../api/sources'
 import { fetchAdminUsers } from '../../api/adminUsers'
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
+  const nu = useNu()
   const [öppenId, setÖppenId] = useState<string | null>(null)
 
   // V3-8: ett misslyckat anrop får aldrig se ut som "0" eller "100 % frisk" —
@@ -80,7 +82,7 @@ export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
 
   // Raderade (anonymiserade) konton räknas inte som riktiga användare längre.
   const riktigaAnvändare = users.filter(u => !u.deletedAt)
-  const sjuDagarSedan    = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const sjuDagarSedan    = new Date(nu - 7 * 24 * 60 * 60 * 1000)
   const nyaSenasteVeckan = riktigaAnvändare.filter(u => new Date(u.createdAt) >= sjuDagarSedan).length
 
   const aktivaÄrenden  = tickets.filter(t => !t.isArchived)
