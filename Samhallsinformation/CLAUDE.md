@@ -179,6 +179,30 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 56 — 2026-11-01
+**What was done:**
+- **Säkerhetskoll, Claude Code VS Code-tillägget v2.1.313 (rapporterad kompromettering):** maskinen kör inte den versionen och har inga spår av den (ingen okänd nyckel i `authorized_keys`). Ingen åtgärd
+- **Railways changelog** (CVE-autopatch + regenererade credentials): `DATABASE_URL` på backend är en referensvariabel (`${{Postgres.DATABASE_URL}}`), så den följer med automatiskt. Ingen åtgärd
+- **Trafikverket-störning härdad (PR #700):** API:et kan svara 200 OK med felet i `RESULT[].ERROR` eller med 0 situationer. Båda räknades som lyckade hämtningar, så `SourceFailingRule` larmade aldrig. Nu kastar ingestorn i båda fallen, så det befintliga larmet tar över (3 misslyckade cykler i rad / 30 min utan hämtning). 4 nya tester
+- **Dependabot auto-merge lagad (PR #701):** workflowen hade fallit varje körning sedan PR #688. Det explicita `permissions:`-blocket saknade `checks: read`, så `wait-on-check-action` fick 403. Backloggen på 7 PR:ar mergad (#694-#698 m.fl.)
+- **minimatch DoS-sårbarhet (PR #703):** tvingad till `^11.0.1` via `overrides` i `package.json`. Lockfil och SBOM visar bara 11.0.3, men GitHub-larmet #37 var fortfarande öppet vid sessionens slut (eftersläpning)
+- **44 ESLint-fel → 0 (PR #704):** ny `useNu`-hook ersätter `Date.now()` i render (App, Översikt, Rapporter, EmailVerificationBanner). Bieffekt: driftbanderoller slår om på sin start-/sluttid utan omladdning. `Math.random()` flyttat ut ur Källhantering, ping-fördröjningen i SystemstatusKort fast per montering. `set-state-in-effect` (15) och `only-export-components` (20) nedgraderade till varning (medvetna mönster, ingen React Compiler)
+- **Lint i frontend-CI (PR #705):** `npm run lint` körs före testerna. `ci.yml` själv tillagd i triggerns `paths`, annars testades en workflow-ändring aldrig i sin egen PR
+
+**Problem och lösningar:**
+- `@dependabot rebase`/`recreate` ignorerades på #696. Användaren mergade manuellt (bygget var grönt, enda röda checken var den gamla auto-merge-körningen)
+- En omkörning av ett `pull_request`-jobb använder PR:ens GAMLA workflow-fil, så fixen i #701 krävde en rebase av varje Dependabot-PR
+
+**Etablerat mönster:**
+- Ett explicit `permissions:`-block i en workflow sätter allt som inte listas till `none`. Lägg till varje behörighet en action behöver (t.ex. `checks: read`)
+- En ingestor som får "200 OK men tomt/fel i kroppen" ska kasta, inte returnera `[]`. Annars ser larmkedjan en lyckad hämtning
+- En workflow vars `paths`-filter inte inkluderar workflow-filen själv testas aldrig i sin egen PR
+
+**Next session:**
+- Kolla att minimatch-larmet #37 stängts. Annars stäng det manuellt som åtgärdat (lockfilen har 11.0.3)
+- 35 lintvarningar kvar, kan tas vid tillfälle men ingen brådska
+- Användaren har en lista med äldre punkter kvar att gå igenom
+
 ### Session 55 — 2026-10-19
 **What was done:**
 - **Testchecklistan för Funktionsidé #7 (Geografiskt platsfilter) och #8 (Schemalagd lansering) färdigställd** — manuella testpunkter avbockade (lokal flaggväxling + Playwright, aldrig mot produktionens flagga), automatiska testfiler kompletterade. Pipeline flyttad av användaren: **#7 → Lanseringsklar** (`flode_platsfilter` bekräftat av i produktion), **#8 → Lanserad** (inte flaggstyrd alls)
