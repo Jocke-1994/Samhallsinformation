@@ -74,6 +74,13 @@ public class TrafikverketApiIngestor : IIngestor
         var json   = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<TvRoot>(json);
 
+        // Trafikverket svarar ofta 200 OK även vid fel, med felet inbäddat som
+        // RESULT[].ERROR. Utan den här kontrollen blev det "0 situationer, lyckad
+        // hämtning" — LastFetchedAt uppdaterades och SourceFailingRule larmade aldrig.
+        var fel = result?.RESPONSE?.RESULT?.FirstOrDefault(r => r.ERROR != null)?.ERROR;
+        if (fel != null)
+            throw new HttpRequestException($"Trafikverket svarade med fel: {fel.SOURCE}: {fel.MESSAGE}");
+
         var situations = result?.RESPONSE?.RESULT
             ?.SelectMany(r => r.Situation ?? [])
             .ToList() ?? [];
@@ -81,6 +88,12 @@ public class TrafikverketApiIngestor : IIngestor
         _logger.LogInformation("Trafikverket API returned {SituationCount} situations (RESULT blocks: {ResultCount})",
             situations.Count,
             result?.RESPONSE?.RESULT?.Count ?? 0);
+
+        // Det finns i praktiken alltid hundratals aktiva vägsituationer i Sverige — noll
+        // betyder ett fel hos Trafikverket (t.ex. driftstörningen 2026-10-21), inte ett
+        // lugnt läge. Räknas som misslyckad hämtning så det befintliga larmet tar över.
+        if (situations.Count == 0)
+            throw new HttpRequestException("Trafikverket returnerade 0 situationer — troligen en störning hos Trafikverket");
 
         var events = new List<CanonicalEvent>();
 
@@ -171,6 +184,13 @@ internal class TvResponse
 internal class TvResult
 {
     [JsonPropertyName("Situation")] public List<TvSituation>? Situation { get; set; }
+    [JsonPropertyName("ERROR")]     public TvError?           ERROR     { get; set; }
+}
+
+internal class TvError
+{
+    [JsonPropertyName("SOURCE")]  public string? SOURCE  { get; set; }
+    [JsonPropertyName("MESSAGE")] public string? MESSAGE { get; set; }
 }
 
 internal class TvSituation
