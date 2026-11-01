@@ -12,6 +12,10 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # wait-on-check-action läser PR:ens check-runs. Ett explicit permissions-block
+  # sätter allt som inte listas till "none", så utan denna rad svarade API:et
+  # 403 och jobbet föll innan merge-steget — varenda körning sedan PR #688.
+  checks: read
 
 jobs:
   auto-merge:
