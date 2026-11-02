@@ -217,12 +217,14 @@ export default function Uppdateringar() {
                     <span className="text-base font-bold text-slate-900">{release.titel}</span>
                     <span className="text-xs text-slate-400 font-medium">{formatDatum(release.datum)}</span>
                   </div>
+                  {/* En etikett per TYP (Nytt, Fixat …), inte en per rad. Tidigare
+                      visades radens plats ("Allmänt Allmänt"), som inte sa något. */}
                   <div className="flex flex-wrap gap-1.5">
-                    {release.punkter.map(p => {
-                      const cfg = getTypConfig(p.typ)
+                    {[...new Set(release.punkter.map(p => p.typ))].map(typ => {
+                      const cfg = getTypConfig(typ)
                       return (
-                        <span key={p.id} className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.badge}`}>
-                          {p.plats}
+                        <span key={typ} className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.badge}`}>
+                          {cfg.label}
                         </span>
                       )
                     })}
