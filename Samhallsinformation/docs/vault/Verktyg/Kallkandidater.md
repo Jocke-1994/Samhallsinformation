@@ -25,6 +25,7 @@ inte att det garanterat saknas.
 |---|---|---|---|---|---|---|
 | **Konsumentverket – Återkallelser** | Produkter som dras tillbaka (t.ex. cykelhjälmar) | Direkt risk för folk, samma sort som Livsmedelsverkets återkallelser vi redan har | ✅ `konsumentverket.se/api/feed/rss/aterkallelser/` | 2 poster, senaste 30 okt | Inget tekniskt (vanlig RSS) | 🟢 **Lägg till först** |
 | **Konsumentverket – Varning för säkerhetsbrist** | Varningar för farliga produkter | Samma som ovan | ✅ `…/rss/varning-for-sakerhetsbrist/` | 1 post, senaste okt 2025 | Sällan nytt, men billigt att ta med | 🟢 Tillsammans med Återkallelser |
+| **Migrationsverket** (din fråga 2026-11-02) | Regeländringar som påverkar människor direkt (ny mottagandelag, nya regler för anhöriga, pausad prövning) | Direkt viktigt för många. Lite brus jämfört med länsstyrelser/MCF | ✅ `migrationsverket.se/rss` + 9 målgruppsflöden (`rss_arbetsgivare`, `rss_arbeta`, `rss_kommuner`, `rss_migrfs` …) | 87 inlägg, senaste 27 okt, ca 1–2/vecka | Liten teknisk fix: titlarna har osynliga avstavningstecken (U+00AD, "Pröv­ning") som måste rensas vid inläsning. Ämnet kan vara laddat, men vi förmedlar bara myndighetens text | 🟢 Lägg till (huvudflödet), målgruppsflöden senare |
 | **Länsstyrelserna (21 län)** | Eldningsförbud, smittskydd (fågelinfluensa), kris, kungörelser | Lokal info, passar platsfiltret perfekt (varje flöde = ett län) | ✅ Ett per län: `lansstyrelsen.se/api/getnews?whichlst=<Län>&local=<id>&type=rss` | Skåne: 100 poster, senaste 29 okt | **Brus**: blandar viktigt med "Analys av ungas entreprenörskap". 21 flöden med var sitt id. Behöver beslut om vi filtrerar eller tar allt | 🟡 Hög nytta, kräver beslut om brus |
 | **Strålsäkerhetsmyndigheten** | Strålning, kärnkraft, incidenter | Sällan, men mycket viktigt när det väl händer | ✅ `stralsakerhetsmyndigheten.se/press/nyheter/?view=rss` | 10 poster sedan juni, senaste 21 sep | Inget tekniskt. Låg volym | 🟢 "Försäkringskälla", lätt att lägga till |
 | **MCF** (f.d. MSB) | Civilt försvar, räddningstjänst, farligt gods, Rakel | Beredskap | ✅ Flera ämnesflöden, t.ex. "alla", "räddningstjänst", "farligt gods" | Alla: 100 poster, senaste 29 okt | **Brus** (t.ex. "jämställdhet och inkludering") + **dubbletter**: MCF driver redan Krisinformation, som vi har | 🟡 Kanske bara ämnesflöden, t.ex. farligt gods |
@@ -53,7 +54,7 @@ Att *vi* filtrerar på nyckelord ("eldningsförbud") vore att börja tolka, vilk
 grundprinciperna säger nej till.
 
 ## Öppna frågor
-- Ska vi börja med de gröna (Konsumentverkets två + Strålsäkerhetsmyndigheten)?
+- Ska vi börja med de gröna (Konsumentverkets två + Strålsäkerhetsmyndigheten + Migrationsverket)?
 - Länsstyrelserna: alla 21 län på en gång, eller börja med några? Ta allt, eller vänta tills brusfrågan är löst?
 - MCF: bara ämnesflöden (t.ex. farligt gods), eller inte alls eftersom Krisinformation redan täcker det viktigaste?
 - Kommuner: börja med Stockholm, Göteborg och Malmö? Bara störningar/kris, eller även nyhetsflödena med mycket PR?
