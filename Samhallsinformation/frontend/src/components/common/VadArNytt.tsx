@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext'
 import { useFlags } from '../../context/FeatureFlagsContext'
 import { fetchVadArNytt, markeraVadArNyttSett, type UppdateringsPunkt } from '../../api/uppdateringar'
 import { getTypConfig } from '../../lib/uppdateringTyp'
+import type { FlagState } from '../../lib/featureFlags'
+import ProvaSjalvLank from './ProvaSjalvLank'
 
 // Sidor där rutan aldrig ska störa: adminpanelen och inloggnings-/kontoflödena.
 const DOLD_PÅ = ['/admin', '/login', '/register', '/forgot-password', '/reset-password',
@@ -87,12 +89,14 @@ export default function VadArNytt() {
  * Själva innehållet i rutan, utan placering. Delas med förhandsvisningen i
  * admin (UppdateringForhandsvisning) så att den visar exakt samma sak.
  */
-export function VadArNyttInnehall({ titel, datum, punkter, rubrikId, onStäng }: {
+export function VadArNyttInnehall({ titel, datum, punkter, rubrikId, onStäng, förhandsvisning }: {
   titel: string
   datum: string
   punkter: UppdateringsPunkt[]
   rubrikId?: string
   onStäng: () => void
+  /** Admins förhandsvisning: Prova själv-länkarna visas som för en inloggad med lanseringens flaggor. */
+  förhandsvisning?: { flaggor: Partial<FlagState> }
 }) {
   return (
     <>
@@ -116,7 +120,12 @@ export function VadArNyttInnehall({ titel, datum, punkter, rubrikId, onStäng }:
         return (
           <li key={p.id} className="flex items-start gap-2.5 text-sm leading-relaxed text-slate-700">
             <span className={`mt-0.5 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${typ.badge}`}>{typ.label}</span>
-            <span>{p.text}</span>
+            <div className="flex flex-col">
+              <span>{p.text}</span>
+              {/* Ett klick räknas som att rutan är sedd, precis som "Läs mer". */}
+              <ProvaSjalvLank mål={p.provaSjalv} onKlick={onStäng}
+                förhandsvisning={förhandsvisning ? { inloggad: true, flaggor: förhandsvisning.flaggor } : undefined} />
+            </div>
           </li>
         )
       })}

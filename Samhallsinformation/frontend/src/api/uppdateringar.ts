@@ -11,6 +11,8 @@ export interface UppdateringsPunkt {
   plats:     string
   text:      string
   synlighet: Synlighet
+  /** "Prova själv"-mål (lib/provaSjalv.ts), null = ingen länk. Saknas i äldre svar. */
+  provaSjalv?: string | null
 }
 
 export interface Uppdatering {
@@ -37,6 +39,7 @@ export interface PunktRequest {
   plats:     string
   text:      string
   synlighet: Synlighet
+  provaSjalv?: string | null
 }
 
 export interface UppdateringRequest {

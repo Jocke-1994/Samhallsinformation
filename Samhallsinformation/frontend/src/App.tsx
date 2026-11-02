@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, useLocation } from 'react-router'
+import { Routes, Route, useLocation, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSwipeable } from 'react-swipeable'
 import Sidebar from './components/Sidebar/Sidebar'
@@ -35,8 +35,11 @@ function HomePage() {
   const [selectedShortName, setSelectedShortName] = useState<string | null>(
     (location.state as { shortName?: string } | null)?.shortName ?? null
   )
+  const [searchParams] = useSearchParams()
+  // /?vy=sparat (Prova själv → Mitt flöde → Sparat) startar i Mitt flöde.
   const [viewMode, setViewMode] = useState<'Allt' | 'Mitt'>(
-    (location.state as { viewMode?: 'Allt' | 'Mitt' } | null)?.viewMode ?? 'Allt'
+    (location.state as { viewMode?: 'Allt' | 'Mitt' } | null)?.viewMode
+      ?? (searchParams.get('vy') === 'sparat' ? 'Mitt' : 'Allt')
   )
   const [sidebarOpen, setSidebarOpen] = useState(false)
 

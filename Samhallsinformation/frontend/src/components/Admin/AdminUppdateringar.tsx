@@ -17,6 +17,7 @@ import { getTypConfig, PUNKT_TYPER } from '../../lib/uppdateringTyp'
 import UppdateringarKalender from './UppdateringarKalender'
 import UppdateringForhandsvisning from './UppdateringForhandsvisning'
 import { FLAG_DEFINITIONER } from '../../lib/featureFlags'
+import { PROVA_SJALV, PROVA_SJALV_MÅL } from '../../lib/provaSjalv'
 import type { FörhandsData } from '../../lib/uppdateringForhandsvisning'
 import { läsUtkast, rensaUtkast, sparaUtkast, type NyUppdateringUtkast } from '../../lib/nyUppdateringUtkast'
 
@@ -165,7 +166,7 @@ interface PunktFormRad extends PunktRequest {
 }
 
 function nyPunkt(radId: number): PunktFormRad {
-  return { radId, typ: 'ny-funktion', plats: 'Allmänt', text: '', synlighet: 'alla' }
+  return { radId, typ: 'ny-funktion', plats: 'Allmänt', text: '', synlighet: 'alla', provaSjalv: null }
 }
 
 let nästaRadId = 0
@@ -190,7 +191,7 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   // injicerade raden hade tom text, utan någon förklaring i UI:t.
   const [punkter, setPunkter] = useState<PunktFormRad[]>(
     redigerar
-      ? redigerar.punkter.map(p => ({ radId: nästaRadId++, typ: p.typ, plats: p.plats, text: p.text, synlighet: p.synlighet }))
+      ? redigerar.punkter.map(p => ({ radId: nästaRadId++, typ: p.typ, plats: p.plats, text: p.text, synlighet: p.synlighet, provaSjalv: p.provaSjalv ?? null }))
       : utkast && utkast.punkter.length > 0
         ? utkast.punkter.map(p => ({ ...p, radId: nästaRadId++ }))
         : [nyPunkt(nästaRadId++)]
@@ -223,7 +224,7 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
 
   // Spara utkastet vid varje ändring (bara ny post). Tomt formulär = inget utkast.
   const nuvarandeUtkast: NyUppdateringUtkast = {
-    titel, datum, punkter: punkter.map(({ typ, plats, text, synlighet }) => ({ typ, plats, text, synlighet })),
+    titel, datum, punkter: punkter.map(({ typ, plats, text, synlighet, provaSjalv }) => ({ typ, plats, text, synlighet, provaSjalv })),
     schemalagd, schemaDatum, valdaFlaggor, skickaPush, pushVersion, pushMeddelande,
     visaBanderoll, visaVadArNytt, annonsera, annonseDatum, pushSkickaVid,
   }
@@ -315,7 +316,7 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
       titel: titel.trim(),
       datum: new Date(datum).toISOString(),
       publicerad: schemalagd ? false : publicera,
-      punkter: punkter.map(({ typ, plats, text, synlighet }) => ({ typ, plats, text, synlighet })),
+      punkter: punkter.map(({ typ, plats, text, synlighet, provaSjalv }) => ({ typ, plats, text, synlighet, provaSjalv: provaSjalv ?? null })),
       schemalagdPubliceringUtc: schemalagd && schemaDatum ? new Date(schemaDatum).toISOString() : null,
       schemalagdaFlaggor: schemalagd ? valdaFlaggor : [],
       skickaPush:     schemalagd && skickaPush,
@@ -700,6 +701,23 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
                     </button>
                   ))}
                 </div>
+
+                {/* Prova själv — fast lista med mål, aldrig fritext (lib/provaSjalv.ts) */}
+                <label className="px-3 pb-3 flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-violet-700 shrink-0">Prova själv</span>
+                  <select
+                    value={p.provaSjalv ?? ''}
+                    onChange={e => updatePunkt(p.radId, 'provaSjalv', e.target.value || null)}
+                    className="flex-1 min-w-0 text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:border-violet-400"
+                  >
+                    <option value="">Ingen länk</option>
+                    {PROVA_SJALV_MÅL.map(m => (
+                      <option key={m} value={m}>
+                        {PROVA_SJALV[m].etikett}{PROVA_SJALV[m].kräverKonto ? ' · kräver konto' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
             ))}
 
@@ -849,7 +867,7 @@ export default function AdminUppdateringar() {
       titel:      u.titel,
       datum:      u.datum,
       publicerad: !u.publicerad,
-      punkter:    u.punkter.map(({ typ, plats, text, synlighet }: UppdateringsPunkt) => ({ typ, plats, text, synlighet })),
+      punkter:    u.punkter.map(({ typ, plats, text, synlighet, provaSjalv }: UppdateringsPunkt) => ({ typ, plats, text, synlighet, provaSjalv: provaSjalv ?? null })),
       schemalagdPubliceringUtc: null,
       schemalagdaFlaggor: [],
     }
