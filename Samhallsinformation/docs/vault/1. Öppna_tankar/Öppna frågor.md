@@ -14,11 +14,6 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
 
 ## Väntar på ditt svar — aktiva frågor
 
-- **[[../Ideer/Uppdateringar-forhandsvisning|Live-förhandsvisning i Uppdateringar]]** —
-  ny idé (2026-11-02): ruta bredvid formuläret som visar hur en uppdatering
-  ser ut medan man fyller i (flikar: Nyheter-sidan, Vad är nytt, Banderoll,
-  Push). Skiss med mockdata klar. Väntar på: alltid synlig eller på knapp,
-  mobilbeteende, om de fyra flikarna räcker. Se notens Öppna frågor.
 - **[[../Ideer/Testmiljö|Testmiljö]]** — ny idé (2026-10-10): en skarp
   men osynlig vy av senaste versionen, bara synlig för Admin/framtida
   beta-testare. Flera grundläggande tekniska vägval olösta — separat

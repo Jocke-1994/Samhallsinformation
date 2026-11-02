@@ -1,7 +1,7 @@
 ---
 typ: ide
-status: fragor-olosta  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
-uiGodkand: ej-bedomd  # giltiga värden: ja | nej | ej-bedomd
+status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
+uiGodkand: ja  # giltiga värden: ja | nej | ej-bedomd
 beroenden: "Vad är nytt-rutan (PR #706) bör vara mergad först, annars finns en av de fyra flikarna inte."
 prioritet: ej-bedomd  # giltiga värden: hog | medel | lag | ej-bedomd
 pipelineNr: ""
@@ -39,10 +39,14 @@ innehållet. Allt det får man i dag hålla i huvudet.
 - Formulärpanelen blir bredare på dator för att få plats med förhandsvisningen.
 - Skiss med mockdata: https://claude.ai/artifact/HsiBRTQ65NDnMvVhqepDES
 
-## Öppna frågor
-- Ska förhandsvisningen alltid synas, eller bara när man klickar "Förhandsgranska"?
-- På mobil: en knapp "Förhandsgranska" som byter vy, eller inte alls på mobil?
-- Räcker de fyra flikarna, eller saknas något ställe där en uppdatering syns?
+## Beslut 2026-11-02 (dina svar)
+- **Skissen godkänd** ("jag gillar förhandsvisningen!").
+- **Förhandsvisningen syns alltid**, ingen knapp — "på så sätt blir det mindre fuck-ups för mig".
+- **Ingen förhandsvisning på mobil**: uppdateringar läggs inte in via mobilen. På smal skärm visas bara formuläret som i dag.
+- **De fyra flikarna räcker.** Målgrupperna är besökare och inloggade, och det täcks av "Visa som".
+- Önskemål: en **rutin** så att inget steg missas vid en lansering (se förslag i chatten 2026-11-02).
+
+Inga öppna frågor kvar. Bör byggas efter att Vad är nytt (PR #706) är mergad.
 
 ## Kopplat
 - [[Vad ar nytt-modal]]
