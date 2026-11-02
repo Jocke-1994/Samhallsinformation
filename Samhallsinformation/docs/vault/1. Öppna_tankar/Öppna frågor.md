@@ -14,6 +14,11 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
 
 ## Väntar på ditt svar — aktiva frågor
 
+- **[[../Ideer/Prova-sjalv-lankar|Prova själv-länkar]]** — ny idé (2026-11-02):
+  varje rad i en uppdatering får en "Prova själv →" som leder till rätt plats
+  i appen. Väntar på: vilka destinationer från start, hur besökare ska se
+  länkar till funktioner som kräver inloggning, och om Profil → Uppdateringar
+  ska slås på. Se notens Öppna frågor.
 - **[[../Ideer/Testmiljö|Testmiljö]]** — ny idé (2026-10-10): en skarp
   men osynlig vy av senaste versionen, bara synlig för Admin/framtida
   beta-testare. Flera grundläggande tekniska vägval olösta — separat
