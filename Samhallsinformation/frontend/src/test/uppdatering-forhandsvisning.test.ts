@@ -12,8 +12,8 @@ function data(över: Partial<FörhandsData> = {}): FörhandsData {
   return {
     titel: 'Filtrera på plats', datum: '2026-11-15',
     punkter: [
-      { typ: 'ny-funktion', plats: 'Senaste nytt', text: 'Filtrera på kommun', synlighet: 'alla' },
-      { typ: 'ny-funktion', plats: 'Konto', text: 'Sparas på kontot', synlighet: 'inloggade' },
+      { typ: 'ny-funktion', plats: 'Senaste nytt', text: 'Filtrera på kommun', synlighet: 'alla', provaSjalv: 'senaste-nytt-plats' },
+      { typ: 'ny-funktion', plats: 'Konto', text: 'Sparas på kontot', synlighet: 'inloggade', provaSjalv: 'mina-kallor' },
     ],
     schemalagd: true, schemaDatum: '2026-11-15T08:00', annonsera: false, annonseDatum: '2026-11-10T08:00',
     skickaPush: true, pushVersion: '0.9.0', pushMeddelande: 'Nu kan du filtrera', pushSkickaVid: 'Lansering',
@@ -141,5 +141,19 @@ describe('checklista', () => {
 
   it('inget att anmärka på när allt är ifyllt och synligt', () => {
     expect(checklista(data())[0]).toEqual({ nivå: 'ok', text: 'Inget att anmärka på.' })
+  })
+
+  it('frågar om en "Ny funktion"-rad saknar Prova själv-länk', () => {
+    const d = data()
+    d.punkter[1] = { ...d.punkter[1], provaSjalv: null }
+    expect(checklista(d).map(p => p.text)).toContain('Rad 2 är "Ny funktion" men har ingen Prova själv-länk. Avsiktligt?')
+  })
+
+  it('varnar när Prova själv leder till en funktion som är av efter lanseringen', () => {
+    const avstängd = checklista(data({ flaggorEfterLansering: { flode_platsfilter: false } }))
+    expect(avstängd.some(p => p.nivå === 'varning' && p.text.startsWith('Rad 1: Prova själv leder till Senaste nytt → Filtrera på plats'))).toBe(true)
+
+    const påslagen = checklista(data({ flaggorEfterLansering: { flode_platsfilter: true } }))
+    expect(påslagen.some(p => p.text.includes('Prova själv leder till'))).toBe(false)
   })
 })

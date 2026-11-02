@@ -59,7 +59,7 @@ export default function Uppdateringar() {
 
   const kortSenaste = flaggor.uppdateringar_senaste && latest ? (
     // Samma kort som Nyheter-sidan och förhandsvisningen i admin.
-    <SenasteUppdateringKort titel={latest.titel} datum={latest.datum} punkter={latest.punkter} className="" />
+    <SenasteUppdateringKort titel={latest.titel} datum={latest.datum} punkter={latest.punkter} className="" härifrån="profil-uppdateringar" />
   ) : null
 
   const kortPagang = flaggor.uppdateringar_pagang ? (

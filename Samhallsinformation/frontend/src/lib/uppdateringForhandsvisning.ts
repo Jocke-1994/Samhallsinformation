@@ -1,5 +1,7 @@
 import type { PunktRequest, PushSkickaVid, UppdateringsPunkt } from '../api/uppdateringar'
 import type { MaintenanceBanner } from '../api/maintenanceBanners'
+import type { FlagState } from './featureFlags'
+import { PROVA_SJALV, ärProvaSjalvMål } from './provaSjalv'
 
 // Ren logik för förhandsvisningen i Uppdateringar (Ideer/Uppdateringar-forhandsvisning.md).
 // Texterna här SPEGLAR backend — ändras de där måste de ändras här:
@@ -30,6 +32,8 @@ export interface FörhandsData {
   profilUppdateringarPå: boolean
   /** Är Vad är nytt-rutan påslagen, nu eller av lanseringen? (uppdateringar_vad_ar_nytt) */
   vadArNyttPå?: boolean
+  /** Flaggornas läge för användarna efter lanseringen (Prova själv-länkarna följer dem). */
+  flaggorEfterLansering?: Partial<FlagState>
 }
 
 const MÅNADER = ['januari', 'februari', 'mars', 'april', 'maj', 'juni',
@@ -125,6 +129,19 @@ export function checklista(d: FörhandsData): Punkt[] {
     ut.push({ nivå: 'info', text: `Nyheten visar datumet ${formateraDag(d.datum)}, men lanseringen är ${formateraDag(d.schemaDatum)}. Avsiktligt?` })
   if (d.visaVadArNytt && d.vadArNyttPå === false)
     ut.push({ nivå: 'varning', text: 'Vad är nytt är ikryssad, men själva rutan är avstängd för användarna (uppdateringar_vad_ar_nytt). Välj flaggan i lanseringen, annars ser ingen den.' })
+  // Prova själv: en "Ny funktion" utan länk kan vara ett förbiseende, och en
+  // länk till en avstängd funktion visas inte alls (lib/provaSjalv.ts).
+  const utanLänk = d.punkter.findIndex(p => p.text.trim() !== '' && p.typ === 'ny-funktion' && !p.provaSjalv)
+  if (utanLänk >= 0)
+    ut.push({ nivå: 'info', text: `Rad ${utanLänk + 1} är "Ny funktion" men har ingen Prova själv-länk. Avsiktligt?` })
+  if (d.flaggorEfterLansering) {
+    d.punkter.forEach((p, i) => {
+      if (p.text.trim() === '' || !ärProvaSjalvMål(p.provaSjalv)) return
+      const flagga = PROVA_SJALV[p.provaSjalv].flagga
+      if (flagga && !d.flaggorEfterLansering![flagga])
+        ut.push({ nivå: 'varning', text: `Rad ${i + 1}: Prova själv leder till ${PROVA_SJALV[p.provaSjalv].etikett}, som är avstängd (${flagga}). Länken visas inte förrän den slås på.` })
+    })
+  }
   if (ps.some(p => p.typ === 'ny-funktion') && !d.visaVadArNytt)
     ut.push({ nivå: 'info', text: 'En punkt är "Ny funktion" men Vad är nytt är inte ikryssad. Avsiktligt?' })
   const opublicerade = d.kopplatFaq.filter(f => !f.publicerad).length

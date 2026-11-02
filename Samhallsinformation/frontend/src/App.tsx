@@ -48,6 +48,16 @@ function HomePage() {
   useEffect(() => { if (!isLoggedIn) setViewMode('Allt') }, [isLoggedIn])
   useEffect(() => { if (selectedShortName !== null) setViewMode('Allt') }, [selectedShortName])
 
+  // Prova själv-länk hit (/?vy=…) medan flödet redan visas, t.ex. från Vad är
+  // nytt-rutan: platsfiltret och Sparat finns bara i det kombinerade flödet.
+  const vy = searchParams.get('vy')
+  useEffect(() => {
+    if (vy !== 'plats' && vy !== 'sparat') return
+    setSelectedShortName(null)
+    if (vy === 'sparat' && isLoggedIn) setViewMode('Mitt')
+    if (vy === 'plats') setViewMode('Allt')
+  }, [vy, location.key, isLoggedIn])
+
   const { data: sources = [] } = useQuery<Source[]>({
     queryKey: ['sources'],
     queryFn: fetchSources,

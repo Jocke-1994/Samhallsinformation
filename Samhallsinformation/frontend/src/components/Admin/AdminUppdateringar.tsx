@@ -348,6 +348,10 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
     profilUppdateringarPå: ['uppdateringar_senaste', 'uppdateringar_historik']
       .some(k => påFörAnvändare(k) || (schemalagd && valdaFlaggor.includes(k))),
     vadArNyttPå: påFörAnvändare('uppdateringar_vad_ar_nytt') || (schemalagd && valdaFlaggor.includes('uppdateringar_vad_ar_nytt')),
+    // Flaggornas läge för användarna EFTER lanseringen — styr vilka Prova själv-
+    // länkar förhandsvisningen visar och vilka checklistan varnar för.
+    flaggorEfterLansering: Object.fromEntries(FLAG_DEFINITIONER.map(d =>
+      [d.key, påFörAnvändare(d.key) || (schemalagd && valdaFlaggor.includes(d.key))])),
   }
 
   return (

@@ -1,7 +1,7 @@
 import { Fragment } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, useMemo } from 'react'
-import { useNavigate, useSearchParams } from 'react-router'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { fetchEvents } from '../../api/events'
 import { getReadStatus, markAllAsRead } from '../../services/readState'
 import NewsItem from './NewsItem'
@@ -92,9 +92,11 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
   const flaggor = useFlags()
   const { sparade, lage: sparadeIdLage } = useSavedEvents()
   // "Prova själv"-länkar (lib/provaSjalv.ts) öppnar en bestämd flik via adressen:
-  // /?vy=plats → Filtrera på plats, /?vy=sparat → Mitt flöde → Sparat. Läses bara
-  // vid start, så användaren kan sedan byta flik fritt.
+  // /?vy=plats → Filtrera på plats, /?vy=sparat → Mitt flöde → Sparat. Gäller vid
+  // varje navigering dit (location.key) — Vad är nytt-rutan ligger ovanpå flödet,
+  // så flödet är redan monterat när länken klickas. Däremellan byter användaren fritt.
   const [searchParams] = useSearchParams()
+  const { key: navigeringsnyckel } = useLocation()
   const startvy = searchParams.get('vy')
   const [mittUnderflik, setMittUnderflik] = useState<MittUnderflik>(startvy === 'sparat' ? 'Sparat' : 'Flöde')
 
@@ -127,6 +129,11 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
     föregåendeKälla.current = shortName
     setSeverityFilter('Alla'); setFlodevy('handelser')
   }, [shortName])
+
+  useEffect(() => {
+    if (startvy === 'plats') setFlodevy('plats')
+    if (startvy === 'sparat') setMittUnderflik('Sparat')
+  }, [startvy, navigeringsnyckel])
 
   const sourceMap = useMemo(
     () => Object.fromEntries(sources.map(s => [s.id, s.shortName])),
