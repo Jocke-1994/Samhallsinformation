@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  banderoll, checklista, formateraDag, punkterNyhetersidan, punkterVadÄrNytt, push,
+  banderoll, checklista, formateraDag, punkterNyhetersidan, punkterProfilen, punkterVadÄrNytt, push,
   type FörhandsData,
 } from '../lib/uppdateringForhandsvisning'
 
@@ -43,6 +43,18 @@ describe('Nyheter-sidan', () => {
   it('hoppar över rader utan text', () => {
     const d = data({ punkter: [{ typ: 'buggfix', plats: 'Allmänt', text: '  ', synlighet: 'alla' }] })
     expect(punkterNyhetersidan(d, 'lansering')).toEqual([])
+  })
+})
+
+describe('Profil → Uppdateringar', () => {
+  it('visar alla ifyllda punkter, även "Endast inloggade"', () => {
+    expect(punkterProfilen(data(), 'lansering').map(p => p.text)).toEqual(['Filtrera på kommun', 'Sparas på kontot'])
+  })
+
+  it('visar samma "Släpps X"-teaser som Nyheter-sidan under annonseringen', () => {
+    const ps = punkterProfilen(data({ annonsera: true }), 'annonsering')
+    expect(ps).toHaveLength(1)
+    expect(ps[0]).toMatchObject({ typ: 'kommer-snart', text: 'Släpps 15 november' })
   })
 })
 

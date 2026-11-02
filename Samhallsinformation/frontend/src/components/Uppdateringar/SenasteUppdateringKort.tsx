@@ -5,16 +5,18 @@ function formatDatum(iso: string): string {
   return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-// Det framhävda "Senaste"-kortet på Nyheter-sidan (/uppdateringar). Egen
-// komponent så att förhandsvisningen i admin (UppdateringForhandsvisning)
-// visar EXAKT samma sak som besökarna ser, inte en kopia som kan glida isär.
-export default function SenasteUppdateringKort({ titel, datum, punkter }: {
+// Det framhävda "Senaste"-kortet på Nyheter-sidan (/uppdateringar) och i
+// Profil → Uppdateringar. Egen komponent så att förhandsvisningen i admin
+// (UppdateringForhandsvisning) visar EXAKT samma sak som användarna ser, inte
+// en kopia som kan glida isär (profilen hade en egen kopia fram till 2026-11-02).
+export default function SenasteUppdateringKort({ titel, datum, punkter, className = 'mb-6' }: {
   titel: string
   datum: string
   punkter: UppdateringsPunkt[]
+  className?: string
 }) {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md overflow-hidden mb-6">
+    <div className={`bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md overflow-hidden ${className}`}>
       <div className="bg-gradient-to-br from-violet-600 to-violet-800 px-8 py-6 flex items-center justify-between gap-4">
         <div>
           <span className="text-xs font-bold text-violet-300 uppercase tracking-widest">Senaste</span>
