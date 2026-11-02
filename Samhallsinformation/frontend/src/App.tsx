@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, useLocation } from 'react-router'
+import { Routes, Route, useLocation, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSwipeable } from 'react-swipeable'
 import Sidebar from './components/Sidebar/Sidebar'
@@ -35,8 +35,11 @@ function HomePage() {
   const [selectedShortName, setSelectedShortName] = useState<string | null>(
     (location.state as { shortName?: string } | null)?.shortName ?? null
   )
+  const [searchParams] = useSearchParams()
+  // /?vy=sparat (Prova själv → Mitt flöde → Sparat) startar i Mitt flöde.
   const [viewMode, setViewMode] = useState<'Allt' | 'Mitt'>(
-    (location.state as { viewMode?: 'Allt' | 'Mitt' } | null)?.viewMode ?? 'Allt'
+    (location.state as { viewMode?: 'Allt' | 'Mitt' } | null)?.viewMode
+      ?? (searchParams.get('vy') === 'sparat' ? 'Mitt' : 'Allt')
   )
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -44,6 +47,16 @@ function HomePage() {
   // annars filtrerar ett kvarhängande "Mitt"-läge tyst en enskild källas vy.
   useEffect(() => { if (!isLoggedIn) setViewMode('Allt') }, [isLoggedIn])
   useEffect(() => { if (selectedShortName !== null) setViewMode('Allt') }, [selectedShortName])
+
+  // Prova själv-länk hit (/?vy=…) medan flödet redan visas, t.ex. från Vad är
+  // nytt-rutan: platsfiltret och Sparat finns bara i det kombinerade flödet.
+  const vy = searchParams.get('vy')
+  useEffect(() => {
+    if (vy !== 'plats' && vy !== 'sparat') return
+    setSelectedShortName(null)
+    if (vy === 'sparat' && isLoggedIn) setViewMode('Mitt')
+    if (vy === 'plats') setViewMode('Allt')
+  }, [vy, location.key, isLoggedIn])
 
   const { data: sources = [] } = useQuery<Source[]>({
     queryKey: ['sources'],

@@ -220,7 +220,7 @@ public class UppdateringarController : ControllerBase
     private static string? ValideraPunkter(UppdateringRequest req)
     {
         var punktFel = UppdateringsVärden.ValideraPunkter(
-            (req.Punkter ?? []).Select(p => ((string?)p.Typ, (string?)p.Synlighet)));
+            (req.Punkter ?? []).Select(p => ((string?)p.Typ, (string?)p.Synlighet, p.ProvaSjalv)));
         if (punktFel != null) return punktFel;
 
         // Del 2 (Beslut 2026-10-08): en banderoll har ingenting att visa utan
@@ -260,6 +260,7 @@ public class UppdateringarController : ControllerBase
                 Plats         = p.Plats,
                 Text          = p.Text,
                 Synlighet     = p.Synlighet,
+                ProvaSjalv    = p.ProvaSjalv,
                 Ordning       = i,
             });
         }
@@ -276,7 +277,7 @@ public class UppdateringarController : ControllerBase
         return releaser.Select(u => new UppdateringDto(
             u.Id, u.Titel, u.Datum, u.Publicerad,
             punkter.Where(p => p.UppdateringId == u.Id)
-                   .Select(p => new PunktDto(p.Id, p.Typ, p.Plats, p.Text, p.Synlighet))
+                   .Select(p => new PunktDto(p.Id, p.Typ, p.Plats, p.Text, p.Synlighet, p.ProvaSjalv))
                    .ToList(),
             u.SchemalagdPubliceringUtc,
             FeatureFlagActivation.DeserialiseraFlaggor(u.SchemalagdaFlaggorJson),
@@ -299,7 +300,7 @@ public class UppdateringarController : ControllerBase
             : u).ToList();
 }
 
-public record PunktDto(Guid Id, string Typ, string Plats, string Text, string Synlighet);
+public record PunktDto(Guid Id, string Typ, string Plats, string Text, string Synlighet, string? ProvaSjalv = null);
 public record UppdateringDto(
     Guid Id, string Titel, DateTime Datum, bool Publicerad, List<PunktDto> Punkter,
     DateTime? SchemalagdPubliceringUtc, List<string> SchemalagdaFlaggor,
@@ -307,7 +308,7 @@ public record UppdateringDto(
     DateTime? AnnonseringUtc, DateTime? AnnonseradUtc, string PushSkickaVid, DateTime CreatedAt,
     bool VisaVadArNytt);
 
-public record PunktRequest(string Typ, string Plats, string Text, string Synlighet);
+public record PunktRequest(string Typ, string Plats, string Text, string Synlighet, string? ProvaSjalv = null);
 public record UppdateringRequest(
     string Titel, DateTime Datum, bool Publicerad, List<PunktRequest> Punkter,
     DateTime? SchemalagdPubliceringUtc = null, List<string>? SchemalagdaFlaggor = null,

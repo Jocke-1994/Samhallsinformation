@@ -1,7 +1,7 @@
 import { Fragment } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router'
+import { useEffect, useRef, useState, useMemo } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { fetchEvents } from '../../api/events'
 import { getReadStatus, markAllAsRead } from '../../services/readState'
 import NewsItem from './NewsItem'
@@ -91,7 +91,14 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
   const navigate = useNavigate()
   const flaggor = useFlags()
   const { sparade, lage: sparadeIdLage } = useSavedEvents()
-  const [mittUnderflik, setMittUnderflik] = useState<MittUnderflik>('Flöde')
+  // "Prova själv"-länkar (lib/provaSjalv.ts) öppnar en bestämd flik via adressen:
+  // /?vy=plats → Filtrera på plats, /?vy=sparat → Mitt flöde → Sparat. Gäller vid
+  // varje navigering dit (location.key) — Vad är nytt-rutan ligger ovanpå flödet,
+  // så flödet är redan monterat när länken klickas. Däremellan byter användaren fritt.
+  const [searchParams] = useSearchParams()
+  const { key: navigeringsnyckel } = useLocation()
+  const startvy = searchParams.get('vy')
+  const [mittUnderflik, setMittUnderflik] = useState<MittUnderflik>(startvy === 'sparat' ? 'Sparat' : 'Flöde')
 
   // "Alla"-flödet: en sida (50 senaste) av allas händelser, oförändrat. Mitt flöde
   // och Sparat hämtas i stället filtrerade på servern (V3-11) — ingen klientfiltrering.
@@ -111,9 +118,22 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
   // Platsfiltret (beslut 10) är en egen, fristående vy — inte AND-kombinerad
   // med allvarlighetsfiltret. Bara meningsfullt mot det delade 50-händelser-
   // fönstret (beslut 6), inte en enskild källas flöde.
-  const [flodevy, setFlodevy] = useState<'handelser' | 'plats'>('handelser')
+  const [flodevy, setFlodevy] = useState<'handelser' | 'plats'>(startvy === 'plats' ? 'plats' : 'handelser')
 
-  useEffect(() => { setSeverityFilter('Alla'); setFlodevy('handelser') }, [shortName])
+  // Nollställ bara vid ett faktiskt källbyte — inte vid start, då skulle
+  // /?vy=plats direkt skrivas över. Jämför värdet i stället för "första
+  // körningen", så att StrictModes dubbla effektkörning inte nollställer ändå.
+  const föregåendeKälla = useRef(shortName)
+  useEffect(() => {
+    if (föregåendeKälla.current === shortName) return
+    föregåendeKälla.current = shortName
+    setSeverityFilter('Alla'); setFlodevy('handelser')
+  }, [shortName])
+
+  useEffect(() => {
+    if (startvy === 'plats') setFlodevy('plats')
+    if (startvy === 'sparat') setMittUnderflik('Sparat')
+  }, [startvy, navigeringsnyckel])
 
   const sourceMap = useMemo(
     () => Object.fromEntries(sources.map(s => [s.id, s.shortName])),

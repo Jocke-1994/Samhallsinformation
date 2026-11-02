@@ -12,7 +12,7 @@ vi.mock('../api/events')
 vi.mock('../api/savedEvents')
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }) }))
 vi.mock('../context/FeatureFlagsContext', () => ({ useFlags: () => ({ flode_sparat: true, flode_olasta_badge: false }) }))
-vi.mock('react-router', () => ({ useNavigate: () => vi.fn() }))
+vi.mock('react-router', () => ({ useNavigate: () => vi.fn(), useSearchParams: () => [new URLSearchParams()], useLocation: () => ({ key: 'default' }) }))
 vi.mock('../components/common/MobilTopBar', () => ({ default: () => null }))
 vi.mock('../components/NewsFeed/NewsItem', () => ({
   default: ({ event }: { event: CanonicalEvent }) => <li data-testid="handelse">{event.title}</li>,

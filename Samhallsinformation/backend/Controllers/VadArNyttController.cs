@@ -51,7 +51,7 @@ public class VadArNyttController : ControllerBase
         var punkter = await _db.UppdateringsPunkter
             .Where(p => p.UppdateringId == senaste.Id)
             .OrderBy(p => p.Ordning)
-            .Select(p => new PunktDto(p.Id, p.Typ, p.Plats, p.Text, p.Synlighet))
+            .Select(p => new PunktDto(p.Id, p.Typ, p.Plats, p.Text, p.Synlighet, p.ProvaSjalv))
             .ToListAsync();
         if (punkter.Count == 0) return NoContent();
 
