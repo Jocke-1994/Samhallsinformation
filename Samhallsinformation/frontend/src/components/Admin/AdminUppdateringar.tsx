@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sendNewVersionNotice } from '../../api/push'
 import {
@@ -18,6 +18,7 @@ import UppdateringarKalender from './UppdateringarKalender'
 import UppdateringForhandsvisning from './UppdateringForhandsvisning'
 import { FLAG_DEFINITIONER } from '../../lib/featureFlags'
 import type { FörhandsData } from '../../lib/uppdateringForhandsvisning'
+import { läsUtkast, rensaUtkast, sparaUtkast, type NyUppdateringUtkast } from '../../lib/nyUppdateringUtkast'
 
 // ---------------------------------------------------------------------------
 // Konfiguration
@@ -176,8 +177,10 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   sparar?:   boolean
   fel?:      unknown
 }) {
-  const [titel,      setTitel]      = useState(redigerar?.titel ?? '')
-  const [datum,      setDatum]      = useState(redigerar?.datum.split('T')[0] ?? new Date().toISOString().split('T')[0])
+  // Läses en gång vid öppning. Bara för en ny post.
+  const [utkast, setUtkast] = useState<NyUppdateringUtkast | null>(() => redigerar ? null : läsUtkast())
+  const [titel,      setTitel]      = useState(redigerar?.titel ?? utkast?.titel ?? '')
+  const [datum,      setDatum]      = useState(redigerar?.datum.split('T')[0] ?? utkast?.datum ?? new Date().toISOString().split('T')[0])
   const [publicerad, setPublicerad] = useState(redigerar?.publicerad ?? false)
   // Bara en HELT NY post får en tom startrad injicerad — redigeras en
   // befintlig post visas exakt vad som är sparat, även 0 rader (en giltig
@@ -188,40 +191,77 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   const [punkter, setPunkter] = useState<PunktFormRad[]>(
     redigerar
       ? redigerar.punkter.map(p => ({ radId: nästaRadId++, typ: p.typ, plats: p.plats, text: p.text, synlighet: p.synlighet }))
-      : [nyPunkt(nästaRadId++)]
+      : utkast && utkast.punkter.length > 0
+        ? utkast.punkter.map(p => ({ ...p, radId: nästaRadId++ }))
+        : [nyPunkt(nästaRadId++)]
   )
 
   // Schemalagd lansering — ett delat datum/tid för både changelog-
   // publicering OCH aktivering av valda feature-flaggor (se
   // ScheduledReleaseBackgroundService på backend).
-  const [schemalagd,   setSchemalagd]   = useState(redigerar?.schemalagdPubliceringUtc != null)
-  const [schemaDatum,  setSchemaDatum]  = useState(redigerar?.schemalagdPubliceringUtc ? isoTillDatetimeLocal(redigerar.schemalagdPubliceringUtc) : '')
-  const [valdaFlaggor, setValdaFlaggor] = useState<string[]>(redigerar?.schemalagdaFlaggor ?? [])
+  const [schemalagd,   setSchemalagd]   = useState(redigerar ? redigerar.schemalagdPubliceringUtc != null : utkast?.schemalagd ?? false)
+  const [schemaDatum,  setSchemaDatum]  = useState(redigerar?.schemalagdPubliceringUtc ? isoTillDatetimeLocal(redigerar.schemalagdPubliceringUtc) : utkast?.schemaDatum ?? '')
+  const [valdaFlaggor, setValdaFlaggor] = useState<string[]>(redigerar?.schemalagdaFlaggor ?? utkast?.valdaFlaggor ?? [])
 
   // Del 2 av Schemalagd lanserings "Ny version"-tillägg (Beslut 2026-10-08) —
   // skapas av ScheduledReleaseBackgroundService vid lanseringstidpunkten,
   // inte här vid sparande.
-  const [skickaPush,     setSkickaPush]     = useState(redigerar?.skickaPush ?? false)
-  const [pushVersion,    setPushVersion]    = useState(redigerar?.pushVersion ?? '')
-  const [pushMeddelande, setPushMeddelande] = useState(redigerar?.pushMeddelande ?? '')
-  const [visaBanderoll,  setVisaBanderoll]  = useState(redigerar?.visaBanderoll ?? false)
+  const [skickaPush,     setSkickaPush]     = useState(redigerar?.skickaPush ?? utkast?.skickaPush ?? false)
+  const [pushVersion,    setPushVersion]    = useState(redigerar?.pushVersion ?? utkast?.pushVersion ?? '')
+  const [pushMeddelande, setPushMeddelande] = useState(redigerar?.pushMeddelande ?? utkast?.pushMeddelande ?? '')
+  const [visaBanderoll,  setVisaBanderoll]  = useState(redigerar?.visaBanderoll ?? utkast?.visaBanderoll ?? false)
   // Vad är nytt-rutan — oberoende av schemaläggning, så den ligger utanför
   // schema-sektionen i formuläret.
-  const [visaVadArNytt,  setVisaVadArNytt]  = useState(redigerar?.visaVadArNytt ?? false)
+  const [visaVadArNytt,  setVisaVadArNytt]  = useState(redigerar?.visaVadArNytt ?? utkast?.visaVadArNytt ?? false)
 
   // Del 3: annonsering i förväg (Beslut 2026-10-08) — en andra, tidigare
   // tidpunkt. Posten visas som en "Kommer snart"-teaser från den tidpunkten
   // tills schemaDatum (lanseringen) ovan slår in.
-  const [annonsera,     setAnnonsera]     = useState(redigerar?.annonseringUtc != null)
-  const [annonseDatum,  setAnnonseDatum]  = useState(redigerar?.annonseringUtc ? isoTillDatetimeLocal(redigerar.annonseringUtc) : '')
-  const [pushSkickaVid, setPushSkickaVid] = useState<PushSkickaVid>(redigerar?.pushSkickaVid ?? 'Lansering')
+  const [annonsera,     setAnnonsera]     = useState(redigerar ? redigerar.annonseringUtc != null : utkast?.annonsera ?? false)
+  const [annonseDatum,  setAnnonseDatum]  = useState(redigerar?.annonseringUtc ? isoTillDatetimeLocal(redigerar.annonseringUtc) : utkast?.annonseDatum ?? '')
+  const [pushSkickaVid, setPushSkickaVid] = useState<PushSkickaVid>(redigerar?.pushSkickaVid ?? utkast?.pushSkickaVid ?? 'Lansering')
+
+  // Spara utkastet vid varje ändring (bara ny post). Tomt formulär = inget utkast.
+  const nuvarandeUtkast: NyUppdateringUtkast = {
+    titel, datum, punkter: punkter.map(({ typ, plats, text, synlighet }) => ({ typ, plats, text, synlighet })),
+    schemalagd, schemaDatum, valdaFlaggor, skickaPush, pushVersion, pushMeddelande,
+    visaBanderoll, visaVadArNytt, annonsera, annonseDatum, pushSkickaVid,
+  }
+  const utkastJson = JSON.stringify(nuvarandeUtkast)
+  const ärTomt = titel.trim() === '' && punkter.every(p => p.text.trim() === '') && !schemalagd
+  useEffect(() => {
+    if (redigerar) return
+    sparaUtkast(ärTomt ? null : JSON.parse(utkastJson) as NyUppdateringUtkast)
+  }, [redigerar, utkastJson, ärTomt])
+
+  function börjaOm() {
+    rensaUtkast()
+    setUtkast(null)
+    setTitel(''); setDatum(new Date().toISOString().split('T')[0]); setPublicerad(false)
+    setPunkter([nyPunkt(nästaRadId++)])
+    setSchemalagd(false); setSchemaDatum(''); setValdaFlaggor([])
+    setSkickaPush(false); setPushVersion(''); setPushMeddelande('')
+    setVisaBanderoll(false); setVisaVadArNytt(false)
+    setAnnonsera(false); setAnnonseDatum(''); setPushSkickaVid('Lansering')
+  }
 
   const flaggFråga = useQuery({ queryKey: ADMIN_FLAGG_QUERY_KEY, queryFn: fetchAdminFeatureFlags })
   const adminFlaggor = flaggFråga.data ?? []
-  // En flagga som är på men bara för Admin (Testmiljö-läget) är inte lanserad
-  // än — den ska gå att välja, och lanseringen öppnar den för alla
-  // (FeatureFlagActivation.ActivateFlagsAsync nollställer EndastAdmin).
-  const redoFlaggor = adminFlaggor.filter(f => f.redoAttLanseras && !(f.value && !f.endastAdmin))
+  // Alla flaggor som inte redan är på för användarna går att välja (önskemål
+  // 2026-11-02 — att först behöva markera "redo" i en annan vy var ett steg
+  // för mycket). En flagga som bara är på för Admin räknas som ej lanserad;
+  // lanseringen öppnar den för alla (FeatureFlagActivation nollställer
+  // EndastAdmin). Mock-flaggor hoppas över: de visar aldrig något för
+  // användare. "Redo att lanseras"-markerade hamnar först, med en ✓.
+  const ärRedo = (key: string) => adminFlaggor.some(f => f.key === key && f.redoAttLanseras)
+  const valbaraNycklar = new Set<string>([
+    ...FLAG_DEFINITIONER.filter(d => !d.mock && !påFörAnvändare(d.key)).map(d => d.key),
+    ...adminFlaggor.filter(f => f.redoAttLanseras && !(f.value && !f.endastAdmin)).map(f => f.key),
+    ...valdaFlaggor,
+  ])
+  const valbaraFlaggor = [...valbaraNycklar]
+    .map(key => ({ key, redo: ärRedo(key), label: FLAG_DEFINITIONER.find(d => d.key === key)?.label }))
+    .sort((a, b) => Number(b.redo) - Number(a.redo))
 
   const { data: faqItems = [] } = useQuery({ queryKey: ['admin-faq'], queryFn: fetchAdminFaq })
   const kopplatFaq = faqItems.filter(f => f.flagKey && valdaFlaggor.includes(f.flagKey))
@@ -301,7 +341,12 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
     skickaPush, pushVersion, pushMeddelande, pushSkickaVid, visaBanderoll, visaVadArNytt,
     valdaFlaggor: schemalagd ? valdaFlaggor : [],
     kopplatFaq: schemalagd ? kopplatFaq.map(f => ({ fraga: f.fraga, publicerad: f.publicerad })) : [],
-    profilUppdateringarPå: påFörAnvändare('uppdateringar_senaste') || påFörAnvändare('uppdateringar_historik'),
+    // Räknar också med det lanseringen själv slår på — annars varnade
+    // checklistan för en avstängd profilsida i just den lansering som öppnar
+    // den (2026-11-02).
+    profilUppdateringarPå: ['uppdateringar_senaste', 'uppdateringar_historik']
+      .some(k => påFörAnvändare(k) || (schemalagd && valdaFlaggor.includes(k))),
+    vadArNyttPå: påFörAnvändare('uppdateringar_vad_ar_nytt') || (schemalagd && valdaFlaggor.includes('uppdateringar_vad_ar_nytt')),
   }
 
   return (
@@ -316,7 +361,7 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
           <h2 className="text-base font-semibold text-slate-900">
             {redigerar ? 'Redigera uppdatering' : 'Ny uppdatering'}
           </h2>
-          <button onClick={onStäng} className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none">✕</button>
+          <button onClick={onStäng} aria-label="Stäng formuläret" className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none">✕</button>
         </div>
 
         <div className="flex-1 min-h-0 flex">
@@ -324,6 +369,15 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
 
         {/* Innehåll */}
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+
+          {utkast && (
+            <div role="status" className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+              <p className="text-xs text-slate-600">Ditt osparade utkast är återställt.</p>
+              <button type="button" onClick={börjaOm} className="text-xs font-medium text-violet-600 hover:text-violet-800 shrink-0">
+                Börja om
+              </button>
+            </div>
+          )}
 
           {/* Titel */}
           <div className="flex flex-col gap-1.5">
@@ -428,16 +482,18 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
                       arIgang={flaggFråga.isFetching}
                       className="items-start text-left"
                     />
-                  ) : redoFlaggor.length === 0 ? (
+                  ) : valbaraFlaggor.length === 0 ? (
                     <p className="text-xs text-slate-400">
-                      Inga flaggor är markerade "redo att lanseras" än — gör det i Feature flags-panelen, eller flytta en idé till "lanseringsklar" i Funktionsidéer.
+                      Alla flaggor är redan på för användarna — det finns inget att lansera.
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
-                      {redoFlaggor.map(f => (
+                      {valbaraFlaggor.map(f => (
                         <button
                           key={f.key}
                           type="button"
+                          title={f.label ? `${f.label}${f.redo ? ' — markerad redo att lanseras' : ''}` : undefined}
+                          aria-pressed={valdaFlaggor.includes(f.key)}
                           onClick={() => toggleFlagga(f.key)}
                           className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors ${
                             valdaFlaggor.includes(f.key)
@@ -446,9 +502,13 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
                           }`}
                         >
                           {f.key}
+                          {f.redo && <span aria-hidden="true" className="ml-1 text-emerald-600">✓</span>}
                         </button>
                       ))}
                     </div>
+                  )}
+                  {valbaraFlaggor.some(f => f.redo) && (
+                    <p className="text-[11px] text-slate-400">✓ = markerad "redo att lanseras" i Feature flags. Håll muspekaren över en flagga för att se vad den heter.</p>
                   )}
                 </div>
 
@@ -775,7 +835,8 @@ export default function AdminUppdateringar() {
     if (redigerar) {
       updateMutation.mutate({ id: redigerar.id, req: data }, villkor)
     } else {
-      createMutation.mutate(data, villkor)
+      // Utkastet rensas först när servern bekräftat — ett fel lämnar det kvar.
+      createMutation.mutate(data, { ...villkor, onSuccess: () => { rensaUtkast(); stängPanel() } })
     }
   }
 
