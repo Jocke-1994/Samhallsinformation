@@ -44,11 +44,12 @@ slutar inte vid "det här finns nu" utan leder dit.
   sedan 2026-09-15 hämtas innehållet från databasen (samma som Nyheter-sidan).
   Pågång och Kända problem är fortfarande mock och har egna flaggor.
 
+## Beslut 2026-11-02 (dina svar, från mobilen)
+- **Destinationer från start:** Senaste nytt → Filtrera på plats, Mina källor, Konto, Support. Fler kan läggas till senare.
+- **Besökare:** ja, de ser "Prova själv" även på funktioner som kräver konto, **men det ska framgå att det kräver ett konto** (t.ex. "Prova själv · kräver konto"), och länken leder till inloggning först.
+
 ## Öppna frågor
-- Vilka destinationer ska finnas i listan från start?
-- Ska en besökare se "Prova själv" på en funktion som kräver inloggning
-  (t.ex. leda till inloggning), eller ska länken döljas för besökare?
-- Slå på Profil → Uppdateringar (Senaste version + Versionshistorik) när detta byggs?
+- Slå på Profil → Uppdateringar (Senaste version + Versionshistorik)? Du bad om bilder på hur den ser ut i dag, på mobil och dator, innan du bestämmer dig.
 
 ## Kopplat
 - [[Uppdateringar-forhandsvisning]]
