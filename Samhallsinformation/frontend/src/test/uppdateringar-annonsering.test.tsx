@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -80,7 +80,8 @@ describe('AdminUppdateringar — annonsering i förväg', () => {
 
     await userEvent.click(screen.getByText('Annonsera i förväg'))
     expect(screen.getByText('Skicka vid')).toBeInTheDocument()
-    expect(screen.getByText('Lansering')).toBeInTheDocument()
+    // Avgränsat till "Skicka vid"-raden: förhandsvisningen har en egen "Lansering"-knapp (Fas).
+    expect(within(screen.getByText('Skicka vid').parentElement!).getByText('Lansering')).toBeInTheDocument()
   })
 
   it('sparar annonseringUtc och pushSkickaVid korrekt', async () => {
