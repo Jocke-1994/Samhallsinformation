@@ -27,6 +27,12 @@ likadant ut för soppa och tårta, men tårtan kräver mycket mer på "smaka och
 | Felsökning ("det funkar inte") | planerad |
 | När Claude tar hjälp av andra agenter | planerad |
 
+## Loggar från riktiga uppgifter
+| Logg | Sorts uppgift | Förbättring som kom ur den |
+|---|---|---|
+| [[Logg - Vad är nytt]] | Ny funktion (alla lager) | Skärmdump tidigare, skript för lokal körning, minnesregler → tester |
+| [[Logg - Migrationsregel som test]] | Skyddsnät | Databasregeln är nu automatisk (PR #707) |
+
 ## Hur diagrammen tas fram
 1. Claude ritar utifrån hur det brukar gå till (det du läser nu).
 2. Vi bygger en riktig liten funktion, och Claude skriver ner varje beslut medan arbetet pågår.
