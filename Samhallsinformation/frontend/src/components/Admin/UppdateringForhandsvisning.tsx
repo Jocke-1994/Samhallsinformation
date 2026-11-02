@@ -3,11 +3,11 @@ import Banderoll from '../common/Banderoll'
 import { VadArNyttInnehall } from '../common/VadArNytt'
 import SenasteUppdateringKort from '../Uppdateringar/SenasteUppdateringKort'
 import {
-  banderoll, checklista, punkterNyhetersidan, punkterVadÄrNytt, push,
+  banderoll, checklista, punkterNyhetersidan, punkterProfilen, punkterVadÄrNytt, push,
   type Fas, type FörhandsData, type VisaSom,
 } from '../../lib/uppdateringForhandsvisning'
 
-type Flik = 'nyheter' | 'vadarnytt' | 'banderoll' | 'push'
+type Flik = 'nyheter' | 'profil' | 'vadarnytt' | 'banderoll' | 'push'
 
 // Live-förhandsvisning bredvid Uppdateringar-formuläret (Ideer/Uppdateringar-
 // forhandsvisning.md, skiss godkänd 2026-11-02). Visar sajtens RIKTIGA
@@ -23,6 +23,7 @@ export default function UppdateringForhandsvisning({ data }: { data: FörhandsDa
 
   const flikar: [Flik, string][] = [
     ['nyheter', 'Nyheter-sidan'],
+    ['profil', 'Profil'],
     ...(data.visaVadArNytt ? [['vadarnytt', 'Vad är nytt'] as [Flik, string]] : []),
     ...(data.schemalagd && data.visaBanderoll ? [['banderoll', 'Banderoll'] as [Flik, string]] : []),
     ...(data.schemalagd && data.skickaPush ? [['push', 'Push'] as [Flik, string]] : []),
@@ -67,6 +68,7 @@ export default function UppdateringForhandsvisning({ data }: { data: FörhandsDa
       </div>
       <div role="tabpanel" className="flex-1 overflow-y-auto bg-slate-50 px-5 py-6 flex flex-col items-center gap-3">
         {flik === 'nyheter'   && <NyheterVy data={data} fas={fas} som={som} />}
+        {flik === 'profil'    && <ProfilVy data={data} fas={fas} som={som} />}
         {flik === 'vadarnytt' && <VadÄrNyttVy data={data} fas={fas} som={som} />}
         {flik === 'banderoll' && <BanderollVy data={data} fas={fas} som={som} />}
         {flik === 'push'      && <PushVy data={data} fas={fas} som={som} />}
@@ -115,6 +117,22 @@ function NyheterVy({ data, fas, som }: VyProps) {
       <Förklaring>
         {som === 'inloggad' ? 'Nyheter-sidan visar bara punkter märkta "Alla", även för inloggade. ' : ''}
         {data.schemalagd ? `Syns från ${fas === 'annonsering' ? 'annonseringen' : 'lanseringen'}.` : 'Syns när du publicerar.'}
+      </Förklaring>
+    </>
+  )
+}
+
+function ProfilVy({ data, fas, som }: VyProps) {
+  if (som === 'besokare') return <Tomt>Profilen finns bara för inloggade. Byt till "Inloggad" ovan.</Tomt>
+  if (!data.profilUppdateringarPå) return <Tomt>Profil → Uppdateringar är avstängd för användarna. Välj flaggan uppdateringar_senaste i lanseringen, annars syns inget här.</Tomt>
+  const ps = punkterProfilen(data, fas)
+  if (ps.length === 0) return <Tomt>Inga ifyllda punkter än.</Tomt>
+  return (
+    <>
+      <div className="w-full max-w-xl"><SenasteUppdateringKort titel={data.titel || '(ingen titel)'} datum={iso(data.datum)} punkter={ps} className="" /></div>
+      <Förklaring>
+        Inloggade ser alla punkter här, även de som är "Endast inloggade".
+        {data.schemalagd ? ` Syns från ${fas === 'annonsering' ? 'annonseringen' : 'lanseringen'}.` : ' Syns när du publicerar.'}
       </Förklaring>
     </>
   )

@@ -5,6 +5,7 @@ import { useFlags } from '../../context/FeatureFlagsContext'
 import { fetchUppdateringar, uppdateringarQueryKey } from '../../api/uppdateringar'
 import { useAuth } from '../../context/AuthContext'
 import { getTypConfig } from '../../lib/uppdateringTyp'
+import SenasteUppdateringKort from '../Uppdateringar/SenasteUppdateringKort'
 
 function formatDatum(iso: string): string {
   return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -57,31 +58,8 @@ export default function Uppdateringar() {
   }
 
   const kortSenaste = flaggor.uppdateringar_senaste && latest ? (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden">
-      <div className="bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-between gap-4" style={{ padding: '1.5rem 2rem' }}>
-        <div>
-          <span className="text-xs font-bold text-violet-300 uppercase tracking-widest">Senaste</span>
-          <h2 className="text-2xl font-extrabold text-white tracking-tight mt-1">{latest.titel}</h2>
-          <p className="text-violet-200 text-sm mt-1">{formatDatum(latest.datum)}</p>
-        </div>
-        <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-2xl backdrop-blur-sm shrink-0">
-          🚀
-        </div>
-      </div>
-      <div style={{ padding: '1.25rem 2rem' }} className="flex flex-col gap-2.5">
-        {latest.punkter.map(p => {
-          const cfg = getTypConfig(p.typ)
-          return (
-            <div key={p.id} className="flex items-start gap-3">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.badge}`}>
-                {cfg.label}
-              </span>
-              <span className="text-sm text-slate-700 leading-relaxed">{p.text}</span>
-            </div>
-          )
-        })}
-      </div>
-    </div>
+    // Samma kort som Nyheter-sidan och förhandsvisningen i admin.
+    <SenasteUppdateringKort titel={latest.titel} datum={latest.datum} punkter={latest.punkter} className="" />
   ) : null
 
   const kortPagang = flaggor.uppdateringar_pagang ? (

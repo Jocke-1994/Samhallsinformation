@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Uppdatering } from '../api/uppdateringar'
@@ -113,6 +113,20 @@ describe('Ny uppdatering — flaggval och checklista', () => {
     await userEvent.click(screen.getByRole('button', { name: 'uppdateringar_senaste' }))
 
     expect(screen.queryByText(varning)).not.toBeInTheDocument()
+  })
+
+  it('fliken Profil visar även "Endast inloggade"-rader, när profilsidan slås på', async () => {
+    await schemalägg()
+    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'Bara för inloggade')
+    await userEvent.click(screen.getByText('Endast inloggade'))
+    await userEvent.click(screen.getByRole('tab', { name: 'Profil' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Inloggad' }))
+    expect(screen.getByText(/Profil → Uppdateringar är avstängd för användarna/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'uppdateringar_senaste' }))
+
+    const panel = screen.getByRole('tabpanel')
+    expect(within(panel).getByText('Bara för inloggade')).toBeInTheDocument()
   })
 
   it('varnar när Vad är nytt är ikryssad men rutan inte slås på', async () => {
