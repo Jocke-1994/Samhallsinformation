@@ -74,7 +74,9 @@ public class UppdateringarController : ControllerBase
         var uppdatering = new Uppdatering
         {
             Titel = req.Titel, Datum = req.Datum,
-            SkickaPush = req.SkickaPush, PushVersion = req.PushVersion?.Trim(), PushMeddelande = req.PushMeddelande?.Trim(),
+            Version = TomTillNull(req.Version),
+            SkickaPush = req.SkickaPush, PushVersion = TomTillNull(req.PushVersion) ?? TomTillNull(req.Version),
+            PushMeddelande = req.PushMeddelande?.Trim(),
             VisaBanderoll = req.VisaBanderoll, VisaVadArNytt = req.VisaVadArNytt,
             AnnonseringUtc = req.AnnonseringUtc, PushSkickaVid = req.PushSkickaVid,
         };
@@ -125,8 +127,9 @@ public class UppdateringarController : ControllerBase
         uppdatering.Titel          = req.Titel;
         uppdatering.Datum          = req.Datum;
         uppdatering.UpdatedAt      = DateTime.UtcNow;
+        if (req.Version != null) uppdatering.Version = TomTillNull(req.Version);
         uppdatering.SkickaPush     = req.SkickaPush;
-        uppdatering.PushVersion    = req.PushVersion?.Trim();
+        uppdatering.PushVersion    = TomTillNull(req.PushVersion) ?? uppdatering.Version;
         uppdatering.PushMeddelande = req.PushMeddelande?.Trim();
         uppdatering.VisaBanderoll  = req.VisaBanderoll;
         uppdatering.VisaVadArNytt  = req.VisaVadArNytt;
@@ -229,7 +232,9 @@ public class UppdateringarController : ControllerBase
             return "Banderoll kräver minst en innehållsrad.";
         if (req.VisaVadArNytt && (req.Punkter?.Count ?? 0) == 0)
             return "Vad är nytt kräver minst en innehållsrad.";
-        if (req.SkickaPush && string.IsNullOrWhiteSpace(req.PushVersion))
+        if (req.Version?.Trim().Length > 20)
+            return "Versionen får vara högst 20 tecken.";
+        if (req.SkickaPush && string.IsNullOrWhiteSpace(req.PushVersion) && string.IsNullOrWhiteSpace(req.Version))
             return "Version krävs för att skicka push.";
         if (req.SkickaPush && string.IsNullOrWhiteSpace(req.PushMeddelande))
             return "Meddelande krävs för att skicka push.";
@@ -245,6 +250,8 @@ public class UppdateringarController : ControllerBase
 
         return null;
     }
+
+    private static string? TomTillNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     private static readonly string[] GiltigaPushSkickaVid = ["Annonsering", "Lansering", "Båda"];
 
@@ -282,7 +289,7 @@ public class UppdateringarController : ControllerBase
             u.SchemalagdPubliceringUtc,
             FeatureFlagActivation.DeserialiseraFlaggor(u.SchemalagdaFlaggorJson),
             u.SkickaPush, u.PushVersion, u.PushMeddelande, u.VisaBanderoll,
-            u.AnnonseringUtc, u.AnnonseradUtc, u.PushSkickaVid, u.CreatedAt, u.VisaVadArNytt
+            u.AnnonseringUtc, u.AnnonseradUtc, u.PushSkickaVid, u.CreatedAt, u.VisaVadArNytt, u.Version
         )).ToList();
     }
 
@@ -306,7 +313,7 @@ public record UppdateringDto(
     DateTime? SchemalagdPubliceringUtc, List<string> SchemalagdaFlaggor,
     bool SkickaPush, string? PushVersion, string? PushMeddelande, bool VisaBanderoll,
     DateTime? AnnonseringUtc, DateTime? AnnonseradUtc, string PushSkickaVid, DateTime CreatedAt,
-    bool VisaVadArNytt);
+    bool VisaVadArNytt, string? Version = null);
 
 public record PunktRequest(string Typ, string Plats, string Text, string Synlighet, string? ProvaSjalv = null);
 public record UppdateringRequest(
@@ -314,4 +321,6 @@ public record UppdateringRequest(
     DateTime? SchemalagdPubliceringUtc = null, List<string>? SchemalagdaFlaggor = null,
     bool SkickaPush = false, string? PushVersion = null, string? PushMeddelande = null,
     bool VisaBanderoll = false, DateTime? AnnonseringUtc = null, string PushSkickaVid = "Lansering",
-    bool VisaVadArNytt = false);
+    bool VisaVadArNytt = false,
+    // null = fältet saknas (äldre klient): behåll sparat värde. "" = ta bort versionen.
+    string? Version = null);

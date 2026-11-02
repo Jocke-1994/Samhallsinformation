@@ -6,6 +6,7 @@ import { fetchUppdateringar, uppdateringarQueryKey } from '../../api/uppdatering
 import { useAuth } from '../../context/AuthContext'
 import { getTypConfig } from '../../lib/uppdateringTyp'
 import SenasteUppdateringKort from '../Uppdateringar/SenasteUppdateringKort'
+import VersionsBricka from '../Uppdateringar/VersionsBricka'
 
 function formatDatum(iso: string): string {
   return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -59,7 +60,7 @@ export default function Uppdateringar() {
 
   const kortSenaste = flaggor.uppdateringar_senaste && latest ? (
     // Samma kort som Nyheter-sidan och förhandsvisningen i admin.
-    <SenasteUppdateringKort titel={latest.titel} datum={latest.datum} punkter={latest.punkter} className="" härifrån="profil-uppdateringar" />
+    <SenasteUppdateringKort titel={latest.titel} datum={latest.datum} punkter={latest.punkter} className="" härifrån="profil-uppdateringar" version={latest.version} />
   ) : null
 
   const kortPagang = flaggor.uppdateringar_pagang ? (
@@ -193,6 +194,7 @@ export default function Uppdateringar() {
                 <div className="flex flex-col gap-2">
                   <div className="flex items-baseline gap-3">
                     <span className="text-base font-bold text-slate-900">{release.titel}</span>
+                    <VersionsBricka version={release.version} />
                     <span className="text-xs text-slate-400 font-medium">{formatDatum(release.datum)}</span>
                   </div>
                   {/* En etikett per TYP (Nytt, Fixat …), inte en per rad. Tidigare

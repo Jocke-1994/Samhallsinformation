@@ -25,6 +25,13 @@ public class Uppdatering
     // vid lanseringstidpunkten, aldrig vid sparande. Kräver att releasen
     // faktiskt har innehåll (UppdateringsPunkter), annars finns inget att
     // pusha eller visa en banderoll om.
+    /// <summary>
+    /// Versionsnummer, t.ex. "1.1" (beslut 2026-11-02: inloggningen 15 sep = 1.0).
+    /// Visas som bricka på kortet, i Vad är nytt-rutan och i historiken, och är
+    /// det nummer "Ny version"-pushen använder när PushVersion inte satts.
+    /// </summary>
+    public string? Version { get; set; }
+
     public bool    SkickaPush     { get; set; } = false;
     public string? PushVersion    { get; set; }
     public string? PushMeddelande { get; set; }

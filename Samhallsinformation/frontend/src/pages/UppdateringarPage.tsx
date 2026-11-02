@@ -7,6 +7,7 @@ import { fetchUppdateringar, uppdateringarQueryKey } from '../api/uppdateringar'
 import { useAuth } from '../context/AuthContext'
 import { getTypConfig } from '../lib/uppdateringTyp'
 import SenasteUppdateringKort from '../components/Uppdateringar/SenasteUppdateringKort'
+import VersionsBricka from '../components/Uppdateringar/VersionsBricka'
 
 
 function formatDatum(iso: string): string {
@@ -65,7 +66,7 @@ export default function UppdateringarPage() {
           {latest && (
             <>
               {/* Senaste uppdatering — framhävd (delas med förhandsvisningen i admin) */}
-              <SenasteUppdateringKort titel={latest.titel} datum={latest.datum} punkter={latest.punkter} />
+              <SenasteUppdateringKort titel={latest.titel} datum={latest.datum} punkter={latest.punkter} version={latest.version} />
 
               {/* Äldre uppdateringar */}
               {older.length > 0 && (
@@ -74,6 +75,7 @@ export default function UppdateringarPage() {
                     <div key={update.id} className="px-8 py-5">
                       <div className="flex items-baseline gap-3 mb-3">
                         <span className="text-base font-bold text-slate-900 dark:text-slate-100">{update.titel}</span>
+                        <VersionsBricka version={update.version} />
                         <span className="text-xs text-slate-400 font-medium">{formatDatum(update.datum)}</span>
                       </div>
                       <div className="flex flex-col gap-2">

@@ -156,6 +156,62 @@ public class UppdateringarControllerTests
         Assert.True(sparad.VisaBanderoll);
     }
 
+    // ── Versionsnummer (beslut 2026-11-02) ───────────────────────────────────
+
+    [Fact]
+    public async Task CreateUppdatering_Version_SparasOchBlirPushensVersion()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var dto = (UppdateringDto)((OkObjectResult)await controller.CreateUppdatering(new UppdateringRequest(
+            "Push-notiser", DateTime.UtcNow, false, [Punkt()], DateTime.UtcNow.AddDays(1), [],
+            SkickaPush: true, PushVersion: null, PushMeddelande: "Nu kan du få notiser", Version: " 1.2 "))).Value!;
+
+        Assert.Equal("1.2", dto.Version);
+        Assert.Equal("1.2", dto.PushVersion);
+        Assert.Equal("1.2", db.Uppdateringar.Single().Version);
+    }
+
+    [Fact]
+    public async Task UpdateUppdatering_VersionSaknasIRequest_BeharSparadVersion()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+        var dto = (UppdateringDto)((OkObjectResult)await controller.CreateUppdatering(new UppdateringRequest(
+            "Logga in", DateTime.UtcNow, true, [Punkt()], Version: "1.0"))).Value!;
+
+        // Äldre klient (t.ex. en flik öppen sedan före deployen) skickar inget versionsfält.
+        await controller.UpdateUppdatering(dto.Id, new UppdateringRequest("Logga in", dto.Datum, false, [Punkt()]));
+
+        Assert.Equal("1.0", db.Uppdateringar.Single().Version);
+    }
+
+    [Fact]
+    public async Task UpdateUppdatering_TomVersion_TarBortVersionen()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+        var dto = (UppdateringDto)((OkObjectResult)await controller.CreateUppdatering(new UppdateringRequest(
+            "Logga in", DateTime.UtcNow, true, [Punkt()], Version: "1.0"))).Value!;
+
+        await controller.UpdateUppdatering(dto.Id, new UppdateringRequest("Logga in", dto.Datum, true, [Punkt()], Version: ""));
+
+        Assert.Null(db.Uppdateringar.Single().Version);
+    }
+
+    [Fact]
+    public async Task CreateUppdatering_ForLangVersion_ReturnsBadRequest()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var result = await controller.CreateUppdatering(new UppdateringRequest(
+            "Titel", DateTime.UtcNow, true, [Punkt()], Version: new string('1', 21)));
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
     // ── Del 3: annonsering i förväg (Beslut 2026-10-08) ──────────────────────
 
     [Fact]

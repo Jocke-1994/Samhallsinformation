@@ -113,7 +113,7 @@ function NyheterVy({ data, fas, som }: VyProps) {
     <>
       {ps.length === 0
         ? <Tomt>Uppdateringen syns inte på Nyheter-sidan: ingen ifylld punkt är märkt "Alla (även besökare)".</Tomt>
-        : <div className="w-full max-w-xl"><SenasteUppdateringKort titel={data.titel || '(ingen titel)'} datum={iso(data.datum)} punkter={ps} förhandsvisning={{ inloggad: som === 'inloggad', flaggor: data.flaggorEfterLansering ?? {} }} /></div>}
+        : <div className="w-full max-w-xl"><SenasteUppdateringKort titel={data.titel || '(ingen titel)'} datum={iso(data.datum)} punkter={ps} version={data.version} förhandsvisning={{ inloggad: som === 'inloggad', flaggor: data.flaggorEfterLansering ?? {} }} /></div>}
       <Förklaring>
         {som === 'inloggad' ? 'Nyheter-sidan visar bara punkter märkta "Alla", även för inloggade. ' : ''}
         {data.schemalagd ? `Syns från ${fas === 'annonsering' ? 'annonseringen' : 'lanseringen'}.` : 'Syns när du publicerar.'}
@@ -129,7 +129,7 @@ function ProfilVy({ data, fas, som }: VyProps) {
   if (ps.length === 0) return <Tomt>Inga ifyllda punkter än.</Tomt>
   return (
     <>
-      <div className="w-full max-w-xl"><SenasteUppdateringKort titel={data.titel || '(ingen titel)'} datum={iso(data.datum)} punkter={ps} className="" härifrån="profil-uppdateringar" förhandsvisning={{ inloggad: true, flaggor: data.flaggorEfterLansering ?? {} }} /></div>
+      <div className="w-full max-w-xl"><SenasteUppdateringKort titel={data.titel || '(ingen titel)'} datum={iso(data.datum)} punkter={ps} version={data.version} className="" härifrån="profil-uppdateringar" förhandsvisning={{ inloggad: true, flaggor: data.flaggorEfterLansering ?? {} }} /></div>
       <Förklaring>
         Inloggade ser alla punkter här, även de som är "Endast inloggade".
         {data.schemalagd ? ` Syns från ${fas === 'annonsering' ? 'annonseringen' : 'lanseringen'}.` : ' Syns när du publicerar.'}
@@ -145,7 +145,7 @@ function VadÄrNyttVy({ data, fas, som }: VyProps) {
   return (
     <>
       <div className="relative w-[360px] max-w-full bg-white border border-slate-200 shadow-2xl rounded-2xl p-5">
-        <VadArNyttInnehall titel={data.titel || '(ingen titel)'} datum={iso(data.datum)} punkter={ps} onStäng={() => {}} förhandsvisning={{ flaggor: data.flaggorEfterLansering ?? {} }} />
+        <VadArNyttInnehall titel={data.titel || '(ingen titel)'} datum={iso(data.datum)} punkter={ps} version={data.version} onStäng={() => {}} förhandsvisning={{ flaggor: data.flaggorEfterLansering ?? {} }} />
       </div>
       <Förklaring>Kort i nedre högra hörnet på dator, ark från botten på mobil. Visas en gång per konto.</Förklaring>
     </>

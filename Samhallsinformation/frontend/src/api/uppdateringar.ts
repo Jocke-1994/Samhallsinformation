@@ -32,6 +32,8 @@ export interface Uppdatering {
   pushSkickaVid:             PushSkickaVid
   createdAt:                 string
   visaVadArNytt:             boolean
+  /** Versionsnummer, t.ex. "1.1". Saknas i äldre svar och på äldre poster. */
+  version?:                  string | null
 }
 
 export interface PunktRequest {
@@ -56,6 +58,8 @@ export interface UppdateringRequest {
   annonseringUtc?:           string | null
   pushSkickaVid?:            PushSkickaVid
   visaVadArNytt?:            boolean
+  /** "" tar bort versionen; utelämnat behåller den sparade. */
+  version?:                  string
 }
 
 // Publika endpointen filtrerar på Synlighet i backend: anonym får bara punkter
@@ -108,6 +112,7 @@ export interface VadArNytt {
   titel:   string
   datum:   string
   punkter: UppdateringsPunkt[]
+  version?: string | null
 }
 
 export async function fetchVadArNytt(): Promise<VadArNytt | null> {
