@@ -57,7 +57,7 @@ describe('AdminUppdateringar — push vid lansering', () => {
     const knapp = screen.getByRole('button', { name: /Schemalägg|Sparas, publiceras automatiskt/ })
     expect(knapp).toBeDisabled() // Version saknas fortfarande
 
-    await userEvent.type(screen.getByPlaceholderText(/Version, t.ex/), '0.9.0')
+    await userEvent.type(screen.getByLabelText('Version'), '0.9.0')
     expect(knapp).not.toBeDisabled()
   })
 
@@ -67,14 +67,14 @@ describe('AdminUppdateringar — push vid lansering', () => {
     await öppnaOchFyllGrunduppgifter()
 
     await userEvent.click(screen.getByText('Skicka push till inloggade'))
-    await userEvent.type(screen.getByPlaceholderText(/Version, t.ex/), '0.9.0')
+    await userEvent.type(screen.getByLabelText('Version'), '0.9.0')
     await userEvent.clear(screen.getByPlaceholderText('Pushens meddelande'))
     await userEvent.type(screen.getByPlaceholderText('Pushens meddelande'), 'Ett eget meddelande')
 
     await userEvent.click(screen.getByRole('button', { name: /Schemalägg|Sparas, publiceras automatiskt/ }))
 
     expect(vi.mocked(api.createUppdatering).mock.calls[0][0]).toMatchObject({
-      skickaPush: true, pushVersion: '0.9.0', pushMeddelande: 'Ett eget meddelande',
+      skickaPush: true, pushVersion: '0.9.0', version: '0.9.0', pushMeddelande: 'Ett eget meddelande',
     })
   })
 })

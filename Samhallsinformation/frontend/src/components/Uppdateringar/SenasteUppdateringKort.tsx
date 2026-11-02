@@ -3,6 +3,7 @@ import { getTypConfig } from '../../lib/uppdateringTyp'
 import type { FlagState } from '../../lib/featureFlags'
 import type { ProvaSjalvMål } from '../../lib/provaSjalv'
 import ProvaSjalvLank from '../common/ProvaSjalvLank'
+import VersionsBricka from './VersionsBricka'
 
 function formatDatum(iso: string): string {
   return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -12,9 +13,10 @@ function formatDatum(iso: string): string {
 // Profil → Uppdateringar. Egen komponent så att förhandsvisningen i admin
 // (UppdateringForhandsvisning) visar EXAKT samma sak som användarna ser, inte
 // en kopia som kan glida isär (profilen hade en egen kopia fram till 2026-11-02).
-export default function SenasteUppdateringKort({ titel, datum, punkter, className = 'mb-6', härifrån, förhandsvisning }: {
+export default function SenasteUppdateringKort({ titel, datum, punkter, className = 'mb-6', härifrån, förhandsvisning, version }: {
   titel: string
   datum: string
+  version?: string | null
   punkter: UppdateringsPunkt[]
   className?: string
   /** Sidan kortet visas på — en Prova själv-länk dit döljs. */
@@ -28,7 +30,10 @@ export default function SenasteUppdateringKort({ titel, datum, punkter, classNam
         <div>
           <span className="text-xs font-bold text-violet-300 uppercase tracking-widest">Senaste</span>
           <h2 className="text-2xl font-extrabold text-white tracking-tight mt-1">{titel}</h2>
-          <p className="text-violet-200 text-sm mt-1">{formatDatum(datum)}</p>
+          <p className="text-violet-200 text-sm mt-1 flex items-center gap-2">
+            <VersionsBricka version={version} påFärg />
+            {formatDatum(datum)}
+          </p>
         </div>
         <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-2xl backdrop-blur-sm shrink-0">
           🚀

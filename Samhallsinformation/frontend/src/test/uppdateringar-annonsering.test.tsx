@@ -93,7 +93,7 @@ describe('AdminUppdateringar — annonsering i förväg', () => {
     fireEvent.change(annonseringsFält(), { target: { value: '2026-11-10T10:00' } })
 
     await userEvent.click(screen.getByText('Skicka push till inloggade'))
-    await userEvent.type(screen.getByPlaceholderText(/Version, t.ex/), '1.0.0')
+    await userEvent.type(screen.getByLabelText('Version'), '1.0.0')
     await userEvent.click(screen.getByText('Båda'))
 
     await userEvent.click(knappSchemalägg())

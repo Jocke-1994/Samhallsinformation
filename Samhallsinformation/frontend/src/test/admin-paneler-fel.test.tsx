@@ -273,6 +273,21 @@ describe('Uppdateringar (admin)', () => {
     expect(uppd.createUppdatering).toHaveBeenCalledTimes(1)
   })
 
+  it('publicera-växlingen i tabellen behåller version och Prova själv-länkar', async () => {
+    vi.mocked(uppd.fetchAdminUppdateringar).mockResolvedValue([{
+      ...UPPD, version: '1.0',
+      punkter: [{ ...UPPD.punkter[0], provaSjalv: 'support' }],
+    }])
+    vi.mocked(uppd.updateUppdatering).mockResolvedValue(undefined as never)
+    rendera(<AdminUppdateringar />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Publicera' }))
+
+    await waitFor(() => expect(uppd.updateUppdatering).toHaveBeenCalled())
+    const req = vi.mocked(uppd.updateUppdatering).mock.calls[0][1]
+    expect(req.version).toBe('1.0')
+    expect(req.punkter[0].provaSjalv).toBe('support')
+  })
+
   it('publicera-växling som misslyckas visas som fel', async () => {
     vi.mocked(uppd.updateUppdatering).mockRejectedValue(new Error('updateUppdatering: 500'))
     rendera(<AdminUppdateringar />)

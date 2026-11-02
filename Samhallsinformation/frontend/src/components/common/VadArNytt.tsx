@@ -7,6 +7,7 @@ import { fetchVadArNytt, markeraVadArNyttSett, type UppdateringsPunkt } from '..
 import { getTypConfig } from '../../lib/uppdateringTyp'
 import type { FlagState } from '../../lib/featureFlags'
 import ProvaSjalvLank from './ProvaSjalvLank'
+import VersionsBricka from '../Uppdateringar/VersionsBricka'
 
 // Sidor där rutan aldrig ska störa: adminpanelen och inloggnings-/kontoflödena.
 const DOLD_PÅ = ['/admin', '/login', '/register', '/forgot-password', '/reset-password',
@@ -80,7 +81,7 @@ export default function VadArNytt() {
                  inset-x-0 bottom-0 rounded-t-2xl px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]
                  sm:z-[9050] sm:inset-x-auto sm:right-6 sm:bottom-40 sm:w-[360px] sm:rounded-2xl sm:p-5"
     >
-      <VadArNyttInnehall titel={data.titel} datum={data.datum} punkter={data.punkter} rubrikId={rubrikId} onStäng={stäng} />
+      <VadArNyttInnehall titel={data.titel} datum={data.datum} punkter={data.punkter} version={data.version} rubrikId={rubrikId} onStäng={stäng} />
     </section>
   )
 }
@@ -89,9 +90,10 @@ export default function VadArNytt() {
  * Själva innehållet i rutan, utan placering. Delas med förhandsvisningen i
  * admin (UppdateringForhandsvisning) så att den visar exakt samma sak.
  */
-export function VadArNyttInnehall({ titel, datum, punkter, rubrikId, onStäng, förhandsvisning }: {
+export function VadArNyttInnehall({ titel, datum, punkter, rubrikId, onStäng, förhandsvisning, version }: {
   titel: string
   datum: string
+  version?: string | null
   punkter: UppdateringsPunkt[]
   rubrikId?: string
   onStäng: () => void
@@ -112,7 +114,7 @@ export function VadArNyttInnehall({ titel, datum, punkter, rubrikId, onStäng, f
 
     <p className="text-xs font-semibold uppercase tracking-wider text-violet-700 dark:text-violet-300">Vad är nytt</p>
     <h2 id={rubrikId} className="mt-1 pr-8 text-lg font-semibold leading-snug text-slate-900">{titel}</h2>
-    <p className="mt-0.5 text-sm text-slate-500">{formatDatum(datum)}</p>
+    <p className="mt-0.5 flex items-center gap-2 text-sm text-slate-500"><VersionsBricka version={version} />{formatDatum(datum)}</p>
 
     <ul className="mt-4 flex max-h-[40vh] flex-col gap-3 overflow-y-auto">
       {punkter.map(p => {

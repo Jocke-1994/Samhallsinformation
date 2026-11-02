@@ -55,7 +55,7 @@ public class VadArNyttController : ControllerBase
             .ToListAsync();
         if (punkter.Count == 0) return NoContent();
 
-        return Ok(new VadArNyttDto(senaste.Id, senaste.Titel, senaste.Datum, punkter));
+        return Ok(new VadArNyttDto(senaste.Id, senaste.Titel, senaste.Datum, punkter, senaste.Version));
     }
 
     [HttpPost("{id:guid}/sett")]
@@ -72,4 +72,4 @@ public class VadArNyttController : ControllerBase
     }
 }
 
-public record VadArNyttDto(Guid Id, string Titel, DateTime Datum, List<PunktDto> Punkter);
+public record VadArNyttDto(Guid Id, string Titel, DateTime Datum, List<PunktDto> Punkter, string? Version = null);

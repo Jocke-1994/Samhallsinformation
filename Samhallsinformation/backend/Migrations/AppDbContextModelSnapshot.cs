@@ -1018,6 +1018,9 @@ namespace Samhallsinformation.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Version")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("VisaBanderoll")
                         .HasColumnType("INTEGER");
 

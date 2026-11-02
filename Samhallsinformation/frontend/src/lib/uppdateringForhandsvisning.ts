@@ -32,6 +32,8 @@ export interface FörhandsData {
   profilUppdateringarPå: boolean
   /** Är Vad är nytt-rutan påslagen, nu eller av lanseringen? (uppdateringar_vad_ar_nytt) */
   vadArNyttPå?: boolean
+  /** Versionsnummer för brickan, t.ex. "1.1". */
+  version?: string
   /** Flaggornas läge för användarna efter lanseringen (Prova själv-länkarna följer dem). */
   flaggorEfterLansering?: Partial<FlagState>
 }

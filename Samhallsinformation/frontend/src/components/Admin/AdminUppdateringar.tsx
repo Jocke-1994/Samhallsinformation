@@ -208,7 +208,9 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   // skapas av ScheduledReleaseBackgroundService vid lanseringstidpunkten,
   // inte här vid sparande.
   const [skickaPush,     setSkickaPush]     = useState(redigerar?.skickaPush ?? utkast?.skickaPush ?? false)
-  const [pushVersion,    setPushVersion]    = useState(redigerar?.pushVersion ?? utkast?.pushVersion ?? '')
+  // Versionsnumret (beslut 2026-11-02) — visas som bricka och är också pushens
+  // "Ny version: X". Äldre poster hade bara pushens version, den tas då som start.
+  const [version,        setVersion]        = useState(redigerar?.version ?? redigerar?.pushVersion ?? utkast?.version ?? utkast?.pushVersion ?? '')
   const [pushMeddelande, setPushMeddelande] = useState(redigerar?.pushMeddelande ?? utkast?.pushMeddelande ?? '')
   const [visaBanderoll,  setVisaBanderoll]  = useState(redigerar?.visaBanderoll ?? utkast?.visaBanderoll ?? false)
   // Vad är nytt-rutan — oberoende av schemaläggning, så den ligger utanför
@@ -225,7 +227,7 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   // Spara utkastet vid varje ändring (bara ny post). Tomt formulär = inget utkast.
   const nuvarandeUtkast: NyUppdateringUtkast = {
     titel, datum, punkter: punkter.map(({ typ, plats, text, synlighet, provaSjalv }) => ({ typ, plats, text, synlighet, provaSjalv })),
-    schemalagd, schemaDatum, valdaFlaggor, skickaPush, pushVersion, pushMeddelande,
+    schemalagd, schemaDatum, valdaFlaggor, skickaPush, pushVersion: version, version, pushMeddelande,
     visaBanderoll, visaVadArNytt, annonsera, annonseDatum, pushSkickaVid,
   }
   const utkastJson = JSON.stringify(nuvarandeUtkast)
@@ -241,7 +243,7 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
     setTitel(''); setDatum(new Date().toISOString().split('T')[0]); setPublicerad(false)
     setPunkter([nyPunkt(nästaRadId++)])
     setSchemalagd(false); setSchemaDatum(''); setValdaFlaggor([])
-    setSkickaPush(false); setPushVersion(''); setPushMeddelande('')
+    setSkickaPush(false); setVersion(''); setPushMeddelande('')
     setVisaBanderoll(false); setVisaVadArNytt(false)
     setAnnonsera(false); setAnnonseDatum(''); setPushSkickaVid('Lansering')
   }
@@ -301,12 +303,13 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   // härleds från punkternas "Syns för" så formuläret aldrig gissar.
   const kanVisaBanderoll = harInnehåll
   const banderollMålgrupp = punkter.some(p => p.synlighet === 'alla') ? 'alla (även besökare)' : 'bara inloggade'
-  const pushGiltigt = !skickaPush || (pushVersion.trim() !== '' && pushMeddelande.trim() !== '')
+  const pushGiltigt = !skickaPush || (version.trim() !== '' && pushMeddelande.trim() !== '')
+  const versionGiltig = version.trim().length <= 20
   // Del 3: annonseringsdatumet måste vara giltigt OCH ligga före lanseringen
   // (samma regel som backend, UppdateringarController.ValideraPunkter).
   const annonseDatumGiltigt = !annonsera || (annonseDatum !== '' && !Number.isNaN(new Date(annonseDatum).getTime()))
   const annonseFoeLansering = !annonsera || !schemaDatum || new Date(annonseDatum) < new Date(schemaDatum)
-  const kanSpara = titel.trim() !== '' && datumGiltigt && schemaDatumGiltigt && pushGiltigt
+  const kanSpara = titel.trim() !== '' && datumGiltigt && schemaDatumGiltigt && pushGiltigt && versionGiltig
     && (!schemalagd || (annonseDatumGiltigt && annonseFoeLansering))
     && (harInnehåll || rentFlaggSchema)
 
@@ -320,7 +323,8 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
       schemalagdPubliceringUtc: schemalagd && schemaDatum ? new Date(schemaDatum).toISOString() : null,
       schemalagdaFlaggor: schemalagd ? valdaFlaggor : [],
       skickaPush:     schemalagd && skickaPush,
-      pushVersion:    schemalagd && skickaPush ? pushVersion.trim() : null,
+      pushVersion:    schemalagd && skickaPush ? version.trim() : null,
+      version:        version.trim(),
       pushMeddelande: schemalagd && skickaPush ? pushMeddelande.trim() : null,
       visaBanderoll:  schemalagd && visaBanderoll && kanVisaBanderoll,
       annonseringUtc: schemalagd && annonsera && annonseDatum ? new Date(annonseDatum).toISOString() : null,
@@ -339,7 +343,7 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
 
   const förhandsData: FörhandsData = {
     titel, datum, punkter, schemalagd, schemaDatum, annonsera, annonseDatum,
-    skickaPush, pushVersion, pushMeddelande, pushSkickaVid, visaBanderoll, visaVadArNytt,
+    skickaPush, pushVersion: version, pushMeddelande, pushSkickaVid, visaBanderoll, visaVadArNytt, version,
     valdaFlaggor: schemalagd ? valdaFlaggor : [],
     kopplatFaq: schemalagd ? kopplatFaq.map(f => ({ fraga: f.fraga, publicerad: f.publicerad })) : [],
     // Räknar också med det lanseringen själv slår på — annars varnade
@@ -396,8 +400,19 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
             />
           </div>
 
-          {/* Datum + Status */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Version + Datum + Status */}
+          <div className="grid grid-cols-[96px_1fr_1fr] gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="uppdatering-version" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Version</label>
+              <input
+                id="uppdatering-version"
+                type="text"
+                value={version}
+                onChange={e => setVersion(e.target.value)}
+                placeholder="1.1"
+                className={`text-sm border rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 ${versionGiltig ? 'border-slate-200' : 'border-red-400'}`}
+              />
+            </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Datum</label>
               <input
@@ -557,14 +572,10 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
                     Skicka push till inloggade
                   </label>
                   {skickaPush && (
-                    <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-2 pl-6">
-                      <input
-                        type="text"
-                        value={pushVersion}
-                        onChange={e => setPushVersion(e.target.value)}
-                        placeholder="Version, t.ex. 0.9.0"
-                        className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                      />
+                    <div className="flex flex-col gap-1.5 pl-6">
+                      <p className={`text-xs ${version.trim() ? 'text-slate-500' : 'text-red-500'}`}>
+                        {version.trim() ? `Rubrik: "Ny version: ${version.trim()}"` : 'Fyll i Version högst upp — pushen använder den.'}
+                      </p>
                       <input
                         type="text"
                         value={pushMeddelande}
@@ -872,6 +883,7 @@ export default function AdminUppdateringar() {
       datum:      u.datum,
       publicerad: !u.publicerad,
       punkter:    u.punkter.map(({ typ, plats, text, synlighet, provaSjalv }: UppdateringsPunkt) => ({ typ, plats, text, synlighet, provaSjalv: provaSjalv ?? null })),
+      version:    u.version ?? '',
       schemalagdPubliceringUtc: null,
       schemalagdaFlaggor: [],
     }

@@ -13,6 +13,8 @@ export interface NyUppdateringUtkast {
   skickaPush: boolean; pushVersion: string; pushMeddelande: string
   visaBanderoll: boolean; visaVadArNytt: boolean
   annonsera: boolean; annonseDatum: string; pushSkickaVid: PushSkickaVid
+  /** Saknas i utkast sparade före versionsfältet (2026-11-02). */
+  version?: string
 }
 
 export function läsUtkast(): NyUppdateringUtkast | null {
