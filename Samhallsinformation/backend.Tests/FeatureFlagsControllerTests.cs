@@ -175,4 +175,33 @@ public class FeatureFlagsControllerTests
         Assert.True(flagg.EndastAdmin);
         Assert.False(flagg.Value); // upsert rör aldrig Value — samma mönster som /redo
     }
+
+    [Fact]
+    public async Task SetEndastAdmin_OppnadForAlla_RensarRedoAttLanseras()
+    {
+        using var db = NewDb();
+        db.FeatureFlagOverrides.Add(new FeatureFlagOverride { Key = "flode_platsfilter", Value = true, EndastAdmin = true, RedoAttLanseras = true });
+        await db.SaveChangesAsync();
+        var controller = NewController(db);
+
+        await controller.SetEndastAdmin("flode_platsfilter", new SetSynlighetRequest(false));
+
+        var flagg = db.FeatureFlagOverrides.Single();
+        Assert.False(flagg.EndastAdmin);
+        Assert.False(flagg.RedoAttLanseras);
+        Assert.True(flagg.Value);
+    }
+
+    [Fact]
+    public async Task SetEndastAdmin_BegransadTillAdmin_BeharRedoAttLanseras()
+    {
+        using var db = NewDb();
+        db.FeatureFlagOverrides.Add(new FeatureFlagOverride { Key = "flode_platsfilter", Value = true, EndastAdmin = false, RedoAttLanseras = true });
+        await db.SaveChangesAsync();
+        var controller = NewController(db);
+
+        await controller.SetEndastAdmin("flode_platsfilter", new SetSynlighetRequest(true));
+
+        Assert.True(db.FeatureFlagOverrides.Single().RedoAttLanseras);
+    }
 }

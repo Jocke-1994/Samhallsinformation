@@ -218,7 +218,10 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
 
   const flaggFråga = useQuery({ queryKey: ADMIN_FLAGG_QUERY_KEY, queryFn: fetchAdminFeatureFlags })
   const adminFlaggor = flaggFråga.data ?? []
-  const redoFlaggor = adminFlaggor.filter(f => f.redoAttLanseras && !f.value)
+  // En flagga som är på men bara för Admin (Testmiljö-läget) är inte lanserad
+  // än — den ska gå att välja, och lanseringen öppnar den för alla
+  // (FeatureFlagActivation.ActivateFlagsAsync nollställer EndastAdmin).
+  const redoFlaggor = adminFlaggor.filter(f => f.redoAttLanseras && !(f.value && !f.endastAdmin))
 
   const { data: faqItems = [] } = useQuery({ queryKey: ['admin-faq'], queryFn: fetchAdminFaq })
   const kopplatFaq = faqItems.filter(f => f.flagKey && valdaFlaggor.includes(f.flagKey))
