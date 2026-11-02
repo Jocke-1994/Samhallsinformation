@@ -1,6 +1,6 @@
 ---
 typ: ide
-status: redo-for-pipeline  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
+status: lanserad  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
 uiGodkand: ja  # giltiga värden: ja | nej | ej-bedomd
 beroenden: "Vad är nytt-rutan (PR #706) bör vara mergad först, annars finns en av de fyra flikarna inte."
 prioritet: ej-bedomd  # giltiga värden: hog | medel | lag | ej-bedomd
@@ -52,3 +52,6 @@ Inga öppna frågor kvar. Bör byggas efter att Vad är nytt (PR #706) är merga
 - [[Vad ar nytt-modal]]
 - [[Uppdateringar-schemalagd-publicering]]
 - [[Uppdateringar-kalendervy]]
+
+## Lanserad 2026-11-02
+PR #708, mergad från mobilen. Ingen flagga, syns direkt i adminpanelen på dator.
