@@ -58,6 +58,13 @@ export function punkterNyhetersidan(d: FörhandsData, fas: Fas): UppdateringsPun
   return somPunkter(ifyllda(d).filter(p => p.synlighet === 'alla'))
 }
 
+/** Profil → Uppdateringar: bara inloggade, och de ser ALLA punkter (även "Endast inloggade").
+ *  Under annonseringen visas samma teaser som på Nyheter-sidan (backendens MedAnnonseringsteaser). */
+export function punkterProfilen(d: FörhandsData, fas: Fas): UppdateringsPunkt[] {
+  if (harAnnonsering(d) && fas === 'annonsering') return teaser(d)
+  return somPunkter(ifyllda(d))
+}
+
 /** Vad är nytt-rutan: bara inloggade, alla deras punkter, aldrig under annonseringen. */
 export function punkterVadÄrNytt(d: FörhandsData): UppdateringsPunkt[] {
   return somPunkter(ifyllda(d))
