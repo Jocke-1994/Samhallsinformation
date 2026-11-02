@@ -202,6 +202,9 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   const [pushVersion,    setPushVersion]    = useState(redigerar?.pushVersion ?? '')
   const [pushMeddelande, setPushMeddelande] = useState(redigerar?.pushMeddelande ?? '')
   const [visaBanderoll,  setVisaBanderoll]  = useState(redigerar?.visaBanderoll ?? false)
+  // Vad är nytt-rutan — oberoende av schemaläggning, så den ligger utanför
+  // schema-sektionen i formuläret.
+  const [visaVadArNytt,  setVisaVadArNytt]  = useState(redigerar?.visaVadArNytt ?? false)
 
   // Del 3: annonsering i förväg (Beslut 2026-10-08) — en andra, tidigare
   // tidpunkt. Posten visas som en "Kommer snart"-teaser från den tidpunkten
@@ -275,6 +278,7 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
       visaBanderoll:  schemalagd && visaBanderoll && kanVisaBanderoll,
       annonseringUtc: schemalagd && annonsera && annonseDatum ? new Date(annonseDatum).toISOString() : null,
       pushSkickaVid:  schemalagd && annonsera ? pushSkickaVid : 'Lansering',
+      visaVadArNytt:  visaVadArNytt && harInnehåll,
     })
   }
 
@@ -514,6 +518,26 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Vad är nytt-rutan (Ideer/Vad ar nytt-modal.md) — samma "kräver
+              innehåll"-spärr som banderollen, men gäller även utan schema. */}
+          <div className="flex flex-col gap-1.5">
+            <label className={`flex items-center gap-2 text-sm font-medium cursor-pointer ${harInnehåll ? 'text-slate-700' : 'text-slate-400 cursor-not-allowed'}`}>
+              <input
+                type="checkbox"
+                checked={visaVadArNytt}
+                disabled={!harInnehåll}
+                onChange={e => setVisaVadArNytt(e.target.checked)}
+                className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 disabled:opacity-40"
+              />
+              Visa som Vad är nytt
+            </label>
+            <p className="text-xs text-slate-400 pl-6">
+              {harInnehåll
+                ? 'Inloggade som inte sett den får en ruta en gång. Bara den senaste ikryssade releasen visas.'
+                : 'Kräver minst en ifylld innehållsrad för att visas som Vad är nytt.'}
+            </p>
           </div>
 
           {/* Separator */}

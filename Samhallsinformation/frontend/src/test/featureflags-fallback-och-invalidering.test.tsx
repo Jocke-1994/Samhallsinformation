@@ -283,7 +283,7 @@ describe('Feature flags: mutationsvägarna invaliderar flagg-queryn', () => {
       id: 'u1', titel: 'Version 9.9.9', datum: '2026-09-25T00:00:00Z', publicerad: false,
       punkter: [], schemalagdPubliceringUtc: null, schemalagdaFlaggor: ['support_faq'],
       skickaPush: false, pushVersion: null, pushMeddelande: null, visaBanderoll: false,
-      annonseringUtc: null, annonseradUtc: null, pushSkickaVid: 'Lansering', createdAt: '2026-09-25T00:00:00Z',
+      annonseringUtc: null, annonseradUtc: null, pushSkickaVid: 'Lansering', createdAt: '2026-09-25T00:00:00Z', visaVadArNytt: false,
     }
     vi.mocked(fetchAdminUppdateringar).mockReset().mockResolvedValue([utkast])
     vi.mocked(updateUppdatering).mockReset().mockResolvedValue(undefined as never)

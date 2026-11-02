@@ -23,6 +23,7 @@ import NotFoundPage from './pages/NotFoundPage'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import EmailVerificationBanner from './components/common/EmailVerificationBanner'
 import Banderoll from './components/common/Banderoll'
+import VadArNytt from './components/common/VadArNytt'
 import { fetchSources } from './api/sources'
 import { useAuth } from './context/AuthContext'
 import { fetchMaintenanceBanners } from './api/maintenanceBanners'
@@ -147,6 +148,7 @@ export default function App() {
         </ErrorBoundary>
       </div>
       <CookieConsent />
+      <VadArNytt />
       <BevakningsToastHost />
     </div>
   )

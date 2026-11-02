@@ -29,6 +29,7 @@ export interface Uppdatering {
   annonseradUtc:             string | null
   pushSkickaVid:             PushSkickaVid
   createdAt:                 string
+  visaVadArNytt:             boolean
 }
 
 export interface PunktRequest {
@@ -51,6 +52,7 @@ export interface UppdateringRequest {
   visaBanderoll?:            boolean
   annonseringUtc?:           string | null
   pushSkickaVid?:            PushSkickaVid
+  visaVadArNytt?:            boolean
 }
 
 // Publika endpointen filtrerar på Synlighet i backend: anonym får bara punkter
@@ -94,6 +96,27 @@ export async function updateUppdatering(id: string, req: UppdateringRequest): Pr
   })
   if (!res.ok) throw await felFranSvar(res, 'updateUppdatering')
   return res.json()
+}
+
+// Vad är nytt-rutan — bara för inloggade. Backend svarar 204 när det inte finns
+// något att visa (redan sett, äldre än kontot, inget ikryssat), då blir det null.
+export interface VadArNytt {
+  id:      string
+  titel:   string
+  datum:   string
+  punkter: UppdateringsPunkt[]
+}
+
+export async function fetchVadArNytt(): Promise<VadArNytt | null> {
+  const res = await adminFetch('/api/uppdateringar/vad-ar-nytt')
+  if (res.status === 204) return null
+  if (!res.ok) throw await felFranSvar(res, 'fetchVadArNytt')
+  return res.json()
+}
+
+export async function markeraVadArNyttSett(id: string): Promise<void> {
+  const res = await adminFetch(`/api/uppdateringar/vad-ar-nytt/${id}/sett`, { method: 'POST' })
+  if (!res.ok) throw await felFranSvar(res, 'markeraVadArNyttSett')
 }
 
 export async function deleteUppdatering(id: string): Promise<void> {

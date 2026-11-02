@@ -40,6 +40,7 @@ public static class FeatureFlagDefaults
         ["uppdateringar_pagang"]      = false,
         ["uppdateringar_kanda_problem"] = false,
         ["uppdateringar_historik"]    = false,
+        ["uppdateringar_vad_ar_nytt"] = false,
         ["support_arenden"]           = false,
         ["support_systemstatus"]      = false,
         ["support_faq"]               = true,

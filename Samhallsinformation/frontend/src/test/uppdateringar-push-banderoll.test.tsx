@@ -126,3 +126,30 @@ describe('AdminUppdateringar — banderoll vid lansering', () => {
     expect(vi.mocked(api.createUppdatering).mock.calls[0][0]).toMatchObject({ visaBanderoll: true })
   })
 })
+
+describe('AdminUppdateringar — Vad är nytt', () => {
+  it('kryssrutan är disabled utan innehåll och syns även utan schemaläggning', async () => {
+    rendera()
+    await userEvent.click(await screen.findByText('+ Ny uppdatering'))
+    await userEvent.type(screen.getByPlaceholderText(/Logga in och skapa konto/), 'Titel')
+
+    const ruta = screen.getByText('Visa som Vad är nytt').closest('label')!.querySelector('input') as HTMLInputElement
+    expect(ruta).toBeDisabled()
+
+    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'En rad text')
+    expect(ruta).not.toBeDisabled()
+  })
+
+  it('sparar visaVadArNytt=true vid direkt publicering', async () => {
+    vi.mocked(api.createUppdatering).mockResolvedValue({} as never)
+    rendera()
+    await userEvent.click(await screen.findByText('+ Ny uppdatering'))
+    await userEvent.type(screen.getByPlaceholderText(/Logga in och skapa konto/), 'Titel')
+    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'En rad text')
+
+    await userEvent.click(screen.getByText('Visa som Vad är nytt'))
+    await userEvent.click(screen.getByRole('button', { name: 'Publicera' }))
+
+    expect(vi.mocked(api.createUppdatering).mock.calls[0][0]).toMatchObject({ visaVadArNytt: true, publicerad: true })
+  })
+})

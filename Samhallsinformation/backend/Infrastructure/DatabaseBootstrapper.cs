@@ -1136,6 +1136,21 @@ public static class DatabaseBootstrapper
                         ON CONFLICT DO NOTHING;
                     ");
                 }
+
+                // Uppdateringar.VisaVadArNytt (boolean) + Users.VadArNyttSettId (uuid) —
+                // Vad är nytt-rutan (Ideer/Vad ar nytt-modal.md). SQLite-scaffoldingen
+                // skrev INTEGER/TEXT, som Npgsql annars tar bokstavligt.
+                if (pendingMigrations.Contains("20261102050217_AddVadArNytt"))
+                {
+                    await db.Database.ExecuteSqlRawAsync(@"
+                        ALTER TABLE ""Uppdateringar"" ADD COLUMN IF NOT EXISTS ""VisaVadArNytt""   boolean NOT NULL DEFAULT false;
+                        ALTER TABLE ""Users""         ADD COLUMN IF NOT EXISTS ""VadArNyttSettId"" uuid;
+
+                        INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                        VALUES ('20261102050217_AddVadArNytt', '10.0.14')
+                        ON CONFLICT DO NOTHING;
+                    ");
+                }
             }
 
             // Rensa dubbletter av (SourceId, ExternalId) i Events INNAN det unika indexet skapas (V3-2). Gäller både
