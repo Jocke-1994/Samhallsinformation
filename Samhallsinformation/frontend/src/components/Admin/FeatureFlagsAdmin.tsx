@@ -191,7 +191,8 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
                           )}
                         </div>
                         <div className="flex items-center gap-3 shrink-0 ml-6">
-                          {!aktiv && !flagga.mock && (
+                          {/* Också när flaggan bara är på för Admin — den är inte lanserad än */}
+                          {(!aktiv || endastAdminMap[flagga.key]) && !flagga.mock && (
                             <button
                               onClick={() => växlaRedo({ key: flagga.key, redo: !redoMap[flagga.key] })}
                               disabled={redoOkänt || redoMutation.isPending}

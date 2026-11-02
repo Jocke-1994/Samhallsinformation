@@ -91,6 +91,10 @@ public class FeatureFlagsController : ControllerBase
     {
         var existing = await FeatureFlagActivation.GetOrCreateOverrideAsync(_db, key);
         existing.EndastAdmin = req.EndastAdmin;
+        // Öppnas en påslagen flagga för alla är den fullt lanserad — en kvarstående
+        // "redo att lanseras"-markering skulle då ligga kvar i Uppdateringars
+        // schemaläggningslista trots att det inte finns något kvar att lansera.
+        if (!req.EndastAdmin && existing.Value) existing.RedoAttLanseras = false;
 
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
