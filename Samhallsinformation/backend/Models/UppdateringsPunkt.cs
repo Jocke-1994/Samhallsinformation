@@ -19,6 +19,14 @@ public class UppdateringsPunkt
     /// </summary>
     public string Synlighet { get; set; } = "alla";
 
+    /// <summary>
+    /// "Prova själv"-länkens mål (Ideer/Prova-sjalv-lankar.md), en nyckel ur
+    /// <c>UppdateringsVärden.ProvaSjalvMål</c>, eller null = ingen länk. En fast
+    /// lista i stället för fritext-URL: går inte att skriva fel, och frontend
+    /// avgör själv adress, flagga och om det kräver konto.
+    /// </summary>
+    public string? ProvaSjalv { get; set; }
+
     /// <summary>Satt = index i punkter-listan vid spara, ingen manuell omordning.</summary>
     public int Ordning { get; set; }
 }

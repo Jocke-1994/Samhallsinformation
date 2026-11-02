@@ -1042,6 +1042,9 @@ namespace Samhallsinformation.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ProvaSjalv")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Synlighet")
                         .IsRequired()
                         .HasColumnType("TEXT");

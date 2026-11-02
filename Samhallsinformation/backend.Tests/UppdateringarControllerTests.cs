@@ -322,6 +322,41 @@ public class UppdateringarControllerTests
         Assert.Empty(db.UppdateringsPunkter);
     }
 
+    // ── Prova själv-länkar (Ideer/Prova-sjalv-lankar.md) ──────────────────────
+
+    [Fact]
+    public async Task CreateUppdatering_ProvaSjalv_SparasOchReturneras()
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var created = (OkObjectResult)await controller.CreateUppdatering(new UppdateringRequest(
+            "Version", DateTime.UtcNow, true,
+            [new PunktRequest("ny-funktion", "Nyhetsflöde", "Filtrera på plats", "alla", "senaste-nytt-plats"),
+             new PunktRequest("buggfix", "Allmänt", "Utan länk", "alla")]));
+
+        var dto = (UppdateringDto)created.Value!;
+        Assert.Equal(["senaste-nytt-plats", null], dto.Punkter.Select(p => p.ProvaSjalv).ToArray());
+        Assert.Equal("senaste-nytt-plats", db.UppdateringsPunkter.Single(p => p.Text == "Filtrera på plats").ProvaSjalv);
+    }
+
+    [Theory]
+    [InlineData("https://evil.se")]
+    [InlineData("/profil")]
+    [InlineData("Senaste-nytt-plats")]   // fel skiftläge
+    [InlineData("")]
+    public async Task CreateUppdatering_OkantProvaSjalvMal_Ger400OchSpararInget(string mål)
+    {
+        using var db = NewDb();
+        var controller = NewController(db);
+
+        var result = await controller.CreateUppdatering(new UppdateringRequest(
+            "Version", DateTime.UtcNow, true, [new PunktRequest("ny-funktion", "Allmänt", "Text", "alla", mål)]));
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(db.Uppdateringar);
+    }
+
     [Fact]
     public async Task UpdateUppdatering_OkandTyp_Ger400OchLamnarBefintligaPunkterOrorda()
     {
