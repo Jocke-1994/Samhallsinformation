@@ -1,7 +1,7 @@
 ---
 typ: ide
-status: fragor-olosta  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
-uiGodkand: ej-bedomd  # giltiga värden: ja | nej | ej-bedomd
+status: lanserad  # giltiga värden: ide | fragor-olosta | redo-for-pipeline | i-pipeline | lanserad | avfardad
+uiGodkand: ja  # giltiga värden: ja | nej | ej-bedomd
 beroenden: "Förhandsvisningen i Uppdateringar bör vara mergad först (länken ska synas i förhandsvisningen och kontrolleras av checklistan)."
 prioritet: ej-bedomd  # giltiga värden: hog | medel | lag | ej-bedomd
 pipelineNr: ""
@@ -48,8 +48,14 @@ slutar inte vid "det här finns nu" utan leder dit.
 - **Destinationer från start:** Senaste nytt → Filtrera på plats, Mina källor, Konto, Support. Fler kan läggas till senare.
 - **Besökare:** ja, de ser "Prova själv" även på funktioner som kräver konto, **men det ska framgå att det kräver ett konto** (t.ex. "Prova själv · kräver konto"), och länken leder till inloggning först.
 
-## Öppna frågor
-- Slå på Profil → Uppdateringar (Senaste version + Versionshistorik)? Du bad om bilder på hur den ser ut i dag, på mobil och dator, innan du bestämmer dig.
+## Byggt 2026-11-02 (PR #713)
+- Skiss godkänd: https://claude.ai/artifact/3zCQvEMiaKnNbHBEG8cXrk. Skärmdumpar av det byggda: https://claude.ai/artifact/SfnLLVcsMzB3r4ygt74KKc
+- Profil → Uppdateringar slås på i lanseringen 3 november (frågan löst).
+- **Mål (fast lista):** Senaste nytt → Filtrera på plats, Profil → Uppdateringar, Konto → Push-notiser, Mitt flöde → Sparat, Mina källor, Support. Nytt mål = lägg till i `frontend/src/lib/provaSjalv.ts` OCH `UppdateringsVärden.ProvaSjalvMål` (ett paritetstest fäller bygget annars).
+- Länken följer funktionens flagga, döljs på sidan man redan står på, och besökare ser "🔒 kräver konto" och går via inloggningen.
+- Adresserna `/?vy=plats` och `/?vy=sparat` öppnar rätt flik.
+- Förhandsvisningen visar länkarna efter lanseringens flaggor; checklistan frågar om "Ny funktion" saknar länk och varnar om länken pekar på något avstängt.
+- Två förarbeten i samma veva: förhandsvisningen fick fliken Profil (PR #712), och "Ny uppdatering" sparar osparat utkast + alla flaggor valbara (PR #711).
 
 ## Kopplat
 - [[Uppdateringar-forhandsvisning]]

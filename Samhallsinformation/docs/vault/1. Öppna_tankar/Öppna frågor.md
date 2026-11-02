@@ -18,10 +18,6 @@ ska bara innehålla det som GENUINT väntar på dig just nu.
   14 myndigheter genomgångna med riktiga flöden kontrollerade. Väntar på: börja
   med de gröna (Konsumentverket + Strålsäkerhetsmyndigheten)? Hur hantera brus
   från länsstyrelser/MCF? Se notens Öppna frågor.
-- **[[../Ideer/Prova-sjalv-lankar|Prova själv-länkar]]** — ny idé (2026-11-02):
-  varje rad i en uppdatering får en "Prova själv →" som leder till rätt plats
-  i appen. Destinationer och besökarfrågan besvarade 2026-11-02. Väntar bara
-  på: om Profil → Uppdateringar ska slås på (bilder på väg).
 - **[[../Ideer/Testmiljö|Testmiljö]]** — ny idé (2026-10-10): en skarp
   men osynlig vy av senaste versionen, bara synlig för Admin/framtida
   beta-testare. Flera grundläggande tekniska vägval olösta — separat
