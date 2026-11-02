@@ -15,6 +15,9 @@ import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
 import { visaFel } from '../../lib/felmeddelande'
 import { getTypConfig, PUNKT_TYPER } from '../../lib/uppdateringTyp'
 import UppdateringarKalender from './UppdateringarKalender'
+import UppdateringForhandsvisning from './UppdateringForhandsvisning'
+import { FLAG_DEFINITIONER } from '../../lib/featureFlags'
+import type { FörhandsData } from '../../lib/uppdateringForhandsvisning'
 
 // ---------------------------------------------------------------------------
 // Konfiguration
@@ -282,10 +285,28 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
     })
   }
 
+  // Flaggans effektiva läge för vanliga användare: adminens avvikelse, annars
+  // kodens default. En flagga som bara syns för admin räknas som av.
+  function påFörAnvändare(key: string): boolean {
+    const o = adminFlaggor.find(f => f.key === key)
+    if (o) return o.value && !o.endastAdmin
+    return FLAG_DEFINITIONER.find(f => f.key === key)?.defaultAktiv ?? false
+  }
+
+  const förhandsData: FörhandsData = {
+    titel, datum, punkter, schemalagd, schemaDatum, annonsera, annonseDatum,
+    skickaPush, pushVersion, pushMeddelande, pushSkickaVid, visaBanderoll, visaVadArNytt,
+    valdaFlaggor: schemalagd ? valdaFlaggor : [],
+    kopplatFaq: schemalagd ? kopplatFaq.map(f => ({ fraga: f.fraga, publicerad: f.publicerad })) : [],
+    profilUppdateringarPå: påFörAnvändare('uppdateringar_senaste') || påFörAnvändare('uppdateringar_historik'),
+  }
+
   return (
     <>
       <div className="fixed inset-0 z-30 bg-black/20" onClick={onStäng} />
-      <div className="fixed top-0 right-0 bottom-0 z-40 w-[560px] bg-white shadow-2xl flex flex-col">
+      {/* Bredare på dator (lg) för att rymma förhandsvisningen bredvid formuläret.
+          På mindre skärmar ser panelen ut som tidigare (beslut 2026-11-02). */}
+      <div className="fixed top-0 right-0 bottom-0 z-40 w-[560px] max-w-full lg:w-[min(1180px,100vw)] bg-white shadow-2xl flex flex-col">
 
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
@@ -294,6 +315,9 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
           </h2>
           <button onClick={onStäng} className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none">✕</button>
         </div>
+
+        <div className="flex-1 min-h-0 flex">
+        <div className="w-full lg:w-[560px] shrink-0 flex flex-col min-h-0">
 
         {/* Innehåll */}
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
@@ -679,6 +703,12 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
             </>
           )}
           </div>
+        </div>
+
+        </div>
+        <aside aria-label="Förhandsvisning" className="hidden lg:flex flex-1 min-w-0 flex-col border-l border-slate-200">
+          <UppdateringForhandsvisning data={förhandsData} />
+        </aside>
         </div>
 
       </div>

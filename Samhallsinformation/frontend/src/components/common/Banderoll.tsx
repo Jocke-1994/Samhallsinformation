@@ -18,12 +18,14 @@ function läsStängd(nyckel: string): string | null {
 // En banderoll högst upp på sajten. Utan rubrik och länk ser den ut exakt som
 // driftbanderollen alltid gjort (en centrerad rad). Med rubrik: på dator
 // "Rubrik: Meddelande · Läs mer" på en rad, på mobil på varsin rad.
-export default function Banderoll({ banner }: { banner: MaintenanceBanner }) {
+// förhandsvisning: används av adminens förhandsvisning i Uppdateringar — ingen
+// Stäng-knapp och ingen läsning/skrivning av stängt-läget i localStorage.
+export default function Banderoll({ banner, förhandsvisning = false }: { banner: MaintenanceBanner; förhandsvisning?: boolean }) {
   const dismissKey = MAINTENANCE_DISMISS_PREFIX + banner.id
   const avtryck = bannerAvtryck(banner)
   const [dismissatAvtryck, setDismissatAvtryck] = useState(() => läsStängd(dismissKey))
 
-  if (dismissatAvtryck === avtryck) return null
+  if (!förhandsvisning && dismissatAvtryck === avtryck) return null
 
   function stäng() {
     try { localStorage.setItem(dismissKey, avtryck) } catch { /* privat läge — stängs bara för sidvisningen */ }
@@ -56,12 +58,12 @@ export default function Banderoll({ banner }: { banner: MaintenanceBanner }) {
           )}
         </span>
       )}
-      <button
+      {!förhandsvisning && <button
         onClick={stäng}
         className="text-xs font-semibold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg transition-colors shrink-0"
       >
         Stäng
-      </button>
+      </button>}
     </div>
   )
 }
