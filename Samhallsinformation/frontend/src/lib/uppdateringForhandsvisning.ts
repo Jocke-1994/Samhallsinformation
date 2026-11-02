@@ -28,6 +28,8 @@ export interface FörhandsData {
   kopplatFaq:     { fraga: string; publicerad: boolean }[]
   /** Är Profil → Uppdateringar påslagen? (flaggorna uppdateringar_senaste/historik) */
   profilUppdateringarPå: boolean
+  /** Är Vad är nytt-rutan påslagen, nu eller av lanseringen? (uppdateringar_vad_ar_nytt) */
+  vadArNyttPå?: boolean
 }
 
 const MÅNADER = ['januari', 'februari', 'mars', 'april', 'maj', 'juni',
@@ -114,6 +116,8 @@ export function checklista(d: FörhandsData): Punkt[] {
   // "Datum" är ett eget fält som inte följer schemat — nyheten visar det datumet.
   if (d.schemalagd && d.datum && d.schemaDatum && d.datum !== d.schemaDatum.slice(0, 10))
     ut.push({ nivå: 'info', text: `Nyheten visar datumet ${formateraDag(d.datum)}, men lanseringen är ${formateraDag(d.schemaDatum)}. Avsiktligt?` })
+  if (d.visaVadArNytt && d.vadArNyttPå === false)
+    ut.push({ nivå: 'varning', text: 'Vad är nytt är ikryssad, men själva rutan är avstängd för användarna (uppdateringar_vad_ar_nytt). Välj flaggan i lanseringen, annars ser ingen den.' })
   if (ps.some(p => p.typ === 'ny-funktion') && !d.visaVadArNytt)
     ut.push({ nivå: 'info', text: 'En punkt är "Ny funktion" men Vad är nytt är inte ikryssad. Avsiktligt?' })
   const opublicerade = d.kopplatFaq.filter(f => !f.publicerad).length
