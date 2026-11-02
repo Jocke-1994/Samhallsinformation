@@ -27,7 +27,7 @@ const LEVANDE_FLAGGOR: FlagKey[] = [
   'kallor_lagg_till', 'kallor_aktiva', 'kallor_alla', 'kallor_polisen_filter',
   'notif_push',
   'konto_info', 'konto_losenord', 'konto_visningsnamn', 'konto_datahantering', 'konto_tema', 'konto_epost_paminnelse',
-  'uppdateringar_senaste', 'uppdateringar_historik',
+  'uppdateringar_senaste', 'uppdateringar_historik', 'uppdateringar_vad_ar_nytt',
   'support_arenden', 'support_faq',
 ]
 

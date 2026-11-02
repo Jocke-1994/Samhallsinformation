@@ -75,7 +75,7 @@ public class UppdateringarController : ControllerBase
         {
             Titel = req.Titel, Datum = req.Datum,
             SkickaPush = req.SkickaPush, PushVersion = req.PushVersion?.Trim(), PushMeddelande = req.PushMeddelande?.Trim(),
-            VisaBanderoll = req.VisaBanderoll,
+            VisaBanderoll = req.VisaBanderoll, VisaVadArNytt = req.VisaVadArNytt,
             AnnonseringUtc = req.AnnonseringUtc, PushSkickaVid = req.PushSkickaVid,
         };
         _db.Uppdateringar.Add(uppdatering);
@@ -129,6 +129,7 @@ public class UppdateringarController : ControllerBase
         uppdatering.PushVersion    = req.PushVersion?.Trim();
         uppdatering.PushMeddelande = req.PushMeddelande?.Trim();
         uppdatering.VisaBanderoll  = req.VisaBanderoll;
+        uppdatering.VisaVadArNytt  = req.VisaVadArNytt;
         uppdatering.AnnonseringUtc = req.AnnonseringUtc;
         uppdatering.PushSkickaVid  = req.PushSkickaVid;
 
@@ -226,6 +227,8 @@ public class UppdateringarController : ControllerBase
         // innehåll, och en push utan version/text skulle skicka en tom notis.
         if (req.VisaBanderoll && (req.Punkter?.Count ?? 0) == 0)
             return "Banderoll kräver minst en innehållsrad.";
+        if (req.VisaVadArNytt && (req.Punkter?.Count ?? 0) == 0)
+            return "Vad är nytt kräver minst en innehållsrad.";
         if (req.SkickaPush && string.IsNullOrWhiteSpace(req.PushVersion))
             return "Version krävs för att skicka push.";
         if (req.SkickaPush && string.IsNullOrWhiteSpace(req.PushMeddelande))
@@ -278,7 +281,7 @@ public class UppdateringarController : ControllerBase
             u.SchemalagdPubliceringUtc,
             FeatureFlagActivation.DeserialiseraFlaggor(u.SchemalagdaFlaggorJson),
             u.SkickaPush, u.PushVersion, u.PushMeddelande, u.VisaBanderoll,
-            u.AnnonseringUtc, u.AnnonseradUtc, u.PushSkickaVid, u.CreatedAt
+            u.AnnonseringUtc, u.AnnonseradUtc, u.PushSkickaVid, u.CreatedAt, u.VisaVadArNytt
         )).ToList();
     }
 
@@ -301,11 +304,13 @@ public record UppdateringDto(
     Guid Id, string Titel, DateTime Datum, bool Publicerad, List<PunktDto> Punkter,
     DateTime? SchemalagdPubliceringUtc, List<string> SchemalagdaFlaggor,
     bool SkickaPush, string? PushVersion, string? PushMeddelande, bool VisaBanderoll,
-    DateTime? AnnonseringUtc, DateTime? AnnonseradUtc, string PushSkickaVid, DateTime CreatedAt);
+    DateTime? AnnonseringUtc, DateTime? AnnonseradUtc, string PushSkickaVid, DateTime CreatedAt,
+    bool VisaVadArNytt);
 
 public record PunktRequest(string Typ, string Plats, string Text, string Synlighet);
 public record UppdateringRequest(
     string Titel, DateTime Datum, bool Publicerad, List<PunktRequest> Punkter,
     DateTime? SchemalagdPubliceringUtc = null, List<string>? SchemalagdaFlaggor = null,
     bool SkickaPush = false, string? PushVersion = null, string? PushMeddelande = null,
-    bool VisaBanderoll = false, DateTime? AnnonseringUtc = null, string PushSkickaVid = "Lansering");
+    bool VisaBanderoll = false, DateTime? AnnonseringUtc = null, string PushSkickaVid = "Lansering",
+    bool VisaVadArNytt = false);

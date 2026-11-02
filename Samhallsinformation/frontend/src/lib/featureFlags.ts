@@ -27,6 +27,7 @@ export type FlagKey =
   | 'uppdateringar_pagang'
   | 'uppdateringar_kanda_problem'
   | 'uppdateringar_historik'
+  | 'uppdateringar_vad_ar_nytt'
   | 'support_arenden'
   | 'support_systemstatus'
   | 'support_faq'
@@ -140,6 +141,7 @@ export const FLAG_GRUPPER: FlagGrupp[] = [
       { key: 'uppdateringar_historik',      label: 'Versionshistorik', beskrivning: 'Visa alla tidigare versioner och deras ändringar',  defaultAktiv: false,
         roadmap: 'Samma orsak som Senaste version — historiken slutar vid v0.5.0. Avstängd tills changelogen är omskriven och godkänd.',
         roadmapSedan: '2026-08-16' },
+      { key: 'uppdateringar_vad_ar_nytt',   label: 'Vad är nytt-ruta', beskrivning: 'Visa senaste nyheten en gång för inloggade när admin kryssat i "Visa som Vad är nytt"', defaultAktiv: false },
     ],
   },
   {

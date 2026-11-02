@@ -46,4 +46,10 @@ public class Uppdatering
     // "Lansering" alltid det enda som faktiskt kan inträffa (bakåtkompatibelt
     // med Del 2, som bara kände till en enda tidpunkt).
     public string PushSkickaVid { get; set; } = "Lansering";
+
+    // Vad är nytt-rutan (Ideer/Vad ar nytt-modal.md, beslut 2026-11-02): visas
+    // en gång för inloggade som inte sett den. Till skillnad från VisaBanderoll
+    // är den oberoende av schemaläggning — den läses när någon besöker sajten,
+    // inte vid en viss tidpunkt. Se UppdateringarController.GetVadÄrNytt.
+    public bool VisaVadArNytt { get; set; } = false;
 }

@@ -23,4 +23,5 @@ public class User
     public string?   DeletionCancelToken  { get; set; } // Engångslänk skickad när raderingen begärs — bevisar identitet utan inloggning, se AuthController.CancelDeletion
     public bool     EmailVerified { get; set; } = false;
     public DateTime CreatedAt    { get; set; } = DateTime.UtcNow;
+    public Guid?    VadArNyttSettId { get; set; } // Senaste Uppdatering användaren stängt Vad är nytt-rutan för — på kontot, inte i webbläsaren, så rutan inte dyker upp igen på en annan enhet
 }
