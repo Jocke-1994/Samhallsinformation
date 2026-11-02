@@ -33,6 +33,9 @@ likadant ut för soppa och tårta, men tårtan kräver mycket mer på "smaka och
 | [[Logg - Vad är nytt]] | Ny funktion (alla lager) | Skärmdump tidigare, skript för lokal körning, minnesregler → tester |
 | [[Logg - Migrationsregel som test]] | Skyddsnät | Databasregeln är nu automatisk (PR #707) |
 
+## Iakttagelser utan egen logg
+- **2026-11-02, källresearch:** Claude valde kandidater ur huvudet ("myndigheter som liknar de vi har") och missade Migrationsverket. Kontrollerna var noggranna, men **urvalet var gissat**. Samma mönster som i [[Logg - Vad är nytt]]: man letar där man förväntar sig att hitta. **Förbättring:** utgå från en fullständig lista (register) och låt ett skript gå igenom allt — därefter gör människa + Claude urvalet. Kontrollera dessutom skriptet mot facit (kända källor): första versionen missade flera, inklusive två vi redan använder.
+
 ## Hur diagrammen tas fram
 1. Claude ritar utifrån hur det brukar gå till (det du läser nu).
 2. Vi bygger en riktig liten funktion, och Claude skriver ner varje beslut medan arbetet pågår.

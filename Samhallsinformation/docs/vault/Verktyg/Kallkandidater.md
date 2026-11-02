@@ -19,7 +19,30 @@ många poster det har och när det senaste kom. Inget är gissat — står det
 "inget flöde hittat" betyder det att det inte syntes på startsidan/nyhetssidan,
 inte att det garanterat saknas.
 
-## Tabell
+## Fullständigt svep 2026-11-02 (ersätter urvalet nedan som utgångspunkt)
+Första versionen av listan byggde på ett urval Claude skrev ur huvudet — Migrationsverket saknades, och du frågade varför. Svar: kontrollerna var noggranna, men *urvalet* var gissat ("myndigheter som liknar de vi har"). Därför gjordes ett fullständigt svep:
+
+- **Underlag:** alla svenska myndigheter i Wikidata med webbadress (330 med .se-adress, efter att utländska ambassader sorterats bort).
+- **Metod:** ett skript hämtade varje sajt, letade RSS/Atom (startsida, nyhetssida, länkar som heter "RSS"/"Prenumerera", vanliga adresser som `/rss`), mätte inlägg senaste 90 dagar och senaste datum. Saknades RSS letades alternativ: sitemap, API/öppna data, pressrum (TT/Mynewsdesk), nyhetsbrev.
+- **Resultat:** ~170 med RSS, ~130 utan, ~28 gick inte att nå.
+- **Träffsäkerhet:** ~9 av 11 kända flöden hittades. Polisen och Läkemedelsverket missades (flödena ligger djupt). "Ingen RSS" = *hittades inte*, inte *finns inte*.
+- **Fallgrop upptäckt:** Wikidata pekar "Lokala säkerhetsnämnden vid Ringhals" på varberg.se, så "nämndens flöde" var egentligen Varbergs kommuns. Kontrollera alltid domänen.
+
+**Hela listan, sökbar, och urvalet i tre grupper:** https://claude.ai/artifact/TUuoTX2Lrh5DPmB5Lj64fC
+
+### Nya fynd som det första urvalet missade
+Pensionsmyndigheten (bedrägerivarningar), Kronofogden, Skatteverket, Riksbanken, E-hälsomyndigheten, TLV, Finansinspektionen, regionerna, kollektivtrafikmyndigheter, domstolarna, Nationella cybersäkerhetscentret, Storstockholms brandförsvar, Räddningstjänsten Storgöteborg, Skogsstyrelsen (brandrisk), SGI (skred), Myndigheten för psykologiskt försvar, Försäkringskassan, Arbetsförmedlingen, Tullverket.
+
+### Vad de utan RSS kör i stället — och hur vi får in det
+| Har i stället | Antal | Hur | Bedömning |
+|---|---|---|---|
+| Sitemap | ~72 | En **generell sitemap-ingestor**: bevaka sitemapen, ta nya sidor under t.ex. `/nyheter/`, läs sidans egen rubrik/ingress (og:title/og:description) | Bäst — byggs en gång, öppnar dussintals |
+| API / öppna data | ~14 | En ingestor per källa (som Trafikverket/SMHI/Krisinformation) | Fall för fall, mycket är statistik |
+| Nyhetsbrev (e-post) | många | Egen adress prenumererar, befintliga Resend inbound gör mejl till händelser | Experiment |
+| Pressrum (TT/Mynewsdesk) | få | Har egen RSS (PTS via `via.tt.se`) | Enkelt |
+| Inget | ~19 | Fråga myndigheten / läsa nyhetssidan direkt | Sista utväg, skört |
+
+## Tabell (första, handplockade versionen)
 
 | Källa | Vad vi skulle få | Varför | Flöde | Hur levande (2026-11-02) | Vad hindrar oss? | Förslag |
 |---|---|---|---|---|---|---|
