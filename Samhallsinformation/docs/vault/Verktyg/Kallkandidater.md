@@ -30,6 +30,7 @@ inte att det garanterat saknas.
 | **MCF** (f.d. MSB) | Civilt försvar, räddningstjänst, farligt gods, Rakel | Beredskap | ✅ Flera ämnesflöden, t.ex. "alla", "räddningstjänst", "farligt gods" | Alla: 100 poster, senaste 29 okt | **Brus** (t.ex. "jämställdhet och inkludering") + **dubbletter**: MCF driver redan Krisinformation, som vi har | 🟡 Kanske bara ämnesflöden, t.ex. farligt gods |
 | **Kustbevakningen** | Oljeutsläpp, händelser till sjöss | Miljö/säkerhet längs kusten | ✅ `kustbevakningen.se/nyheter/rss` | 50 poster, senaste 13 okt | Blandat med övningar/PR | 🟡 Medel |
 | **Havs- och vattenmyndigheten** | Fiskeregler, havsmiljö | Berör fiskare/fritidsfiske | ✅ "Aktuellt", "Nyheter", "Nytt om fiskeregler" | 10 poster, senaste 29 okt | Låg brådska för de flesta | ⚪ Låg, ev. bara fiskeregler |
+| **Kommuner, t.ex. Göteborgs Stad** (din idé 2026-11-02) | Lokala störningar (vattenavbrott, kokningsråd, sophämtning), kommunens krisinfo | Det som påverkar vardagen mest ligger ofta hos kommunen. Passar platsfiltret | ⚠️ Ofta: Malmö har flera (`malmo.se/rss/nyheter` m.fl.), Göteborg har en "Aktuellt"-RSS-länk på startsidan (gick inte att läsa ut direkt), Uppsala har en RSS-sida. Störningsflöden ej hittade | Malmö: 10 inlägg, senaste 30 okt | 290 kommuner med olika sajter/format. Nyhetsflödena är mest PR (Föreningsgalan, Kockumstiden). Det värdefulla — driftstörningar — saknar ofta flöde | 🟡 Börja med de 3 största? |
 | **Sjöfartsverket – navigationsvarningar** | Varningar till sjöfarare | Båtfolk | ❌ Bara webbsida (navvarn.sjofartsverket.se) | – | Inget flöde: skulle kräva att läsa webbsidan (skört) | ⚪ Vänta / fråga Sjöfartsverket om API |
 | **Elsäkerhetsverket** | Farliga elprodukter | Brandrisk i hemmet | ❌ Inget flöde hittat | – | Inget flöde | ⚪ Kolla igen |
 | **Jordbruksverket / SVA** | Djursjukdomar (fågelinfluensa m.m.) | Berör djurägare, ibland alla | ❌ Inget flöde hittat | – | Inget flöde. Delvis täckt av länsstyrelserna | ⚪ Via länsstyrelserna i stället |
@@ -55,6 +56,7 @@ grundprinciperna säger nej till.
 - Ska vi börja med de gröna (Konsumentverkets två + Strålsäkerhetsmyndigheten)?
 - Länsstyrelserna: alla 21 län på en gång, eller börja med några? Ta allt, eller vänta tills brusfrågan är löst?
 - MCF: bara ämnesflöden (t.ex. farligt gods), eller inte alls eftersom Krisinformation redan täcker det viktigaste?
+- Kommuner: börja med Stockholm, Göteborg och Malmö? Bara störningar/kris, eller även nyhetsflödena med mycket PR?
 
 ## Kopplat
 - [[../1. Öppna_tankar/_Prioritering|Prioritering]] (#36-38, stående vana)
