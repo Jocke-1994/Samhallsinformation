@@ -179,6 +179,33 @@ Systemet hanterar information baserat på tillgänglig metadata:
 
 ## Session Log
 
+### Session 58 — 2026-11-03
+**Obs:** Session 57 (2026-11-02: Hur Claude jobbar-diagram, förhandsvisning i Uppdateringar, PR #706-714, lanseringsplanen för november) loggades bara i minnessystemet. Se `project_hur_claude_jobbar_diagram_2026-11-02.md`.
+
+**What was done:**
+- **Lanseringen 09:00 gick igenom**: `flode_platsfilter`, `uppdateringar_vad_ar_nytt/senaste/historik` påslagna i produktion (verifierat via `GET /api/feature-flags`)
+- **Platsfiltret visade bara 4 pluppar** (PR #715). Två fel, verifierade mot produktionens API: Trafikverkets `Geography` är länets grundnamn utan "län" (`Skåne E6`, `Västra Götaland Väg 1040`), så inget matchade; och 50-händelsefönstret var 46 Trafikverket + 4 Polisen (~1,5 h). Ny källmedveten `PlatsMatchare.Matcha(geography, sourceId)` med en explicit 21-länstabell för Trafikverket. Trafikverket-träffar har `ÄrvsTillKommuner=false`, syns bara på länets plupp (användarens beslut). Katalog + sektioner bygger på senaste 24 h, max 50 per sektion. Efter deploy: 214 aktiva pluppar (20 län, 193 kommuner, Nationellt)
+- **Push-notisklick landade alltid på startsidan** (PR #716). `HomePage` läste aldrig `?shortName=` (sedan push byggdes) och länken pekade aldrig på händelsen. Nu `PushDispatcher.KällUrl` → `&handelse=<id>` när pushen gäller exakt en händelse (per mottagare i Polisen-vägen). Flödet scrollar fram, fäller ut och markerar händelsen; finns den inte bland de 50 hämtas den via `GET /api/events/{id}` och visas under "Från din notis"
+- **Aktivera push direkt i nyheten** (PR #717). Nytt Prova själv-mål `aktivera-push` ("Knapp: Aktivera push-notiser" i admin): en ruta "Vill du aktivera push-notiser?" med Aktivera-knapp som registrerar enheten och slår på båda kategorierna, och säger det. Lägen för klart, nekat, blockerat, utan push-stöd, besökare. Skisser: https://claude.ai/artifact/LRvAQbrMLE3eEHiQecF31D
+- **Nyhetstexterna för 1.2 Push / 1.3 Dela / 1.4 Sparat** omskrivna (kvällens utkast från session 57 hade aldrig sparats) och sparade i `docs/vault/Verktyg/Lanseringar november 2026 - texter.md`. 1.2 inlagd av användaren: syns för Alla, annonseras 3 nov 18:00, lanseras fre 6 nov 09:00 med `notif_push`
+- **Känd lucka, medvetet ej prio**: ~25 % av Trafikverkets händelser saknar län och Stockholm förekommer aldrig (troligen `CountyName`/`CountyNo.FirstOrDefault()`). Inlagd i `Kodgranskning-backlog — Push, ingest och bakgrundstjänster.md`
+
+**Problem och lösningar:**
+- Jag påstod att `flode_platsfilter` var av utan att kolla (gick på sessionsloggen). Användaren rättade. `GET /api/feature-flags` först, alltid
+- Kvarglömd lokal backend (pid) låste `dotnet test`-bygget igen trots port-stopp. Stoppa via processlistan (`Get-CimInstance Win32_Process` på kommandoraden), inte bara portarna
+- Headless Chromium nekar `Notification.permission` även med `grantPermissions` — för en skärmdump av knappläget, fejka `Notification.permission` med `addInitScript`; klicklogiken täcks av enhetstester
+- Komponentnamn med å/ä/ö (`…Förhandsvisning`) triggar `react-refresh/only-export-components` — använd ASCII i exporterade komponentnamn
+
+**Etablerat mönster:**
+- En matchare mot fritext-geografi ska verifieras mot källans FAKTISKA strängar i produktion, inte mot en kommentar om formatet — antagandet "Stockholms län E4" var fel från början och dolde att en hel källa aldrig deltog
+- Ett fönster "N senaste" över flera källor domineras av den pratsammaste källan; använd ett tidsfönster när syftet är "vad finns just nu"
+- En push-länks parametrar är ett kontrakt med frontend — testa att mottagarsidan faktiskt läser dem, inte bara att länken byggs rätt
+
+**Next session:**
+- Kolla att annonseringen av 1.2 gick ut 18:00 (publik `/api/uppdateringar` + en "Kommande"-banderoll), och att lanseringen fre 6 nov 09:00 slår på `notif_push`
+- Användaren lägger in 1.3 Dela (annonseras fre 6 nov 09:00) och 1.4 Sparat (annonseras 13 nov 09:00) — texter i valvet
+- Nästa riktiga push-notis om en enskild händelse ska öppna just den händelsen (PR #716) — be användaren bekräfta
+
 ### Session 56 — 2026-11-01
 **What was done:**
 - **Säkerhetskoll, Claude Code VS Code-tillägget v2.1.313 (rapporterad kompromettering):** maskinen kör inte den versionen och har inga spår av den (ingen okänd nyckel i `authorized_keys`). Ingen åtgärd
