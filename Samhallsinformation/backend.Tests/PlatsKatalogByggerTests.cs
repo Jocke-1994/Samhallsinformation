@@ -95,4 +95,20 @@ public class PlatsKatalogByggerTests
         Assert.Equal(1, katalog.Single(p => p.Namn == "Nationellt").AntalHändelser);
         Assert.Equal(1, katalog.Single(p => p.Namn == "Haninge").AntalHändelser); // bara ärvt
     }
+
+    [Fact]
+    public void Bygg_Trafikverket_RäknasPåLänetMenÄrvsInteTillKommunerna()
+    {
+        const int tv = PlatsMatchare.TrafikverketSourceId;
+        var katalog = PlatsKatalogBygger.ByggPerKälla(
+        [
+            ("Skåne Väg 19", false, tv),
+            ("Skåne E6", false, tv),
+            ("Malmö", false, 1), // Polisen
+        ]);
+
+        Assert.Equal(2, katalog.Single(p => p.Namn == "Skåne län").AntalHändelser);
+        Assert.Equal(1, katalog.Single(p => p.Namn == "Malmö").AntalHändelser); // bara Polisen
+        Assert.Equal(0, katalog.Single(p => p.Namn == "Lund").AntalHändelser);
+    }
 }
