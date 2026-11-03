@@ -82,6 +82,33 @@ gruppen, och en idempotent backfill aktiverade Efterlysningar/SMHI Nyheter
 
 *(enhet-3, "Ingestors")*
 
+## Känt, ej prio: Trafikverket tappar länet för en del händelser (Stockholm syns aldrig)
+
+*Tillagt 2026-11-03. Medvetet ingen prio just nu — "vi är medvetna men det
+är ingen prio... inte just nu iaf".*
+
+Upptäckt när platsfiltret verifierades i produktion efter
+[PR #715](https://github.com/Jocke-1994/Samhallsinformation/pull/715). Av
+Trafikverkets 700 senaste händelser hade **ingen enda** `Stockholm` som
+länsdel. Däremot hade ~180 (≈25 %) inget län alls, bara vägen: `E4`,
+`E18`, `E20`, `Väg 75`, `Väg 273`.
+
+**Konsekvens:** de händelserna deltar inte i platsfiltret. Stockholms län
+har därför aldrig någon egen läns-plupp. Stockholms kommuner syns
+fortfarande via Polisen. I det ofiltrerade flödet syns allt som vanligt.
+
+**Troliga orsaker (inte verifierade):**
+- `TrafikverketApiIngestor.CountyName` gör `1 => "Stockholm"`. Trafikverket
+  kan använda ett annat nummer för Stockholm, eller en kombination av två
+  nummer.
+- Ingestorn tar bara `CountyNo.FirstOrDefault()`. En situation som berör
+  flera län, eller ett okänt nummer, ger `null` → bara vägnumret blir kvar.
+
+**Nästa steg när det blir aktuellt:** titta på Trafikverkets råsvar
+(`CountyNo` för några `E4`/`E18`-situationer runt Stockholm, kräver
+`TRAFIKVERKET_API_KEY`), rätta mappningen i `CountyName` och fundera på
+hur flerläns-situationer ska hanteras. Egen PR.
+
 ## Push, övrigt
 
 - `PolisenBevakningMatcher.Matches` (den faktiska push-vägen) saknar
