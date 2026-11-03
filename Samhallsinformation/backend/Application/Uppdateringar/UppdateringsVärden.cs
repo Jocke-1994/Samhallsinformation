@@ -32,7 +32,7 @@ public static class UppdateringsVärden
     /// </summary>
     public static readonly IReadOnlySet<string> ProvaSjalvMål = new HashSet<string>(StringComparer.Ordinal)
     {
-        "senaste-nytt-plats", "profil-uppdateringar", "konto-push", "mitt-flode-sparat", "mina-kallor", "support",
+        "senaste-nytt-plats", "profil-uppdateringar", "konto-push", "aktivera-push", "mitt-flode-sparat", "mina-kallor", "support",
     };
 
     /// <summary>Returnerar ett felmeddelande för första ogiltiga punkten, annars null.</summary>

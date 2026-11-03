@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useFlags } from '../../context/FeatureFlagsContext'
 import type { FlagState } from '../../lib/featureFlags'
 import { provaSjalvLänk, type ProvaSjalvMål } from '../../lib/provaSjalv'
+import AktiveraPushRuta, { AktiveraPushRutaForhandsvisning } from './AktiveraPushRuta'
 
 // "Prova själv →" under en rad i Uppdateringar (Nyheter-sidan, Profil →
 // Uppdateringar, Vad är nytt-rutan och förhandsvisningen i admin). Textlänk,
@@ -36,6 +37,11 @@ const KLASS = 'inline-flex items-center gap-1.5 self-start py-1 text-sm font-sem
 function Visning({ mål, härifrån, förhandsvisning, onKlick, inloggad, flaggor }: Props & ProvaSjalvFörhandsvisning) {
   const länk = provaSjalvLänk(mål, { inloggad, flaggor, härifrån })
   if (!länk) return null
+
+  // "aktivera-push" är en ruta med knapp, inte en länk — men bara för
+  // inloggade. En besökare får den vanliga "kräver konto"-länken nedan.
+  if (mål === 'aktivera-push' && !länk.kräverKonto)
+    return förhandsvisning ? <AktiveraPushRutaForhandsvisning /> : <AktiveraPushRuta onKlick={onKlick} />
 
   const innehåll = (
     <>
