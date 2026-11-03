@@ -18,19 +18,21 @@ Inloggade = funktionen kräver konto. Prova själv = färdig länk i nyheten.
 ## 1.2 — Push-notiser
 
 - **Titel:** Få en notis när något händer
-- **Annonsering:** tis 3 nov (direkt). Kortare än en vecka, beslutat 2 nov
+- **Annonsering:** tis 3 nov 18:00. Kortare än en vecka, beslutat 2 nov
 - **Lansering:** fre 6 nov 09:00
 - **Flagga som slås på:** `notif_push`
 - **Visa som Vad är nytt:** ja
-- **Banderoll:** ja (blir "Användare", alla punkter är för inloggade)
+- **Banderoll:** ja (blir "Alla")
 - **Skicka push:** nej. Ingen har push påslaget innan lanseringen, så den når ingen
 
 | Typ | Plats | Syns för | Prova själv | Text |
 |---|---|---|---|---|
-| Ny funktion | Konto | Inloggade | Knapp: Aktivera push-notiser | Push-notiser – få en notis i mobilen eller datorn när det kommer något nytt från dina källor. Har du Polisen-bevakningar får du bara notiser om det som matchar dem. |
+| Ny funktion | Konto | Alla | Knapp: Aktivera push-notiser | Push-notiser – få en notis i mobilen eller datorn när det kommer något nytt från dina källor. Har du Polisen-bevakningar får du bara notiser om det som matchar dem. |
 
 En punkt i stället för tre (ändrat 2026-11-03 på användarens begäran): de två
 extra punkterna var förklaring av hur push fungerar, inte egna funktioner.
+
+Syns för = **Alla** (beslut 2026-11-03): besökare ser nyheten med "Prova själv · kräver konto →", ett skäl att skapa konto. Inloggade får knappen.
 
 Prova själv = **Knapp: Aktivera push-notiser** (PR #717, 2026-11-03): under
 texten visas en ruta "Vill du aktivera push-notiser?" med en Aktivera-knapp
@@ -69,6 +71,6 @@ som slår på båda kategorierna (Ny händelse + Ny version). Därför är menin
 
 ## Status
 
-- [ ] 1.2 Push inlagd
+- [x] 1.2 Push inlagd (2026-11-03, annonseras 18:00, lanseras fre 6 nov 09:00)
 - [ ] 1.3 Dela inlagd
 - [ ] 1.4 Sparat inlagd
