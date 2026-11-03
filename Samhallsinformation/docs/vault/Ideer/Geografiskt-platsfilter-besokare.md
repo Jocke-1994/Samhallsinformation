@@ -179,6 +179,34 @@ matchning), #677 (frontend-UI, Variant E), bakom flaggan
 2026-10-19 — manuell/automatiserad verifiering (Checklista innan
 lansering) kvar innan Lanseringsklar.
 
+## Beslut 2026-11-03 — efter lansering: Trafikverket + dygnsfönster
+
+Lanserat 2026-11-03 kl. 09:00. Direkt efteråt visade filtret bara 4
+pluppar i produktion. Två fel, verifierade mot produktionens API:
+
+1. **Trafikverket matchade aldrig.** Antagandet ovan (2026-10-09:
+   "Stockholms län E4") stämde inte. Ingestorn skriver länets grundnamn
+   utan "län", ofta med vägnummer: `Skåne`, `Skåne E6`,
+   `Västra Götaland Väg 1040`.
+2. **Fönstret med 50 händelser (beslut 6) var för smalt.** Trafikverket
+   står för ~95 % av alla händelser, så de 50 senaste var 46
+   Trafikverket + 4 Polisen och täckte bara ~1,5 timme.
+
+**Beslut:**
+- Trafikverket får en egen, källmedveten matchningsregel (explicit
+  tabell med 21 län). **En Trafikverket-händelse syns bara under länets
+  egen plupp och ärvs inte till kommunerna** (ersätter beslut 2 för
+  just Trafikverket). Vägarbeten på E6 i Skåne är inte en varning för
+  hela länet, och skulle annars fylla varje kommun. Riktiga
+  länsvarningar (Polisens "Hallands län") ärvs som förut.
+- **Beslut 6 ändrat:** katalogen och sektionerna bygger på senaste
+  24 timmarna i stället för de 50 senaste. Max 50 händelser per sektion.
+- Märket "Länsvarning — gäller hela …" visas bara i kommunsektioner.
+
+PR #715. Verifierat i produktion direkt efter deploy (10:15 UTC):
+214 aktiva pluppar (20 län, 193 kommuner, Nationellt). Malmö-sektionen
+visar bara Polisen, Skåne län visar Trafikverkets vägsituationer.
+
 ## UI-skiss
 
 Claude Artifact (Design-canvas, interaktiv): https://claude.ai/artifact/NRitLhJURPuw69QcJUsACA
