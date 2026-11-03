@@ -27,10 +27,15 @@ Inloggade = funktionen kräver konto. Prova själv = färdig länk i nyheten.
 
 | Typ | Plats | Syns för | Prova själv | Text |
 |---|---|---|---|---|
-| Ny funktion | Konto | Inloggade | Konto → Push-notiser | Push-notiser – få en notis i mobilen eller datorn när det kommer något nytt från dina källor. Har du Polisen-bevakningar får du bara notiser om det som matchar dem. Slå på under Konto → Push-notiser. |
+| Ny funktion | Konto | Inloggade | Knapp: Aktivera push-notiser | Push-notiser – få en notis i mobilen eller datorn när det kommer något nytt från dina källor. Har du Polisen-bevakningar får du bara notiser om det som matchar dem. |
 
 En punkt i stället för tre (ändrat 2026-11-03 på användarens begäran): de två
 extra punkterna var förklaring av hur push fungerar, inte egna funktioner.
+
+Prova själv = **Knapp: Aktivera push-notiser** (PR #717, 2026-11-03): under
+texten visas en ruta "Vill du aktivera push-notiser?" med en Aktivera-knapp
+som slår på båda kategorierna (Ny händelse + Ny version). Därför är meningen
+"Slå på under Konto → Push-notiser." struken ur texten.
 
 ## 1.3 — Dela
 
