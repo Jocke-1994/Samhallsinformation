@@ -27,9 +27,10 @@ Inloggade = funktionen kräver konto. Prova själv = färdig länk i nyheten.
 
 | Typ | Plats | Syns för | Prova själv | Text |
 |---|---|---|---|---|
-| Ny funktion | Konto | Inloggade | Konto → Push-notiser | Push-notiser – få en notis i mobilen eller datorn när det kommer något nytt från dina källor. Slå på under Konto → Push-notiser. |
-| Ny funktion | Konto | Inloggade | – | Följer du Polisen med bevakningar får du bara notiser om händelser som matchar dem, inte allt. |
-| Ny funktion | Konto | Inloggade | – | Trycker du på en notis om en enskild händelse kommer du direkt till den. |
+| Ny funktion | Konto | Inloggade | Konto → Push-notiser | Push-notiser – få en notis i mobilen eller datorn när det kommer något nytt från dina källor. Har du Polisen-bevakningar får du bara notiser om det som matchar dem. Slå på under Konto → Push-notiser. |
+
+En punkt i stället för tre (ändrat 2026-11-03 på användarens begäran): de två
+extra punkterna var förklaring av hur push fungerar, inte egna funktioner.
 
 ## 1.3 — Dela
 
