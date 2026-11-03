@@ -2,7 +2,7 @@ import { Fragment } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
-import { fetchEvents } from '../../api/events'
+import { fetchEvent, fetchEvents } from '../../api/events'
 import { getReadStatus, markAllAsRead } from '../../services/readState'
 import NewsItem from './NewsItem'
 import type { CanonicalEvent, Source } from '../../types'
@@ -84,9 +84,11 @@ interface Props {
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
   onOpenSidebar: () => void
+  /** Push-djuplänk (/?handelse=<id>): händelsen scrollas fram, fälls ut och markeras. */
+  markeradHandelseId?: string | null
 }
 
-export default function NewsFeed({ shortName, sources, viewMode, onViewModeChange, onOpenSidebar }: Props) {
+export default function NewsFeed({ shortName, sources, viewMode, onViewModeChange, onOpenSidebar, markeradHandelseId = null }: Props) {
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()
   const flaggor = useFlags()
@@ -112,6 +114,15 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
   const sparatFlode = useSparatFlode(isLoggedIn && viewMode === 'Mitt' && mittUnderflik === 'Sparat')
 
   const events: CanonicalEvent[] = useMemo(() => data?.events ?? [], [data])
+
+  // Push-djuplänk: finns händelsen inte bland de 50 som hämtats (äldre, eller
+  // flödet hann fyllas på) hämtas den separat och visas överst.
+  const markeradIListan = !!markeradHandelseId && events.some(e => e.id === markeradHandelseId)
+  const { data: markeradSeparat } = useQuery({
+    queryKey: ['event', markeradHandelseId],
+    queryFn: () => fetchEvent(markeradHandelseId!),
+    enabled: !!markeradHandelseId && viewMode === 'Allt' && !!data && !markeradIListan,
+  })
 
   const [readMap, setReadMap] = useState<Record<string, boolean>>({})
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('Alla')
@@ -371,6 +382,19 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
             </div>
           )}
 
+          {viewMode === 'Allt' && markeradSeparat && !markeradIListan && (
+            <div className="flex flex-col gap-1.5 mb-3">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Från din notis</p>
+              <NewsItem
+                event={markeradSeparat}
+                isRead={!!readMap[markeradSeparat.id]}
+                sourceName={shortName === null ? sourceMap[markeradSeparat.sourceId] : undefined}
+                sourceShortName={sourceMap[markeradSeparat.sourceId]}
+                markerad
+              />
+            </div>
+          )}
+
           {(() => {
             let readSepShown = false
             return visaEvents.map((event, i) => {
@@ -402,6 +426,7 @@ export default function NewsFeed({ shortName, sources, viewMode, onViewModeChang
                     sourceName={shortName === null ? sourceMap[event.sourceId] : undefined}
                     sourceShortName={sourceMap[event.sourceId]}
                     viewMode={viewMode === 'Allt' ? 'allt' : 'mitt'}
+                    markerad={viewMode === 'Allt' && event.id === markeradHandelseId}
                   />
                 </Fragment>
               )

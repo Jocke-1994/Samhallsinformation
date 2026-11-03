@@ -233,6 +233,16 @@ export async function fetchEvents(params: FetchEventsParams = {}): Promise<Event
   return res.json()
 }
 
+// En enskild händelse, för en push-djuplänk (/?handelse=<id>) vars händelse
+// inte finns bland de 50 som flödet hämtar. null om den inte finns (404).
+export async function fetchEvent(id: string): Promise<CanonicalEvent | null> {
+  if (USE_MOCK) return MOCK_EVENTS.find(e => e.id === id) ?? null
+  const res = await publikFetch(`/api/events/${encodeURIComponent(id)}`)
+  if (res.status === 404) return null
+  if (!res.ok) throw await felFranSvar(res, 'fetchEvent')
+  return res.json()
+}
+
 // Mitt flöde, filtrerat på servern (V3-11): användarens aktiva källor, med
 // Polisen matchad mot användarens bevakningar. Kräver inloggning (401 annars).
 export async function fetchMittFlode(page: number, pageSize: number): Promise<EventsResponse> {
