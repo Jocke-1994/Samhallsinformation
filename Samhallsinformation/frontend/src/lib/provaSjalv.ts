@@ -7,7 +7,7 @@ import type { FlagKey, FlagState } from './featureFlags'
 // kontokrav bor här.
 
 export type ProvaSjalvMål =
-  | 'senaste-nytt-plats' | 'profil-uppdateringar' | 'konto-push'
+  | 'senaste-nytt-plats' | 'profil-uppdateringar' | 'konto-push' | 'aktivera-push'
   | 'mitt-flode-sparat' | 'mina-kallor' | 'support'
 
 export interface ProvaSjalvMålInfo {
@@ -22,6 +22,9 @@ export const PROVA_SJALV: Record<ProvaSjalvMål, ProvaSjalvMålInfo> = {
   'senaste-nytt-plats':   { etikett: 'Senaste nytt → Filtrera på plats', till: '/?vy=plats',                    flagga: 'flode_platsfilter',     kräverKonto: false },
   'profil-uppdateringar': { etikett: 'Profil → Uppdateringar',           till: '/profil?section=uppdateringar', flagga: 'uppdateringar_senaste', kräverKonto: true },
   'konto-push':           { etikett: 'Konto → Push-notiser',             till: '/profil?section=konto',         flagga: 'notif_push',            kräverKonto: true },
+  // Inte en länk utan en ruta med en Aktivera-knapp (AktiveraPushRuta, beslut
+  // 2026-11-03). Besökare utan konto får en vanlig "kräver konto"-länk hit.
+  'aktivera-push':        { etikett: 'Knapp: Aktivera push-notiser',     till: '/profil?section=konto',         flagga: 'notif_push',            kräverKonto: true },
   'mitt-flode-sparat':    { etikett: 'Mitt flöde → Sparat',              till: '/?vy=sparat',                   flagga: 'flode_sparat',          kräverKonto: true },
   'mina-kallor':          { etikett: 'Mina källor',                      till: '/profil?section=mina-kallor',   flagga: null,                    kräverKonto: true },
   'support':              { etikett: 'Support',                          till: '/profil?section=support',       flagga: null,                    kräverKonto: true },
