@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CanonicalEvent } from '../../types'
 import { markAsRead } from '../../services/readState'
 import { extraheraPolisenTyp, extraheraPolisenOmrade } from '../Profile/MinaKallor/kallorUtils'
@@ -15,6 +15,8 @@ interface Props {
   sourceShortName?: string
   viewMode?: 'allt' | 'mitt'
   checkbox?: { checked: boolean; onChange: () => void }
+  /** Öppnad via en push-djuplänk: visas utfälld, scrollas fram och får en ram. */
+  markerad?: boolean
 }
 
 const SEVERITY_CONFIG = {
@@ -59,11 +61,21 @@ function EventContent({ content }: { content: string }) {
   )
 }
 
-export default function NewsItem({ event, isRead, sourceName, sourceShortName, viewMode = 'allt', checkbox }: Props) {
+export default function NewsItem({ event, isRead, sourceName, sourceShortName, viewMode = 'allt', checkbox, markerad = false }: Props) {
   const { isLoggedIn } = useAuth()
   const flaggor = useFlags()
   const { sparade, lage: sparatLage, toggleSparad } = useSavedEvents()
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(markerad)
+  const rotRef = useRef<HTMLDivElement>(null)
+
+  // Push-djuplänken: scrolla fram händelsen och räkna den som läst, en gång
+  // när den blir markerad (inte vid varje omrendering).
+  useEffect(() => {
+    if (!markerad) return
+    setExpanded(true)
+    markAsRead(event.id)
+    rotRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+  }, [markerad, event.id])
   const [länkDöd, setLänkDöd] = useState(false)
   const [delaFeedback, setDelaFeedback] = useState<string | null>(null)
   const ärSparad = sparade.has(event.id)
@@ -128,7 +140,11 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
   }
 
   return (
-    <div className={`rounded-xl border border-slate-200 dark:border-slate-700 border-l-4 ${borderClass} bg-white dark:bg-slate-800 shadow-sm overflow-hidden`}>
+    <div
+      ref={rotRef}
+      data-markerad={markerad || undefined}
+      className={`rounded-xl border border-slate-200 dark:border-slate-700 border-l-4 ${borderClass} bg-white dark:bg-slate-800 shadow-sm overflow-hidden ${markerad ? 'ring-2 ring-violet-500 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-900' : ''}`}
+    >
 
       <div
         role="button"

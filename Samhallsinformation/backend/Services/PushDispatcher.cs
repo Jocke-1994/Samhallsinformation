@@ -92,7 +92,9 @@ public static class PushDispatcher
         var body  = insertedCount == 1
             ? $"1 ny händelse från {source.Name}"
             : $"{insertedCount} nya händelser från {source.Name}";
-        var url = $"{frontendUrl.TrimEnd('/')}/?shortName={Uri.EscapeDataString(source.ShortName)}";
+        // En enda händelse → djuplänk till just den (appen scrollar fram och
+        // fäller ut den). Flera → källans flöde.
+        var url = KällUrl(frontendUrl, source, insertedEvents.Count == 1 ? insertedEvents[0] : null);
 
         await SendToDevicesAsync(db, push, devices, title, body, url, sourceId, ct);
     }
@@ -119,8 +121,6 @@ public static class PushDispatcher
             .GroupBy(d => d.UserId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        var url = $"{frontendUrl.TrimEnd('/')}/?shortName={Uri.EscapeDataString(source.ShortName)}";
-
         foreach (var userId in recipientIds)
         {
             if (!devicesByUser.TryGetValue(userId, out var devices) || devices.Count == 0) continue;
@@ -143,8 +143,18 @@ public static class PushDispatcher
                 body = $"{matchande.Count} nya händelser matchar dina bevakningar";
             }
 
+            var url = KällUrl(frontendUrl, source, matchande.Count == 1 ? matchande[0] : null);
             await SendToDevicesAsync(db, push, devices, title, body, url, source.Id, ct);
         }
+    }
+
+    // Länken i en händelse-push. Frontend (HomePage) läser shortName för att
+    // öppna källans flöde och handelse för att scrolla fram och fälla ut
+    // händelsen. handelse sätts bara när pushen gäller exakt en händelse.
+    internal static string KällUrl(string frontendUrl, Source source, CanonicalEvent? enda)
+    {
+        var url = $"{frontendUrl.TrimEnd('/')}/?shortName={Uri.EscapeDataString(source.ShortName)}";
+        return enda == null ? url : $"{url}&handelse={enda.Id}";
     }
 
     // Notifierar alla Admin-användare när ETT NYTT supportärende/feedback-inskick

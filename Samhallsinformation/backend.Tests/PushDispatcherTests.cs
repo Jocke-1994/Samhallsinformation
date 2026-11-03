@@ -228,6 +228,70 @@ public class PushDispatcherTests
         PublishedAt = DateTime.UtcNow,
     };
 
+    // Djuplänk (2026-11-03): en push om exakt en händelse länkar till just den,
+    // så att appen kan scrolla fram och fälla ut den. Upptäckt via en riktig
+    // Efterlysningar-push som bara landade på startsidan.
+    [Fact]
+    public async Task DispatchNewEventsAsync_EnHändelseGenerisk_LänkenPekarPåHändelsen()
+    {
+        using var db = NewDb();
+        var (_, source, device) = SeedPolisenEfterlysningarSubscriber(db);
+        var ev = MakeEvent(source.Id, null, null);
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local/", source.Id, insertedCount: 1, insertedEvents: [ev]);
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Is<string?>(u => u == $"https://test.local/?shortName=Polisen&handelse={ev.Id}"),
+            Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DispatchNewEventsAsync_FleraHändelser_LänkenPekarPåKällflödet()
+    {
+        using var db = NewDb();
+        var (_, source, device) = SeedPolisenEfterlysningarSubscriber(db);
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 2,
+            insertedEvents: [MakeEvent(source.Id, null, null), MakeEvent(source.Id, null, null)]);
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Is<string?>(u => u == "https://test.local/?shortName=Polisen"),
+            Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
+    // Polisen-vägen: det som räknas är hur många händelser som matchar JUST
+    // den här mottagarens bevakningar, inte hur många som infogades totalt.
+    [Fact]
+    public async Task DispatchNewEventsAsync_PolisenEnMatchandeAvFlera_LänkenPekarPåDenMatchande()
+    {
+        using var db = NewDb();
+        var (user, source, device) = SeedPolisenSubscriber(db);
+        db.PolisenBevakningar.Add(new PolisenBevakning
+        {
+            UserId         = user.Id,
+            KategorierJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Trafikolycka" }),
+            OmradenJson    = null,
+        });
+        db.SaveChanges();
+        var träff = MakeEvent(source.Id, "Göteborg", "Trafikolycka");
+        var annan = MakeEvent(source.Id, "Malmö", "Brand");
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 2, insertedEvents: [träff, annan]);
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Is<string?>(u => u!.EndsWith($"&handelse={träff.Id}")),
+            Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task DispatchNewEventsAsync_PolisenNoBevakningar_SendsAllLikeBefore()
     {

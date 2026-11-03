@@ -32,10 +32,24 @@ import type { Source } from './types'
 function HomePage() {
   const location = useLocation()
   const { isLoggedIn } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
+  // Push-djuplänk (PushDispatcher.KällUrl): /?shortName=Polisen&handelse=<id>
+  // öppnar källans flöde och scrollar fram och fäller ut händelsen. Utan
+  // handelse (en push om flera händelser) öppnas bara källans flöde.
   const [selectedShortName, setSelectedShortName] = useState<string | null>(
-    (location.state as { shortName?: string } | null)?.shortName ?? null
+    (location.state as { shortName?: string } | null)?.shortName ?? searchParams.get('shortName')
   )
-  const [searchParams] = useSearchParams()
+  const länkadKälla = searchParams.get('shortName')
+  const markeradHandelse = searchParams.get('handelse')
+  // Ett nytt notisklick medan appen redan är öppen navigerar hit igen.
+  useEffect(() => {
+    if (länkadKälla) setSelectedShortName(länkadKälla)
+  }, [länkadKälla, location.key])
+  // Byter man själv källa i sidomenyn gäller länken inte längre.
+  function väljKälla(shortName: string | null) {
+    if (länkadKälla || markeradHandelse) setSearchParams({}, { replace: true })
+    setSelectedShortName(shortName)
+  }
   // /?vy=sparat (Prova själv → Mitt flöde → Sparat) startar i Mitt flöde.
   const [viewMode, setViewMode] = useState<'Allt' | 'Mitt'>(
     (location.state as { viewMode?: 'Allt' | 'Mitt' } | null)?.viewMode
@@ -74,7 +88,7 @@ function HomePage() {
     <div className="flex h-full bg-slate-50 dark:bg-slate-900">
       <Sidebar
         selectedShortName={selectedShortName}
-        onSelectSource={setSelectedShortName}
+        onSelectSource={väljKälla}
         viewMode={viewMode}
         onSelectViewMode={setViewMode}
         isOpen={sidebarOpen}
@@ -87,6 +101,7 @@ function HomePage() {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           onOpenSidebar={() => setSidebarOpen(true)}
+          markeradHandelseId={markeradHandelse}
         />
       </main>
     </div>
