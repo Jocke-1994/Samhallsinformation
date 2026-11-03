@@ -46,13 +46,67 @@ public class PlatsMatchareTests
         Assert.Null(PlatsMatchare.Matcha(geografi));
     }
 
-    // Riktig Trafikverket-form: länsnamn + vägsträcka. Matchar inte (county-only
-    // hade matchat, se testet ovan för "Hallands län") — ett känt, accepterat
-    // v1-gap, inte en bugg.
-    [Fact]
-    public void Matcha_TrafikverketLänPlusVägnummer_ReturnerarNull()
+    // Riktiga Trafikverket-strängar från produktion 2026-11-03. Formatet är
+    // länets grundnamn utan "län", ofta följt av ett vägnummer.
+    [Theory]
+    [InlineData("Skåne", "Skåne län")]
+    [InlineData("Skåne E6", "Skåne län")]
+    [InlineData("Västra Götaland Väg 1040", "Västra Götalands län")]
+    [InlineData("Uppsala E18", "Uppsala län")]
+    [InlineData("Blekinge", "Blekinge län")]
+    [InlineData("Västerbotten E4", "Västerbottens län")]
+    [InlineData("Halland E6", "Hallands län")]
+    [InlineData("Dalarna Väg 70", "Dalarnas län")]
+    public void Matcha_TrafikverketFormat_GerLänsträffSomInteÄrvs(string geografi, string förväntatLän)
     {
-        Assert.Null(PlatsMatchare.Matcha("Stockholms län E4"));
+        var träff = PlatsMatchare.Matcha(geografi, PlatsMatchare.TrafikverketSourceId);
+        Assert.NotNull(träff);
+        Assert.Equal(PlatsNivå.Lan, träff!.Nivå);
+        Assert.Equal(förväntatLän, träff.Namn);
+        Assert.False(träff.ÄrvsTillKommuner);
+    }
+
+    // "Uppsala"/"Kalmar"/"Stockholm" är både kommun och län. Från Trafikverket
+    // betyder det alltid länet, från Polisen alltid kommunen.
+    [Fact]
+    public void Matcha_TvetydigtNamn_TolkasEfterKälla()
+    {
+        Assert.Equal(PlatsNivå.Lan, PlatsMatchare.Matcha("Uppsala", PlatsMatchare.TrafikverketSourceId)!.Nivå);
+        Assert.Equal(PlatsNivå.Kommun, PlatsMatchare.Matcha("Uppsala", 1)!.Nivå);
+    }
+
+    [Theory]
+    [InlineData("E4")]
+    [InlineData("Väg 273")]
+    [InlineData("Västra")] // början av ett länsnamn räcker inte
+    [InlineData(null)]
+    public void Matcha_TrafikverketUtanLän_ReturnerarNull(string? geografi)
+    {
+        Assert.Null(PlatsMatchare.Matcha(geografi, PlatsMatchare.TrafikverketSourceId));
+    }
+
+    // Den vanliga regeln är oförändrad: Trafikverkets format matchar inte
+    // där, så en annan källa kan aldrig råka gå genom Trafikverket-regeln.
+    [Fact]
+    public void Matcha_TrafikverketFormatUtanKälla_ReturnerarNull()
+    {
+        Assert.Null(PlatsMatchare.Matcha("Skåne E6"));
+    }
+
+    [Fact]
+    public void TrafikverketLän_VarjeMålFinnsIKommunLanOchAllaLänTäcks()
+    {
+        Assert.All(PlatsMatchare.TrafikverketLänMål, l => Assert.Contains(l, KommunLan.AllaLan));
+        Assert.Equal(KommunLan.AllaLan.Count, PlatsMatchare.TrafikverketLänMål.Distinct().Count());
+    }
+
+    [Fact]
+    public void TrafikverketSourceId_MatcharIngestornsKälla()
+    {
+        var ingestor = new Samhallsinformation.Ingestors.TrafikverketApiIngestor(
+            new HttpClient(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Samhallsinformation.Ingestors.TrafikverketApiIngestor>.Instance);
+        Assert.Equal(PlatsMatchare.TrafikverketSourceId, ingestor.Source.Id);
     }
 
     [Fact]

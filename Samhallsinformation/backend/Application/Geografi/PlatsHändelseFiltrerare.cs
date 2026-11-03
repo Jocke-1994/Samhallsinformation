@@ -13,14 +13,14 @@ namespace Samhallsinformation.Application.Geografi;
 /// </summary>
 public static class PlatsHändelseFiltrerare
 {
-    public static bool GällerPlats(string plats, string? geography, bool isNational)
+    public static bool GällerPlats(string plats, string? geography, bool isNational, int sourceId = 0)
     {
         if (string.Equals(plats, "Nationellt", StringComparison.OrdinalIgnoreCase))
             return isNational;
 
         if (isNational) return false;
 
-        var träff = PlatsMatchare.Matcha(geography);
+        var träff = PlatsMatchare.Matcha(geography, sourceId);
         if (träff is null) return false;
 
         if (string.Equals(träff.Namn, plats, StringComparison.OrdinalIgnoreCase))
@@ -28,7 +28,9 @@ public static class PlatsHändelseFiltrerare
 
         // Länsvarningen ärvs in för varje kommun i länet — men bara i den
         // riktningen, en enskild kommunhändelse gäller aldrig hela länet.
+        // Trafikverkets länsträffar ärvs inte alls (ÄrvsTillKommuner=false).
         return träff.Nivå == PlatsNivå.Lan
+            && träff.ÄrvsTillKommuner
             && KommunLan.LanForKommun.TryGetValue(plats, out var platsLän)
             && string.Equals(platsLän, träff.Namn, StringComparison.OrdinalIgnoreCase);
     }

@@ -61,6 +61,16 @@ public class PlatsHändelseFiltrerareTests
         Assert.False(PlatsHändelseFiltrerare.GällerPlats("Botkyrka", null, true));
     }
 
+    // Beslut 2026-11-03: Trafikverket gäller bara länets egen plupp.
+    [Fact]
+    public void GällerPlats_Trafikverket_GällerLänetMenInteKommunerna()
+    {
+        const int tv = PlatsMatchare.TrafikverketSourceId;
+        Assert.True(PlatsHändelseFiltrerare.GällerPlats("Skåne län", "Skåne Väg 19", false, tv));
+        Assert.False(PlatsHändelseFiltrerare.GällerPlats("Malmö", "Skåne Väg 19", false, tv));
+        Assert.False(PlatsHändelseFiltrerare.GällerPlats("Uppsala", "Uppsala E18", false, tv));
+    }
+
     [Fact]
     public void GällerPlats_OlöstGeografi_GällerIngenPlats()
     {

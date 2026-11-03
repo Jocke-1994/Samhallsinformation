@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchPlatskatalog, fetchPlatsHandelser } from '../../api/platser'
-import type { CanonicalEvent, PlatsKatalogPost, Source } from '../../types'
+import type { CanonicalEvent, PlatsKatalogPost, PlatsSektion, Source } from '../../types'
 import NewsItem from './NewsItem'
 
 // Senaste valet (beslut 8) — samma mönster som theme/cookie_consent: en
@@ -19,13 +19,13 @@ function läsSparatVal(): string[] {
   }
 }
 
-// En händelses geography-sträng är redan den exakt matchade kommun-/länsnamnet
-// (PlatsMatchare gör bara exakt matchning) — skiljer sig den från den valda
-// platsen själv är händelsen en länsvarning som ärvts in (beslut 2+3), inte en
-// direkt träff.
-function ärÄrvdLänsvarning(valdPlats: string, event: CanonicalEvent): boolean {
-  if (valdPlats === 'Nationellt' || !event.geography) return false
-  return event.geography.toLowerCase() !== valdPlats.toLowerCase()
+// Ärvning (beslut 2+3) sker bara till en KOMMUN-sektion (sek.lan är satt bara
+// för kommuner). Där är en händelse vars geography skiljer sig från kommunen
+// en länsvarning som ärvts in. Under ett läns egen plupp är allt direkta
+// träffar, även Trafikverkets "Skåne Väg 19" — inget märke där.
+function ärÄrvdLänsvarning(sek: PlatsSektion, event: CanonicalEvent): boolean {
+  if (!sek.lan || !event.geography) return false
+  return event.geography.toLowerCase() !== sek.plats.toLowerCase()
 }
 
 interface Props {
@@ -164,7 +164,7 @@ export default function Platsfilter({ sources }: Props) {
                     sourceShortName={sourceMap[event.sourceId]}
                     viewMode="allt"
                   />
-                  {ärÄrvdLänsvarning(sek.plats, event) && (
+                  {ärÄrvdLänsvarning(sek, event) && (
                     <span className="inline-flex mt-1 ml-1 text-[11px] font-semibold text-violet-600 bg-violet-50 dark:bg-violet-950/40 px-2.5 py-1 rounded-full">
                       📍 Länsvarning — gäller hela {event.geography}
                     </span>

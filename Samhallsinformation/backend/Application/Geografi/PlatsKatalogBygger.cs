@@ -21,13 +21,18 @@ public sealed record PlatsKatalogPost(string Namn, PlatsKatalogNivå Nivå, stri
 
 public static class PlatsKatalogBygger
 {
-    public static IReadOnlyList<PlatsKatalogPost> Bygg(IEnumerable<(string? Geography, bool IsNational)> händelser)
+    // Källöst överlag (källa okänd = vanliga regler) — används av tester
+    // och av anropare som inte bryr sig om Trafikverkets specialformat.
+    public static IReadOnlyList<PlatsKatalogPost> Bygg(IEnumerable<(string? Geography, bool IsNational)> händelser) =>
+        ByggPerKälla(händelser.Select(h => (h.Geography, h.IsNational, SourceId: 0)));
+
+    public static IReadOnlyList<PlatsKatalogPost> ByggPerKälla(IEnumerable<(string? Geography, bool IsNational, int SourceId)> händelser)
     {
         var kommunRäknare = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var länRäknare = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var nationelltAntal = 0;
 
-        foreach (var (geography, isNational) in händelser)
+        foreach (var (geography, isNational, sourceId) in händelser)
         {
             if (isNational)
             {
@@ -35,7 +40,7 @@ public static class PlatsKatalogBygger
                 continue;
             }
 
-            var träff = PlatsMatchare.Matcha(geography);
+            var träff = PlatsMatchare.Matcha(geography, sourceId);
             if (träff is null) continue;
 
             if (träff.Nivå == PlatsNivå.Kommun)
@@ -45,8 +50,9 @@ public static class PlatsKatalogBygger
             else
             {
                 länRäknare[träff.Namn] = länRäknare.GetValueOrDefault(träff.Namn) + 1;
-                foreach (var kommun in PlatsMatchare.KommunerILan(träff.Namn))
-                    kommunRäknare[kommun] = kommunRäknare.GetValueOrDefault(kommun) + 1;
+                if (träff.ÄrvsTillKommuner)
+                    foreach (var kommun in PlatsMatchare.KommunerILan(träff.Namn))
+                        kommunRäknare[kommun] = kommunRäknare.GetValueOrDefault(kommun) + 1;
             }
         }
 
