@@ -38,12 +38,12 @@ När uppgiften är att förklara något för någon som "aldrig sett en dator":
 
 ## Källor att luta dig mot
 
-- `Samhallsinformation/CLAUDE.md` — teknisk sessionslogg, PR-nummer, detaljer
+- `Samhallsinformation/docs/SESSIONSLOGG.md` — teknisk sessionslogg, PR-nummer, detaljer (nyast först)
 - `Samhallsinformation/docs/UTVECKLINGSLOGG.md` — resonemanget bakom arbetet:
   mål, vad som hände på vägen, buggar och hur grundorsaken hittades
   (uteslutningsmetod), vald lösning och andra vägar som övervägdes men inte
   valdes. Det här är den bästa källan för "varför gjorde vi X" och "hur löstes
-  Y" — djupare och mer resonerande än CLAUDE.md:s korta sessionsloggpunkter
+  Y" — djupare och mer resonerande än SESSIONSLOGG.md:s korta sessionsloggpunkter
 - `Samhallsinformation/docs/FORKLARINGAR.md` — det du själv bygger på
 - `Samhallsinformation/docs/ROADMAP.md` och GitHub-issues — vad som är
   planerat vs. byggt

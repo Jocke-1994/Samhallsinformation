@@ -59,7 +59,7 @@ CLAUDE.md:s roll smalnar av till "de senaste 5-10 sessionerna + en länk
 till Obsidian för allt äldre" — historiken finns redan kvar i git-loggen
 om något behöver grävas fram.
 - kan du lösa det på ett snyggt sätt så varför inte, jag är öppen för förslag på förbättringar.
-- → **Gjort 2026-09-12:** CLAUDE.md smalnat av från 1372 till ~570 rader. Sessioner 1–28 flyttade oförändrade till `docs/SESSIONSLOGG_ARKIV.md`, sessioner 29–47 ligger kvar direkt i CLAUDE.md. En kort pekare länkar till arkivfilen.
+- → **Gjort 2026-09-12:** CLAUDE.md smalnat av från 1372 till ~570 rader. Sessioner 1–28 flyttade oförändrade till `docs/SESSIONSLOGG.md`, sessioner 29–47 ligger kvar direkt i CLAUDE.md. En kort pekare länkar till arkivfilen.
 - → **Bekräftat 2026-09-12:** du bad mig hålla koll på det här löpande, inte bara som en engångsstädning. Tillagt som en stående regel i CLAUDE.md (Övriga regler) — jag arkiverar proaktivt de äldsta sessionerna igen nästa gång filen börjar bli lika lång, utan att du behöver be om det.
 
 ## Frontend har fortfarande noll testtäckning
