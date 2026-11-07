@@ -13,6 +13,10 @@ strimlar jag bort raden härifrån vid nästa genomgång — den här listan
 ska bara innehålla det som GENUINT väntar på dig just nu.
 
 ## Väntar på ditt svar — aktiva frågor
+- **[[../Ideer/Annonsering-med-intresselista|Annonsering med intresselista]]** —
+  ny idé (2026-11-07): vad visar annonseringen för funktioner utan
+  Aktivera-knapp (text om var den finns, eller bilder?), och ska
+  platsetiketten synas?
 
 - **[[../Verktyg/Kallkandidater|Källkandidater]]** — ny lista (2026-11-02):
   14 myndigheter genomgångna med riktiga flöden kontrollerade. Väntar på: börja
