@@ -9,6 +9,25 @@ inte historik. Sessioner 1–28 arkiverades hit redan 2026-09-12, sessioner
 
 ---
 
+### Session 60 — 2026-11-08
+**What was done:**
+- **Frågan "simulerad produktionsmiljö innan vi kopplar in källor?" besvarad: behövs inte för källor.** Verifierat i koden att `IsActive=true` + `IsPublished=false` stoppas i `EventsController`, `UserFeedService`, `PlatserController`, `SourcesController` och `PushDispatcher.cs:59` (ingen push), larmar inte (`SourceFailingRule`), och syns bara i Sandlådan. En RSS-källa läser bara, kan inte röra annan data. Separat miljö behövs bara för omergad kod (spår 2 i `Ideer/Testmiljö.md`, fortsatt vilande)
+- **50 nya källor inlagda i produktion som aktiva/opublicerade (id 13–62)**: 20 nationella, 9 regioner, alla 21 länsstyrelser. Flödesadresser framletade per sajt (länsstyrelsernas `getnews?whichlst=…&local=…` per län), varje flöde torrkört mot riktiga `GenericRssIngestor` via lokal backend (`/api/admin/testing/dryrun`) innan inläggning. Inlagda av användaren via ett konsolskript (`POST /api/admin/sources` + `PATCH isActive`). Hela listan, vad som kräver jobb och vad som inte går: `docs/vault/Verktyg/Kallkandidater.md`, avsnittet "Internt betatest i Sandlådan"
+- **Fynd från torrkörningen:** U+00AD-avstavningstecken i ~10 källor (inte bara Migrationsverket), tom brödtext (Skatteverket, Region Örebro, Pensionsmyndigheten), Ekobrottsmyndigheten avvisas för att servern skickar `text/html` på giltig RSS, Svenska kraftnät ignorerar kategoriparametern (1 880 poster, ej inlagd), Kustbevakningens RSS-adress leder nu till en webbsida
+
+**Problem och lösningar:**
+- Chrome-tillägget tappade flikgruppen mitt i (två gånger, "not in Claude's tab group") → slutade försöka, gav användaren ett konsolskript i stället
+- Konsolskriptet gav "Invalid or unexpected token": användaren klistrade in filens **sökväg**, inte innehållet. Löst genom att lägga skriptet direkt i urklippet (`Set-Clipboard`) och en ren ASCII-version (å/ä/ö som `\u`-koder). Flikens token hade också gått ut (401) → ladda om sidan först
+
+**Etablerat mönster:**
+- Ny källa: torrkör mot riktiga ingestorn lokalt först (fångar Content-Type-fel, osynliga tecken, tom brödtext, enorma backloggar) — billigare än att upptäcka det i Sandlådan
+- När användaren ska köra något i webbläsarkonsolen: lägg det i urklippet, skriv inte bara en filsökväg
+
+**Next session:**
+- Kolla att de 50 källorna faktiskt hämtar (Källhantering: senast hämtad / fel)
+- Två små PR:ar innan utvärderingen, var för sig: (1) Sandlådans förhandsvisning tar 200 totalt → gräns per källa, annars tränger stora källor ut små; (2) rensa U+00AD i `GenericRssIngestor` + "Synka om" på berörda källor
+- Efter ~1 vecka (runt 15 nov): gå igenom Sandlådan källa för källa → publicera / vänta / stryk
+
 ### Session 58 — 2026-11-03
 **Obs:** Session 57 (2026-11-02: Hur Claude jobbar-diagram, förhandsvisning i Uppdateringar, PR #706-714, lanseringsplanen för november) loggades bara i minnessystemet. Se `project_hur_claude_jobbar_diagram_2026-11-02.md`.
 
