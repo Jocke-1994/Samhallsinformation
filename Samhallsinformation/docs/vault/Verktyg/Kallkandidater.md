@@ -19,6 +19,46 @@ många poster det har och när det senaste kom. Inget är gissat — står det
 "inget flöde hittat" betyder det att det inte syntes på startsidan/nyhetssidan,
 inte att det garanterat saknas.
 
+## Internt betatest i Sandlådan — startat 2026-11-08
+Ingen separat testmiljö behövs för källor: `IsActive=true` + `IsPublished=false` hämtar
+skarpt i produktion men stoppas i flöde, Mitt flöde, platsfilter, källistor och push
+(`PushDispatcher` avbryter för opublicerade). Syns bara i Adminpanel → Sandlåda.
+
+**Inlagda 2026-11-08 (id 13–62, alla aktiva/opublicerade), testade först med torrkörning
+mot riktiga `GenericRssIngestor`:**
+- Nationella (20): Konsumentverket Återkallelser + Varning för säkerhetsbrist, Migrationsverket,
+  Pensionsmyndigheten, Kronofogden Nyheter + Pressmeddelanden, Skatteverket (Alla nyheter),
+  Strålsäkerhetsmyndigheten, E-hälsomyndigheten, Riksbanken Pressmeddelanden + Nyheter,
+  MCF Räddningstjänst / Farligt gods / Rakel (ämnesflöden, inte "Alla"), IMY,
+  HaV Aktuellt + Fiskeregler, Lantmäteriet, Arbetsmiljöverket, Riksgälden Insättningsgarantin
+- Regioner (9): Stockholm, Gotland + Gotland Drift- och servicemeddelanden (vattenavbrott m.m.),
+  Gävleborg, Norrbotten, Västernorrland, Örebro län, Östergötland, Blekinge
+- Länsstyrelserna: alla 21 län (eget flöde per län, ShortName per län — grupperingen avgörs vid publicering)
+
+**Plan:** låt gå ~1 vecka, gå sedan igenom källa för källa: volym, brus, texter (tecken,
+tom brödtext, länkar), stabilitet → publicera / vänta / stryk.
+
+### Kräver jobb men går att få in
+| Vad | Problem | Jobb |
+|---|---|---|
+| Osynliga avstavningstecken (U+00AD) | Migrationsverket, Kronofogden, IMY, Region Stockholm/Gotland, HaV, ~10 länsstyrelser | Liten PR i `GenericRssIngestor`, sedan "Synka om". Görs först |
+| Tom brödtext | Skatteverket (alla), Region Örebro (alla), Pensionsmyndigheten (37/44) | Ev. hämta sidans egen ingress (og:description) — myndighetens text, ingen tolkning. Medel |
+| Ekobrottsmyndigheten | Giltig RSS men servern skickar `Content-Type: text/html` → avvisas | Liten: titta på innehållet, inte bara Content-Type |
+| Svenska kraftnät | Kategoriparametern ignoreras, 1 880 poster bakåt | Åldersgräns vid första hämtning. Liten. Ej inlagd |
+| Sandlådan | Förhandsvisningen tar 200 senaste totalt — stora källor tränger ut små | Gräns per källa. Liten PR |
+| Platsfiltret | Länsstyrelse-/regionhändelse utan ortnamn i texten blir "nationell" | Standardgeografi per källa (nytt fält). Medel |
+
+### Svårare men möjligt
+- **Sitemap-ingestor** (ett bygge, ~70 källor): NCSC, Storstockholms brandförsvar, Räddningstjänsten
+  Storgöteborg, Försäkringskassan, Transportstyrelsen, Tullverket, Sjöfartsverket, SHK,
+  Elsäkerhetsverket, Jordbruksverket, Kustbevakningen (gamla RSS-adressen ger nu en webbsida)
+- **API, en ingestor per källa:** Skogsstyrelsen (brandrisk), SGI (skred)
+- **Flöde ej hittat än:** TLV, Finansinspektionen, PTS, Brå, Din Tur, Region Västerbotten
+
+### Principbeslut, inte teknik
+- Domstolar + Åklagarmyndigheten (brottmål/integritet) — inte inlagda
+- Länsstyrelsernas/regionernas brus — avgörs efter veckan i Sandlådan
+
 ## Fullständigt svep 2026-11-02 (ersätter urvalet nedan som utgångspunkt)
 Första versionen av listan byggde på ett urval Claude skrev ur huvudet — Migrationsverket saknades, och du frågade varför. Svar: kontrollerna var noggranna, men *urvalet* var gissat ("myndigheter som liknar de vi har"). Därför gjordes ett fullständigt svep:
 
