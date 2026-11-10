@@ -1,0 +1,23 @@
+name: Hello CI
+#Name är vad som visas i GitHub Actions fliken.
+on: [pull_request]
+#On är när workflowen ska köras. I detta fall när en pull request skapas.
+jobs:
+#Vad som ska köras i workflowen. I detta fall ett jobb som heter hello.
+  hello:
+    runs-on: ubuntu-latest
+  #Ubuntu-latest är en virtuell maskin som körs i GitHub Actions.
+    steps:
+    #Steps är de steg som ska köras i jobbet. I detta fall tre steg.
+      - uses: actions/checkout@v7
+  #Uses är ett steg som använder en action. 
+  #I detta fall actions/checkout@v7 som checkar ut koden i repot.
+      - name: Säg hej
+        env: 
+            BRANCH: ${{ github.head_ref }}
+        #BRANCH är en miljövariabel som 
+        #innehåller namnet på branchen som pull requesten skapades från.
+        run: echo "Hej från GitHub Jag kör på branchen $BRANCH"
+      - run: ls -la
+  #Run är ett steg som kör ett kommando i terminalen. 
+  #I detta fall ls -la som listar alla filer i repot.
