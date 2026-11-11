@@ -44,13 +44,20 @@ public class VadArNyttTests
     {
         var r = new Uppdatering
         {
-            Titel = $"Release {datum:yyyy-MM-dd}", Datum = datum, Publicerad = publicerad,
-            VisaVadArNytt = visaVadArNytt, SchemalagdPubliceringUtc = schemalagd,
+            Titel = $"Release {datum:yyyy-MM-dd}",
+            Datum = datum,
+            Publicerad = publicerad,
+            VisaVadArNytt = visaVadArNytt,
+            SchemalagdPubliceringUtc = schemalagd,
         };
         db.Uppdateringar.Add(r);
         db.UppdateringsPunkter.Add(new UppdateringsPunkt
         {
-            UppdateringId = r.Id, Typ = "ny-funktion", Plats = "Allmänt", Text = "Nytt!", Synlighet = synlighet,
+            UppdateringId = r.Id,
+            Typ = "ny-funktion",
+            Plats = "Allmänt",
+            Text = "Nytt!",
+            Synlighet = synlighet,
         });
         db.SaveChanges();
         return r;

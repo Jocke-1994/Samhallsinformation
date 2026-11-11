@@ -6,8 +6,8 @@ namespace Samhallsinformation.Models;
 // en rad per flagga som någon gång ändrats bort från sitt kodade default.
 public class FeatureFlagOverride
 {
-    public string Key   { get; set; } = "";
-    public bool   Value { get; set; }
+    public string Key { get; set; } = "";
+    public bool Value { get; set; }
 
     // Satt av AdminFeatureIdeaController när en kopplad idés Stage blir
     // "lanseringsklar", eller manuellt i Feature flags-panelen — driver

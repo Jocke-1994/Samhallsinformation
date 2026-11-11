@@ -13,7 +13,7 @@ using WebPush;
 /// </summary>
 public static class StartupSecretsGuard
 {
-    public const string VapidPublicKeyConfig  = "VAPID_PUBLIC_KEY";
+    public const string VapidPublicKeyConfig = "VAPID_PUBLIC_KEY";
     public const string VapidPrivateKeyConfig = "VAPID_PRIVATE_KEY";
 
     /// <summary>Under detta antal tecken loggas en Warning (ingen tvingad minimilängd — produktionens längd är okänd).</summary>
@@ -47,7 +47,7 @@ public static class StartupSecretsGuard
         else if (string.Equals(jwt, JwtSettings.DevFallbackSecret, StringComparison.Ordinal))
             problems.Add($"{JwtSettings.ConfigKey} har utvecklingsvärdet (den hårdkodade dev-hemligheten)");
 
-        var vapidPublic  = config[VapidPublicKeyConfig];
+        var vapidPublic = config[VapidPublicKeyConfig];
         var vapidPrivate = config[VapidPrivateKeyConfig];
 
         if (string.IsNullOrWhiteSpace(vapidPublic))
@@ -82,7 +82,7 @@ public static class StartupSecretsGuard
             return;
 
         var keys = VapidHelper.GenerateVapidKeys();
-        config[VapidPublicKeyConfig]  = keys.PublicKey;
+        config[VapidPublicKeyConfig] = keys.PublicKey;
         config[VapidPrivateKeyConfig] = keys.PrivateKey;
 
         logger?.LogWarning(

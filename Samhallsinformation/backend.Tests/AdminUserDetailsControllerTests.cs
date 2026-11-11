@@ -34,15 +34,22 @@ public class AdminUserDetailsControllerTests
         using var db = NewDb();
         var user = new User
         {
-            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
-            PushEnabled = true, PushNyaHandelser = true, PushNyVersion = false,
+            Name = "Ada",
+            Email = "ada@example.com",
+            PasswordHash = "x",
+            PushEnabled = true,
+            PushNyaHandelser = true,
+            PushNyVersion = false,
         };
         db.Users.Add(user);
         db.UserDevices.Add(new UserDevice
         {
-            UserId = user.Id, Endpoint = "https://push.example/secret-ep",
-            P256dh = "p256dh-key", Auth = "auth-secret",
-            DeviceName = "Adas Pixel", Platform = "Android",
+            UserId = user.Id,
+            Endpoint = "https://push.example/secret-ep",
+            P256dh = "p256dh-key",
+            Auth = "auth-secret",
+            DeviceName = "Adas Pixel",
+            Platform = "Android",
         });
         await db.SaveChangesAsync();
 
@@ -81,8 +88,12 @@ public class AdminUserDetailsControllerTests
         using var db = NewDb();
         var user = new User
         {
-            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
-            PushEnabled = false, PushNyaHandelser = false, PushNyVersion = true,
+            Name = "Ada",
+            Email = "ada@example.com",
+            PasswordHash = "x",
+            PushEnabled = false,
+            PushNyaHandelser = false,
+            PushNyVersion = true,
         };
         db.Users.Add(user);
         await db.SaveChangesAsync();

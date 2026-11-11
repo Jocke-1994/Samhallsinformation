@@ -61,8 +61,13 @@ public class IngestorIsActiveTests
     private static Source NewSource(string name, bool isActive, bool isPublished = true, SourceType type = SourceType.RSS, string? url = null) =>
         new()
         {
-            Name = name, ShortName = name, BaseUrl = "https://example.test",
-            Url = url, Type = type, IsActive = isActive, IsPublished = isPublished,
+            Name = name,
+            ShortName = name,
+            BaseUrl = "https://example.test",
+            Url = url,
+            Type = type,
+            IsActive = isActive,
+            IsPublished = isPublished,
         };
 
     // Kör en riktig ingest-cykel mot en delad in-memory-databas. Den dedikerade ingestorns
@@ -82,8 +87,13 @@ public class IngestorIsActiveTests
 
             var dedicated = new FakeIngestor(new Source
             {
-                Id = row.Id, Name = row.Name, ShortName = row.ShortName, BaseUrl = row.BaseUrl,
-                Type = SourceType.WebAPI, IsActive = true, IsPublished = true,
+                Id = row.Id,
+                Name = row.Name,
+                ShortName = row.ShortName,
+                BaseUrl = row.BaseUrl,
+                Type = SourceType.WebAPI,
+                IsActive = true,
+                IsPublished = true,
             });
 
             if (removeDedicatedRow)

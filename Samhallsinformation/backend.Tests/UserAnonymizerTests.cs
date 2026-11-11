@@ -14,11 +14,11 @@ using Xunit;
 /// </summary>
 public class UserAnonymizerTests
 {
-    private const string AdaName     = "Ada Lovelace";
-    private const string AdaEmail    = "ada.lovelace@example.com";
+    private const string AdaName = "Ada Lovelace";
+    private const string AdaEmail = "ada.lovelace@example.com";
     private const string AdaOldEmail = "ada.gammal@example.com";
     private const string AdaNewEmail = "ada.ny@example.com";
-    private const string AdaOldName  = "Ada L";
+    private const string AdaOldName = "Ada L";
 
     // ------------------------------------------------------------------ seed
 
@@ -47,8 +47,12 @@ public class UserAnonymizerTests
     {
         var user = new User
         {
-            Name = p.Name, DisplayName = p.Name.Split(' ')[0] + "-visning", Email = p.Email, PasswordHash = "hash",
-            IsActive = !dueForDeletion, SuspendedReason = dueForDeletion ? "Radering begärd" : null,
+            Name = p.Name,
+            DisplayName = p.Name.Split(' ')[0] + "-visning",
+            Email = p.Email,
+            PasswordHash = "hash",
+            IsActive = !dueForDeletion,
+            SuspendedReason = dueForDeletion ? "Radering begärd" : null,
             DeletionScheduledAt = dueForDeletion ? DateTime.UtcNow.AddMinutes(-1) : null,
             DeletionCancelToken = dueForDeletion ? "canceltoken-" + p.Tag : null,
         };
@@ -71,7 +75,10 @@ public class UserAnonymizerTests
         db.UserPreferences.Add(new UserPreference { UserId = id.ToString(), GeographyFilter = "Uppsala" });
         var idea = new FeatureIdea
         {
-            IdeaNumber = ++_no, Title = "Idé från " + p.Name, Description = "Kontakt " + p.Email, CreatedByUserId = b.Admin.Id,
+            IdeaNumber = ++_no,
+            Title = "Idé från " + p.Name,
+            Description = "Kontakt " + p.Email,
+            CreatedByUserId = b.Admin.Id,
         };
         db.FeatureIdeas.Add(idea);
         await db.SaveChangesAsync();
@@ -94,8 +101,13 @@ public class UserAnonymizerTests
         // --- ANONYMISERAS: supportärende skapat av kontot
         var ticket = new SupportTicket
         {
-            TicketNumber = ++_no, Subject = $"Fråga från {p.Name.Split(' ')[0]}", Category = "Övrigt", CreatedByUserId = id,
-            ContactName = p.Name, ContactEmail = p.Email, AssignedToUserId = b.Admin.Id,
+            TicketNumber = ++_no,
+            Subject = $"Fråga från {p.Name.Split(' ')[0]}",
+            Category = "Övrigt",
+            CreatedByUserId = id,
+            ContactName = p.Name,
+            ContactEmail = p.Email,
+            AssignedToUserId = b.Admin.Id,
             ReminderNote = "Ring " + p.Name,
         };
         db.SupportTickets.Add(ticket);
@@ -111,8 +123,12 @@ public class UserAnonymizerTests
         // --- ANONYMISERAS: ärende som kom in via mejl (ingen kontokoppling, bara avsändaradressen — med annan skiftläge)
         var mailTicket = new SupportTicket
         {
-            TicketNumber = ++_no, Subject = "Mejl utan konto", Category = "Övrigt", Channel = "info-mejl",
-            ContactName = "A. " + p.Name.Split(' ')[1], ContactEmail = p.Email.ToUpperInvariant(),
+            TicketNumber = ++_no,
+            Subject = "Mejl utan konto",
+            Category = "Övrigt",
+            Channel = "info-mejl",
+            ContactName = "A. " + p.Name.Split(' ')[1],
+            ContactEmail = p.Email.ToUpperInvariant(),
         };
         db.SupportTickets.Add(mailTicket);
         await db.SaveChangesAsync();

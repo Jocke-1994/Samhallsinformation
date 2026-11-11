@@ -17,20 +17,20 @@ using Samhallsinformation.Services;
 [EnableRateLimiting("auth")]
 public class AuthController : ControllerBase
 {
-    private readonly IAuthService          _auth;
-    private readonly ITokenService         _tokens;
-    private readonly AppDbContext          _db;
+    private readonly IAuthService _auth;
+    private readonly ITokenService _tokens;
+    private readonly AppDbContext _db;
     private readonly IPasswordHasher<User> _hasher;
-    private readonly IEmailService         _email;
-    private readonly string                _frontendUrl;
+    private readonly IEmailService _email;
+    private readonly string _frontendUrl;
 
     public AuthController(IAuthService auth, ITokenService tokens, AppDbContext db, IPasswordHasher<User> hasher, IEmailService email, IConfiguration config)
     {
-        _auth        = auth;
-        _tokens      = tokens;
-        _db          = db;
-        _hasher      = hasher;
-        _email       = email;
+        _auth = auth;
+        _tokens = tokens;
+        _db = db;
+        _hasher = hasher;
+        _email = email;
         _frontendUrl = config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
     }
 
@@ -79,7 +79,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Me()
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var user   = await _db.Users.FindAsync(userId);
+        var user = await _db.Users.FindAsync(userId);
         if (user == null) return NotFound();
 
         var pendingEmail = await _db.EmailChangeTokens
@@ -119,7 +119,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> UpdateMe([FromBody] UpdateMeRequest req)
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var user   = await _db.Users.FindAsync(userId);
+        var user = await _db.Users.FindAsync(userId);
         if (user == null) return NotFound();
 
         // DisplayName är bara meningsfullt för konton som faktiskt kan svara på
@@ -128,10 +128,10 @@ public class AuthController : ControllerBase
         if (req.DisplayName != null && user.Role != "Admin" && user.Role != "Support")
             return StatusCode(403, new { error = "Bara admin eller support kan sätta ett visningsnamn." });
 
-        var oldName        = user.Name;
+        var oldName = user.Name;
         var oldDisplayName = user.DisplayName;
 
-        if (!string.IsNullOrWhiteSpace(req.Name))  user.Name  = req.Name;
+        if (!string.IsNullOrWhiteSpace(req.Name)) user.Name = req.Name;
         // E-postbyte går via POST /api/auth/me/email-change (bekräftelselänk
         // till den nya adressen) — den här endpointen rör aldrig user.Email.
         // Explicit null = rör inte fältet, tom sträng = nollställ tillbaka till "Support".
@@ -171,7 +171,11 @@ public class AuthController : ControllerBase
 
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
-            UserId = userId, Setting = "data_export", OldValue = null, NewValue = null, ChangedBy = "user",
+            UserId = userId,
+            Setting = "data_export",
+            OldValue = null,
+            NewValue = null,
+            ChangedBy = "user",
         });
         await _db.SaveChangesAsync();
 
@@ -200,7 +204,7 @@ public class AuthController : ControllerBase
             .Select(b => new
             {
                 Kategorier = b.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.KategorierJson),
-                Omraden    = b.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson),
+                Omraden = b.OmradenJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson),
             })
             .ToList();
 
@@ -271,7 +275,7 @@ public class AuthController : ControllerBase
                 {
                     storEj.IsEnabled,
                     StartTid = storEj.StartTime.ToString("HH:mm"),
-                    SlutTid  = storEj.EndTime.ToString("HH:mm"),
+                    SlutTid = storEj.EndTime.ToString("HH:mm"),
                 },
             },
             NotisleveransHistorik = notisHistorik,
@@ -305,16 +309,19 @@ public class AuthController : ControllerBase
         if (await AccountSuspension.IsLastActiveAdminAsync(_db, user))
             return BadRequest(new { error = "Du är den sista aktiva administratören och kan inte radera ditt konto." });
 
-        user.IsActive            = false;
-        user.SuspendedAt       ??= DateTime.UtcNow;
-        user.SuspendedReason     = AccountSuspension.UserDeletionReason;
+        user.IsActive = false;
+        user.SuspendedAt ??= DateTime.UtcNow;
+        user.SuspendedReason = AccountSuspension.UserDeletionReason;
         user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24);
         user.DeletionCancelToken = Guid.NewGuid().ToString("N");
 
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
-            UserId = userId, Setting = "account_deletion_requested", OldValue = null,
-            NewValue = user.DeletionScheduledAt.ToString(), ChangedBy = "user",
+            UserId = userId,
+            Setting = "account_deletion_requested",
+            OldValue = null,
+            NewValue = user.DeletionScheduledAt.ToString(),
+            ChangedBy = "user",
         });
 
         await _db.SaveChangesAsync();
@@ -346,11 +353,11 @@ public class AuthController : ControllerBase
         if (result.Tokens != null)
             return Ok(new
             {
-                accessToken  = result.Tokens.AccessToken,
+                accessToken = result.Tokens.AccessToken,
                 refreshToken = result.Tokens.RefreshToken,
-                name         = result.Tokens.Name,
-                role         = result.Tokens.Role,
-                isNewUser    = result.Tokens.IsNewUser,
+                name = result.Tokens.Name,
+                role = result.Tokens.Role,
+                isNewUser = result.Tokens.IsNewUser,
             });
 
         return Ok(new { message = result.Message });

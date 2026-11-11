@@ -34,8 +34,14 @@ public class AdminUsersControllerTests
 
     private static AdminUsersController NewController(AppDbContext db, Guid callerId) => new(db, Substitute.For<IAktivitetsloggService>(), Substitute.For<IEmailService>(), Substitute.For<IAuthService>(), Substitute.For<IConfiguration>())
     {
-        ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(
-            new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, callerId.ToString()) }, "TestAuth")) } },
+        ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(
+            new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, callerId.ToString()) }, "TestAuth"))
+            }
+        },
     };
 
     [Fact]
@@ -75,8 +81,12 @@ public class AdminUsersControllerTests
         using var db = NewDb();
         var user = new User
         {
-            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
-            IsActive = false, SuspendedAt = DateTime.UtcNow, SuspendedReason = "Missbruk",
+            Name = "Ada",
+            Email = "ada@example.com",
+            PasswordHash = "x",
+            IsActive = false,
+            SuspendedAt = DateTime.UtcNow,
+            SuspendedReason = "Missbruk",
         };
         db.Users.Add(user);
         await db.SaveChangesAsync();
@@ -113,9 +123,14 @@ public class AdminUsersControllerTests
         using var db = NewDb();
         var user = new User
         {
-            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
-            IsActive = false, SuspendedAt = DateTime.UtcNow, SuspendedReason = "Missbruk",
-            SuspensionReminderAt = DateTime.UtcNow.AddDays(3), SuspensionReminderNote = "Kolla igen",
+            Name = "Ada",
+            Email = "ada@example.com",
+            PasswordHash = "x",
+            IsActive = false,
+            SuspendedAt = DateTime.UtcNow,
+            SuspendedReason = "Missbruk",
+            SuspensionReminderAt = DateTime.UtcNow.AddDays(3),
+            SuspensionReminderNote = "Kolla igen",
         };
         db.Users.Add(user);
         await db.SaveChangesAsync();
@@ -134,23 +149,35 @@ public class AdminUsersControllerTests
         using var db = NewDb();
         db.Users.Add(new User // Förfallen påminnelse — ska synas
         {
-            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
-            IsActive = false, SuspensionReminderAt = DateTime.UtcNow.AddDays(-1), SuspensionReminderNote = "Kolla",
+            Name = "Ada",
+            Email = "ada@example.com",
+            PasswordHash = "x",
+            IsActive = false,
+            SuspensionReminderAt = DateTime.UtcNow.AddDays(-1),
+            SuspensionReminderNote = "Kolla",
         });
         db.Users.Add(new User // Framtida påminnelse — ska INTE synas än
         {
-            Name = "Bob", Email = "bob@example.com", PasswordHash = "x",
-            IsActive = false, SuspensionReminderAt = DateTime.UtcNow.AddDays(1),
+            Name = "Bob",
+            Email = "bob@example.com",
+            PasswordHash = "x",
+            IsActive = false,
+            SuspensionReminderAt = DateTime.UtcNow.AddDays(1),
         });
         db.Users.Add(new User // Avstängd men ingen påminnelse satt — ska INTE synas
         {
-            Name = "Cleo", Email = "cleo@example.com", PasswordHash = "x",
+            Name = "Cleo",
+            Email = "cleo@example.com",
+            PasswordHash = "x",
             IsActive = false,
         });
         db.Users.Add(new User // Aktiv — ska INTE synas oavsett datum
         {
-            Name = "Dan", Email = "dan@example.com", PasswordHash = "x",
-            IsActive = true, SuspensionReminderAt = DateTime.UtcNow.AddDays(-1),
+            Name = "Dan",
+            Email = "dan@example.com",
+            PasswordHash = "x",
+            IsActive = true,
+            SuspensionReminderAt = DateTime.UtcNow.AddDays(-1),
         });
         await db.SaveChangesAsync();
 
@@ -219,8 +246,12 @@ public class AdminUsersControllerTests
         using var db = NewDb();
         var user = new User
         {
-            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
-            IsActive = false, SuspendedAt = DateTime.UtcNow, SuspendedReason = "Radering begärd (GDPR)",
+            Name = "Ada",
+            Email = "ada@example.com",
+            PasswordHash = "x",
+            IsActive = false,
+            SuspendedAt = DateTime.UtcNow,
+            SuspendedReason = "Radering begärd (GDPR)",
             DeletionScheduledAt = DateTime.UtcNow.AddHours(10),
         };
         db.Users.Add(user);

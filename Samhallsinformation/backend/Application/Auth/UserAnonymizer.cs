@@ -23,7 +23,7 @@ using Samhallsinformation.Models;
 /// </summary>
 public static class UserAnonymizer
 {
-    public const string Redacted       = "[borttagen]";
+    public const string Redacted = "[borttagen]";
     public const string AnonymizedName = "Raderad användare";
 
     // Generiska namn som aldrig ska användas som sökterm vid textrensning (skulle rensa orelaterad text).
@@ -58,18 +58,18 @@ public static class UserAnonymizer
             await db.EventShareLogs.Where(x => x.UserId == userId)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.UserId, (Guid?)null), ct);
 
-            user.Name                   = AnonymizedName;
-            user.DisplayName            = null;
-            user.Email                  = $"deleted-{Guid.NewGuid():N}@anonymized.local";
-            user.PasswordHash           = "";
-            user.Role                   = "Användare";
-            user.IsActive               = false;
-            user.SuspendedReason        = "Konto raderat (GDPR)";
-            user.SuspensionReminderAt   = null;
+            user.Name = AnonymizedName;
+            user.DisplayName = null;
+            user.Email = $"deleted-{Guid.NewGuid():N}@anonymized.local";
+            user.PasswordHash = "";
+            user.Role = "Användare";
+            user.IsActive = false;
+            user.SuspendedReason = "Konto raderat (GDPR)";
+            user.SuspensionReminderAt = null;
             user.SuspensionReminderNote = null;
-            user.DeletionScheduledAt    = null;
-            user.DeletionCancelToken    = null;
-            user.DeletedAt              = now; // "klar"-markeringen — sist, i samma transaktion som allt ovan
+            user.DeletionScheduledAt = null;
+            user.DeletionCancelToken = null;
+            user.DeletedAt = now; // "klar"-markeringen — sist, i samma transaktion som allt ovan
 
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
@@ -92,7 +92,7 @@ public static class UserAnonymizer
     private static async Task<Identifiers> CollectIdentifiersAsync(AppDbContext db, User user, CancellationToken ct)
     {
         var emails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var names  = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         void AddEmail(string? e)
         {
@@ -181,7 +181,7 @@ public static class UserAnonymizer
 
     private static async Task ScrubSupportAsync(AppDbContext db, User user, Identifiers ids, CancellationToken ct)
     {
-        var partyIds  = ids.PartyTicketIds.ToList();
+        var partyIds = ids.PartyTicketIds.ToList();
         var partyText = new TextScrubber(ids.Emails.Concat(ids.Names).Concat(ids.TicketExtras));
         var emailText = new TextScrubber(ids.Emails);
 
@@ -189,9 +189,9 @@ public static class UserAnonymizer
         var tickets = await db.SupportTickets.Where(x => partyIds.Contains(x.Id)).ToListAsync(ct);
         foreach (var tk in tickets)
         {
-            if (tk.ContactName != null)  tk.ContactName  = AnonymizedName;
+            if (tk.ContactName != null) tk.ContactName = AnonymizedName;
             if (tk.ContactEmail != null) tk.ContactEmail = $"deleted-{tk.Id:N}@anonymized.local";
-            tk.Subject      = partyText.Scrub(tk.Subject)!;
+            tk.Subject = partyText.Scrub(tk.Subject)!;
             tk.ReminderNote = partyText.Scrub(tk.ReminderNote);
         }
 
@@ -203,7 +203,7 @@ public static class UserAnonymizer
             ct);
         foreach (var tk in otherTickets)
         {
-            tk.Subject      = emailText.Scrub(tk.Subject)!;
+            tk.Subject = emailText.Scrub(tk.Subject)!;
             tk.ReminderNote = emailText.Scrub(tk.ReminderNote);
         }
 
@@ -226,7 +226,7 @@ public static class UserAnonymizer
             .Where(x => partyIds.Contains(x.TicketId) || x.CreatedByUserId == user.Id).ToListAsync(ct);
         foreach (var a in actions)
         {
-            a.Text        = partyText.Scrub(a.Text);
+            a.Text = partyText.Scrub(a.Text);
             a.Instruction = partyText.Scrub(a.Instruction);
         }
         var seenActions = actions.Select(a => a.Id).ToHashSet();
@@ -236,7 +236,7 @@ public static class UserAnonymizer
             ct);
         foreach (var a in otherActions.Where(a => !seenActions.Contains(a.Id)))
         {
-            a.Text        = emailText.Scrub(a.Text);
+            a.Text = emailText.Scrub(a.Text);
             a.Instruction = emailText.Scrub(a.Instruction);
         }
     }
@@ -245,8 +245,8 @@ public static class UserAnonymizer
 
     private static async Task ScrubLogsAsync(AppDbContext db, User user, Identifiers ids, CancellationToken ct)
     {
-        var all       = ids.Emails.Concat(ids.Names).ToList();
-        var allText   = new TextScrubber(all);
+        var all = ids.Emails.Concat(ids.Names).ToList();
+        var allText = new TextScrubber(all);
         var emailText = new TextScrubber(ids.Emails);
 
         // --- AdminActivityLogs: behålls (ansvarsskyldighet); namn/e-post i text → [borttagen].
@@ -261,20 +261,20 @@ public static class UserAnonymizer
         foreach (var l in activity)
         {
             var actorIsUser = allText.Scrub(l.Vem) != l.Vem;
-            var mentioned   = allText.Scrub(l.Rubrik) != l.Rubrik || allText.Scrub(l.Detalj) != l.Detalj
+            var mentioned = allText.Scrub(l.Rubrik) != l.Rubrik || allText.Scrub(l.Detalj) != l.Detalj
                               || allText.Scrub(l.GammaltVärde) != l.GammaltVärde || allText.Scrub(l.NyttVärde) != l.NyttVärde;
 
-            l.Vem          = allText.Scrub(l.Vem)!;
-            l.Rubrik       = allText.Scrub(l.Rubrik)!;
-            l.Detalj       = allText.Scrub(l.Detalj)!;
+            l.Vem = allText.Scrub(l.Vem)!;
+            l.Rubrik = allText.Scrub(l.Rubrik)!;
+            l.Detalj = allText.Scrub(l.Detalj)!;
             l.GammaltVärde = allText.Scrub(l.GammaltVärde);
-            l.NyttVärde    = allText.Scrub(l.NyttVärde);
+            l.NyttVärde = allText.Scrub(l.NyttVärde);
 
             // En System-händelse om användaren (registrering, ärende, ångra-länk ...) loggar användarens egen IP/enhet.
             // Adminhändelser om användaren loggar ADMINENS IP — den rörs inte. Användaren som aktör (personal) → egen IP.
             if (actorIsUser || (mentioned && l.AktörTyp == "System"))
             {
-                l.Ip    = null;
+                l.Ip = null;
                 l.Enhet = null;
             }
         }
@@ -311,9 +311,9 @@ public static class UserAnonymizer
         var ownDeliveries = await db.NotificationDeliveryLogs.Where(x => x.UserId == user.Id).ToListAsync(ct);
         foreach (var l in ownDeliveries)
         {
-            l.Recipient    = Redacted;
-            l.Subject      = allText.Scrub(l.Subject)!;
-            l.Body         = allText.Scrub(l.Body)!;
+            l.Recipient = Redacted;
+            l.Subject = allText.Scrub(l.Subject)!;
+            l.Body = allText.Scrub(l.Body)!;
             l.ErrorMessage = allText.Scrub(l.ErrorMessage);
         }
         var seenDeliveries = ownDeliveries.Select(l => l.Id).ToHashSet();
@@ -325,9 +325,9 @@ public static class UserAnonymizer
             ct);
         foreach (var l in otherDeliveries.Where(l => !seenDeliveries.Contains(l.Id)))
         {
-            l.Recipient    = allText.Scrub(l.Recipient)!;
-            l.Subject      = allText.Scrub(l.Subject)!;
-            l.Body         = allText.Scrub(l.Body)!;
+            l.Recipient = allText.Scrub(l.Recipient)!;
+            l.Subject = allText.Scrub(l.Subject)!;
+            l.Body = allText.Scrub(l.Body)!;
             l.ErrorMessage = allText.Scrub(l.ErrorMessage);
         }
     }
@@ -338,7 +338,7 @@ public static class UserAnonymizer
     {
         var emailText = new TextScrubber(ids.Emails);
         var partyText = new TextScrubber(ids.Emails.Concat(ids.Names).Concat(ids.TicketExtras));
-        var partyIds  = ids.PartyTicketIds.ToList();
+        var partyIds = ids.PartyTicketIds.ToList();
 
         var ideas = await FindContainingAsync(db.FeatureIdeas, ids.Emails,
             term => x => x.Title.ToLower().Contains(term) || x.Description.ToLower().Contains(term)
@@ -348,8 +348,8 @@ public static class UserAnonymizer
             ct);
         foreach (var i in ideas)
         {
-            i.Title            = emailText.Scrub(i.Title)!;
-            i.Description      = emailText.Scrub(i.Description)!;
+            i.Title = emailText.Scrub(i.Title)!;
+            i.Description = emailText.Scrub(i.Description)!;
             i.TriageMotivering = emailText.Scrub(i.TriageMotivering);
         }
 
@@ -358,8 +358,8 @@ public static class UserAnonymizer
             .Where(x => x.SourceTicketId != null && partyIds.Contains(x.SourceTicketId.Value)).ToListAsync(ct);
         foreach (var i in fromTickets)
         {
-            i.Title            = partyText.Scrub(i.Title)!;
-            i.Description      = partyText.Scrub(i.Description)!;
+            i.Title = partyText.Scrub(i.Title)!;
+            i.Description = partyText.Scrub(i.Description)!;
             i.TriageMotivering = partyText.Scrub(i.TriageMotivering);
         }
 
@@ -381,7 +381,7 @@ public static class UserAnonymizer
         Func<string, Expression<Func<T, bool>>> predicate, CancellationToken ct) where T : class
     {
         var found = new List<T>();
-        var seen  = new HashSet<T>(ReferenceEqualityComparer.Instance);
+        var seen = new HashSet<T>(ReferenceEqualityComparer.Instance);
         foreach (var term in terms.Select(t => t.ToLowerInvariant()).Distinct())
         {
             foreach (var row in await source.Where(predicate(term)).ToListAsync(ct))

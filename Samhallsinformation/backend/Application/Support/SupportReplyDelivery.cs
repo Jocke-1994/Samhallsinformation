@@ -32,11 +32,11 @@ public class SupportReplyDelivery : ISupportReplyDelivery
 
         _db.SupportTicketMessages.Add(new SupportTicketMessage
         {
-            TicketId     = ticket.Id,
-            SenderType   = "agent",
+            TicketId = ticket.Id,
+            SenderType = "agent",
             AuthorUserId = request.AuthorUserId,
-            Text         = request.Text,
-            IsInternal   = request.IsInternal,
+            Text = request.Text,
+            IsInternal = request.IsInternal,
         });
         ticket.UpdatedAt = DateTime.UtcNow;
         beforeSave?.Invoke();

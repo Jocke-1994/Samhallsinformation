@@ -290,9 +290,9 @@ public class WebhooksController : ControllerBase
 
             _db.SupportTicketMessages.Add(new SupportTicketMessage
             {
-                TicketId   = ticket.Id,
+                TicketId = ticket.Id,
                 SenderType = "user",
-                Text       = sparadText,
+                Text = sparadText,
             });
             ticket.UpdatedAt = DateTime.UtcNow;
             ticket.LastUserMessageAt = DateTime.UtcNow;
@@ -353,10 +353,10 @@ public class WebhooksController : ControllerBase
 
             _db.SupportTicketMessages.Add(new SupportTicketMessage
             {
-                TicketId   = ticket.Id,
+                TicketId = ticket.Id,
                 SenderType = "agent",
                 IsInternal = true,
-                Text       = $"{OverifieratPrefix} — avsändaren ({fromEpost}) kunde inte autentiseras (SPF/DKIM/DMARC: {utfall}). " +
+                Text = $"{OverifieratPrefix} — avsändaren ({fromEpost}) kunde inte autentiseras (SPF/DKIM/DMARC: {utfall}). " +
                              $"Mejlet har INTE lagts in som kundens svar och ingen notis har skickats. Bedöm avsändaren innan du agerar. " +
                              $"[email_id {emailId}] Innehåll (klippt): {förhandsvisning}",
             });
@@ -417,22 +417,22 @@ public class WebhooksController : ControllerBase
             var nextNumber = (await _db.SupportTickets.MaxAsync(t => (int?)t.TicketNumber) ?? 0) + 1;
             ticket = new SupportTicket
             {
-                TicketNumber      = nextNumber,
-                Subject           = string.IsNullOrWhiteSpace(subjectRaw) ? "Mejl till info@" : subjectRaw,
-                Category          = "Allmän förfrågan",
-                Channel           = "info-mejl",
-                ContactName       = fromNamn,
-                ContactEmail      = fromAdress,
-                InboundAddress    = InfoAdress,
+                TicketNumber = nextNumber,
+                Subject = string.IsNullOrWhiteSpace(subjectRaw) ? "Mejl till info@" : subjectRaw,
+                Category = "Allmän förfrågan",
+                Channel = "info-mejl",
+                ContactName = fromNamn,
+                ContactEmail = fromAdress,
+                InboundAddress = InfoAdress,
                 LastUserMessageAt = DateTime.UtcNow,
             };
             _db.SupportTickets.Add(ticket);
 
             _db.SupportTicketMessages.Add(new SupportTicketMessage
             {
-                Ticket     = ticket,
+                Ticket = ticket,
                 SenderType = "user",
-                Text       = sparadText,
+                Text = sparadText,
             });
 
             await _db.SaveChangesAsync();
@@ -474,7 +474,7 @@ public class WebhooksController : ControllerBase
             return false;
         }
 
-        var svixId        = Request.Headers["svix-id"].ToString();
+        var svixId = Request.Headers["svix-id"].ToString();
         var svixTimestamp = Request.Headers["svix-timestamp"].ToString();
         var svixSignature = Request.Headers["svix-signature"].ToString();
         if (string.IsNullOrEmpty(svixId) || string.IsNullOrEmpty(svixTimestamp) || string.IsNullOrEmpty(svixSignature))
@@ -498,8 +498,8 @@ public class WebhooksController : ControllerBase
         }
         var signedContent = $"{svixId}.{svixTimestamp}.{rawBody}";
 
-        using var hmac  = new HMACSHA256(secretBytes);
-        var beräknad     = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(signedContent)));
+        using var hmac = new HMACSHA256(secretBytes);
+        var beräknad = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(signedContent)));
         var beräknadBytes = Encoding.UTF8.GetBytes(beräknad);
 
         foreach (var del in svixSignature.Split(' ', StringSplitOptions.RemoveEmptyEntries))

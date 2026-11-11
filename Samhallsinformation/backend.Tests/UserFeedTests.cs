@@ -44,9 +44,15 @@ public class UserFeedTests
 
     private static CanonicalEvent Ev(Source s, DateTime publishedAt, string? eventType = null, string? geography = null, string? title = null) => new()
     {
-        SourceId = s.Id, ExternalId = Guid.NewGuid().ToString(), Title = title ?? $"{s.ShortName} {publishedAt:O}",
-        Content = "x", Url = "https://example.com/x", RawData = "", PublishedAt = publishedAt,
-        EventType = eventType, Geography = geography,
+        SourceId = s.Id,
+        ExternalId = Guid.NewGuid().ToString(),
+        Title = title ?? $"{s.ShortName} {publishedAt:O}",
+        Content = "x",
+        Url = "https://example.com/x",
+        RawData = "",
+        PublishedAt = publishedAt,
+        EventType = eventType,
+        Geography = geography,
     };
 
     private static async Task<List<CanonicalEvent>> Lagg(AppDbContext db, params CanonicalEvent[] events)

@@ -37,8 +37,13 @@ public class DeleteSourceTests
     {
         var s = new Source
         {
-            Name = name, ShortName = name, BaseUrl = "https://rss.test", Url = url,
-            Type = SourceType.RSS, IsActive = true, IsPublished = true,
+            Name = name,
+            ShortName = name,
+            BaseUrl = "https://rss.test",
+            Url = url,
+            Type = SourceType.RSS,
+            IsActive = true,
+            IsPublished = true,
         };
         db.Sources.Add(s);
         db.SaveChanges();
@@ -57,7 +62,10 @@ public class DeleteSourceTests
     {
         var e = new CanonicalEvent
         {
-            SourceId = source.Id, ExternalId = ext, Title = ext, PublishedAt = DateTime.UtcNow,
+            SourceId = source.Id,
+            ExternalId = ext,
+            Title = ext,
+            PublishedAt = DateTime.UtcNow,
         };
         db.Events.Add(e);
         db.SaveChanges();
@@ -125,7 +133,7 @@ public class DeleteSourceTests
 
         // Globalt: varje händelse/prenumeration/körlogg/delning pekar på något som finns kvar.
         var sourceIds = await db.Sources.Select(s => s.Id).ToListAsync();
-        var eventIds  = await db.Events.Select(e => e.Id).ToListAsync();
+        var eventIds = await db.Events.Select(e => e.Id).ToListAsync();
         Assert.DoesNotContain(await db.Events.ToListAsync(), e => !sourceIds.Contains(e.SourceId));
         Assert.DoesNotContain(await db.IngestorRunLogs.ToListAsync(), r => !sourceIds.Contains(r.SourceId));
         Assert.DoesNotContain(await db.UserSourcePreferences.ToListAsync(), p => !sourceIds.Contains(p.SourceId));
@@ -139,7 +147,7 @@ public class DeleteSourceTests
     {
         using var db = TestDb.Create();
         var u1 = AddUser(db, "a@test.se"); var u2 = AddUser(db, "b@test.se");
-        var (src, _)      = SeedFullSource(db, "Vanlig", u1, u2);
+        var (src, _) = SeedFullSource(db, "Vanlig", u1, u2);
         var (other, otherEvents) = SeedFullSource(db, "Annan", u1, u2);
 
         await NewController(db).DeleteSource(src.Id);

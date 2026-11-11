@@ -28,8 +28,11 @@ public class KontosparrIntegritetTests
 
     private static ControllerContext CallerContext(Guid callerId) => new()
     {
-        HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(
-            new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, callerId.ToString()) }, "TestAuth")) },
+        HttpContext = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(
+            new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, callerId.ToString()) }, "TestAuth"))
+        },
     };
 
     private static AuthController NewAuthController(AppDbContext db, Guid userId) =>
@@ -57,13 +60,21 @@ public class KontosparrIntegritetTests
 
     private static User AdminSuspendedUser(string reason = "Missbruk") => new()
     {
-        Name = "Ada", Email = $"ada-{Guid.NewGuid():N}@example.com", PasswordHash = "x",
-        IsActive = false, SuspendedAt = DateTime.UtcNow.AddDays(-1), SuspendedReason = reason,
+        Name = "Ada",
+        Email = $"ada-{Guid.NewGuid():N}@example.com",
+        PasswordHash = "x",
+        IsActive = false,
+        SuspendedAt = DateTime.UtcNow.AddDays(-1),
+        SuspendedReason = reason,
     };
 
     private static User NewAdmin(string name, bool active = true) => new()
     {
-        Name = name, Email = $"{name}-{Guid.NewGuid():N}@example.com", PasswordHash = "x", Role = "Admin", IsActive = active,
+        Name = name,
+        Email = $"{name}-{Guid.NewGuid():N}@example.com",
+        PasswordHash = "x",
+        Role = "Admin",
+        IsActive = active,
     };
 
     // ---- DeleteMe ----------------------------------------------------------------------

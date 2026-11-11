@@ -25,14 +25,14 @@ public class KrisinformationApiIngestor : IIngestor
         Url = ApiUrl,
         Category = "Nationell",
         Type = SourceType.WebAPI,
-        IsActive    = true,
+        IsActive = true,
         IsPublished = true,
     };
 
     public KrisinformationApiIngestor(HttpClient httpClient, ILogger<KrisinformationApiIngestor> logger)
     {
         _httpClient = httpClient;
-        _logger     = logger;
+        _logger = logger;
     }
 
     public async Task<List<CanonicalEvent>> FetchEventsAsync()
@@ -62,15 +62,15 @@ public class KrisinformationApiIngestor : IIngestor
 
             var canonicalEvent = new CanonicalEvent
             {
-                SourceId   = Source.Id,
+                SourceId = Source.Id,
                 ExternalId = item.Identifier,
-                Title      = item.Headline ?? string.Empty,
-                Content    = StripHtml(item.BodyText ?? item.Preamble ?? string.Empty),
+                Title = item.Headline ?? string.Empty,
+                Content = StripHtml(item.BodyText ?? item.Preamble ?? string.Empty),
                 PublishedAt = publishedAt,
-                Url        = item.Web ?? string.Empty,
-                RawData    = item.Headline + " | " + item.Preamble,
-                Geography  = ExtractGeography(item.Area),
-                Severity   = MapSeverity(item.Headline)
+                Url = item.Web ?? string.Empty,
+                RawData = item.Headline + " | " + item.Preamble,
+                Geography = ExtractGeography(item.Area),
+                Severity = MapSeverity(item.Headline)
             };
 
             MetadataFallbacks.ApplyAll(canonicalEvent);
@@ -144,18 +144,18 @@ public class KrisinformationApiIngestor : IIngestor
 
 internal class KrisinformationItem
 {
-    [JsonPropertyName("Identifier")]   public string Identifier  { get; set; } = string.Empty;
-    [JsonPropertyName("Headline")]     public string? Headline   { get; set; }
-    [JsonPropertyName("Preamble")]     public string? Preamble   { get; set; }
-    [JsonPropertyName("BodyText")]     public string? BodyText   { get; set; }
-    [JsonPropertyName("Published")]    public string? Published  { get; set; }
-    [JsonPropertyName("Web")]          public string? Web        { get; set; }
-    [JsonPropertyName("Area")]         public List<KrisinformationArea>? Area { get; set; }
-    [JsonPropertyName("IsTest")]       public bool IsTest        { get; set; }
+    [JsonPropertyName("Identifier")] public string Identifier { get; set; } = string.Empty;
+    [JsonPropertyName("Headline")] public string? Headline { get; set; }
+    [JsonPropertyName("Preamble")] public string? Preamble { get; set; }
+    [JsonPropertyName("BodyText")] public string? BodyText { get; set; }
+    [JsonPropertyName("Published")] public string? Published { get; set; }
+    [JsonPropertyName("Web")] public string? Web { get; set; }
+    [JsonPropertyName("Area")] public List<KrisinformationArea>? Area { get; set; }
+    [JsonPropertyName("IsTest")] public bool IsTest { get; set; }
 }
 
 internal class KrisinformationArea
 {
-    [JsonPropertyName("Type")]        public string? Type        { get; set; }
+    [JsonPropertyName("Type")] public string? Type { get; set; }
     [JsonPropertyName("Description")] public string? Description { get; set; }
 }

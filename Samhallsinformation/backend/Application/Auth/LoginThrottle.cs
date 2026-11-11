@@ -27,7 +27,7 @@ public class LoginThrottle
     public const int MaxAttempts = 10;
     public static readonly TimeSpan Window = TimeSpan.FromMinutes(15);
 
-    private const int MaxKeyLength   = 254;    // RFC 5321 — längre nycklar kan inte vara riktiga adresser
+    private const int MaxKeyLength = 254;    // RFC 5321 — längre nycklar kan inte vara riktiga adresser
     private const int MaxTrackedKeys = 50_000; // minnestak; över det spåras inga nya adresser (IP-räknaren gäller ändå)
     private static readonly TimeSpan SweepInterval = TimeSpan.FromMinutes(1);
 

@@ -73,29 +73,44 @@ public class IngestorIsolationTests : IDisposable
         using var db = NewDb();
         var row = new Source
         {
-            Name = name, ShortName = name, BaseUrl = "https://example.test",
-            Type = SourceType.WebAPI, IsActive = true, IsPublished = isPublished,
+            Name = name,
+            ShortName = name,
+            BaseUrl = "https://example.test",
+            Type = SourceType.WebAPI,
+            IsActive = true,
+            IsPublished = isPublished,
             LastFetchError = lastFetchError,
         };
         db.Sources.Add(row);
         await db.SaveChangesAsync();
         return new FakeIngestor(new Source
         {
-            Id = row.Id, Name = row.Name, ShortName = row.ShortName, BaseUrl = row.BaseUrl,
-            Type = SourceType.WebAPI, IsActive = true, IsPublished = isPublished,
+            Id = row.Id,
+            Name = row.Name,
+            ShortName = row.ShortName,
+            BaseUrl = row.BaseUrl,
+            Type = SourceType.WebAPI,
+            IsActive = true,
+            IsPublished = isPublished,
         });
     }
 
     private static CanonicalEvent GoodEvent(int sourceId, string externalId) => new()
     {
-        SourceId = sourceId, ExternalId = externalId, Title = "Titel", PublishedAt = DateTime.UtcNow,
+        SourceId = sourceId,
+        ExternalId = externalId,
+        Title = "Titel",
+        PublishedAt = DateTime.UtcNow,
     };
 
     // Bryter NOT NULL på Events.Title vid SaveChanges — en post som passerar EventSync (giltigt
     // ExternalId) men som databasen vägrar. Den ogiltiga entiteten blir kvar i trackern.
     private static CanonicalEvent ConstraintBreakingEvent(int sourceId, string externalId) => new()
     {
-        SourceId = sourceId, ExternalId = externalId, Title = null!, PublishedAt = DateTime.UtcNow,
+        SourceId = sourceId,
+        ExternalId = externalId,
+        Title = null!,
+        PublishedAt = DateTime.UtcNow,
     };
 
     private static void MakeBroken(FakeIngestor ingestor) =>

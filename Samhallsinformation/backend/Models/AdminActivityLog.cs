@@ -14,34 +14,34 @@ namespace Samhallsinformation.Models;
 // Kontoåtgärd, admin/support-initierade).
 public class AdminActivityLog
 {
-    public Guid     Id       { get; set; } = Guid.NewGuid();
-    public DateTime Tid      { get; set; } = DateTime.UtcNow;
-    public string   Vem      { get; set; } = "";
-    public string   AktörTyp { get; set; } = "Admin"; // "System" | "Admin" — sträng, inte enum-kolumn, samma mönster som Typ
-    public string   Typ      { get; set; } = "";
-    public string   Rubrik   { get; set; } = "";
-    public string   Detalj   { get; set; } = "";
-    public bool     Ångrad   { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public DateTime Tid { get; set; } = DateTime.UtcNow;
+    public string Vem { get; set; } = "";
+    public string AktörTyp { get; set; } = "Admin"; // "System" | "Admin" — sträng, inte enum-kolumn, samma mönster som Typ
+    public string Typ { get; set; } = "";
+    public string Rubrik { get; set; } = "";
+    public string Detalj { get; set; } = "";
+    public bool Ångrad { get; set; }
 
     // Ingen riktig radering av loggposter (skulle underminera spårbarheten) —
     // arkivering + test-taggning istället, båda döljs ur standardvyn.
-    public bool     Arkiverad { get; set; }
-    public bool     Test      { get; set; } // taggas vid SKAPANDET mot kända test-/betakonton
+    public bool Arkiverad { get; set; }
+    public bool Test { get; set; } // taggas vid SKAPANDET mot kända test-/betakonton
 
-    public string?  Ip           { get; set; }
-    public string?  Enhet        { get; set; } // User-Agent
-    public string?  GammaltVärde { get; set; } // breddar UserSettingAuditLogs OldValue/NewValue-mönster
-    public string?  NyttVärde    { get; set; }
+    public string? Ip { get; set; }
+    public string? Enhet { get; set; } // User-Agent
+    public string? GammaltVärde { get; set; } // breddar UserSettingAuditLogs OldValue/NewValue-mönster
+    public string? NyttVärde { get; set; }
 
     // Sätts för Typ=Ärende-rader — låter Aktivitetslogg/Översikt länka direkt
     // till ärendet i Support-inbox istället för att bara nämna det i text.
-    public Guid?    RelateratÄrendeId { get; set; }
+    public Guid? RelateratÄrendeId { get; set; }
 
-    public string?  AngraAnvandareId { get; set; }
-    public string?  AngraEventId     { get; set; }
-    public string?  AngraTitle       { get; set; }
-    public string?  AngraSourceName  { get; set; }
-    public string?  AngraPublishedAt { get; set; }
-    public string?  AngraSparadDatum { get; set; }
-    public string?  AngraUndoAction  { get; set; }
+    public string? AngraAnvandareId { get; set; }
+    public string? AngraEventId { get; set; }
+    public string? AngraTitle { get; set; }
+    public string? AngraSourceName { get; set; }
+    public string? AngraPublishedAt { get; set; }
+    public string? AngraSparadDatum { get; set; }
+    public string? AngraUndoAction { get; set; }
 }

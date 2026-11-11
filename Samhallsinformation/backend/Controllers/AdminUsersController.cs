@@ -110,9 +110,9 @@ public class AdminUsersController : ControllerBase
         var cancelsDeletion = req.IsActive && user.DeletionScheduledAt != null;
 
         user.IsActive = req.IsActive;
-        user.SuspendedAt     = req.IsActive ? null : DateTime.UtcNow;
+        user.SuspendedAt = req.IsActive ? null : DateTime.UtcNow;
         user.SuspendedReason = req.IsActive ? null : req.Reason;
-        user.SuspensionReminderAt   = req.IsActive ? null : UtcDateTime.Ensure(req.ReminderAt);
+        user.SuspensionReminderAt = req.IsActive ? null : UtcDateTime.Ensure(req.ReminderAt);
         user.SuspensionReminderNote = req.IsActive ? null : req.ReminderNote;
         if (cancelsDeletion)
         {
@@ -161,11 +161,11 @@ public class AdminUsersController : ControllerBase
         // med raderingsmarkören — annars kunde användarens ångra-länk häva admins spärr.
         var keepAdminSuspension = AccountSuspension.IsAdminSuspended(user);
 
-        user.IsActive            = false;
+        user.IsActive = false;
         if (!keepAdminSuspension)
         {
-            user.SuspendedAt       ??= DateTime.UtcNow;
-            user.SuspendedReason     = AccountSuspension.AdminDeletionReason;
+            user.SuspendedAt ??= DateTime.UtcNow;
+            user.SuspendedReason = AccountSuspension.AdminDeletionReason;
         }
         user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24);
         user.DeletionCancelToken = Guid.NewGuid().ToString("N");
@@ -202,8 +202,8 @@ public class AdminUsersController : ControllerBase
         user.DeletionCancelToken = null;
         if (restoreAccess)
         {
-            user.IsActive        = true;
-            user.SuspendedAt     = null;
+            user.IsActive = true;
+            user.SuspendedAt = null;
             user.SuspendedReason = null;
         }
 

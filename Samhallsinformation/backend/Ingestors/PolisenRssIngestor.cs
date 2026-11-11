@@ -21,7 +21,7 @@ public class PolisenRssIngestor : IIngestor
         Url = FeedUrl,
         Category = "Nationell",
         Type = SourceType.RSS,
-        IsActive    = true,
+        IsActive = true,
         IsPublished = true,
     };
 

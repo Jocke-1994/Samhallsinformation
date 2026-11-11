@@ -36,9 +36,9 @@ public static class AdminSeeder
 
         var admin = new User
         {
-            Email         = normalized,
-            Name          = name,
-            Role          = "Admin",
+            Email = normalized,
+            Name = name,
+            Role = "Admin",
             EmailVerified = true,
         };
         admin.PasswordHash = new PasswordHasher<User>().HashPassword(admin, password);

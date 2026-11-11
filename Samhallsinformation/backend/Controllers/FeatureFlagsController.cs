@@ -31,7 +31,7 @@ public class FeatureFlagsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetOverrides()
     {
-        var rader   = await _db.FeatureFlagOverrides.ToListAsync();
+        var rader = await _db.FeatureFlagOverrides.ToListAsync();
         var ärAdmin = User.IsInRole("Admin");
         var overrides = rader.ToDictionary(
             f => f.Key,
@@ -44,8 +44,8 @@ public class FeatureFlagsController : ControllerBase
     public async Task<IActionResult> SetOverride(string key, [FromBody] SetFlagRequest req)
     {
         var existing = await FeatureFlagActivation.GetOrCreateOverrideAsync(_db, key);
-        var ärNy     = _db.Entry(existing).State == EntityState.Added;
-        var gammalt  = ärNy ? (bool?)null : existing.Value;
+        var ärNy = _db.Entry(existing).State == EntityState.Added;
+        var gammalt = ärNy ? (bool?)null : existing.Value;
         existing.Value = req.Value;
         // En flagga som slås på direkt via den här vanliga på/av-brytaren
         // (utan att gå via schemaläggningsflödet) ska inte lämna en

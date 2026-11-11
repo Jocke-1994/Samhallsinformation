@@ -15,7 +15,7 @@ using Samhallsinformation.Application.RateLimiting;
 public static class SupportTicketRateLimit
 {
     public const string PolicyName = "support-ticket";
-    public const int AnonymousPermitLimit     = 10;
+    public const int AnonymousPermitLimit = 10;
     public const int AuthenticatedPermitLimit = 20;
     public static readonly TimeSpan Window = TimeSpan.FromHours(1);
 
@@ -32,8 +32,8 @@ public static class SupportTicketRateLimit
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = userId != null ? AuthenticatedPermitLimit : AnonymousPermitLimit,
-                Window      = Window,
-                QueueLimit  = 0,
+                Window = Window,
+                QueueLimit = 0,
             });
     }
 }

@@ -27,8 +27,14 @@ public class UpdateSourceTests
     {
         var s = new Source
         {
-            Name = "Gammalt namn", ShortName = "GN", BaseUrl = "https://rss.test", Url = "https://rss.test/feed",
-            Category = "Nationell", Type = SourceType.RSS, IsActive = isActive, IsPublished = isPublished,
+            Name = "Gammalt namn",
+            ShortName = "GN",
+            BaseUrl = "https://rss.test",
+            Url = "https://rss.test/feed",
+            Category = "Nationell",
+            Type = SourceType.RSS,
+            IsActive = isActive,
+            IsPublished = isPublished,
         };
         db.Sources.Add(s);
         db.SaveChanges();

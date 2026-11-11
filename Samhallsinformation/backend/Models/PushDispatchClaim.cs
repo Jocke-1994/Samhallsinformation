@@ -6,9 +6,9 @@ namespace Samhallsinformation.Models;
 // visar notisen, så bara den enhet som frågar FÖRST faktiskt visar den.
 public class PushDispatchClaim
 {
-    public Guid     Id                { get; set; } = Guid.NewGuid();
-    public Guid     UserId            { get; set; }
-    public Guid?    ClaimedByDeviceId { get; set; }
-    public DateTime? ClaimedAt        { get; set; }
-    public DateTime CreatedAt         { get; set; } = DateTime.UtcNow;
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid UserId { get; set; }
+    public Guid? ClaimedByDeviceId { get; set; }
+    public DateTime? ClaimedAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

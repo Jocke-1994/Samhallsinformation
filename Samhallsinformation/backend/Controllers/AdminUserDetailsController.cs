@@ -57,15 +57,18 @@ public class AdminUserDetailsController : ControllerBase
 
         var bevakning = new PolisenBevakning
         {
-            UserId         = id,
+            UserId = id,
             KategorierJson = validering.Kategorier == null ? null : JsonSerializer.Serialize(validering.Kategorier),
-            OmradenJson    = validering.Omraden    == null ? null : JsonSerializer.Serialize(validering.Omraden),
+            OmradenJson = validering.Omraden == null ? null : JsonSerializer.Serialize(validering.Omraden),
         };
         _db.PolisenBevakningar.Add(bevakning);
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
-            UserId = id, Setting = "polisen_bevakning_skapad", OldValue = null,
-            NewValue = $"{validering.Kategorier?.Count ?? 0} kategorier, {validering.Omraden?.Count ?? 0} områden", ChangedBy = "admin",
+            UserId = id,
+            Setting = "polisen_bevakning_skapad",
+            OldValue = null,
+            NewValue = $"{validering.Kategorier?.Count ?? 0} kategorier, {validering.Omraden?.Count ?? 0} områden",
+            ChangedBy = "admin",
         });
         await _db.SaveChangesAsync();
 
@@ -85,11 +88,13 @@ public class AdminUserDetailsController : ControllerBase
 
         var gammaltVärde = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}";
         bevakning.KategorierJson = validering.Kategorier == null ? null : JsonSerializer.Serialize(validering.Kategorier);
-        bevakning.OmradenJson    = validering.Omraden    == null ? null : JsonSerializer.Serialize(validering.Omraden);
+        bevakning.OmradenJson = validering.Omraden == null ? null : JsonSerializer.Serialize(validering.Omraden);
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
-            UserId = id, Setting = "polisen_bevakning_ändrad",
-            OldValue = gammaltVärde, NewValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}",
+            UserId = id,
+            Setting = "polisen_bevakning_ändrad",
+            OldValue = gammaltVärde,
+            NewValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}",
             ChangedBy = "admin",
         });
         await _db.SaveChangesAsync();
@@ -107,8 +112,10 @@ public class AdminUserDetailsController : ControllerBase
         _db.PolisenBevakningar.Remove(bevakning);
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
-            UserId = id, Setting = "polisen_bevakning_borttagen",
-            OldValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}", NewValue = null,
+            UserId = id,
+            Setting = "polisen_bevakning_borttagen",
+            OldValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}",
+            NewValue = null,
             ChangedBy = "admin",
         });
         await _db.SaveChangesAsync();
@@ -120,7 +127,7 @@ public class AdminUserDetailsController : ControllerBase
     {
         b.Id,
         Kategorier = b.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.KategorierJson),
-        Omraden    = b.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson),
+        Omraden = b.OmradenJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson),
     };
 
     // Admin/support-variant av GET/PUT /api/user/sources (UserSourcesController)
@@ -138,10 +145,10 @@ public class AdminUserDetailsController : ControllerBase
             .OrderBy(p => p.SortOrder)
             .Select(p => new
             {
-                sourceId  = p.SourceId,
+                sourceId = p.SourceId,
                 shortName = p.Source.ShortName,
-                name      = p.Source.Name,
-                isActive  = p.IsActive,
+                name = p.Source.Name,
+                isActive = p.IsActive,
             })
             .ToListAsync();
 
@@ -168,8 +175,11 @@ public class AdminUserDetailsController : ControllerBase
         if (gammaltVärde != req.IsActive.ToString())
             _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
             {
-                UserId = id, Setting = $"source.{sourceId}.isActive",
-                OldValue = gammaltVärde, NewValue = req.IsActive.ToString(), ChangedBy = "admin",
+                UserId = id,
+                Setting = $"source.{sourceId}.isActive",
+                OldValue = gammaltVärde,
+                NewValue = req.IsActive.ToString(),
+                ChangedBy = "admin",
             });
 
         await _db.SaveChangesAsync();
@@ -269,18 +279,21 @@ public class AdminUserDetailsController : ControllerBase
             if (!nytt.HasValue || nytt.Value == gammalt) return;
             _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
             {
-                UserId = id, Setting = setting,
-                OldValue = gammalt.ToString(), NewValue = nytt.Value.ToString(), ChangedBy = "admin",
+                UserId = id,
+                Setting = setting,
+                OldValue = gammalt.ToString(),
+                NewValue = nytt.Value.ToString(),
+                ChangedBy = "admin",
             });
         }
 
-        Logga("push_enabled",        user.PushEnabled,      req.PushEnabled);
-        Logga("push_nya_handelser",  user.PushNyaHandelser, req.PushNyaHandelser);
-        Logga("push_ny_version",     user.PushNyVersion,    req.PushNyVersion);
+        Logga("push_enabled", user.PushEnabled, req.PushEnabled);
+        Logga("push_nya_handelser", user.PushNyaHandelser, req.PushNyaHandelser);
+        Logga("push_ny_version", user.PushNyVersion, req.PushNyVersion);
 
-        if (req.PushEnabled.HasValue)      user.PushEnabled      = req.PushEnabled.Value;
+        if (req.PushEnabled.HasValue) user.PushEnabled = req.PushEnabled.Value;
         if (req.PushNyaHandelser.HasValue) user.PushNyaHandelser = req.PushNyaHandelser.Value;
-        if (req.PushNyVersion.HasValue)    user.PushNyVersion    = req.PushNyVersion.Value;
+        if (req.PushNyVersion.HasValue) user.PushNyVersion = req.PushNyVersion.Value;
 
         await _db.SaveChangesAsync();
         return Ok();
@@ -303,12 +316,12 @@ public class AdminUserDetailsController : ControllerBase
             orderby s.SavedAt descending
             select new
             {
-                EventId     = s.EventId,
-                Title       = e.Title,
-                Url         = e.Url,
-                SourceName  = src != null ? src.ShortName : "Okänd källa",
+                EventId = s.EventId,
+                Title = e.Title,
+                Url = e.Url,
+                SourceName = src != null ? src.ShortName : "Okänd källa",
                 PublishedAt = e.PublishedAt,
-                SavedAt     = s.SavedAt,
+                SavedAt = s.SavedAt,
             }
         ).ToListAsync();
 

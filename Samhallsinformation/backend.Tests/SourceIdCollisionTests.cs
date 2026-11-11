@@ -16,8 +16,18 @@ public class SourceIdCollisionTests
     private static Source Ingestor(int id, string name = "Polisen", string shortName = "Polisen",
         string baseUrl = "https://polisen.se", string url = "https://polisen.se/rss", SourceType type = SourceType.RSS,
         string? category = "Nationell", bool published = true) =>
-        new() { Id = id, Name = name, ShortName = shortName, BaseUrl = baseUrl, Url = url, Type = type,
-                Category = category, IsActive = true, IsPublished = published };
+        new()
+        {
+            Id = id,
+            Name = name,
+            ShortName = shortName,
+            BaseUrl = baseUrl,
+            Url = url,
+            Type = type,
+            Category = category,
+            IsActive = true,
+            IsPublished = published
+        };
 
     // ---- kollisionsvakten -----------------------------------------------------------------------------------
 
@@ -27,8 +37,14 @@ public class SourceIdCollisionTests
         using var db = TestDb.Create();
         db.Sources.Add(new Source
         {
-            Id = 7, Name = "Adminens Blogg", ShortName = "Blogg", BaseUrl = "https://blogg.example.se",
-            Url = "https://blogg.example.se/feed", Type = SourceType.RSS, IsActive = true, IsPublished = true,
+            Id = 7,
+            Name = "Adminens Blogg",
+            ShortName = "Blogg",
+            BaseUrl = "https://blogg.example.se",
+            Url = "https://blogg.example.se/feed",
+            Type = SourceType.RSS,
+            IsActive = true,
+            IsPublished = true,
         });
         await db.SaveChangesAsync();
         var logger = new CapturingLogger();
@@ -110,8 +126,16 @@ public class SourceIdCollisionTests
     public async Task Seed_SaknasId_InfogasOchKollisionHoppasÖverUtanAttStoppaDeÖvriga()
     {
         using var db = TestDb.Create();
-        db.Sources.Add(new Source { Id = 7, Name = "Admin", ShortName = "Admin", BaseUrl = "https://a.se",
-                                    Url = "https://a.se/f", Type = SourceType.RSS, IsActive = true });
+        db.Sources.Add(new Source
+        {
+            Id = 7,
+            Name = "Admin",
+            ShortName = "Admin",
+            BaseUrl = "https://a.se",
+            Url = "https://a.se/f",
+            Type = SourceType.RSS,
+            IsActive = true
+        });
         await db.SaveChangesAsync();
 
         var skipped = await IngestorSourceSeeder.SeedAsync(db, new[]

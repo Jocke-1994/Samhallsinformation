@@ -7,14 +7,33 @@ on:
       - "Samhallsinformation/backend/**"
       - "Samhallsinformation/backend.Tests/**"
       - "Samhallsinformation/Samhallsinformation.slnx"
+      - ".github/workflows/ci-backend.yml"
   pull_request:
     branches: [main]
     paths:
       - "Samhallsinformation/backend/**"
       - "Samhallsinformation/backend.Tests/**"
       - "Samhallsinformation/Samhallsinformation.slnx"
+      - ".github/workflows/ci-backend.yml"
 
 jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          include-prerelease: true
+
+      - name: Format
+        working-directory: Samhallsinformation
+        run: dotnet format whitespace --verify-no-changes
+
   build:
     name: Build & Test
     runs-on: ubuntu-latest

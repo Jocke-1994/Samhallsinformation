@@ -26,7 +26,7 @@ public static class DatabaseBootstrapper
     {
         using (var scope = app.Services.CreateScope())
         {
-            var db        = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var ingestors = scope.ServiceProvider.GetRequiredService<IEnumerable<IIngestor>>();
 
             // V4-6b: "databaseUrl != null || pgHost != null" (Program.cs-lokala variabler, inte
@@ -1269,13 +1269,13 @@ public static class DatabaseBootstrapper
             {
                 db.Sources.Add(new Source
                 {
-                    Name        = "SMHI Nyheter",
-                    ShortName   = "SMHI",
-                    BaseUrl     = "https://www.smhi.se",
-                    Url         = SeededSources.SmhiNyheterUrl,
-                    Category    = "Väder",
-                    Type        = SourceType.RSS,
-                    IsActive    = true,
+                    Name = "SMHI Nyheter",
+                    ShortName = "SMHI",
+                    BaseUrl = "https://www.smhi.se",
+                    Url = SeededSources.SmhiNyheterUrl,
+                    Category = "Väder",
+                    Type = SourceType.RSS,
+                    IsActive = true,
                     IsPublished = false,
                 });
                 await db.SaveChangesAsync();
@@ -1290,13 +1290,13 @@ public static class DatabaseBootstrapper
             {
                 db.Sources.Add(new Source
                 {
-                    Name        = "Polisen Efterlysningar",
-                    ShortName   = "Polisen",
-                    BaseUrl     = "https://polisen.se",
-                    Url         = SeededSources.PolisenEfterlysningarUrl,
-                    Category    = "Nationell",
-                    Type        = SourceType.RSS,
-                    IsActive    = true,
+                    Name = "Polisen Efterlysningar",
+                    ShortName = "Polisen",
+                    BaseUrl = "https://polisen.se",
+                    Url = SeededSources.PolisenEfterlysningarUrl,
+                    Category = "Nationell",
+                    Type = SourceType.RSS,
+                    IsActive = true,
                     IsPublished = false,
                 });
                 await db.SaveChangesAsync();
@@ -1343,7 +1343,10 @@ public static class DatabaseBootstrapper
                         {
                             db.UserSourcePreferences.Add(new UserSourcePreference
                             {
-                                UserId = userId, SourceId = sourceId, IsActive = true, SortOrder = 0,
+                                UserId = userId,
+                                SourceId = sourceId,
+                                IsActive = true,
+                                SortOrder = 0,
                             });
                         }
                     }
@@ -1459,11 +1462,11 @@ public static class DatabaseBootstrapper
                         db.UppdateringsPunkter.Add(new UppdateringsPunkt
                         {
                             UppdateringId = uppdatering.Id,
-                            Typ           = punkter[i].Typ,
-                            Plats         = "Allmänt",
-                            Text          = punkter[i].Text,
-                            Synlighet     = "alla",
-                            Ordning       = i,
+                            Typ = punkter[i].Typ,
+                            Plats = "Allmänt",
+                            Text = punkter[i].Text,
+                            Synlighet = "alla",
+                            Ordning = i,
                         });
                     }
                 }

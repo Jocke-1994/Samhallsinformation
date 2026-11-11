@@ -25,7 +25,7 @@ public class AdminActivityLogController : ControllerBase
     // egen tabell, rörs inte) VID LÄSNING — inte en riktig DB-nivå UNION,
     // utan ett fönstrat urval från var sida som slås ihop och sorteras i
     // minnet. Pragmatiskt: datavolymen i den här adminpanelen är liten,
-      // se #491 wave 1-scopningen.
+    // se #491 wave 1-scopningen.
     private const int MaxFönster = 1000;
 
     // V4-1b (E4#11): ingestor-cyklernas Take-gräns var TIDIGARE 1000 rader — med ~10
@@ -54,7 +54,7 @@ public class AdminActivityLogController : ControllerBase
         [FromQuery] bool visaTest = false)
     {
         if (gräns > 500) gräns = 500;
-        if (gräns < 1)   gräns = 1;
+        if (gräns < 1) gräns = 1;
 
         // V3-6: "2026-09-01" binds som Kind=Unspecified, som Npgsql vägrar mot timestamptz
         // (500 i produktion, grönt i SQLite). Bara Kind läggs på — dagsgränserna är oförändrade.
@@ -63,17 +63,17 @@ public class AdminActivityLogController : ControllerBase
 
         var adminQuery = _db.AdminActivityLogs.AsQueryable();
         if (!visaArkiverade) adminQuery = adminQuery.Where(l => !l.Arkiverad);
-        if (!visaTest)       adminQuery = adminQuery.Where(l => !l.Test);
+        if (!visaTest) adminQuery = adminQuery.Where(l => !l.Test);
         if (!string.IsNullOrWhiteSpace(aktörTyp)) adminQuery = adminQuery.Where(l => l.AktörTyp == aktörTyp);
-        if (!string.IsNullOrWhiteSpace(typ))      adminQuery = adminQuery.Where(l => l.Typ == typ);
+        if (!string.IsNullOrWhiteSpace(typ)) adminQuery = adminQuery.Where(l => l.Typ == typ);
         if (från != null) adminQuery = adminQuery.Where(l => l.Tid >= från);
         if (till != null) adminQuery = adminQuery.Where(l => l.Tid <= till);
         if (!string.IsNullOrWhiteSpace(sök))
             adminQuery = adminQuery.Where(l => l.Rubrik.Contains(sök) || l.Detalj.Contains(sök));
 
         var adminTotalt = await adminQuery.CountAsync();
-        var adminRader  = await adminQuery.OrderByDescending(l => l.Tid).Take(MaxFönster).ToListAsync();
-        var adminDtos   = adminRader.Select(ToDto).ToList();
+        var adminRader = await adminQuery.OrderByDescending(l => l.Tid).Take(MaxFönster).ToListAsync();
+        var adminDtos = adminRader.Select(ToDto).ToList();
 
         // Ingestor-körningar (System) hämtas alltid i ett fönster (oavsett
         // aktörTyp/typ/sök) — dels för sammanfattningskorten, som liksom
@@ -90,8 +90,8 @@ public class AdminActivityLogController : ControllerBase
         // Efterlysningar" delar "Polisen"), vilket gör en ingestor-radrubrik
         // som "Polisen misslyckades" tvetydig om man inte vet vilket av de
         // två flödena som faktiskt är trasigt.
-        var sourceNames   = await _db.Sources.ToDictionaryAsync(s => s.Id, s => s.Name);
-        var aktuellaFel   = await _db.Sources.Where(s => s.LastFetchError != null).Select(s => s.Id).ToListAsync();
+        var sourceNames = await _db.Sources.ToDictionaryAsync(s => s.Id, s => s.Name);
+        var aktuellaFel = await _db.Sources.Where(s => s.LastFetchError != null).Select(s => s.Id).ToListAsync();
 
         // En rad per ingestor-CYKEL, inte en rad per källa — annars fyller en
         // enda 5-minuterskörning (8+ källor) hela "Senaste händelser" på
@@ -138,7 +138,7 @@ public class AdminActivityLogController : ControllerBase
                 .ToList()
             : [];
 
-        var alla   = adminDtos.Concat(ingestorMedI).OrderByDescending(d => d.Tid).ToList();
+        var alla = adminDtos.Concat(ingestorMedI).OrderByDescending(d => d.Tid).ToList();
         var totalt = adminTotalt + ingestorMedI.Count;
 
         return Ok(new
@@ -147,8 +147,8 @@ public class AdminActivityLogController : ControllerBase
             Totalt = totalt,
             Sammanfattning = new
             {
-                Ingestor  = cykler.Count, // faktiskt antal körda cykler, oavsett hur många rader de blivit slagna ihop till
-                Fel       = ingestorDtosAlla.Count(d => d.Status == "Fel"),
+                Ingestor = cykler.Count, // faktiskt antal körda cykler, oavsett hur många rader de blivit slagna ihop till
+                Fel = ingestorDtosAlla.Count(d => d.Status == "Fel"),
                 Varningar = ingestorDtosAlla.Count(d => d.Status == "Varning"),
             },
         });
@@ -166,18 +166,18 @@ public class AdminActivityLogController : ControllerBase
 
         var post = new AdminActivityLog
         {
-            Vem    = $"{namn} ({req.AktivVy}-läge)",
-            Typ    = req.Typ,
+            Vem = $"{namn} ({req.AktivVy}-läge)",
+            Typ = req.Typ,
             Rubrik = req.Rubrik,
             Detalj = req.Detalj,
 
             AngraAnvandareId = req.ÅngraData?.AnvandareId,
-            AngraEventId     = req.ÅngraData?.Handelse.EventId,
-            AngraTitle       = req.ÅngraData?.Handelse.Title,
-            AngraSourceName  = req.ÅngraData?.Handelse.SourceName,
+            AngraEventId = req.ÅngraData?.Handelse.EventId,
+            AngraTitle = req.ÅngraData?.Handelse.Title,
+            AngraSourceName = req.ÅngraData?.Handelse.SourceName,
             AngraPublishedAt = req.ÅngraData?.Handelse.PublishedAt,
             AngraSparadDatum = req.ÅngraData?.Handelse.SparadDatum,
-            AngraUndoAction  = req.ÅngraData?.UndoAction,
+            AngraUndoAction = req.ÅngraData?.UndoAction,
         };
 
         _db.AdminActivityLogs.Add(post);
@@ -255,7 +255,7 @@ public class AdminActivityLogController : ControllerBase
 
         var någotFortfarandeTrasigt = misslyckade.Any(r => aktuellaFel.Contains(r.SourceId));
         var status = misslyckade.Count == 0 ? "OK" : (någotFortfarandeTrasigt ? "Fel" : "Varning");
-        var typ    = misslyckade.Count == 0 ? LoggTyper.Ingestor : LoggTyper.Fel;
+        var typ = misslyckade.Count == 0 ? LoggTyper.Ingestor : LoggTyper.Fel;
 
         return new LoggPostDto(
             rader[0].Id, runAt, AktörTyper.System, AktörTyper.System, typ, rubrik, string.Join(" · ", detaljDelar), status, false, null,

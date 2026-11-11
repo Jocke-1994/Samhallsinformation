@@ -48,16 +48,16 @@ public static class PolisenBevakningMatcher
     {
         if (bevakningar.Count == 0) return true;
 
-        var typ    = ExtractTyp(ev.EventType);
+        var typ = ExtractTyp(ev.EventType);
         var omrade = ev.Geography;
 
         foreach (var b in bevakningar)
         {
             var kategorier = b.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.KategorierJson);
-            var omraden    = b.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson);
+            var omraden = b.OmradenJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson);
 
-            var typOk    = kategorier == null || typ    == null || kategorier.Contains(typ);
-            var omradeOk = omraden    == null || omrade == null || omraden.Contains(omrade);
+            var typOk = kategorier == null || typ == null || kategorier.Contains(typ);
+            var omradeOk = omraden == null || omrade == null || omraden.Contains(omrade);
 
             if (typOk && omradeOk) return true;
         }
@@ -84,19 +84,19 @@ public static class PolisenBevakningMatcher
         foreach (var b in bevakningar)
         {
             var kategorier = b.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.KategorierJson);
-            var omraden    = b.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson);
+            var omraden = b.OmradenJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson);
 
             var typOk = kategorier == null || typ == null || kategorier.Contains(typ);
             var omradeOk =
                 omraden == null ? true :
-                lan != null     ? SvenskaLan.KommunerILan(lan).Any(omraden.Contains) :
-                omrade == null  ? true :
+                lan != null ? SvenskaLan.KommunerILan(lan).Any(omraden.Contains) :
+                omrade == null ? true :
                 omraden.Contains(omrade);
 
             if (typOk && omradeOk)
             {
-                var typDel    = kategorier == null ? "alla typer" : string.Join(", ", kategorier);
-                var omradeDel = omraden    == null ? "alla områden" : string.Join(", ", omraden);
+                var typDel = kategorier == null ? "alla typer" : string.Join(", ", kategorier);
+                var omradeDel = omraden == null ? "alla områden" : string.Join(", ", omraden);
                 return (true, $"Matchar bevakningen: {typDel} · {omradeDel}.", b.Id);
             }
         }

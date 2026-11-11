@@ -16,7 +16,7 @@ public class TestingController : ControllerBase
 
     public TestingController(AppDbContext db, IHttpClientFactory httpClientFactory)
     {
-        _db               = db;
+        _db = db;
         _httpClientFactory = httpClientFactory;
     }
 
@@ -38,9 +38,9 @@ public class TestingController : ControllerBase
 
         var result = testSources.Select(s => new
         {
-            sourceId   = s.Id,
+            sourceId = s.Id,
             sourceName = s.Name,
-            events     = events.Where(e => e.SourceId == s.Id).ToList(),
+            events = events.Where(e => e.SourceId == s.Id).ToList(),
         });
 
         return Ok(result);
@@ -56,18 +56,18 @@ public class TestingController : ControllerBase
         var domain = Uri.TryCreate(req.Url, UriKind.Absolute, out var uri) ? uri.Host : req.Url;
         var tempSource = new Source
         {
-            Id          = 0,
-            Name        = req.Name ?? domain,
-            ShortName   = req.Name ?? domain,
-            BaseUrl     = req.Url,
-            Url         = req.Url,
-            Type        = SourceType.RSS,
-            IsActive    = false,
+            Id = 0,
+            Name = req.Name ?? domain,
+            ShortName = req.Name ?? domain,
+            BaseUrl = req.Url,
+            Url = req.Url,
+            Type = SourceType.RSS,
+            IsActive = false,
             IsPublished = false,
         };
 
         var httpClient = _httpClientFactory.CreateClient();
-        var ingestor   = new GenericRssIngestor(httpClient, tempSource);
+        var ingestor = new GenericRssIngestor(httpClient, tempSource);
 
         try
         {

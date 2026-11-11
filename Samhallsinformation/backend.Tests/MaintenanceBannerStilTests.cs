@@ -16,7 +16,7 @@ public class MaintenanceBannerStilTests
 {
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
     private static readonly DateTime Start = DateTime.UtcNow.AddHours(-1);
-    private static readonly DateTime Slut  = DateTime.UtcNow.AddHours(1);
+    private static readonly DateTime Slut = DateTime.UtcNow.AddHours(1);
 
     private static AppDbContext NewDb() => new(
         new DbContextOptionsBuilder<AppDbContext>()

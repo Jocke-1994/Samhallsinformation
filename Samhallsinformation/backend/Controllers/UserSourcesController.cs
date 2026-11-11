@@ -27,9 +27,9 @@ public class UserSourcesController : ControllerBase
             .OrderBy(p => p.SortOrder)
             .Select(p => new
             {
-                sourceId  = p.SourceId,
+                sourceId = p.SourceId,
                 shortName = p.Source.ShortName,
-                isActive  = p.IsActive,
+                isActive = p.IsActive,
                 sortOrder = p.SortOrder,
             })
             .ToListAsync();
@@ -113,15 +113,15 @@ public class UserSourcesController : ControllerBase
             {
                 _db.UserSourcePreferences.Add(new UserSourcePreference
                 {
-                    UserId    = userId,
-                    SourceId  = item.SourceId,
-                    IsActive  = item.IsActive,
+                    UserId = userId,
+                    SourceId = item.SourceId,
+                    IsActive = item.IsActive,
                     SortOrder = item.SortOrder,
                 });
             }
             else
             {
-                pref.IsActive  = item.IsActive;
+                pref.IsActive = item.IsActive;
                 pref.SortOrder = item.SortOrder;
             }
         }
@@ -132,16 +132,16 @@ public class UserSourcesController : ControllerBase
             if (old.IsActive != item.IsActive)
                 _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
                 {
-                    UserId   = userId,
-                    Setting  = $"source.{item.SourceId}.isActive",
+                    UserId = userId,
+                    Setting = $"source.{item.SourceId}.isActive",
                     OldValue = old.IsActive.ToString(),
                     NewValue = item.IsActive.ToString(),
                 });
             if (old.SortOrder != item.SortOrder)
                 _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
                 {
-                    UserId   = userId,
-                    Setting  = $"source.{item.SourceId}.sortOrder",
+                    UserId = userId,
+                    Setting = $"source.{item.SourceId}.sortOrder",
                     OldValue = old.SortOrder.ToString(),
                     NewValue = item.SortOrder.ToString(),
                 });

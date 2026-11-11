@@ -52,7 +52,7 @@ public class EventsControllerTests
     {
         using var db = NewDb();
         var eventId = Guid.NewGuid();
-        var userId  = Guid.NewGuid();
+        var userId = Guid.NewGuid();
 
         await NewController(db, userId).LogShare(eventId);
 
@@ -62,8 +62,13 @@ public class EventsControllerTests
 
     private static Source NewSource(int id, string shortName, bool published = true) => new()
     {
-        Id = id, Name = shortName, ShortName = shortName, BaseUrl = "https://example.se",
-        Type = SourceType.RSS, IsActive = true, IsPublished = published,
+        Id = id,
+        Name = shortName,
+        ShortName = shortName,
+        BaseUrl = "https://example.se",
+        Type = SourceType.RSS,
+        IsActive = true,
+        IsPublished = published,
     };
 
     [Fact]
@@ -149,8 +154,12 @@ public class EventsControllerTests
         var publishedAt = new DateTime(2026, 9, 13, 14, 0, 0, DateTimeKind.Utc);
         db.Events.Add(new CanonicalEvent
         {
-            SourceId = 1, Title = "Trafikolycka, Göteborg", Content = "En bil voltade.",
-            Url = "https://polisen.se/nyheter/1", Geography = "Göteborg", PublishedAt = publishedAt,
+            SourceId = 1,
+            Title = "Trafikolycka, Göteborg",
+            Content = "En bil voltade.",
+            Url = "https://polisen.se/nyheter/1",
+            Geography = "Göteborg",
+            PublishedAt = publishedAt,
         });
         await db.SaveChangesAsync();
 

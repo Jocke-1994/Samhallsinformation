@@ -2,12 +2,12 @@ namespace Samhallsinformation.Models;
 
 public class Uppdatering
 {
-    public Guid     Id         { get; set; } = Guid.NewGuid();
-    public string   Titel      { get; set; } = "";
-    public DateTime Datum      { get; set; }
-    public bool     Publicerad { get; set; } = false;
-    public DateTime CreatedAt  { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt  { get; set; } = DateTime.UtcNow;
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Titel { get; set; } = "";
+    public DateTime Datum { get; set; }
+    public bool Publicerad { get; set; } = false;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Satt när posten schemaläggs istället för att publiceras direkt.
     // ScheduledReleaseBackgroundService nollställer detta när den är klar
@@ -32,10 +32,10 @@ public class Uppdatering
     /// </summary>
     public string? Version { get; set; }
 
-    public bool    SkickaPush     { get; set; } = false;
-    public string? PushVersion    { get; set; }
+    public bool SkickaPush { get; set; } = false;
+    public string? PushVersion { get; set; }
     public string? PushMeddelande { get; set; }
-    public bool    VisaBanderoll  { get; set; } = false;
+    public bool VisaBanderoll { get; set; } = false;
 
     // Del 3: annonsering i förväg (Beslut 2026-10-08). AnnonseringUtc är
     // admins valda första tidpunkt (fas 1) — SchemalagdPubliceringUtc ovan
@@ -46,7 +46,7 @@ public class Uppdatering
     // push/banderoll vid varje 60s-poll. Null = ingen annonsering vald,
     // eller fas 1 har inte körts än.
     public DateTime? AnnonseringUtc { get; set; }
-    public DateTime? AnnonseradUtc  { get; set; }
+    public DateTime? AnnonseradUtc { get; set; }
 
     // "Annonsering" | "Lansering" | "Båda" — vilken fas SkickaPush gäller
     // för. Bara meningsfullt när AnnonseringUtc är satt; annars är

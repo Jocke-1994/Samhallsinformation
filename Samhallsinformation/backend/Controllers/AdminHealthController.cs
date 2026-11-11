@@ -37,37 +37,37 @@ public class AdminHealthController : ControllerBase
             .Select(s => s.LastFetchedAt!.Value)
             .DefaultIfEmpty()
             .Max();
-        var källorMedFel  = aktivaKällor.Count(s => s.LastFetchError != null);
-        var ingestorTyst  = senasteLyckade == default || DateTime.UtcNow - senasteLyckade > IngestorStaleThreshold;
+        var källorMedFel = aktivaKällor.Count(s => s.LastFetchError != null);
+        var ingestorTyst = senasteLyckade == default || DateTime.UtcNow - senasteLyckade > IngestorStaleThreshold;
         var ingestorStatus =
-            ingestorTyst      ? "Nere" :
-            källorMedFel > 0  ? "Varning" :
+            ingestorTyst ? "Nere" :
+            källorMedFel > 0 ? "Varning" :
                                  "OK";
 
         var sedan24h = DateTime.UtcNow.AddHours(-24);
-        var notisLogg  = await _db.NotificationDeliveryLogs.Where(l => l.SentAt >= sedan24h).ToListAsync();
-        var notisFel   = notisLogg.Count(l => l.Status != "sent");
+        var notisLogg = await _db.NotificationDeliveryLogs.Where(l => l.SentAt >= sedan24h).ToListAsync();
+        var notisFel = notisLogg.Count(l => l.Status != "sent");
         var notisStatus =
-            notisLogg.Count == 0        ? "OK" :
-            notisFel == 0                ? "OK" :
-            notisFel == notisLogg.Count  ? "Nere" :
+            notisLogg.Count == 0 ? "OK" :
+            notisFel == 0 ? "OK" :
+            notisFel == notisLogg.Count ? "Nere" :
                                             "Varning";
 
         return Ok(new
         {
             Api = new { Status = "OK", LatencyMs = 0 },
-            Db  = new { Status = dbOk ? "OK" : "Nere", LatencyMs = sw.ElapsedMilliseconds },
+            Db = new { Status = dbOk ? "OK" : "Nere", LatencyMs = sw.ElapsedMilliseconds },
             Ingestor = new
             {
-                Status        = ingestorStatus,
+                Status = ingestorStatus,
                 LastFetchedAt = senasteLyckade == default ? (DateTime?)null : senasteLyckade,
-                AktivaKällor  = aktivaKällor.Count,
-                KällorMedFel  = källorMedFel,
+                AktivaKällor = aktivaKällor.Count,
+                KällorMedFel = källorMedFel,
             },
             Notifieringar = new
             {
-                Status           = notisStatus,
-                FelSenaste24h    = notisFel,
+                Status = notisStatus,
+                FelSenaste24h = notisFel,
                 TotaltSenaste24h = notisLogg.Count,
             },
         });

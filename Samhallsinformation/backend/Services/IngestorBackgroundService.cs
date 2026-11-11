@@ -66,7 +66,7 @@ public class IngestorBackgroundService : BackgroundService
         // (IngestSourceAsync), så ett misslyckat SaveChanges för en källa aldrig kan lämna
         // ogiltiga entiteter kvar i en change tracker som nästa källa delar (V3-3, E3#3).
         using var scope = _scopeFactory.CreateScope();
-        var db        = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var dedicated = scope.ServiceProvider.GetRequiredService<IEnumerable<IIngestor>>().ToList();
         var frontendUrl = _config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
 
@@ -128,7 +128,7 @@ public class IngestorBackgroundService : BackgroundService
         try
         {
             using var scope = _scopeFactory.CreateScope();
-            var db   = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var push = scope.ServiceProvider.GetRequiredService<IPushNotificationService>();
 
             var (inserted, _, insertedEvents) = await EventSync.SyncAsync(db, ingestor, overwriteExisting: false, ct, _logger);
@@ -137,7 +137,7 @@ public class IngestorBackgroundService : BackgroundService
             var dbSource = await db.Sources.FindAsync([sourceId], ct);
             if (dbSource != null)
             {
-                dbSource.LastFetchedAt  = DateTime.UtcNow;
+                dbSource.LastFetchedAt = DateTime.UtcNow;
                 dbSource.LastFetchError = null;
             }
 

@@ -89,7 +89,7 @@ public static class PushDispatcher
         if (devices.Count == 0) return;
 
         var title = "Samhällsinformation";
-        var body  = insertedCount == 1
+        var body = insertedCount == 1
             ? $"1 ny händelse från {source.Name}"
             : $"{insertedCount} nya händelser från {source.Name}";
         // En enda händelse → djuplänk till just den (appen scrollar fram och
@@ -176,8 +176,8 @@ public static class PushDispatcher
 
         var kanalNamn = ticket.Channel == "feedback" ? "Ny feedback" : "Nytt supportärende";
         var title = kanalNamn;
-        var body  = ticket.Subject;
-        var url   = $"{frontendUrl.TrimEnd('/')}/admin";
+        var body = ticket.Subject;
+        var url = $"{frontendUrl.TrimEnd('/')}/admin";
 
         await SendToDevicesAsync(db, push, devices, title, body, url, sourceId: null, ct);
     }
@@ -203,8 +203,8 @@ public static class PushDispatcher
         if (devices.Count == 0) return;
 
         var title = "Nytt svar på ärende";
-        var body  = $"SUP-{ticket.TicketNumber:D4} — {ticket.Subject}";
-        var url   = $"{frontendUrl.TrimEnd('/')}/admin";
+        var body = $"SUP-{ticket.TicketNumber:D4} — {ticket.Subject}";
+        var url = $"{frontendUrl.TrimEnd('/')}/admin";
 
         await SendToDevicesAsync(db, push, devices, title, body, url, sourceId: null, ct);
     }
@@ -227,8 +227,8 @@ public static class PushDispatcher
         if (devices.Count == 0) return;
 
         var title = "Ny användare";
-        var body  = $"{newUser.Name} ({newUser.Email}) skapade ett konto";
-        var url   = $"{frontendUrl.TrimEnd('/')}/admin";
+        var body = $"{newUser.Name} ({newUser.Email}) skapade ett konto";
+        var url = $"{frontendUrl.TrimEnd('/')}/admin";
 
         await SendToDevicesAsync(db, push, devices, title, body, url, sourceId: null, ct);
     }
@@ -258,7 +258,7 @@ public static class PushDispatcher
         // rubriken "Kommer 15 oktober" i stället för "Ny version: X", men delar
         // samma mottagarkrets (User.PushNyVersion) och avsändarlogik.
         var title = customTitle ?? $"Ny version: {version}";
-        var url   = $"{frontendUrl.TrimEnd('/')}/profil?section=uppdateringar";
+        var url = $"{frontendUrl.TrimEnd('/')}/profil?section=uppdateringar";
 
         await SendToDevicesAsync(db, push, devices, title, message, url, sourceId: null, ct);
         return devices.Count;
@@ -291,13 +291,13 @@ public static class PushDispatcher
         {
             db.NotificationDeliveryLogs.Add(new NotificationDeliveryLog
             {
-                UserId       = r.Device.UserId,
-                SourceId     = sourceId,
-                Channel      = "push",
-                Recipient    = r.Device.Endpoint,
-                Subject      = title,
-                Body         = body,
-                Status       = r.Status,
+                UserId = r.Device.UserId,
+                SourceId = sourceId,
+                Channel = "push",
+                Recipient = r.Device.Endpoint,
+                Subject = title,
+                Body = body,
+                Status = r.Status,
                 ErrorMessage = r.ErrorMessage,
             });
 

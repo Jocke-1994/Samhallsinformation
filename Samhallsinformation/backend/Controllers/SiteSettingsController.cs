@@ -37,7 +37,7 @@ public class SiteSettingsController : ControllerBase
     {
         var settings = await GetOrCreateAsync();
         var ändringar = new List<string>();
-        if (req.ShowLoginButton.HasValue    && req.ShowLoginButton.Value    != settings.ShowLoginButton)
+        if (req.ShowLoginButton.HasValue && req.ShowLoginButton.Value != settings.ShowLoginButton)
         {
             ändringar.Add($"Logga in-knapp: {settings.ShowLoginButton} → {req.ShowLoginButton.Value}");
             settings.ShowLoginButton = req.ShowLoginButton.Value;

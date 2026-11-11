@@ -86,7 +86,10 @@ public class ScheduledReleaseBackgroundServiceTests
         db.Uppdateringar.Add(uppdatering);
         db.UppdateringsPunkter.Add(new UppdateringsPunkt
         {
-            UppdateringId = uppdatering.Id, Typ = "ny-funktion", Text = "Nu kan du filtrera på län", Synlighet = "alla",
+            UppdateringId = uppdatering.Id,
+            Typ = "ny-funktion",
+            Text = "Nu kan du filtrera på län",
+            Synlighet = "alla",
         });
         await db.SaveChangesAsync();
 
@@ -143,9 +146,12 @@ public class ScheduledReleaseBackgroundServiceTests
         SeedPushMottagare(db);
         var uppdatering = new Uppdatering
         {
-            Titel = "Ny källa tillagd", Publicerad = false,
+            Titel = "Ny källa tillagd",
+            Publicerad = false,
             SchemalagdPubliceringUtc = DateTime.UtcNow.AddMinutes(-1),
-            SkickaPush = true, PushVersion = "0.9.0", PushMeddelande = "Nu kan du filtrera på plats",
+            SkickaPush = true,
+            PushVersion = "0.9.0",
+            PushMeddelande = "Nu kan du filtrera på plats",
         };
         db.Uppdateringar.Add(uppdatering);
         db.UppdateringsPunkter.Add(new UppdateringsPunkt { UppdateringId = uppdatering.Id, Typ = "ny-funktion", Text = "...", Synlighet = "alla" });
@@ -167,7 +173,8 @@ public class ScheduledReleaseBackgroundServiceTests
         SeedPushMottagare(db);
         var uppdatering = new Uppdatering
         {
-            Titel = "Ny källa tillagd", Publicerad = false,
+            Titel = "Ny källa tillagd",
+            Publicerad = false,
             SchemalagdPubliceringUtc = DateTime.UtcNow.AddMinutes(-1),
             SkickaPush = false,
         };
@@ -189,7 +196,8 @@ public class ScheduledReleaseBackgroundServiceTests
         using var db = NewDb();
         var uppdatering = new Uppdatering
         {
-            Titel = "Nytt platsfilter", Publicerad = false,
+            Titel = "Nytt platsfilter",
+            Publicerad = false,
             SchemalagdPubliceringUtc = DateTime.UtcNow.AddMinutes(-1),
             VisaBanderoll = true,
         };
@@ -214,7 +222,8 @@ public class ScheduledReleaseBackgroundServiceTests
         using var db = NewDb();
         var uppdatering = new Uppdatering
         {
-            Titel = "Ny intern funktion", Publicerad = false,
+            Titel = "Ny intern funktion",
+            Publicerad = false,
             SchemalagdPubliceringUtc = DateTime.UtcNow.AddMinutes(-1),
             VisaBanderoll = true,
         };
@@ -233,7 +242,8 @@ public class ScheduledReleaseBackgroundServiceTests
         using var db = NewDb();
         db.Uppdateringar.Add(new Uppdatering
         {
-            Titel = "Bara flagg-aktivering", Publicerad = false,
+            Titel = "Bara flagg-aktivering",
+            Publicerad = false,
             SchemalagdPubliceringUtc = DateTime.UtcNow.AddMinutes(-1),
             VisaBanderoll = true,
         });
@@ -252,10 +262,15 @@ public class ScheduledReleaseBackgroundServiceTests
     {
         var uppdatering = new Uppdatering
         {
-            Titel = "Nytt platsfilter", Publicerad = false,
-            AnnonseringUtc = annonsering, SchemalagdPubliceringUtc = lansering,
-            SkickaPush = skickaPush, PushVersion = "1.0.0", PushMeddelande = "Nu kan du filtrera på plats",
-            PushSkickaVid = pushSkickaVid, VisaBanderoll = visaBanderoll,
+            Titel = "Nytt platsfilter",
+            Publicerad = false,
+            AnnonseringUtc = annonsering,
+            SchemalagdPubliceringUtc = lansering,
+            SkickaPush = skickaPush,
+            PushVersion = "1.0.0",
+            PushMeddelande = "Nu kan du filtrera på plats",
+            PushSkickaVid = pushSkickaVid,
+            VisaBanderoll = visaBanderoll,
         };
         db.Uppdateringar.Add(uppdatering);
         db.UppdateringsPunkter.Add(new UppdateringsPunkt { UppdateringId = uppdatering.Id, Typ = "ny-funktion", Text = "...", Synlighet = "alla" });

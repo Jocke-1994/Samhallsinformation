@@ -28,22 +28,22 @@ public class TrafikverketApiIngestor : IIngestor
 
     public Source Source { get; } = new Source
     {
-        Id        = 4,
-        Name      = "Trafikverket",
+        Id = 4,
+        Name = "Trafikverket",
         ShortName = "Trafikverket",
-        BaseUrl   = "https://www.trafikverket.se",
-        Url       = ApiUrl,
-        Category  = "Transport",
-        Type        = SourceType.WebAPI,
-        IsActive    = true,
+        BaseUrl = "https://www.trafikverket.se",
+        Url = ApiUrl,
+        Category = "Transport",
+        Type = SourceType.WebAPI,
+        IsActive = true,
         IsPublished = true,
     };
 
     public TrafikverketApiIngestor(HttpClient httpClient, ILogger<TrafikverketApiIngestor> logger)
     {
         _httpClient = httpClient;
-        _logger     = logger;
-        _apiKey     = Environment.GetEnvironmentVariable("TRAFIKVERKET_API_KEY") ?? string.Empty;
+        _logger = logger;
+        _apiKey = Environment.GetEnvironmentVariable("TRAFIKVERKET_API_KEY") ?? string.Empty;
     }
 
     public async Task<List<CanonicalEvent>> FetchEventsAsync()
@@ -62,7 +62,7 @@ public class TrafikverketApiIngestor : IIngestor
             </REQUEST>
             """;
 
-        using var body     = new StringContent(xml, Encoding.UTF8, "text/xml");
+        using var body = new StringContent(xml, Encoding.UTF8, "text/xml");
         using var response = await _httpClient.PostAsync(ApiUrl, body);
 
         if (!response.IsSuccessStatusCode)
@@ -71,7 +71,7 @@ public class TrafikverketApiIngestor : IIngestor
             throw new HttpRequestException($"Trafikverket {(int)response.StatusCode}: {errorBody}");
         }
 
-        var json   = await response.Content.ReadAsStringAsync();
+        var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<TvRoot>(json);
 
         // Trafikverket svarar ofta 200 OK även vid fel, med felet inbäddat som
@@ -105,23 +105,23 @@ public class TrafikverketApiIngestor : IIngestor
             if (dev == null) continue;
             if (dev.Suspended == true) continue;
 
-            var title   = System.Net.WebUtility.HtmlDecode(dev.Header ?? dev.MessageCode ?? dev.MessageType ?? "Trafikhändelse");
+            var title = System.Net.WebUtility.HtmlDecode(dev.Header ?? dev.MessageCode ?? dev.MessageType ?? "Trafikhändelse");
             var content = System.Net.WebUtility.HtmlDecode(dev.Message ?? string.Empty);
-            var county  = CountyName(dev.CountyNo?.FirstOrDefault());
-            var geo     = string.IsNullOrEmpty(dev.RoadNumber) ? county : $"{county} {dev.RoadNumber}".Trim();
-            var url     = dev.WebLink ?? "https://www.trafikverket.se/trafikinformation/vag/?TrafficType=personalTraffic";
+            var county = CountyName(dev.CountyNo?.FirstOrDefault());
+            var geo = string.IsNullOrEmpty(dev.RoadNumber) ? county : $"{county} {dev.RoadNumber}".Trim();
+            var url = dev.WebLink ?? "https://www.trafikverket.se/trafikinformation/vag/?TrafficType=personalTraffic";
 
             var ev = new CanonicalEvent
             {
-                SourceId    = Source.Id,
-                ExternalId  = dev.Id ?? s.Id ?? Guid.NewGuid().ToString(),
-                Title       = title,
-                Content     = content,
+                SourceId = Source.Id,
+                ExternalId = dev.Id ?? s.Id ?? Guid.NewGuid().ToString(),
+                Title = title,
+                Content = content,
                 PublishedAt = ParseDate(s.PublicationTime ?? dev.StartTime),
-                Url         = url,
-                RawData     = title + " | " + content,
-                Geography   = geo,
-                Severity    = MapSeverity(dev.SeverityCode),
+                Url = url,
+                RawData = title + " | " + content,
+                Geography = geo,
+                Severity = MapSeverity(dev.SeverityCode),
             };
 
             MetadataFallbacks.ApplyAll(ev);
@@ -146,14 +146,14 @@ public class TrafikverketApiIngestor : IIngestor
 
     private static string? CountyName(int? no) => no switch
     {
-        1  => "Stockholm",
-        3  => "Uppsala",
-        4  => "Södermanland",
-        5  => "Östergötland",
-        6  => "Jönköping",
-        7  => "Kronoberg",
-        8  => "Kalmar",
-        9  => "Gotland",
+        1 => "Stockholm",
+        3 => "Uppsala",
+        4 => "Södermanland",
+        5 => "Östergötland",
+        6 => "Jönköping",
+        7 => "Kronoberg",
+        8 => "Kalmar",
+        9 => "Gotland",
         10 => "Blekinge",
         12 => "Skåne",
         13 => "Halland",
@@ -167,7 +167,7 @@ public class TrafikverketApiIngestor : IIngestor
         23 => "Jämtland",
         24 => "Västerbotten",
         25 => "Norrbotten",
-        _  => null,
+        _ => null,
     };
 }
 
@@ -184,35 +184,35 @@ internal class TvResponse
 internal class TvResult
 {
     [JsonPropertyName("Situation")] public List<TvSituation>? Situation { get; set; }
-    [JsonPropertyName("ERROR")]     public TvError?           ERROR     { get; set; }
+    [JsonPropertyName("ERROR")] public TvError? ERROR { get; set; }
 }
 
 internal class TvError
 {
-    [JsonPropertyName("SOURCE")]  public string? SOURCE  { get; set; }
+    [JsonPropertyName("SOURCE")] public string? SOURCE { get; set; }
     [JsonPropertyName("MESSAGE")] public string? MESSAGE { get; set; }
 }
 
 internal class TvSituation
 {
-    [JsonPropertyName("Id")]              public string?            Id              { get; set; }
-    [JsonPropertyName("Deleted")]         public bool?              Deleted         { get; set; }
-    [JsonPropertyName("PublicationTime")] public string?            PublicationTime { get; set; }
-    [JsonPropertyName("Deviation")]       public List<TvDeviation>? Deviation       { get; set; }
+    [JsonPropertyName("Id")] public string? Id { get; set; }
+    [JsonPropertyName("Deleted")] public bool? Deleted { get; set; }
+    [JsonPropertyName("PublicationTime")] public string? PublicationTime { get; set; }
+    [JsonPropertyName("Deviation")] public List<TvDeviation>? Deviation { get; set; }
 }
 
 internal class TvDeviation
 {
-    [JsonPropertyName("Id")]               public string?    Id               { get; set; }
-    [JsonPropertyName("Header")]           public string?    Header           { get; set; }
-    [JsonPropertyName("Message")]          public string?    Message          { get; set; }
-    [JsonPropertyName("MessageCode")]      public string?    MessageCode      { get; set; }
-    [JsonPropertyName("MessageCodeValue")] public string?    MessageCodeValue { get; set; }
-    [JsonPropertyName("MessageType")]      public string?    MessageType      { get; set; }
-    [JsonPropertyName("SeverityCode")]     public int?       SeverityCode     { get; set; }
-    [JsonPropertyName("CountyNo")]         public List<int>? CountyNo         { get; set; }
-    [JsonPropertyName("StartTime")]        public string?    StartTime        { get; set; }
-    [JsonPropertyName("WebLink")]          public string?    WebLink          { get; set; }
-    [JsonPropertyName("RoadNumber")]       public string?    RoadNumber       { get; set; }
-    [JsonPropertyName("Suspended")]        public bool?      Suspended        { get; set; }
+    [JsonPropertyName("Id")] public string? Id { get; set; }
+    [JsonPropertyName("Header")] public string? Header { get; set; }
+    [JsonPropertyName("Message")] public string? Message { get; set; }
+    [JsonPropertyName("MessageCode")] public string? MessageCode { get; set; }
+    [JsonPropertyName("MessageCodeValue")] public string? MessageCodeValue { get; set; }
+    [JsonPropertyName("MessageType")] public string? MessageType { get; set; }
+    [JsonPropertyName("SeverityCode")] public int? SeverityCode { get; set; }
+    [JsonPropertyName("CountyNo")] public List<int>? CountyNo { get; set; }
+    [JsonPropertyName("StartTime")] public string? StartTime { get; set; }
+    [JsonPropertyName("WebLink")] public string? WebLink { get; set; }
+    [JsonPropertyName("RoadNumber")] public string? RoadNumber { get; set; }
+    [JsonPropertyName("Suspended")] public bool? Suspended { get; set; }
 }

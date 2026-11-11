@@ -25,8 +25,8 @@ public class SupportController : ControllerBase
 
     public SupportController(AppDbContext db, IPushNotificationService push, IConfiguration config, IAktivitetsloggService aktivitetslogg)
     {
-        _db     = db;
-        _push   = push;
+        _db = db;
+        _push = push;
         _config = config;
         _aktivitetslogg = aktivitetslogg;
     }
@@ -68,23 +68,23 @@ public class SupportController : ControllerBase
 
         var ticket = new SupportTicket
         {
-            TicketNumber    = nextNumber,
-            Subject         = string.IsNullOrWhiteSpace(subject) ? "Feedback" : subject.Trim(),
-            Category        = string.IsNullOrWhiteSpace(category) ? "Feedback" : category.Trim(),
-            Channel         = req.Channel,
+            TicketNumber = nextNumber,
+            Subject = string.IsNullOrWhiteSpace(subject) ? "Feedback" : subject.Trim(),
+            Category = string.IsNullOrWhiteSpace(category) ? "Feedback" : category.Trim(),
+            Channel = req.Channel,
             CreatedByUserId = userId,
-            ContactName     = user?.Name ?? NullIfBlank(contactName),
-            ContactEmail    = user?.Email ?? NullIfBlank(contactEmail),
+            ContactName = user?.Name ?? NullIfBlank(contactName),
+            ContactEmail = user?.Email ?? NullIfBlank(contactEmail),
             LastUserMessageAt = DateTime.UtcNow,
         };
         _db.SupportTickets.Add(ticket);
 
         _db.SupportTicketMessages.Add(new SupportTicketMessage
         {
-            Ticket       = ticket,
-            SenderType   = "user",
+            Ticket = ticket,
+            SenderType = "user",
             AuthorUserId = userId,
-            Text         = message!.Trim(),
+            Text = message!.Trim(),
         });
 
         await _db.SaveChangesAsync();
@@ -183,10 +183,10 @@ public class SupportController : ControllerBase
 
         _db.SupportTicketMessages.Add(new SupportTicketMessage
         {
-            TicketId     = ticket.Id,
-            SenderType   = "user",
+            TicketId = ticket.Id,
+            SenderType = "user",
             AuthorUserId = userId,
-            Text         = req.Text,
+            Text = req.Text,
         });
         ticket.UpdatedAt = DateTime.UtcNow;
         ticket.LastUserMessageAt = DateTime.UtcNow;

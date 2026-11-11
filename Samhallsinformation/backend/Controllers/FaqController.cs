@@ -54,11 +54,11 @@ public class FaqController : ControllerBase
     {
         var item = new FaqItem
         {
-            Kategori   = req.Kategori,
-            Fraga      = req.Fraga,
-            Svar       = req.Svar,
+            Kategori = req.Kategori,
+            Fraga = req.Fraga,
+            Svar = req.Svar,
             Publicerad = req.Publicerad,
-            FlagKey    = req.FlagKey,
+            FlagKey = req.FlagKey,
         };
         _db.FaqItems.Add(item);
         await _db.SaveChangesAsync();
@@ -77,12 +77,12 @@ public class FaqController : ControllerBase
 
         var publiceradFörut = item.Publicerad;
 
-        item.Kategori   = req.Kategori;
-        item.Fraga      = req.Fraga;
-        item.Svar       = req.Svar;
+        item.Kategori = req.Kategori;
+        item.Fraga = req.Fraga;
+        item.Svar = req.Svar;
         item.Publicerad = req.Publicerad;
-        item.FlagKey    = req.FlagKey;
-        item.UpdatedAt  = DateTime.UtcNow;
+        item.FlagKey = req.FlagKey;
+        item.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
         var detalj = publiceradFörut != req.Publicerad
