@@ -9,6 +9,25 @@ inte historik. Sessioner 1–28 arkiverades hit redan 2026-09-12, sessioner
 
 ---
 
+### Session 61 — 2026-11-11
+**What was done:**
+- **Discord-notiser byggda på tre grenar, inget pushat** (se `docs/vault/Funktioner/Discord-notiser.md`):
+  - `feat/discord-larm`: `IAlertNotifier` med `EmailAlertNotifier` (utbrutet ur `AdminAlertCycle`, samma beteende) + `DiscordAlertNotifier`. Larm räknas som aviserat när minst en kanal levererat. Larm som löses av sig självt ger en "löst"-notis om det redan aviserats. 1295 tester gröna (11 nya), formatkollen ok
+  - `feat/kallbevakning`: dagligt workflow läser Trafikverkets publika sitemap (länkad från robots.txt) och postar nyheter ändrade sedan förra lyckade körningen. ⚠️ på `Situation`. Torrkört mot riktiga sitemapen
+  - `ci/upptid-och-ci-larm`: upptidskoll var 15:e min (backend via `/api/settings/site` + frontend, bara vid lägesändring) och CI-larm för main
+- **Fynd:** larmsystemet (V1-9, `SourceFailingRule` 3 fel i rad) fanns redan, så "felnotisen" blev bara en ny kanal. Trafikverkets `TrafficFlow`-mejl påverkar oss inte (vi hämtar `Situation` 1.6), men nyheten "New groundbreaking version of Situation" (2026-01-30) gör det
+
+**Problem och lösningar:**
+- Trafikverkets nyhetssida är en SPA. Att utforska deras interna GraphQL nekades (och vore skört), så lösningen blev robots.txt → sitemap med `lastmod`
+- jq-payloaden i workflowen kunde inte testas lokalt (ingen jq, docker nekades). Testas med en manuell körning efter merge
+- `python -I` ignorerar `PYTHONIOENCODING`. Skriptet sätter `sys.stdout.reconfigure(encoding="utf-8")` själv så det kan köras lokalt på Windows
+
+**Next session:**
+- Användaren skapar Discord-server + webhooks (#larm, #utveckling, #källnyheter) och lägger in secrets: `DISCORD_ALERT_WEBHOOK_URL` i Railway, `DISCORD_SOURCE/UPTIME/CI_WEBHOOK_URL` i GitHub
+- Ok till push → `/code-review` på `feat/discord-larm` → en PR per gren → manuell körning av `uptime.yml` och `source-watch.yml`
+- Läs Trafikverkets nyhet om ny Situation-version och stäm av mot `TrafikverketApiIngestor`
+- Kvar från session 60: kolla de 50 nya källorna, Sandlådans gräns per källa, U+00AD-rensning, Sandlådegenomgång runt 15 nov
+
 ### Session 60 — 2026-11-08
 **What was done:**
 - **Frågan "simulerad produktionsmiljö innan vi kopplar in källor?" besvarad: behövs inte för källor.** Verifierat i koden att `IsActive=true` + `IsPublished=false` stoppas i `EventsController`, `UserFeedService`, `PlatserController`, `SourcesController` och `PushDispatcher.cs:59` (ingen push), larmar inte (`SourceFailingRule`), och syns bara i Sandlådan. En RSS-källa läser bara, kan inte röra annan data. Separat miljö behövs bara för omergad kod (spår 2 i `Ideer/Testmiljö.md`, fortsatt vilande)
