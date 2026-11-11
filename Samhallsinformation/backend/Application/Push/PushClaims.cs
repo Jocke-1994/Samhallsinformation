@@ -44,7 +44,10 @@ public static class PushClaims
 
         db.PushDispatchClaims.Add(new PushDispatchClaim
         {
-            Id = claimId, UserId = userId.Value, ClaimedAt = now, ClaimedByDeviceId = deviceId,
+            Id = claimId,
+            UserId = userId.Value,
+            ClaimedAt = now,
+            ClaimedByDeviceId = deviceId,
         });
         try
         {

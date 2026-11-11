@@ -45,8 +45,11 @@ public class UppdateringarController : ControllerBase
         if (inloggad) return Ok(dtos);
 
         var synliga = dtos
-            .Select(u => u with { Punkter = u.Punkter
-                .Where(p => p.Synlighet == UppdateringsVärden.SynlighetAlla).ToList() })
+            .Select(u => u with
+            {
+                Punkter = u.Punkter
+                .Where(p => p.Synlighet == UppdateringsVärden.SynlighetAlla).ToList()
+            })
             .Where(u => u.Punkter.Count > 0)
             .ToList();
         return Ok(synliga);
@@ -73,12 +76,16 @@ public class UppdateringarController : ControllerBase
 
         var uppdatering = new Uppdatering
         {
-            Titel = req.Titel, Datum = req.Datum,
+            Titel = req.Titel,
+            Datum = req.Datum,
             Version = TomTillNull(req.Version),
-            SkickaPush = req.SkickaPush, PushVersion = TomTillNull(req.PushVersion) ?? TomTillNull(req.Version),
+            SkickaPush = req.SkickaPush,
+            PushVersion = TomTillNull(req.PushVersion) ?? TomTillNull(req.Version),
             PushMeddelande = req.PushMeddelande?.Trim(),
-            VisaBanderoll = req.VisaBanderoll, VisaVadArNytt = req.VisaVadArNytt,
-            AnnonseringUtc = req.AnnonseringUtc, PushSkickaVid = req.PushSkickaVid,
+            VisaBanderoll = req.VisaBanderoll,
+            VisaVadArNytt = req.VisaVadArNytt,
+            AnnonseringUtc = req.AnnonseringUtc,
+            PushSkickaVid = req.PushSkickaVid,
         };
         _db.Uppdateringar.Add(uppdatering);
         LäggTillPunkter(uppdatering.Id, req.Punkter);
@@ -124,17 +131,17 @@ public class UppdateringarController : ControllerBase
         if (req.AnnonseringUtc != uppdatering.AnnonseringUtc)
             uppdatering.AnnonseradUtc = null;
 
-        uppdatering.Titel          = req.Titel;
-        uppdatering.Datum          = req.Datum;
-        uppdatering.UpdatedAt      = DateTime.UtcNow;
+        uppdatering.Titel = req.Titel;
+        uppdatering.Datum = req.Datum;
+        uppdatering.UpdatedAt = DateTime.UtcNow;
         if (req.Version != null) uppdatering.Version = TomTillNull(req.Version);
-        uppdatering.SkickaPush     = req.SkickaPush;
-        uppdatering.PushVersion    = TomTillNull(req.PushVersion) ?? uppdatering.Version;
+        uppdatering.SkickaPush = req.SkickaPush;
+        uppdatering.PushVersion = TomTillNull(req.PushVersion) ?? uppdatering.Version;
         uppdatering.PushMeddelande = req.PushMeddelande?.Trim();
-        uppdatering.VisaBanderoll  = req.VisaBanderoll;
-        uppdatering.VisaVadArNytt  = req.VisaVadArNytt;
+        uppdatering.VisaBanderoll = req.VisaBanderoll;
+        uppdatering.VisaVadArNytt = req.VisaVadArNytt;
         uppdatering.AnnonseringUtc = req.AnnonseringUtc;
-        uppdatering.PushSkickaVid  = req.PushSkickaVid;
+        uppdatering.PushSkickaVid = req.PushSkickaVid;
 
         // Ersätter hela punkter-listan — samma helobjekt-PUT-UX som FAQ,
         // slipper spåra per-punkt-ID:n genom formuläret.
@@ -180,17 +187,17 @@ public class UppdateringarController : ControllerBase
         {
             uppdatering.Publicerad = req.Publicerad || req.Punkter.Count > 0;
             uppdatering.SchemalagdPubliceringUtc = null;
-            uppdatering.SchemalagdaFlaggorJson   = null;
+            uppdatering.SchemalagdaFlaggorJson = null;
             // En manuell publicering (eller ett redan förfallet schema) hoppar
             // rakt till "lanserad" — ingen kvarvarande annonseringsfas att vänta på.
             uppdatering.AnnonseringUtc = null;
-            uppdatering.AnnonseradUtc  = null;
+            uppdatering.AnnonseradUtc = null;
         }
         else
         {
             uppdatering.Publicerad = false;
             uppdatering.SchemalagdPubliceringUtc = req.SchemalagdPubliceringUtc;
-            uppdatering.SchemalagdaFlaggorJson   = FeatureFlagActivation.SerialiseraFlaggor(req.SchemalagdaFlaggor);
+            uppdatering.SchemalagdaFlaggorJson = FeatureFlagActivation.SerialiseraFlaggor(req.SchemalagdaFlaggor);
         }
 
         return förfallet;
@@ -263,12 +270,12 @@ public class UppdateringarController : ControllerBase
             _db.UppdateringsPunkter.Add(new UppdateringsPunkt
             {
                 UppdateringId = uppdateringId,
-                Typ           = p.Typ,
-                Plats         = p.Plats,
-                Text          = p.Text,
-                Synlighet     = p.Synlighet,
-                ProvaSjalv    = p.ProvaSjalv,
-                Ordning       = i,
+                Typ = p.Typ,
+                Plats = p.Plats,
+                Text = p.Text,
+                Synlighet = p.Synlighet,
+                ProvaSjalv = p.ProvaSjalv,
+                Ordning = i,
             });
         }
     }
@@ -300,10 +307,13 @@ public class UppdateringarController : ControllerBase
     // transformen körs bara i GetUppdateringar, aldrig i GetAdminUppdateringar).
     private static List<UppdateringDto> MedAnnonseringsteaser(List<UppdateringDto> dtos) =>
         dtos.Select(u => u.AnnonseradUtc != null && u.SchemalagdPubliceringUtc != null
-            ? u with { Punkter = [new PunktDto(
+            ? u with
+            {
+                Punkter = [new PunktDto(
                 Guid.Empty, UppdateringsVärden.TypKommerSnart, "Allmänt",
                 $"Släpps {SvenskDatum.FormateraDag(u.SchemalagdPubliceringUtc.Value)}",
-                UppdateringsVärden.SynlighetAlla)] }
+                UppdateringsVärden.SynlighetAlla)]
+            }
             : u).ToList();
 }
 

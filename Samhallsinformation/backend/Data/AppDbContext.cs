@@ -7,41 +7,41 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public DbSet<CanonicalEvent>             Events                    => Set<CanonicalEvent>();
-    public DbSet<Source>                     Sources                   => Set<Source>();
-    public DbSet<UserPreference>             UserPreferences           => Set<UserPreference>();
-    public DbSet<User>                       Users                     => Set<User>();
-    public DbSet<UserDevice>                 UserDevices               => Set<UserDevice>();
-    public DbSet<UserSourcePreference>       UserSourcePreferences     => Set<UserSourcePreference>();
-    public DbSet<UserNotificationSetting>    UserNotificationSettings  => Set<UserNotificationSetting>();
-    public DbSet<UserDoNotDisturbSchedule>   UserDoNotDisturbSchedules => Set<UserDoNotDisturbSchedule>();
-    public DbSet<UserSettingAuditLog>        UserSettingAuditLogs      => Set<UserSettingAuditLog>();
-    public DbSet<NotificationDeliveryLog>    NotificationDeliveryLogs  => Set<NotificationDeliveryLog>();
-    public DbSet<PasswordResetToken>         PasswordResetTokens       => Set<PasswordResetToken>();
-    public DbSet<EmailVerificationToken>     EmailVerificationTokens   => Set<EmailVerificationToken>();
-    public DbSet<EmailChangeToken>           EmailChangeTokens         => Set<EmailChangeToken>();
-    public DbSet<RefreshToken>               RefreshTokens             => Set<RefreshToken>();
-    public DbSet<PolisenBevakning>           PolisenBevakningar        => Set<PolisenBevakning>();
-    public DbSet<UserSavedEvent>             UserSavedEvents           => Set<UserSavedEvent>();
-    public DbSet<SupportTicket>              SupportTickets            => Set<SupportTicket>();
-    public DbSet<SupportTicketMessage>       SupportTicketMessages     => Set<SupportTicketMessage>();
+    public DbSet<CanonicalEvent> Events => Set<CanonicalEvent>();
+    public DbSet<Source> Sources => Set<Source>();
+    public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<UserDevice> UserDevices => Set<UserDevice>();
+    public DbSet<UserSourcePreference> UserSourcePreferences => Set<UserSourcePreference>();
+    public DbSet<UserNotificationSetting> UserNotificationSettings => Set<UserNotificationSetting>();
+    public DbSet<UserDoNotDisturbSchedule> UserDoNotDisturbSchedules => Set<UserDoNotDisturbSchedule>();
+    public DbSet<UserSettingAuditLog> UserSettingAuditLogs => Set<UserSettingAuditLog>();
+    public DbSet<NotificationDeliveryLog> NotificationDeliveryLogs => Set<NotificationDeliveryLog>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
+    public DbSet<EmailChangeToken> EmailChangeTokens => Set<EmailChangeToken>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<PolisenBevakning> PolisenBevakningar => Set<PolisenBevakning>();
+    public DbSet<UserSavedEvent> UserSavedEvents => Set<UserSavedEvent>();
+    public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+    public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
     public DbSet<SupportTicketScheduledAction> SupportTicketScheduledActions => Set<SupportTicketScheduledAction>();
-    public DbSet<FeatureIdea>                FeatureIdeas              => Set<FeatureIdea>();
-    public DbSet<FeatureIdeaTester>          FeatureIdeaTesters        => Set<FeatureIdeaTester>();
-    public DbSet<FeatureIdeaChecklistItem>   FeatureIdeaChecklistItems => Set<FeatureIdeaChecklistItem>();
-    public DbSet<FeatureIdeaTestFile>        FeatureIdeaTestFiles      => Set<FeatureIdeaTestFile>();
-    public DbSet<IngestorRunLog>             IngestorRunLogs           => Set<IngestorRunLog>();
-    public DbSet<AdminActivityLog>           AdminActivityLogs         => Set<AdminActivityLog>();
-    public DbSet<FeatureFlagOverride>        FeatureFlagOverrides      => Set<FeatureFlagOverride>();
-    public DbSet<FaqItem>                    FaqItems                  => Set<FaqItem>();
-    public DbSet<SiteSettings>               SiteSettings              => Set<SiteSettings>();
-    public DbSet<MaintenanceBanner>          MaintenanceBanners        => Set<MaintenanceBanner>();
-    public DbSet<PushDispatchClaim>          PushDispatchClaims        => Set<PushDispatchClaim>();
-    public DbSet<EventShareLog>              EventShareLogs            => Set<EventShareLog>();
-    public DbSet<Uppdatering>                Uppdateringar             => Set<Uppdatering>();
-    public DbSet<UppdateringsPunkt>          UppdateringsPunkter       => Set<UppdateringsPunkt>();
-    public DbSet<AdminAlert>                 AdminAlerts               => Set<AdminAlert>();
-    public DbSet<AppliedSeed>                AppliedSeeds              => Set<AppliedSeed>();
+    public DbSet<FeatureIdea> FeatureIdeas => Set<FeatureIdea>();
+    public DbSet<FeatureIdeaTester> FeatureIdeaTesters => Set<FeatureIdeaTester>();
+    public DbSet<FeatureIdeaChecklistItem> FeatureIdeaChecklistItems => Set<FeatureIdeaChecklistItem>();
+    public DbSet<FeatureIdeaTestFile> FeatureIdeaTestFiles => Set<FeatureIdeaTestFile>();
+    public DbSet<IngestorRunLog> IngestorRunLogs => Set<IngestorRunLog>();
+    public DbSet<AdminActivityLog> AdminActivityLogs => Set<AdminActivityLog>();
+    public DbSet<FeatureFlagOverride> FeatureFlagOverrides => Set<FeatureFlagOverride>();
+    public DbSet<FaqItem> FaqItems => Set<FaqItem>();
+    public DbSet<SiteSettings> SiteSettings => Set<SiteSettings>();
+    public DbSet<MaintenanceBanner> MaintenanceBanners => Set<MaintenanceBanner>();
+    public DbSet<PushDispatchClaim> PushDispatchClaims => Set<PushDispatchClaim>();
+    public DbSet<EventShareLog> EventShareLogs => Set<EventShareLog>();
+    public DbSet<Uppdatering> Uppdateringar => Set<Uppdatering>();
+    public DbSet<UppdateringsPunkt> UppdateringsPunkter => Set<UppdateringsPunkt>();
+    public DbSet<AdminAlert> AdminAlerts => Set<AdminAlert>();
+    public DbSet<AppliedSeed> AppliedSeeds => Set<AppliedSeed>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

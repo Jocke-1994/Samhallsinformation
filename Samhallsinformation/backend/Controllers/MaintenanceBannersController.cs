@@ -18,7 +18,7 @@ using Samhallsinformation.Models;
 public class MaintenanceBannersController : ControllerBase
 {
     private static readonly string[] GiltigaMålgrupper = ["Alla", "Besökare", "Användare"];
-    private static readonly string[] GiltigaStilar     = ["Drift", "Nyhet", "Kommande"];
+    private static readonly string[] GiltigaStilar = ["Drift", "Nyhet", "Kommande"];
 
     private readonly AppDbContext _db;
     private readonly IAktivitetsloggService _aktivitetslogg;
@@ -71,14 +71,14 @@ public class MaintenanceBannersController : ControllerBase
 
         var banner = new MaintenanceBanner
         {
-            Id        = Guid.NewGuid(),
-            Message   = req.Message.Trim(),
-            StartUtc  = req.StartUtc,
-            EndUtc    = req.EndUtc,
-            Audience  = req.Audience,
-            Stil      = req.Stil!,
-            Rubrik    = req.Rubrik,
-            LankUrl   = req.LankUrl,
+            Id = Guid.NewGuid(),
+            Message = req.Message.Trim(),
+            StartUtc = req.StartUtc,
+            EndUtc = req.EndUtc,
+            Audience = req.Audience,
+            Stil = req.Stil!,
+            Rubrik = req.Rubrik,
+            LankUrl = req.LankUrl,
             CreatedAt = DateTime.UtcNow,
         };
         _db.MaintenanceBanners.Add(banner);
@@ -106,13 +106,13 @@ public class MaintenanceBannersController : ControllerBase
         var fel = Validera(req);
         if (fel != null) return BadRequest(fel);
 
-        banner.Message  = req.Message.Trim();
+        banner.Message = req.Message.Trim();
         banner.StartUtc = req.StartUtc;
-        banner.EndUtc   = req.EndUtc;
+        banner.EndUtc = req.EndUtc;
         banner.Audience = req.Audience;
-        banner.Stil     = req.Stil!;
-        banner.Rubrik   = req.Rubrik;
-        banner.LankUrl  = req.LankUrl;
+        banner.Stil = req.Stil!;
+        banner.Rubrik = req.Rubrik;
+        banner.LankUrl = req.LankUrl;
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Konfiguration,
@@ -141,20 +141,20 @@ public class MaintenanceBannersController : ControllerBase
     private static MaintenanceBannerRequest NormaliseraTider(MaintenanceBannerRequest req) => req with
     {
         StartUtc = UtcDateTime.Ensure(req.StartUtc),
-        EndUtc   = UtcDateTime.Ensure(req.EndUtc),
-        Stil     = string.IsNullOrWhiteSpace(req.Stil) ? "Drift" : req.Stil.Trim(),
+        EndUtc = UtcDateTime.Ensure(req.EndUtc),
+        Stil = string.IsNullOrWhiteSpace(req.Stil) ? "Drift" : req.Stil.Trim(),
         // Banderollen sätter själv ":" efter rubriken på dator — ett avslutande
         // kolon i rubriken skulle annars visas dubbelt.
-        Rubrik   = string.IsNullOrWhiteSpace(req.Rubrik) ? null : req.Rubrik.Trim().TrimEnd(':').TrimEnd() is { Length: > 0 } r ? r : null,
-        LankUrl  = string.IsNullOrWhiteSpace(req.LankUrl) ? null : req.LankUrl.Trim(),
+        Rubrik = string.IsNullOrWhiteSpace(req.Rubrik) ? null : req.Rubrik.Trim().TrimEnd(':').TrimEnd() is { Length: > 0 } r ? r : null,
+        LankUrl = string.IsNullOrWhiteSpace(req.LankUrl) ? null : req.LankUrl.Trim(),
     };
 
     private static string? Validera(MaintenanceBannerRequest req)
     {
-        if (string.IsNullOrWhiteSpace(req.Message))         return "Meddelande krävs.";
-        if (!GiltigaMålgrupper.Contains(req.Audience))      return "Ogiltig målgrupp.";
-        if (!GiltigaStilar.Contains(req.Stil))              return "Ogiltig stil.";
-        if (req.EndUtc <= req.StartUtc)                     return "Sluttid måste vara efter starttid.";
+        if (string.IsNullOrWhiteSpace(req.Message)) return "Meddelande krävs.";
+        if (!GiltigaMålgrupper.Contains(req.Audience)) return "Ogiltig målgrupp.";
+        if (!GiltigaStilar.Contains(req.Stil)) return "Ogiltig stil.";
+        if (req.EndUtc <= req.StartUtc) return "Sluttid måste vara efter starttid.";
         if (req.LankUrl != null && !ArInternSokvag(req.LankUrl))
             return "Länken måste vara en sökväg på sajten, t.ex. /uppdateringar.";
         return null;

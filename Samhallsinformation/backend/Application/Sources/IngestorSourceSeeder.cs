@@ -42,11 +42,11 @@ public static class IngestorSourceSeeder
                 continue;
             }
 
-            existing.Name      = source.Name;
+            existing.Name = source.Name;
             existing.ShortName = source.ShortName;
-            existing.BaseUrl   = source.BaseUrl;
-            existing.Type      = source.Type;
-            existing.Url       = source.Url;
+            existing.BaseUrl = source.BaseUrl;
+            existing.Type = source.Type;
+            existing.Url = source.Url;
             // IsPublished uppdateras INTE — admin-ändringar ska överleva restarts
             if (source.Category != null) existing.Category = source.Category;
         }

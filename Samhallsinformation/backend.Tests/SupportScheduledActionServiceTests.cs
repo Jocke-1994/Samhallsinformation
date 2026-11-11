@@ -44,8 +44,11 @@ public class SupportScheduledActionServiceTests
         var (agent, ticket) = SeedTicket(db);
         db.SupportTicketScheduledActions.Add(new SupportTicketScheduledAction
         {
-            TicketId = ticket.Id, Type = "svar", ScheduledAt = DateTime.UtcNow.AddMinutes(-1),
-            CreatedByUserId = agent.Id, Text = "Ett automatiskt svar",
+            TicketId = ticket.Id,
+            Type = "svar",
+            ScheduledAt = DateTime.UtcNow.AddMinutes(-1),
+            CreatedByUserId = agent.Id,
+            Text = "Ett automatiskt svar",
         });
         await db.SaveChangesAsync();
 
@@ -64,8 +67,11 @@ public class SupportScheduledActionServiceTests
         var (agent, ticket) = SeedTicket(db);
         db.SupportTicketScheduledActions.Add(new SupportTicketScheduledAction
         {
-            TicketId = ticket.Id, Type = "intern", ScheduledAt = DateTime.UtcNow.AddMinutes(-1),
-            CreatedByUserId = agent.Id, Text = "Intern notering",
+            TicketId = ticket.Id,
+            Type = "intern",
+            ScheduledAt = DateTime.UtcNow.AddMinutes(-1),
+            CreatedByUserId = agent.Id,
+            Text = "Intern notering",
         });
         await db.SaveChangesAsync();
 
@@ -84,8 +90,12 @@ public class SupportScheduledActionServiceTests
         db.Users.Add(nyAgent);
         db.SupportTicketScheduledActions.Add(new SupportTicketScheduledAction
         {
-            TicketId = ticket.Id, Type = "tilldela", ScheduledAt = DateTime.UtcNow.AddMinutes(-1),
-            CreatedByUserId = agent.Id, ReassignToUserId = nyAgent.Id, Instruction = "Ta över den här",
+            TicketId = ticket.Id,
+            Type = "tilldela",
+            ScheduledAt = DateTime.UtcNow.AddMinutes(-1),
+            CreatedByUserId = agent.Id,
+            ReassignToUserId = nyAgent.Id,
+            Instruction = "Ta över den här",
         });
         await db.SaveChangesAsync();
 
@@ -104,8 +114,11 @@ public class SupportScheduledActionServiceTests
         var (agent, ticket) = SeedTicket(db);
         db.SupportTicketScheduledActions.Add(new SupportTicketScheduledAction
         {
-            TicketId = ticket.Id, Type = "svar", ScheduledAt = DateTime.UtcNow.AddHours(1),
-            CreatedByUserId = agent.Id, Text = "Inte än",
+            TicketId = ticket.Id,
+            Type = "svar",
+            ScheduledAt = DateTime.UtcNow.AddHours(1),
+            CreatedByUserId = agent.Id,
+            Text = "Inte än",
         });
         await db.SaveChangesAsync();
 
@@ -122,8 +135,13 @@ public class SupportScheduledActionServiceTests
         var (agent, ticket) = SeedTicket(db);
         db.SupportTicketScheduledActions.Add(new SupportTicketScheduledAction
         {
-            TicketId = ticket.Id, Type = "svar", ScheduledAt = DateTime.UtcNow.AddMinutes(-1),
-            CreatedByUserId = agent.Id, Text = "Redan gjort", Executed = true, ExecutedAt = DateTime.UtcNow.AddSeconds(-30),
+            TicketId = ticket.Id,
+            Type = "svar",
+            ScheduledAt = DateTime.UtcNow.AddMinutes(-1),
+            CreatedByUserId = agent.Id,
+            Text = "Redan gjort",
+            Executed = true,
+            ExecutedAt = DateTime.UtcNow.AddSeconds(-30),
         });
         await db.SaveChangesAsync();
 

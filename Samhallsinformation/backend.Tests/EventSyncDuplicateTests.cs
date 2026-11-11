@@ -37,8 +37,12 @@ public class EventSyncDuplicateTests
     {
         var source = new Source
         {
-            Name = name, ShortName = name, BaseUrl = "https://example.test",
-            Type = SourceType.WebAPI, IsActive = true, IsPublished = false,
+            Name = name,
+            ShortName = name,
+            BaseUrl = "https://example.test",
+            Type = SourceType.WebAPI,
+            IsActive = true,
+            IsPublished = false,
         };
         db.Sources.Add(source);
         await db.SaveChangesAsync();
@@ -47,7 +51,9 @@ public class EventSyncDuplicateTests
 
     private static CanonicalEvent Ev(int sourceId, string? externalId, string title = "Titel") => new()
     {
-        SourceId = sourceId, ExternalId = externalId!, Title = title,
+        SourceId = sourceId,
+        ExternalId = externalId!,
+        Title = title,
         PublishedAt = DateTime.UtcNow,
     };
 

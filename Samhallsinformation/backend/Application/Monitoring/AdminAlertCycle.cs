@@ -81,8 +81,14 @@ public class AdminAlertCycle
             {
                 _db.AdminAlerts.Add(new AdminAlert
                 {
-                    RuleId = rule.RuleId, Key = c.Key, Severity = c.Severity, Title = c.Title, Detail = c.Detail,
-                    FirstRaisedAt = now, LastSeenAt = now, OccurrenceCount = 1,
+                    RuleId = rule.RuleId,
+                    Key = c.Key,
+                    Severity = c.Severity,
+                    Title = c.Title,
+                    Detail = c.Detail,
+                    FirstRaisedAt = now,
+                    LastSeenAt = now,
+                    OccurrenceCount = 1,
                 });
                 continue;
             }
@@ -92,11 +98,11 @@ public class AdminAlertCycle
             if (alert.ResolvedAt != null)
             {
                 // Problemet är tillbaka efter att ha lösts: öppna samma rad på nytt.
-                alert.ResolvedAt      = null;
-                alert.AcknowledgedAt  = null;
-                alert.AcknowledgedBy  = null;
-                alert.NotifiedAt      = null;
-                alert.FirstRaisedAt   = now;
+                alert.ResolvedAt = null;
+                alert.AcknowledgedAt = null;
+                alert.AcknowledgedBy = null;
+                alert.NotifiedAt = null;
+                alert.FirstRaisedAt = now;
                 alert.OccurrenceCount = 1;
             }
             else
@@ -104,9 +110,9 @@ public class AdminAlertCycle
                 alert.OccurrenceCount++;
             }
 
-            alert.Severity   = c.Severity;
-            alert.Title      = c.Title;
-            alert.Detail     = c.Detail;
+            alert.Severity = c.Severity;
+            alert.Title = c.Title;
+            alert.Detail = c.Detail;
             alert.LastSeenAt = now;
         }
 

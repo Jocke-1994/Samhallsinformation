@@ -32,9 +32,9 @@ public class PushDispatcherTests
     {
         var user = new User
         {
-            Name             = "Ada",
-            Email            = $"{Guid.NewGuid()}@example.com",
-            PasswordHash     = "x",
+            Name = "Ada",
+            Email = $"{Guid.NewGuid()}@example.com",
+            PasswordHash = "x",
             PushNyaHandelser = pushNyaHandelser,
         };
         var source = new Source { Id = 2, Name = "Krisinformation", ShortName = "Krisinformation", BaseUrl = "https://example.com", IsPublished = sourcePublished };
@@ -44,17 +44,17 @@ public class PushDispatcherTests
 
         db.UserSourcePreferences.Add(new UserSourcePreference
         {
-            UserId    = user.Id,
-            SourceId  = source.Id,
-            IsActive  = sourceActive,
+            UserId = user.Id,
+            SourceId = source.Id,
+            IsActive = sourceActive,
             SortOrder = 0,
         });
         var device = new UserDevice
         {
-            UserId   = user.Id,
+            UserId = user.Id,
             Endpoint = "https://push.example/ep1",
-            P256dh   = "p256dh-key",
-            Auth     = "auth-secret",
+            P256dh = "p256dh-key",
+            Auth = "auth-secret",
         };
         db.UserDevices.Add(device);
         db.SaveChanges();
@@ -128,7 +128,7 @@ public class PushDispatcherTests
         var (_, source, device) = SeedSubscriber(db);
         var push = Substitute.For<IPushNotificationService>();
 
-        var subscription  = new PushSubscription(device.Endpoint, device.P256dh, device.Auth);
+        var subscription = new PushSubscription(device.Endpoint, device.P256dh, device.Auth);
         var goneException = new WebPushException("gone", subscription, new HttpResponseMessage(HttpStatusCode.Gone));
         push.SendAsync(Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(goneException));
@@ -168,9 +168,9 @@ public class PushDispatcherTests
     {
         var user = new User
         {
-            Name             = "Berit",
-            Email            = $"{Guid.NewGuid()}@example.com",
-            PasswordHash     = "x",
+            Name = "Berit",
+            Email = $"{Guid.NewGuid()}@example.com",
+            PasswordHash = "x",
             PushNyaHandelser = true,
         };
         var source = new Source { Id = 1, Name = "Polisen", ShortName = "Polisen", BaseUrl = "https://example.com", IsPublished = sourcePublished };
@@ -193,9 +193,9 @@ public class PushDispatcherTests
     {
         var user = new User
         {
-            Name             = "Berit",
-            Email            = $"{Guid.NewGuid()}@example.com",
-            PasswordHash     = "x",
+            Name = "Berit",
+            Email = $"{Guid.NewGuid()}@example.com",
+            PasswordHash = "x",
             PushNyaHandelser = true,
         };
         var source = new Source { Id = 99, Name = "Polisen Efterlysningar", ShortName = "Polisen", BaseUrl = "https://example.com", IsPublished = true };
@@ -217,14 +217,14 @@ public class PushDispatcherTests
     // title, så ett realistiskt datumprefix bevisar att fixen faktiskt biter.
     private static CanonicalEvent MakeEvent(int sourceId, string? geography, string? eventType) => new()
     {
-        SourceId    = sourceId,
-        ExternalId  = Guid.NewGuid().ToString(),
-        Title       = $"14 augusti 13.05, {eventType}, {geography}",
-        Content     = "",
-        Url         = "https://polisen.se/x",
-        RawData     = "",
-        Geography   = geography,
-        EventType   = eventType,
+        SourceId = sourceId,
+        ExternalId = Guid.NewGuid().ToString(),
+        Title = $"14 augusti 13.05, {eventType}, {geography}",
+        Content = "",
+        Url = "https://polisen.se/x",
+        RawData = "",
+        Geography = geography,
+        EventType = eventType,
         PublishedAt = DateTime.UtcNow,
     };
 
@@ -274,9 +274,9 @@ public class PushDispatcherTests
         var (user, source, device) = SeedPolisenSubscriber(db);
         db.PolisenBevakningar.Add(new PolisenBevakning
         {
-            UserId         = user.Id,
+            UserId = user.Id,
             KategorierJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Trafikolycka" }),
-            OmradenJson    = null,
+            OmradenJson = null,
         });
         db.SaveChanges();
         var träff = MakeEvent(source.Id, "Göteborg", "Trafikolycka");
@@ -314,9 +314,9 @@ public class PushDispatcherTests
         var (user, source, device) = SeedPolisenSubscriber(db);
         db.PolisenBevakningar.Add(new PolisenBevakning
         {
-            UserId         = user.Id,
+            UserId = user.Id,
             KategorierJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Trafikolycka" }),
-            OmradenJson    = null,
+            OmradenJson = null,
         });
         db.SaveChanges();
         var events = new List<CanonicalEvent> { MakeEvent(source.Id, "Göteborg", "Trafikolycka") };
@@ -338,9 +338,9 @@ public class PushDispatcherTests
         var (user, source, _) = SeedPolisenSubscriber(db);
         db.PolisenBevakningar.Add(new PolisenBevakning
         {
-            UserId         = user.Id,
+            UserId = user.Id,
             KategorierJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Skjutning" }),
-            OmradenJson    = null,
+            OmradenJson = null,
         });
         db.SaveChanges();
         var events = new List<CanonicalEvent> { MakeEvent(source.Id, "Göteborg", "Trafikolycka") };
@@ -363,9 +363,9 @@ public class PushDispatcherTests
         var (user, source, _) = SeedPolisenSubscriber(db);
         db.PolisenBevakningar.Add(new PolisenBevakning
         {
-            UserId         = user.Id,
+            UserId = user.Id,
             KategorierJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Sammanfattning natt" }),
-            OmradenJson    = null,
+            OmradenJson = null,
         });
         db.SaveChanges();
         var events = new List<CanonicalEvent> { MakeEvent(source.Id, "Jönköpings län", "Sammanfattning natt") };
@@ -404,9 +404,9 @@ public class PushDispatcherTests
         var (user, source, device) = SeedPolisenSubscriber(db);
         db.PolisenBevakningar.Add(new PolisenBevakning
         {
-            UserId         = user.Id,
+            UserId = user.Id,
             KategorierJson = null,
-            OmradenJson    = System.Text.Json.JsonSerializer.Serialize(new[] { "Göteborg" }),
+            OmradenJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Göteborg" }),
         });
         db.SaveChanges();
         var events = new List<CanonicalEvent>
@@ -442,9 +442,9 @@ public class PushDispatcherTests
         var (user, source, device) = SeedPolisenEfterlysningarSubscriber(db);
         db.PolisenBevakningar.Add(new PolisenBevakning
         {
-            UserId         = user.Id,
+            UserId = user.Id,
             KategorierJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Skjutning" }),
-            OmradenJson    = System.Text.Json.JsonSerializer.Serialize(new[] { "Kungälv" }),
+            OmradenJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Kungälv" }),
         });
         db.SaveChanges();
         var events = new List<CanonicalEvent>
@@ -501,21 +501,21 @@ public class PushDispatcherTests
     {
         var admin = new User
         {
-            Name         = "Joakim",
-            Email        = $"{Guid.NewGuid()}@example.com",
+            Name = "Joakim",
+            Email = $"{Guid.NewGuid()}@example.com",
             PasswordHash = "x",
-            Role         = role,
-            PushEnabled  = pushEnabled,
+            Role = role,
+            PushEnabled = pushEnabled,
         };
         db.Users.Add(admin);
         db.SaveChanges();
 
         var device = new UserDevice
         {
-            UserId   = admin.Id,
+            UserId = admin.Id,
             Endpoint = "https://push.example/admin-ep",
-            P256dh   = "p256dh-key",
-            Auth     = "auth-secret",
+            P256dh = "p256dh-key",
+            Auth = "auth-secret",
         };
         db.UserDevices.Add(device);
         db.SaveChanges();
@@ -526,9 +526,9 @@ public class PushDispatcherTests
     private static SupportTicket NewTicket(string channel = "arendehantering") => new()
     {
         TicketNumber = 1,
-        Subject      = "Testärende",
-        Category     = "Tekniskt fel",
-        Channel      = channel,
+        Subject = "Testärende",
+        Category = "Tekniskt fel",
+        Channel = channel,
     };
 
     [Fact]
@@ -629,9 +629,9 @@ public class PushDispatcherTests
     {
         switch (state)
         {
-            case "inactive":          user.IsActive = false; break;
-            case "deleted":           user.DeletedAt = DateTime.UtcNow; break;
-            case "suspendedAt":       user.SuspendedAt = DateTime.UtcNow; break;
+            case "inactive": user.IsActive = false; break;
+            case "deleted": user.DeletedAt = DateTime.UtcNow; break;
+            case "suspendedAt": user.SuspendedAt = DateTime.UtcNow; break;
             case "deletionScheduled": user.DeletionScheduledAt = DateTime.UtcNow.AddHours(24); break;
             default: throw new ArgumentOutOfRangeException(nameof(state), state, null);
         }

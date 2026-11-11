@@ -23,7 +23,7 @@ public class JwtTokenService : ITokenService
 
     public string GenerateAccessToken(User user)
     {
-        var key   = _jwt.CreateSigningKey();
+        var key = _jwt.CreateSigningKey();
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
@@ -37,8 +37,8 @@ public class JwtTokenService : ITokenService
         };
 
         var token = new JwtSecurityToken(
-            claims:             claims,
-            expires:            DateTime.UtcNow.Add(AccessTokenLifetime),
+            claims: claims,
+            expires: DateTime.UtcNow.Add(AccessTokenLifetime),
             signingCredentials: creds
         );
 
@@ -48,7 +48,7 @@ public class JwtTokenService : ITokenService
     public (string RawToken, string TokenHash) GenerateRefreshToken()
     {
         var bytes = RandomNumberGenerator.GetBytes(32);
-        var raw   = Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+        var raw = Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
         return (raw, HashToken(raw));
     }
 

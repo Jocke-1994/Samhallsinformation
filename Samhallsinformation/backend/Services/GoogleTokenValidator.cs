@@ -23,7 +23,7 @@ public class GoogleTokenValidator : IGoogleTokenValidator
         try
         {
             var settings = new GoogleJsonWebSignature.ValidationSettings { Audience = [_clientId] };
-            var payload  = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
+            var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
             return new GooglePayload(payload.Email, payload.Name ?? payload.Email, payload.EmailVerified);
         }
         catch (InvalidJwtException)

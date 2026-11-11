@@ -17,8 +17,11 @@ public class UserDeletionBackgroundServiceTests
         using var db = NewDb();
         var user = new User
         {
-            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
-            IsActive = false, SuspendedReason = "Radering begärd (GDPR)",
+            Name = "Ada",
+            Email = "ada@example.com",
+            PasswordHash = "x",
+            IsActive = false,
+            SuspendedReason = "Radering begärd (GDPR)",
             DeletionScheduledAt = DateTime.UtcNow.AddMinutes(-1),
         };
         db.Users.Add(user);
@@ -40,8 +43,11 @@ public class UserDeletionBackgroundServiceTests
         using var db = NewDb();
         var user = new User
         {
-            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
-            IsActive = false, DeletionScheduledAt = DateTime.UtcNow.AddHours(1),
+            Name = "Ada",
+            Email = "ada@example.com",
+            PasswordHash = "x",
+            IsActive = false,
+            DeletionScheduledAt = DateTime.UtcNow.AddHours(1),
         };
         db.Users.Add(user);
         await db.SaveChangesAsync();
@@ -59,8 +65,12 @@ public class UserDeletionBackgroundServiceTests
         using var db = NewDb();
         var user = new User
         {
-            Name = "Raderad användare", Email = "deleted-x@anonymized.local", PasswordHash = "",
-            IsActive = false, DeletedAt = DateTime.UtcNow.AddDays(-1), DeletionScheduledAt = null,
+            Name = "Raderad användare",
+            Email = "deleted-x@anonymized.local",
+            PasswordHash = "",
+            IsActive = false,
+            DeletedAt = DateTime.UtcNow.AddDays(-1),
+            DeletionScheduledAt = null,
         };
         db.Users.Add(user);
         await db.SaveChangesAsync();

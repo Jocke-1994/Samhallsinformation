@@ -41,22 +41,22 @@ public class GenericRssIngestor : IIngestor
 
         foreach (var item in feed.Items)
         {
-            var link    = item.Links.FirstOrDefault()?.Uri?.ToString() ?? string.Empty;
-            var title   = System.Net.WebUtility.HtmlDecode(item.Title?.Text ?? string.Empty);
+            var link = item.Links.FirstOrDefault()?.Uri?.ToString() ?? string.Empty;
+            var title = System.Net.WebUtility.HtmlDecode(item.Title?.Text ?? string.Empty);
             var summary = System.Net.WebUtility.HtmlDecode(item.Summary?.Text ?? string.Empty);
 
             var canonicalEvent = new CanonicalEvent
             {
-                SourceId    = Source.Id,
-                ExternalId  = string.IsNullOrWhiteSpace(item.Id) ? link : item.Id,
-                Title       = title,
-                Content     = summary,
+                SourceId = Source.Id,
+                ExternalId = string.IsNullOrWhiteSpace(item.Id) ? link : item.Id,
+                Title = title,
+                Content = summary,
                 PublishedAt = item.PublishDate.UtcDateTime == default
                     ? DateTime.UtcNow
                     : item.PublishDate.UtcDateTime,
-                Url         = link,
-                RawData     = title + " | " + summary,
-                Severity    = MetadataFallbacks.DefaultSeverity
+                Url = link,
+                RawData = title + " | " + summary,
+                Severity = MetadataFallbacks.DefaultSeverity
             };
 
             MetadataFallbacks.ApplyAll(canonicalEvent);

@@ -124,14 +124,14 @@ public sealed class CspReportService : ICspReportService
 
             _db.AdminActivityLogs.Add(new AdminActivityLog
             {
-                Tid      = now,
+                Tid = now,
                 AktörTyp = AktörTyper.System,
-                Vem      = AktörTyper.System,
-                Typ      = LoggTyper.Säkerhet,
-                Rubrik   = CspLogFormat.Rubrik,
-                Detalj   = detalj,
-                Ip       = null,
-                Enhet    = null,
+                Vem = AktörTyper.System,
+                Typ = LoggTyper.Säkerhet,
+                Rubrik = CspLogFormat.Rubrik,
+                Detalj = detalj,
+                Ip = null,
+                Enhet = null,
             });
             added++;
 

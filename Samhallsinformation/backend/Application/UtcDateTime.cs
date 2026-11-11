@@ -20,9 +20,9 @@ public static class UtcDateTime
 {
     public static DateTime Ensure(DateTime value) => value.Kind switch
     {
-        DateTimeKind.Utc   => value,
+        DateTimeKind.Utc => value,
         DateTimeKind.Local => value.ToUniversalTime(),
-        _                  => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
     };
 
     public static DateTime? Ensure(DateTime? value) =>

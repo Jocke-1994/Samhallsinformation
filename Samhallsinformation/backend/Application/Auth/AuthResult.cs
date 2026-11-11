@@ -4,21 +4,21 @@ public record AuthTokens(string AccessToken, string RefreshToken, string Name, s
 
 public class AuthResult
 {
-    public bool        Success    { get; }
-    public int         StatusCode { get; }
-    public string?      Error      { get; }
-    public string?      Message    { get; }
-    public AuthTokens?  Tokens     { get; }
+    public bool Success { get; }
+    public int StatusCode { get; }
+    public string? Error { get; }
+    public string? Message { get; }
+    public AuthTokens? Tokens { get; }
     /// <summary>Sätts endast vid 429 från kontospärren — controllern skickar det som Retry-After.</summary>
-    public TimeSpan?    RetryAfter { get; private init; }
+    public TimeSpan? RetryAfter { get; private init; }
 
     private AuthResult(bool success, int statusCode, string? error, string? message, AuthTokens? tokens)
     {
-        Success    = success;
+        Success = success;
         StatusCode = statusCode;
-        Error      = error;
-        Message    = message;
-        Tokens     = tokens;
+        Error = error;
+        Message = message;
+        Tokens = tokens;
     }
 
     public static AuthResult Ok(AuthTokens tokens) => new(true, 200, null, null, tokens);

@@ -93,20 +93,20 @@ public class AdminFeatureIdeaController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(req.Title)) return BadRequest("Title krävs.");
 
-        var nextNumber   = (await _db.FeatureIdeas.MaxAsync(i => (int?)i.IdeaNumber) ?? 0) + 1;
+        var nextNumber = (await _db.FeatureIdeas.MaxAsync(i => (int?)i.IdeaNumber) ?? 0) + 1;
         // Nya idéer hamnar sist i prioritetsordningen (lägst prio) som standard —
         // admin flyttar upp den manuellt om den faktiskt ska prioriteras högre.
         var nextPriority = (await _db.FeatureIdeas.MaxAsync(i => (int?)i.Priority) ?? -1) + 1;
 
         var idea = new FeatureIdea
         {
-            IdeaNumber      = nextNumber,
-            Title           = req.Title,
-            Description     = req.Description ?? string.Empty,
-            KällaTyp        = req.KällaTyp ?? "admin",
-            SourceTicketId  = req.SourceTicketId,
+            IdeaNumber = nextNumber,
+            Title = req.Title,
+            Description = req.Description ?? string.Empty,
+            KällaTyp = req.KällaTyp ?? "admin",
+            SourceTicketId = req.SourceTicketId,
             CreatedByUserId = CurrentUserId,
-            Priority        = nextPriority,
+            Priority = nextPriority,
         };
         _db.FeatureIdeas.Add(idea);
         await _db.SaveChangesAsync();
@@ -174,9 +174,9 @@ public class AdminFeatureIdeaController : ControllerBase
                 t.Id,
                 t.FilePath,
                 ClassName = post?.ClassName,
-                Count     = post?.Count ?? 0,
-                Names     = post?.Names ?? [],
-                Okänd     = post == null,
+                Count = post?.Count ?? 0,
+                Names = post?.Names ?? [],
+                Okänd = post == null,
             };
         }).ToList();
 
@@ -191,8 +191,8 @@ public class AdminFeatureIdeaController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(req.Title)) idea.Title = req.Title;
         idea.Description = req.Description ?? idea.Description;
-        idea.FlagKey      = req.FlagKey;
-        idea.UpdatedAt    = DateTime.UtcNow;
+        idea.FlagKey = req.FlagKey;
+        idea.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return Ok();
     }
@@ -208,10 +208,10 @@ public class AdminFeatureIdeaController : ControllerBase
         // redan valt stadium (code review-fynd, PR #590: ett omklick på en
         // redan aktiv "lanseringsklar"-pill återställde tyst en flagga som
         // admin medvetet avmarkerat som "inte redo" i Feature flags-panelen).
-        var stageÄndrades   = idea.Stage != req.Stage;
+        var stageÄndrades = idea.Stage != req.Stage;
         var föregåendeStage = idea.Stage;
 
-        idea.Stage     = req.Stage;
+        idea.Stage = req.Stage;
         idea.UpdatedAt = DateTime.UtcNow;
 
         if (stageÄndrades && req.Stage == "lanseringsklar")
@@ -252,10 +252,10 @@ public class AdminFeatureIdeaController : ControllerBase
         var idea = await _db.FeatureIdeas.FindAsync(id);
         if (idea == null) return NotFound();
 
-        idea.TriageKanGoras   = req.KanGoras;
-        idea.TriageBorGoras   = req.BorGoras;
+        idea.TriageKanGoras = req.KanGoras;
+        idea.TriageBorGoras = req.BorGoras;
         idea.TriageMotivering = req.Motivering;
-        idea.UpdatedAt        = DateTime.UtcNow;
+        idea.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return Ok();
     }
@@ -344,8 +344,8 @@ public class AdminFeatureIdeaController : ControllerBase
         var item = await _db.FeatureIdeaChecklistItems.FirstOrDefaultAsync(c => c.Id == itemId && c.FeatureIdeaId == id);
         if (item == null) return NotFound();
 
-        item.Done       = req.Done;
-        item.DoneAt     = req.Done ? DateTime.UtcNow : null;
+        item.Done = req.Done;
+        item.DoneAt = req.Done ? DateTime.UtcNow : null;
         item.DoneByUserId = req.Done ? CurrentUserId : null;
         await _db.SaveChangesAsync();
         return Ok();

@@ -98,7 +98,7 @@ public class UtcDateTimeTests
 
         Assert.Null(conv.ConvertToProvider(null));
         var unspec = (DateTime)conv.ConvertToProvider(new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Unspecified))!;
-        var local  = (DateTime)conv.ConvertToProvider(new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Local))!;
+        var local = (DateTime)conv.ConvertToProvider(new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Local))!;
 
         Assert.Equal(DateTimeKind.Utc, unspec.Kind);
         Assert.Equal(DateTimeKind.Utc, local.Kind);
@@ -123,16 +123,16 @@ public class UtcDateTimeTests
         var missing = new List<string>();
         var checkedCount = 0;
         foreach (var entity in db.Model.GetEntityTypes())
-        foreach (var prop in entity.GetProperties())
-        {
-            var clr = Nullable.GetUnderlyingType(prop.ClrType) ?? prop.ClrType;
-            if (clr != typeof(DateTime)) continue;
-            checkedCount++;
+            foreach (var prop in entity.GetProperties())
+            {
+                var clr = Nullable.GetUnderlyingType(prop.ClrType) ?? prop.ClrType;
+                if (clr != typeof(DateTime)) continue;
+                checkedCount++;
 
-            var converter = prop.GetValueConverter() ?? prop.GetTypeMapping().Converter;
-            if (converter is not (UtcDateTimeConverter or NullableUtcDateTimeConverter))
-                missing.Add($"{entity.DisplayName()}.{prop.Name}");
-        }
+                var converter = prop.GetValueConverter() ?? prop.GetTypeMapping().Converter;
+                if (converter is not (UtcDateTimeConverter or NullableUtcDateTimeConverter))
+                    missing.Add($"{entity.DisplayName()}.{prop.Name}");
+            }
 
         Assert.True(checkedCount > 20, "Förväntade många DateTime-egenskaper i modellen.");
         Assert.Empty(missing);

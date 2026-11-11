@@ -32,9 +32,9 @@ public class AuthServiceTests
     {
         tokens ??= Substitute.For<ITokenService>();
         hasher ??= Substitute.For<IPasswordHasher<User>>();
-        email  ??= Substitute.For<IEmailService>();
+        email ??= Substitute.For<IEmailService>();
         google ??= Substitute.For<IGoogleTokenValidator>();
-        push   ??= Substitute.For<IPushNotificationService>();
+        push ??= Substitute.For<IPushNotificationService>();
         aktivitetslogg ??= Substitute.For<IAktivitetsloggService>();
 
         var config = Substitute.For<IConfiguration>();
@@ -608,7 +608,7 @@ public class AuthServiceTests
         db.Users.Add(user);
         db.RefreshTokens.Add(new RefreshToken
         {
-            UserId    = user.Id,
+            UserId = user.Id,
             TokenHash = "old-hash",
             ExpiresAt = DateTime.UtcNow.AddDays(1),
         });
@@ -641,7 +641,7 @@ public class AuthServiceTests
         db.Users.Add(user);
         db.RefreshTokens.Add(new RefreshToken
         {
-            UserId    = user.Id,
+            UserId = user.Id,
             TokenHash = "suspended-hash",
             ExpiresAt = DateTime.UtcNow.AddDays(1),
         });
@@ -670,7 +670,7 @@ public class AuthServiceTests
         db.Users.Add(user);
         db.RefreshTokens.Add(new RefreshToken
         {
-            UserId    = user.Id,
+            UserId = user.Id,
             TokenHash = "expired-hash",
             ExpiresAt = DateTime.UtcNow.AddDays(-1),
         });
@@ -695,7 +695,7 @@ public class AuthServiceTests
         db.Users.Add(user);
         db.RefreshTokens.Add(new RefreshToken
         {
-            UserId    = user.Id,
+            UserId = user.Id,
             TokenHash = "revoked-hash",
             ExpiresAt = DateTime.UtcNow.AddDays(1),
             RevokedAt = DateTime.UtcNow.AddMinutes(-5),
@@ -735,9 +735,14 @@ public class AuthServiceTests
         using var db = NewDb();
         var user = new User
         {
-            Name = "Ada", Email = "ada@example.com", PasswordHash = "x",
-            IsActive = false, SuspendedAt = DateTime.UtcNow, SuspendedReason = "Radering begärd",
-            DeletionScheduledAt = DateTime.UtcNow.AddHours(20), DeletionCancelToken = "valid-token",
+            Name = "Ada",
+            Email = "ada@example.com",
+            PasswordHash = "x",
+            IsActive = false,
+            SuspendedAt = DateTime.UtcNow,
+            SuspendedReason = "Radering begärd",
+            DeletionScheduledAt = DateTime.UtcNow.AddHours(20),
+            DeletionCancelToken = "valid-token",
         };
         db.Users.Add(user);
         await db.SaveChangesAsync();
@@ -776,8 +781,12 @@ public class AuthServiceTests
         using var db = NewDb();
         var user = new User
         {
-            Name = "Ada", Email = "ada@example.com", PasswordHash = "x", IsActive = false,
-            DeletionScheduledAt = DateTime.UtcNow.AddMinutes(-5), DeletionCancelToken = "expired-token",
+            Name = "Ada",
+            Email = "ada@example.com",
+            PasswordHash = "x",
+            IsActive = false,
+            DeletionScheduledAt = DateTime.UtcNow.AddMinutes(-5),
+            DeletionCancelToken = "expired-token",
         };
         db.Users.Add(user);
         await db.SaveChangesAsync();

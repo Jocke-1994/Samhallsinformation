@@ -16,7 +16,7 @@ using Samhallsinformation.Models;
 public static class AccountSuspension
 {
     public const string DeletionReasonPrefix = "Radering begärd";
-    public const string UserDeletionReason  = DeletionReasonPrefix + " av användaren (GDPR) — raderas automatiskt om 24 timmar";
+    public const string UserDeletionReason = DeletionReasonPrefix + " av användaren (GDPR) — raderas automatiskt om 24 timmar";
     public const string AdminDeletionReason = DeletionReasonPrefix + " (GDPR) — raderas automatiskt om 24 timmar om ingen avbryter det";
 
     private const string AdminRole = "Admin";

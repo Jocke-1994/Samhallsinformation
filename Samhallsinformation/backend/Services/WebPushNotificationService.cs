@@ -14,13 +14,13 @@ public class WebPushNotificationService : IPushNotificationService, IDisposable
     private const int PushTtlSeconds = 24 * 60 * 60;
 
     private readonly WebPushClient _client = new();
-    private readonly VapidDetails  _vapidDetails;
-    private readonly string?       _extraAllowedHosts;
+    private readonly VapidDetails _vapidDetails;
+    private readonly string? _extraAllowedHosts;
 
     public WebPushNotificationService(IConfiguration configuration)
     {
-        var subject    = configuration["VAPID_SUBJECT"]     ?? "mailto:noreply@samhallsinformation.se";
-        var publicKey  = configuration["VAPID_PUBLIC_KEY"]  ?? throw new InvalidOperationException("VAPID_PUBLIC_KEY saknas");
+        var subject = configuration["VAPID_SUBJECT"] ?? "mailto:noreply@samhallsinformation.se";
+        var publicKey = configuration["VAPID_PUBLIC_KEY"] ?? throw new InvalidOperationException("VAPID_PUBLIC_KEY saknas");
         var privateKey = configuration["VAPID_PRIVATE_KEY"] ?? throw new InvalidOperationException("VAPID_PRIVATE_KEY saknas");
 
         _vapidDetails = new VapidDetails(subject, publicKey, privateKey);
@@ -43,7 +43,7 @@ public class WebPushNotificationService : IPushNotificationService, IDisposable
         var options = new Dictionary<string, object>
         {
             ["vapidDetails"] = _vapidDetails,
-            ["TTL"]          = PushTtlSeconds,
+            ["TTL"] = PushTtlSeconds,
         };
         return _client.SendNotificationAsync(subscription, payload, options, ct);
     }

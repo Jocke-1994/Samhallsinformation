@@ -6,7 +6,7 @@ namespace Samhallsinformation.Models;
 // Logga in/Skapa konto-knapparna styrdes globalt när de bara var lokala.
 public class SiteSettings
 {
-    public int  Id                 { get; set; }
-    public bool ShowLoginButton    { get; set; } = true;
+    public int Id { get; set; }
+    public bool ShowLoginButton { get; set; } = true;
     public bool ShowRegisterButton { get; set; } = true;
 }

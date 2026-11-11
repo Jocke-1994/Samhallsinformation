@@ -26,17 +26,23 @@ public class AuthControllerTests
 
     private static AuthController NewController(AppDbContext db, Guid userId)
     {
-        var auth   = Substitute.For<IAuthService>();
+        var auth = Substitute.For<IAuthService>();
         var tokens = Substitute.For<ITokenService>();
         tokens.GenerateAccessToken(Arg.Any<User>()).Returns("dummy-token");
         var hasher = Substitute.For<IPasswordHasher<User>>();
-        var email  = Substitute.For<IEmailService>();
+        var email = Substitute.For<IEmailService>();
         var config = Substitute.For<IConfiguration>();
 
         return new AuthController(auth, tokens, db, hasher, email, config)
         {
-            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(
-                new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }, "TestAuth")) } },
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(
+                new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }, "TestAuth"))
+                }
+            },
         };
     }
 

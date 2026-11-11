@@ -39,14 +39,14 @@ using (var startupLogFactory = LoggerFactory.Create(l => l.AddSimpleConsole()))
 
 // Database — PostgreSQL på Railway (via DATABASE_URL eller PGHOST), SQLite lokalt
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-var pgHost      = Environment.GetEnvironmentVariable("PGHOST");
+var pgHost = Environment.GetEnvironmentVariable("PGHOST");
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     if (databaseUrl != null)
     {
-        var uri      = new Uri(databaseUrl);
+        var uri = new Uri(databaseUrl);
         var userInfo = uri.UserInfo.Split(':');
-        var connStr  = $"Host={uri.Host};" +
+        var connStr = $"Host={uri.Host};" +
                        $"Port={uri.Port};" +
                        $"Database={uri.AbsolutePath.TrimStart('/')};" +
                        $"Username={userInfo[0]};" +
@@ -102,8 +102,8 @@ builder.Services.AddRateLimiter(options =>
         factory: _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 5,
-            Window      = TimeSpan.FromMinutes(1),
-            QueueLimit  = 0,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
         }));
 
     // /api/events/search-public — byggd för kundtjänstbotens
@@ -117,8 +117,8 @@ builder.Services.AddRateLimiter(options =>
         factory: _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 30,
-            Window      = TimeSpan.FromMinutes(1),
-            QueueLimit  = 0,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
         }));
 
     // POST /api/support/tickets — anonym skrivning som pushar till admins (E1 #8).
@@ -245,7 +245,7 @@ var app = builder.Build();
 var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor,
-    ForwardLimit     = null,
+    ForwardLimit = null,
 };
 forwardedHeadersOptions.KnownIPNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();

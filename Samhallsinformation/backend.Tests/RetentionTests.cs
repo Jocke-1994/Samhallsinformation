@@ -195,8 +195,15 @@ public class RetentionTests
     public async Task SourceFailing_PåverkasInteAvRetention_SenasteKörningarnaFinnsKvar()
     {
         using var db = TestDb.Create();
-        db.Sources.Add(new Source { Id = 1, Name = "K", ShortName = "K", BaseUrl = "https://k.se",
-                                    IsActive = true, IsPublished = true });
+        db.Sources.Add(new Source
+        {
+            Id = 1,
+            Name = "K",
+            ShortName = "K",
+            BaseUrl = "https://k.se",
+            IsActive = true,
+            IsPublished = true
+        });
         // Gammal historik (ska städas) + tre misslyckade cykler i rad inom fönstret.
         for (var i = 0; i < 50; i++) db.IngestorRunLogs.Add(Run(1, Nu.AddDays(-60).AddMinutes(i), success: true));
         db.IngestorRunLogs.AddRange(

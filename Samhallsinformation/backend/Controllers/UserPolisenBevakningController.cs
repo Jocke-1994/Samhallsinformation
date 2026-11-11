@@ -54,15 +54,18 @@ public class UserPolisenBevakningController : ControllerBase
 
         var bevakning = new PolisenBevakning
         {
-            UserId         = userId,
+            UserId = userId,
             KategorierJson = validering.Kategorier == null ? null : JsonSerializer.Serialize(validering.Kategorier),
-            OmradenJson    = validering.Omraden    == null ? null : JsonSerializer.Serialize(validering.Omraden),
+            OmradenJson = validering.Omraden == null ? null : JsonSerializer.Serialize(validering.Omraden),
         };
         _db.PolisenBevakningar.Add(bevakning);
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
-            UserId = userId, Setting = "polisen_bevakning_skapad", OldValue = null,
-            NewValue = $"{validering.Kategorier?.Count ?? 0} kategorier, {validering.Omraden?.Count ?? 0} områden", ChangedBy = "user",
+            UserId = userId,
+            Setting = "polisen_bevakning_skapad",
+            OldValue = null,
+            NewValue = $"{validering.Kategorier?.Count ?? 0} kategorier, {validering.Omraden?.Count ?? 0} områden",
+            ChangedBy = "user",
         });
         await _db.SaveChangesAsync();
 
@@ -81,11 +84,13 @@ public class UserPolisenBevakningController : ControllerBase
 
         var gammaltVärde = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}";
         bevakning.KategorierJson = validering.Kategorier == null ? null : JsonSerializer.Serialize(validering.Kategorier);
-        bevakning.OmradenJson    = validering.Omraden    == null ? null : JsonSerializer.Serialize(validering.Omraden);
+        bevakning.OmradenJson = validering.Omraden == null ? null : JsonSerializer.Serialize(validering.Omraden);
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
-            UserId = CurrentUserId, Setting = "polisen_bevakning_ändrad",
-            OldValue = gammaltVärde, NewValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}",
+            UserId = CurrentUserId,
+            Setting = "polisen_bevakning_ändrad",
+            OldValue = gammaltVärde,
+            NewValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}",
             ChangedBy = "user",
         });
         await _db.SaveChangesAsync();
@@ -102,8 +107,10 @@ public class UserPolisenBevakningController : ControllerBase
         _db.PolisenBevakningar.Remove(bevakning);
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
-            UserId = CurrentUserId, Setting = "polisen_bevakning_borttagen",
-            OldValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}", NewValue = null,
+            UserId = CurrentUserId,
+            Setting = "polisen_bevakning_borttagen",
+            OldValue = $"{bevakning.KategorierJson ?? "[]"} / {bevakning.OmradenJson ?? "[]"}",
+            NewValue = null,
             ChangedBy = "user",
         });
         await _db.SaveChangesAsync();
@@ -112,9 +119,9 @@ public class UserPolisenBevakningController : ControllerBase
     }
 
     private static BevakningResponse ToDto(PolisenBevakning b) => new(
-        Id:         b.Id,
+        Id: b.Id,
         Kategorier: b.KategorierJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.KategorierJson),
-        Omraden:    b.OmradenJson    == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson)
+        Omraden: b.OmradenJson == null ? null : JsonSerializer.Deserialize<List<string>>(b.OmradenJson)
     );
 }
 

@@ -16,9 +16,9 @@ namespace Samhallsinformation.Services;
 // klassen, så en redan för stor bevakning kan fortfarande läsas.
 public static class PolisenBevakningValidator
 {
-    public const int MaxKategorierIRequest   = 50;   // giltig mängd: 16
-    public const int MaxOmradenIRequest      = 300;  // giltig mängd: 290
-    public const int MaxStrangLangd          = 100;  // längsta kommunnamn: 15
+    public const int MaxKategorierIRequest = 50;   // giltig mängd: 16
+    public const int MaxOmradenIRequest = 300;  // giltig mängd: 290
+    public const int MaxStrangLangd = 100;  // längsta kommunnamn: 15
 
     private static readonly HashSet<string> KändaKommuner =
         new(SvenskaLan.LanKommuner.Values.SelectMany(k => k), StringComparer.Ordinal);

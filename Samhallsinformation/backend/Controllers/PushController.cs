@@ -21,9 +21,9 @@ public class PushController : ControllerBase
 
     public PushController(AppDbContext db, IConfiguration config, IPushNotificationService push, IAktivitetsloggService aktivitetslogg)
     {
-        _db     = db;
+        _db = db;
         _config = config;
-        _push   = push;
+        _push = push;
         _aktivitetslogg = aktivitetslogg;
     }
 
@@ -43,8 +43,8 @@ public class PushController : ControllerBase
         var devices = rows.Select(d => new
         {
             d.Id,
-            UserEmail       = d.User.Email,
-            UserRole        = d.User.Role,
+            UserEmail = d.User.Email,
+            UserRole = d.User.Role,
             UserPushEnabled = d.User.PushEnabled,
             d.DeviceName,
             d.Platform,
@@ -164,11 +164,11 @@ public class PushController : ControllerBase
             _db.UserDevices.Add(device);
         }
 
-        device.UserId     = userId;
-        device.P256dh     = req.Keys.P256dh;
-        device.Auth       = req.Keys.Auth;
+        device.UserId = userId;
+        device.P256dh = req.Keys.P256dh;
+        device.Auth = req.Keys.Auth;
         device.DeviceName = req.DeviceName ?? device.DeviceName;
-        device.Platform   = req.Platform   ?? device.Platform;
+        device.Platform = req.Platform ?? device.Platform;
         device.LastSeenAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
@@ -215,9 +215,9 @@ public class PushController : ControllerBase
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var user = await _db.Users.FirstAsync(u => u.Id == userId);
-        if (req.PushEnabled.HasValue)      user.PushEnabled      = req.PushEnabled.Value;
+        if (req.PushEnabled.HasValue) user.PushEnabled = req.PushEnabled.Value;
         if (req.PushNyaHandelser.HasValue) user.PushNyaHandelser = req.PushNyaHandelser.Value;
-        if (req.PushNyVersion.HasValue)    user.PushNyVersion    = req.PushNyVersion.Value;
+        if (req.PushNyVersion.HasValue) user.PushNyVersion = req.PushNyVersion.Value;
         await _db.SaveChangesAsync();
         return Ok();
     }

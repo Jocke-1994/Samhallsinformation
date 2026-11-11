@@ -20,15 +20,17 @@ public class MigrationRawSqlRegelTests
     // migration ska aldrig läggas till här, den ska få ett riktigt block.
     private static readonly Dictionary<string, string> Undantag = new()
     {
-        ["20260216135439_InitialCreate"]          = "Skapades innan PostgreSQL användes; produktionsschemat byggdes separat.",
-        ["20260615111721_AddUsers"]               = "Users.Id konverteras text→uuid av ett självläkande DO-block före MigrateAsync.",
-        ["20260615135248_AddIsTestOnlyToSource"]  = "Sources.IsPublished rättas integer→boolean av ett självläkande DO-block.",
+        ["20260216135439_InitialCreate"] = "Skapades innan PostgreSQL användes; produktionsschemat byggdes separat.",
+        ["20260615111721_AddUsers"] = "Users.Id konverteras text→uuid av ett självläkande DO-block före MigrateAsync.",
+        ["20260615135248_AddIsTestOnlyToSource"] = "Sources.IsPublished rättas integer→boolean av ett självläkande DO-block.",
         ["20260625115213_AddFetchStatusToSource"] = "Sources.LastFetchedAt rättas text→timestamptz av ett självläkande DO-block.",
     };
 
     private static readonly Dictionary<string, string> PostgresTyp = new()
     {
-        ["bool"] = "boolean", ["Guid"] = "uuid", ["DateTime"] = "timestamp", // timestamp / timestamptz
+        ["bool"] = "boolean",
+        ["Guid"] = "uuid",
+        ["DateTime"] = "timestamp", // timestamp / timestamptz
     };
 
     private static readonly Regex RiskabelKolumn =
@@ -102,13 +104,13 @@ public class MigrationRawSqlRegelTests
 
         var fel = new List<string>();
         foreach (var m in RiskablaMigrationer(backend).Where(m => !Undantag.ContainsKey(m.Id)))
-        foreach (Match k in AddColumn.Matches(m.Up))
-        {
-            var (typ, kolumn, tabell) = (k.Groups[1].Value, k.Groups[2].Value, k.Groups[3].Value);
-            var förväntad = PostgresTyp[typ];
-            if (!rader.Any(r => r.Contains($"\"\"{kolumn}\"\"") && r.Contains(förväntad, StringComparison.OrdinalIgnoreCase)))
-                fel.Add($"{m.Id}: {tabell}.{kolumn} ({typ}) — ingen rad i blocket med typen {förväntad}");
-        }
+            foreach (Match k in AddColumn.Matches(m.Up))
+            {
+                var (typ, kolumn, tabell) = (k.Groups[1].Value, k.Groups[2].Value, k.Groups[3].Value);
+                var förväntad = PostgresTyp[typ];
+                if (!rader.Any(r => r.Contains($"\"\"{kolumn}\"\"") && r.Contains(förväntad, StringComparison.OrdinalIgnoreCase)))
+                    fel.Add($"{m.Id}: {tabell}.{kolumn} ({typ}) — ingen rad i blocket med typen {förväntad}");
+            }
 
         Assert.True(fel.Count == 0, "Kolumner utan rätt Postgres-typ i DatabaseBootstrapper.cs:\n  " + string.Join("\n  ", fel));
     }

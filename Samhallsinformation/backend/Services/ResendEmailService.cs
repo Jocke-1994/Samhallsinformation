@@ -174,8 +174,8 @@ public class ResendEmailService : IEmailService
             var (etikett, färg) = a.Severity switch
             {
                 "critical" => ("Kritisk", "#dc2626"),
-                "warning"  => ("Varning", "#d97706"),
-                _          => ("Info",    "#2563eb"),
+                "warning" => ("Varning", "#d97706"),
+                _ => ("Info", "#2563eb"),
             };
             rader.Append($"""
                 <div style="border:1px solid #e2e8f0;border-left:4px solid {färg};border-radius:8px;padding:12px 16px;margin:12px 0">

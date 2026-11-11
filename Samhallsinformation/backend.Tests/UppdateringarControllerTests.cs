@@ -320,8 +320,8 @@ public class UppdateringarControllerTests
         var utkast = new Uppdatering { Titel = "Utkast", Datum = DateTime.UtcNow.AddDays(-2), Publicerad = false };
         db.Uppdateringar.AddRange(blandad, baraInloggad, utkast);
         db.UppdateringsPunkter.AddRange(
-            new UppdateringsPunkt { UppdateringId = blandad.Id, Text = "publik",  Synlighet = "alla",      Ordning = 0 },
-            new UppdateringsPunkt { UppdateringId = blandad.Id, Text = "hemlig",  Synlighet = "inloggade", Ordning = 1 },
+            new UppdateringsPunkt { UppdateringId = blandad.Id, Text = "publik", Synlighet = "alla", Ordning = 0 },
+            new UppdateringsPunkt { UppdateringId = blandad.Id, Text = "hemlig", Synlighet = "inloggade", Ordning = 1 },
             new UppdateringsPunkt { UppdateringId = baraInloggad.Id, Text = "hemlig 2", Synlighet = "inloggade", Ordning = 0 },
             new UppdateringsPunkt { UppdateringId = utkast.Id, Text = "utkast", Synlighet = "alla", Ordning = 0 });
         db.SaveChanges();
@@ -497,7 +497,8 @@ public class UppdateringarControllerTests
         var lansering = DateTime.UtcNow.AddDays(3);
         var u = new Uppdatering
         {
-            Titel = "Nytt platsfilter", Publicerad = true,
+            Titel = "Nytt platsfilter",
+            Publicerad = true,
             SchemalagdPubliceringUtc = lansering,
             AnnonseringUtc = lansering.AddDays(-2),
             AnnonseradUtc = DateTime.UtcNow.AddHours(-1), // fas 1 redan körd
@@ -542,7 +543,8 @@ public class UppdateringarControllerTests
         using var db = NewDb();
         var u = new Uppdatering
         {
-            Titel = "Kommande funktion", Publicerad = true,
+            Titel = "Kommande funktion",
+            Publicerad = true,
             SchemalagdPubliceringUtc = DateTime.UtcNow.AddDays(5),
             AnnonseringUtc = DateTime.UtcNow.AddDays(1), // satt men inte körd — AnnonseradUtc är null
         };

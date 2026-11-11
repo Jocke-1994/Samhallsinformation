@@ -339,8 +339,15 @@ public class PolisenBevakningGranserTests
         };
         var ev = new CanonicalEvent
         {
-            SourceId = 1, ExternalId = "e", Title = "t", Content = "", Url = "u", RawData = "",
-            Geography = "Kungälv", EventType = "Stöld", PublishedAt = DateTime.UtcNow,
+            SourceId = 1,
+            ExternalId = "e",
+            Title = "t",
+            Content = "",
+            Url = "u",
+            RawData = "",
+            Geography = "Kungälv",
+            EventType = "Stöld",
+            PublishedAt = DateTime.UtcNow,
         };
 
         Assert.True(PolisenBevakningMatcher.Matches(ev, [b]));

@@ -22,9 +22,9 @@ public class AdminAlertEmailTests
             Calls++;
             var body = await request.Content!.ReadAsStringAsync(ct);
             using var doc = JsonDocument.Parse(body);
-            To      = doc.RootElement.GetProperty("to").GetString();
+            To = doc.RootElement.GetProperty("to").GetString();
             Subject = doc.RootElement.GetProperty("subject").GetString();
-            Html    = doc.RootElement.GetProperty("html").GetString();
+            Html = doc.RootElement.GetProperty("html").GetString();
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") };
         }
     }

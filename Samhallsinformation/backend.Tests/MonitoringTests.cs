@@ -106,7 +106,8 @@ public class MonitoringTests
 
         var cfg = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["MONITORING_USERS_THRESHOLD"] = "750", ["MONITORING_SOURCE_FAIL_STREAK"] = "abc",
+            ["MONITORING_USERS_THRESHOLD"] = "750",
+            ["MONITORING_SOURCE_FAIL_STREAK"] = "abc",
         }).Build();
         var o = MonitoringOptions.FromConfiguration(cfg);
         Assert.Equal(750, o.UsersThreshold);
@@ -199,7 +200,7 @@ public class MonitoringTests
         using var db = TestDb.Create();
         db.Sources.AddRange(
             NySource(1, "Gammal", fetched: Nu.AddMinutes(-31)),
-            NySource(2, "Färsk",  fetched: Nu.AddMinutes(-29)),
+            NySource(2, "Färsk", fetched: Nu.AddMinutes(-29)),
             NySource(3, "Aldrig hämtad", fetched: null));
         await db.SaveChangesAsync();
 
@@ -215,7 +216,7 @@ public class MonitoringTests
     {
         using var db = TestDb.Create();
         db.Sources.AddRange(
-            NySource(1, "Pausad",   active: false, fetched: Nu.AddHours(-5)),
+            NySource(1, "Pausad", active: false, fetched: Nu.AddHours(-5)),
             NySource(2, "Sandlåda", published: false, fetched: Nu.AddHours(-5)));
         await db.SaveChangesAsync();
 

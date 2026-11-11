@@ -133,8 +133,8 @@ public class EventsController : ControllerBase
             candidateSources = candidateSources.Where(s => s.ShortName == shortName);
 
         var sourcesSearched = candidateSources.Select(s => s.ShortName).Distinct().OrderBy(n => n).ToList();
-        var sourceIds       = candidateSources.Select(s => s.Id).ToList();
-        var sourceNameById  = publishedSources.ToDictionary(s => s.Id, s => s.ShortName);
+        var sourceIds = candidateSources.Select(s => s.Id).ToList();
+        var sourceNameById = publishedSources.ToDictionary(s => s.Id, s => s.ShortName);
 
         var query = _db.Events.Where(e => sourceIds.Contains(e.SourceId)).AsQueryable();
 
@@ -168,12 +168,12 @@ public class EventsController : ControllerBase
 
         var result = events.Select(e => new
         {
-            title      = e.Title,
-            content    = e.Content,
+            title = e.Title,
+            content = e.Content,
             sourceName = sourceNameById.GetValueOrDefault(e.SourceId, "Okänd källa"),
-            sourceUrl  = e.Url,
-            location   = e.Geography,
-            timestamp  = e.PublishedAt,
+            sourceUrl = e.Url,
+            location = e.Geography,
+            timestamp = e.PublishedAt,
         });
 
         return Ok(new { total, page, pageSize, sourcesSearched, events = result });
@@ -202,13 +202,13 @@ public class EventsController : ControllerBase
         string status;
         try
         {
-            using var request  = new HttpRequestMessage(HttpMethod.Get, evt.Url);
+            using var request = new HttpRequestMessage(HttpMethod.Get, evt.Url);
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
             status = response.StatusCode switch
             {
                 HttpStatusCode.NotFound or HttpStatusCode.Gone => "dead",
-                _ when response.IsSuccessStatusCode            => "alive",
-                _                                              => "unknown",
+                _ when response.IsSuccessStatusCode => "alive",
+                _ => "unknown",
             };
         }
         catch

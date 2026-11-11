@@ -64,7 +64,7 @@ public class UtcKindGuardScenarioTests
         var guard = new DateTimeKindGuard();
         using var db = TestDb.Create(guard);
         var unspec = Unspec(new DateTime(2026, 9, 1, 10, 0, 0));
-        var local  = new DateTime(2026, 9, 2, 10, 0, 0, DateTimeKind.Local);
+        var local = new DateTime(2026, 9, 2, 10, 0, 0, DateTimeKind.Local);
         db.SupportTickets.Add(new SupportTicket { TicketNumber = 1, Subject = "A", ReminderAt = unspec });
         db.SupportTickets.Add(new SupportTicket { TicketNumber = 2, Subject = "B", ReminderAt = local });
 
@@ -102,7 +102,7 @@ public class UtcKindGuardScenarioTests
         using var db = TestDb.Create(guard);
         var controller = new MaintenanceBannersController(db, Substitute.For<IAktivitetsloggService>());
         var start = Unspec(new DateTime(2026, 10, 1, 8, 0, 0));
-        var slut  = Unspec(new DateTime(2026, 10, 1, 10, 0, 0));
+        var slut = Unspec(new DateTime(2026, 10, 1, 10, 0, 0));
 
         var created = Assert.IsType<OkObjectResult>(
             await controller.Create(new MaintenanceBannerRequest("Underhåll", start, slut, "Alla")));
@@ -170,8 +170,8 @@ public class UtcKindGuardScenarioTests
     {
         var guard = new DateTimeKindGuard();
         using var db = TestDb.Create(guard);
-        var admin  = new User { Email = "admin@test.se", Name = "Admin", Role = "Admin", IsActive = true };
-        var target = new User { Email = "user@test.se",  Name = "User",  Role = "User",  IsActive = true };
+        var admin = new User { Email = "admin@test.se", Name = "Admin", Role = "Admin", IsActive = true };
+        var target = new User { Email = "user@test.se", Name = "User", Role = "User", IsActive = true };
         db.Users.AddRange(admin, target);
         await db.SaveChangesAsync();
         var controller = new AdminUsersController(db, Substitute.For<IAktivitetsloggService>(),

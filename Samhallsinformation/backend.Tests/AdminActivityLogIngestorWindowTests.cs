@@ -62,7 +62,10 @@ public class AdminActivityLogIngestorWindowTests
         {
             db.IngestorRunLogs.Add(new IngestorRunLog
             {
-                SourceId = 1, RunAt = innanförStart.AddMinutes(i), Success = true, EventsInserted = 0,
+                SourceId = 1,
+                RunAt = innanförStart.AddMinutes(i),
+                Success = true,
+                EventsInserted = 0,
             });
         }
         // Långt utanför det efterfrågade fönstret — ska INTE räknas med.
@@ -70,7 +73,10 @@ public class AdminActivityLogIngestorWindowTests
         {
             db.IngestorRunLogs.Add(new IngestorRunLog
             {
-                SourceId = 1, RunAt = nu.AddDays(-10).AddMinutes(i), Success = true, EventsInserted = 0,
+                SourceId = 1,
+                RunAt = nu.AddDays(-10).AddMinutes(i),
+                Success = true,
+                EventsInserted = 0,
             });
         }
         await db.SaveChangesAsync();
@@ -91,8 +97,14 @@ public class AdminActivityLogIngestorWindowTests
         // se IngestorCykelTillDto.
         db.Sources.Add(new Source
         {
-            Id = 1, Name = "Testkälla", ShortName = "T", BaseUrl = "https://example.test",
-            Type = SourceType.WebAPI, IsActive = true, IsPublished = false, LastFetchError = "Trasig källa",
+            Id = 1,
+            Name = "Testkälla",
+            ShortName = "T",
+            BaseUrl = "https://example.test",
+            Type = SourceType.WebAPI,
+            IsActive = true,
+            IsPublished = false,
+            LastFetchError = "Trasig källa",
         });
         await db.SaveChangesAsync();
         var fönsterStart = DateTime.UtcNow.AddHours(-4);

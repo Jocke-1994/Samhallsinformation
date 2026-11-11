@@ -19,13 +19,13 @@ public class StatsController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetStats()
     {
-        var now         = DateTime.UtcNow;
-        var since24h    = now.AddHours(-24);
-        var since7days  = now.AddDays(-7).Date;
+        var now = DateTime.UtcNow;
+        var since24h = now.AddHours(-24);
+        var since7days = now.AddDays(-7).Date;
 
-        var totalEvents    = await _db.Events.CountAsync();
-        var eventsLast24h  = await _db.Events.CountAsync(e => e.PublishedAt >= since24h);
-        var activeSources  = await _db.Sources.CountAsync(s => s.IsActive);
+        var totalEvents = await _db.Events.CountAsync();
+        var eventsLast24h = await _db.Events.CountAsync(e => e.PublishedAt >= since24h);
+        var activeSources = await _db.Sources.CountAsync(s => s.IsActive);
 
         var eventsByDay = await _db.Events
             .Where(e => e.PublishedAt >= since7days)
@@ -41,10 +41,11 @@ public class StatsController : ControllerBase
             .ToListAsync();
 
         var eventsBySourceNamed = eventsBySource
-            .Select(x => new {
-                SourceId   = x.SourceId,
+            .Select(x => new
+            {
+                SourceId = x.SourceId,
                 SourceName = sources.FirstOrDefault(s => s.Id == x.SourceId)?.Name ?? "Okänd",
-                Count      = x.Count,
+                Count = x.Count,
             })
             .OrderByDescending(x => x.Count)
             .ToList();
@@ -62,19 +63,21 @@ public class StatsController : ControllerBase
 
         var last7Days = Enumerable.Range(0, 7)
             .Select(i => since7days.AddDays(i))
-            .Select(d => new {
-                Date  = d.ToString("yyyy-MM-dd"),
+            .Select(d => new
+            {
+                Date = d.ToString("yyyy-MM-dd"),
                 Count = eventsByDay.FirstOrDefault(x => x.Date == d)?.Count ?? 0,
             })
             .ToList();
 
-        return Ok(new {
-            TotalEvents       = totalEvents,
-            EventsLast24h     = eventsLast24h,
-            ActiveSources     = activeSources,
-            EventsByDay       = last7Days,
-            EventsBySource    = eventsBySourceNamed,
-            EventsBySeverity  = eventsBySeverity,
+        return Ok(new
+        {
+            TotalEvents = totalEvents,
+            EventsLast24h = eventsLast24h,
+            ActiveSources = activeSources,
+            EventsByDay = last7Days,
+            EventsBySource = eventsBySourceNamed,
+            EventsBySeverity = eventsBySeverity,
             NotificationsByChannel = notificationsByChannel,
         });
     }

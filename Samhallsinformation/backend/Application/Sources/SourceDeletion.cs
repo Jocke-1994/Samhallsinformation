@@ -13,7 +13,7 @@ using Samhallsinformation.Models;
 public static class SeededSources
 {
     // Delas med Program.cs så att seed-villkoret och raderingsspärren aldrig glider isär.
-    public const string SmhiNyheterUrl           = "https://www.smhi.se/rss/nyheter-fran-smhi";
+    public const string SmhiNyheterUrl = "https://www.smhi.se/rss/nyheter-fran-smhi";
     public const string PolisenEfterlysningarUrl = "https://polisen.se/aktuellt/rss/hela-landet/hjalp-polisen-rss/";
 
     public static bool IsSeeded(Source source, IEnumerable<IIngestor> dedicatedIngestors) =>
@@ -51,7 +51,7 @@ public static class SourceDeletion
                 .Where(l => db.Events.Any(e => e.Id == l.EventId && e.SourceId == sourceId))
                 .ExecuteDeleteAsync(ct);
             var runLogs = await db.IngestorRunLogs.Where(r => r.SourceId == sourceId).ExecuteDeleteAsync(ct);
-            var events  = await db.Events.Where(e => e.SourceId == sourceId).ExecuteDeleteAsync(ct);
+            var events = await db.Events.Where(e => e.SourceId == sourceId).ExecuteDeleteAsync(ct);
             await db.Sources.Where(s => s.Id == sourceId).ExecuteDeleteAsync(ct);
 
             await tx.CommitAsync(ct);

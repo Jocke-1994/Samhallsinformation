@@ -85,9 +85,9 @@ public static class StartupSchemaGuard
             if (historyRows > 0)
                 return new SchemaInspection(null, true, 0, 0, 0);
 
-            var events  = await CountIfTableExistsAsync(db, "Events", ct);
+            var events = await CountIfTableExistsAsync(db, "Events", ct);
             var sources = await CountIfTableExistsAsync(db, "Sources", ct);
-            var users   = await CountIfTableExistsAsync(db, "Users", ct);
+            var users = await CountIfTableExistsAsync(db, "Users", ct);
             return new SchemaInspection(null, false, events, sources, users);
         }
         catch (Exception ex)

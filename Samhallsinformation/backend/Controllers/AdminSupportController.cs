@@ -172,7 +172,7 @@ public class AdminSupportController : ControllerBase
         if (ticket == null) return NotFound();
 
         var gammalStatus = ticket.Status;
-        ticket.Status    = req.Status;
+        ticket.Status = req.Status;
         ticket.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
@@ -189,7 +189,7 @@ public class AdminSupportController : ControllerBase
         if (ticket == null) return NotFound();
 
         ticket.IsArchived = req.Archived;
-        ticket.UpdatedAt  = DateTime.UtcNow;
+        ticket.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
             AktörTyper.Admin, LoggTyper.Ärende,
@@ -205,7 +205,7 @@ public class AdminSupportController : ControllerBase
         if (ticket == null) return NotFound();
 
         ticket.AssignedToUserId = req.UserId;
-        ticket.UpdatedAt        = DateTime.UtcNow;
+        ticket.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
         var tilldeladNamn = req.UserId == null
@@ -223,9 +223,9 @@ public class AdminSupportController : ControllerBase
         var ticket = await _db.SupportTickets.FindAsync(id);
         if (ticket == null) return NotFound();
 
-        ticket.ReminderAt   = UtcDateTime.Ensure(req.ReminderAt);
+        ticket.ReminderAt = UtcDateTime.Ensure(req.ReminderAt);
         ticket.ReminderNote = req.ReminderNote;
-        ticket.UpdatedAt    = DateTime.UtcNow;
+        ticket.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return Ok();
     }
@@ -253,13 +253,13 @@ public class AdminSupportController : ControllerBase
 
         var action = new SupportTicketScheduledAction
         {
-            TicketId         = ticket.Id,
-            Type             = req.Type,
-            ScheduledAt      = scheduledAt,
-            CreatedByUserId  = CurrentUserId,
-            Text             = req.Text,
+            TicketId = ticket.Id,
+            Type = req.Type,
+            ScheduledAt = scheduledAt,
+            CreatedByUserId = CurrentUserId,
+            Text = req.Text,
             ReassignToUserId = req.ReassignToUserId,
-            Instruction      = req.Instruction,
+            Instruction = req.Instruction,
         };
         _db.SupportTicketScheduledActions.Add(action);
         await _db.SaveChangesAsync();
@@ -283,7 +283,7 @@ public class AdminSupportController : ControllerBase
     public async Task<IActionResult> GetNotifications()
     {
         var myId = CurrentUserId;
-        var now  = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
 
         var assignedToMe = await _db.SupportTickets
             .Where(t => t.AssignedToUserId == myId && t.Status != "Stängt")

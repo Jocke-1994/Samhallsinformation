@@ -74,15 +74,24 @@ public class EventsUniqueIndexIngestTests : IDisposable
         using var db = new AppDbContext(_options);
         var row = new Source
         {
-            Name = "Källa", ShortName = "K", BaseUrl = "https://example.test",
-            Type = SourceType.WebAPI, IsActive = true, IsPublished = false,
+            Name = "Källa",
+            ShortName = "K",
+            BaseUrl = "https://example.test",
+            Type = SourceType.WebAPI,
+            IsActive = true,
+            IsPublished = false,
         };
         db.Sources.Add(row);
         await db.SaveChangesAsync();
         return new FakeIngestor(new Source
         {
-            Id = row.Id, Name = row.Name, ShortName = row.ShortName, BaseUrl = row.BaseUrl,
-            Type = SourceType.WebAPI, IsActive = true, IsPublished = false,
+            Id = row.Id,
+            Name = row.Name,
+            ShortName = row.ShortName,
+            BaseUrl = row.BaseUrl,
+            Type = SourceType.WebAPI,
+            IsActive = true,
+            IsPublished = false,
         });
     }
 
@@ -97,7 +106,10 @@ public class EventsUniqueIndexIngestTests : IDisposable
             using var other = new AppDbContext(_options);
             other.Events.Add(new CanonicalEvent
             {
-                SourceId = sourceId, ExternalId = externalId, Title = "Från den andra körningen", PublishedAt = DateTime.UtcNow,
+                SourceId = sourceId,
+                ExternalId = externalId,
+                Title = "Från den andra körningen",
+                PublishedAt = DateTime.UtcNow,
             });
             other.SaveChanges();
         };

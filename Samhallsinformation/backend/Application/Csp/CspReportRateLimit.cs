@@ -21,7 +21,7 @@ public static class CspReportRateLimit
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = PermitLimit,
-                Window      = Window,
-                QueueLimit  = 0,
+                Window = Window,
+                QueueLimit = 0,
             });
 }

@@ -33,7 +33,12 @@ public class GenericRssIngestorTests
 
     private static Source NewSource(string url = "https://exempel.se/rss") => new()
     {
-        Id = 7, Name = "Exempelkällan", ShortName = "Exempel", Url = url, IsActive = true, IsPublished = true,
+        Id = 7,
+        Name = "Exempelkällan",
+        ShortName = "Exempel",
+        Url = url,
+        IsActive = true,
+        IsPublished = true,
     };
 
     private const string ValidRss = """

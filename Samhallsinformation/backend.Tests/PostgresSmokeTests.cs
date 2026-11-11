@@ -109,12 +109,12 @@ public class PostgresSmokeTests
 
         db.Events.Add(new CanonicalEvent
         {
-            SourceId    = source.Id,
-            ExternalId  = "v4-6b-dubblett-test",
-            Title       = "Test",
-            Content     = "Test",
+            SourceId = source.Id,
+            ExternalId = "v4-6b-dubblett-test",
+            Title = "Test",
+            Content = "Test",
             PublishedAt = DateTime.UtcNow,
-            Url         = "https://example.test/1",
+            Url = "https://example.test/1",
         });
         await db.SaveChangesAsync();
 
@@ -122,12 +122,12 @@ public class PostgresSmokeTests
         var db2 = scope2.ServiceProvider.GetRequiredService<AppDbContext>();
         db2.Events.Add(new CanonicalEvent
         {
-            SourceId    = source.Id,
-            ExternalId  = "v4-6b-dubblett-test", // samma (SourceId, ExternalId) — ska krocka mot V3-2:s unika index
-            Title       = "Test (dubblett)",
-            Content     = "Test",
+            SourceId = source.Id,
+            ExternalId = "v4-6b-dubblett-test", // samma (SourceId, ExternalId) — ska krocka mot V3-2:s unika index
+            Title = "Test (dubblett)",
+            Content = "Test",
             PublishedAt = DateTime.UtcNow,
-            Url         = "https://example.test/2",
+            Url = "https://example.test/2",
         });
 
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => db2.SaveChangesAsync());

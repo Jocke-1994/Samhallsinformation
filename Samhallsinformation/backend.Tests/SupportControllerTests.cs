@@ -111,7 +111,7 @@ public class SupportControllerTests
     public async Task GetMyTickets_OnlyReturnsCurrentUsersOwnTickets()
     {
         using var db = NewDb();
-        var mine   = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        var mine = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
         var others = new User { Name = "Bob", Email = "bob@example.com", PasswordHash = "x" };
         db.Users.AddRange(mine, others);
         db.SupportTickets.Add(new SupportTicket { Subject = "Mitt", Category = "Konto", Channel = "arendehantering", CreatedByUserId = mine.Id });
@@ -141,14 +141,14 @@ public class SupportControllerTests
     public async Task GetMyTicket_AgentReply_UsesDisplayNameOrFallsBackToSupport()
     {
         using var db = NewDb();
-        var owner   = new User { Name = "Ada",   Email = "ada@example.com",   PasswordHash = "x" };
-        var agent   = new User { Name = "Joakim Rehn", Email = "admin@example.com", PasswordHash = "x", Role = "Admin", DisplayName = "Nova" };
-        var agent2  = new User { Name = "Support Two", Email = "support2@example.com", PasswordHash = "x", Role = "Admin" }; // ingen DisplayName satt
+        var owner = new User { Name = "Ada", Email = "ada@example.com", PasswordHash = "x" };
+        var agent = new User { Name = "Joakim Rehn", Email = "admin@example.com", PasswordHash = "x", Role = "Admin", DisplayName = "Nova" };
+        var agent2 = new User { Name = "Support Two", Email = "support2@example.com", PasswordHash = "x", Role = "Admin" }; // ingen DisplayName satt
         db.Users.AddRange(owner, agent, agent2);
         var ticket = new SupportTicket { Subject = "Fråga", Category = "Konto", Channel = "arendehantering", CreatedByUserId = owner.Id };
         db.SupportTickets.Add(ticket);
-        db.SupportTicketMessages.Add(new SupportTicketMessage { Ticket = ticket, SenderType = "user",  AuthorUserId = owner.Id,  Text = "Hej" });
-        db.SupportTicketMessages.Add(new SupportTicketMessage { Ticket = ticket, SenderType = "agent", AuthorUserId = agent.Id,  Text = "Hej tillbaka" });
+        db.SupportTicketMessages.Add(new SupportTicketMessage { Ticket = ticket, SenderType = "user", AuthorUserId = owner.Id, Text = "Hej" });
+        db.SupportTicketMessages.Add(new SupportTicketMessage { Ticket = ticket, SenderType = "agent", AuthorUserId = agent.Id, Text = "Hej tillbaka" });
         db.SupportTicketMessages.Add(new SupportTicketMessage { Ticket = ticket, SenderType = "agent", AuthorUserId = agent2.Id, Text = "Jag också" });
         await db.SaveChangesAsync();
 

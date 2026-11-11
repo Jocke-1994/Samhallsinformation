@@ -16,8 +16,8 @@ using Xunit;
 public class StartupSecretsGuardTests
 {
     // Testnycklar — påhittade, inte kopplade till något riktigt system.
-    private const string GoodJwt     = "test-only-jwt-secret-that-is-long-enough-0123456789";
-    private const string GoodVapidPub  = "BTestOnlyPublicKeyNotARealVapidKey_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    private const string GoodJwt = "test-only-jwt-secret-that-is-long-enough-0123456789";
+    private const string GoodVapidPub = "BTestOnlyPublicKeyNotARealVapidKey_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     private const string GoodVapidPriv = "TestOnlyPrivateKeyNotARealOne_aaaaaaaaaaaa";
 
     private sealed class FakeEnv(string name) : IHostEnvironment
@@ -40,8 +40,8 @@ public class StartupSecretsGuardTests
     private static IConfiguration Config(string? jwt = GoodJwt, string? pub = GoodVapidPub, string? priv = GoodVapidPriv)
     {
         var d = new Dictionary<string, string?>();
-        if (jwt != null)  d["JWT_SECRET"]        = jwt;
-        if (pub != null)  d["VAPID_PUBLIC_KEY"]  = pub;
+        if (jwt != null) d["JWT_SECRET"] = jwt;
+        if (pub != null) d["VAPID_PUBLIC_KEY"] = pub;
         if (priv != null) d["VAPID_PRIVATE_KEY"] = priv;
         return new ConfigurationBuilder().AddInMemoryCollection(d).Build();
     }
@@ -86,7 +86,7 @@ public class StartupSecretsGuardTests
     public void Validate_ProductionSaknarVapid_Kastar_OchNamnerRättVariabel(string missing)
     {
         var config = Config(
-            pub:  missing == "VAPID_PUBLIC_KEY"  ? null : GoodVapidPub,
+            pub: missing == "VAPID_PUBLIC_KEY" ? null : GoodVapidPub,
             priv: missing == "VAPID_PRIVATE_KEY" ? null : GoodVapidPriv);
 
         var ex = Assert.Throws<InvalidOperationException>(

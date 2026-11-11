@@ -13,8 +13,8 @@ public static class SupportTicketValidator
 {
     public const int MaxSubjectLength = 200;
     public const int MaxMessageLength = 5000;
-    public const int MaxNameLength    = 100;
-    public const int MaxEmailLength   = 254; // RFC 5321
+    public const int MaxNameLength = 100;
+    public const int MaxEmailLength = 254; // RFC 5321
 
     // Kanaler klienter får ange. "info-mejl" ingår avsiktligt INTE: den sätts
     // bara av WebhooksController (inbound-mejl) och styr trådmatchningen där.

@@ -78,7 +78,7 @@ public class PushControllerTests
         await db.SaveChangesAsync();
         var controller = NewController(db);
 
-        var first  = await controller.Claim(new ClaimRequest(claim.Id, Guid.NewGuid()));
+        var first = await controller.Claim(new ClaimRequest(claim.Id, Guid.NewGuid()));
         var second = await controller.Claim(new ClaimRequest(claim.Id, Guid.NewGuid()));
 
         Assert.True(Claimed(first));
@@ -98,7 +98,7 @@ public class PushControllerTests
         var unknownClaimId = Guid.NewGuid();
         var controller = NewController(db);
 
-        var first  = await controller.Claim(new ClaimRequest(unknownClaimId, d1.Id));
+        var first = await controller.Claim(new ClaimRequest(unknownClaimId, d1.Id));
         var second = await controller.Claim(new ClaimRequest(unknownClaimId, d2.Id));
 
         Assert.True(Claimed(first));

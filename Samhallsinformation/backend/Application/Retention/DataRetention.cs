@@ -32,7 +32,7 @@ public static class DataRetention
     {
         var pause = pauseBetweenBatches ?? TimeSpan.FromMilliseconds(100);
         var runLogCutoff = nowUtc - IngestorRunLogMaxAge;
-        var claimCutoff  = nowUtc - PushDispatchClaimMaxAge;
+        var claimCutoff = nowUtc - PushDispatchClaimMaxAge;
 
         var runLogs = await SafeAsync("IngestorRunLogs", logger, () => DeleteInBatchesAsync(
             async token =>

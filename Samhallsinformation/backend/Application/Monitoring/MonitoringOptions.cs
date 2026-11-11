@@ -19,14 +19,14 @@ public sealed class MonitoringOptions
     public int SourceStaleMinutes { get; init; } = 30;
 
     // push_failures — inte konfigurerbart via env i v1.
-    public int PushWindowHours     { get; init; } = 6;
-    public int PushMinAttempts     { get; init; } = 10;
+    public int PushWindowHours { get; init; } = 6;
+    public int PushMinAttempts { get; init; } = 10;
     public double PushFailureShare { get; init; } = 0.5;
 
     public static MonitoringOptions FromConfiguration(IConfiguration config) => new()
     {
-        UsersThreshold     = Positive(config["MONITORING_USERS_THRESHOLD"],     500),
-        SourceFailStreak   = Positive(config["MONITORING_SOURCE_FAIL_STREAK"],    3),
+        UsersThreshold = Positive(config["MONITORING_USERS_THRESHOLD"], 500),
+        SourceFailStreak = Positive(config["MONITORING_SOURCE_FAIL_STREAK"], 3),
         SourceStaleMinutes = Positive(config["MONITORING_SOURCE_STALE_MINUTES"], 30),
     };
 

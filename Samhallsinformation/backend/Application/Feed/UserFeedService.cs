@@ -57,7 +57,7 @@ public class UserFeedService : IUserFeedService
             return new FeedPage(0, page, pageSize, [], false, true);
 
         var polisenIds = kallor.Where(k => k.ShortName == PolisenShortName).Select(k => k.SourceId).ToList();
-        var andraIds   = kallor.Where(k => k.ShortName != PolisenShortName).Select(k => k.SourceId).ToList();
+        var andraIds = kallor.Where(k => k.ShortName != PolisenShortName).Select(k => k.SourceId).ToList();
 
         var bevakningar = polisenIds.Count == 0
             ? new List<PolisenBevakning>()

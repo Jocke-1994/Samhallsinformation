@@ -72,7 +72,7 @@ public class PushEndpointValidatorTests
     public void ForLangUrl_Avvisas_MenGransvardetAccepteras()
     {
         const string prefix = "https://fcm.googleapis.com/";
-        var exakt   = prefix + new string('a', PushEndpointValidator.MaxLength - prefix.Length);
+        var exakt = prefix + new string('a', PushEndpointValidator.MaxLength - prefix.Length);
         var forLang = exakt + "a";
 
         Assert.Equal(PushEndpointValidator.MaxLength, exakt.Length);
@@ -185,7 +185,7 @@ public class WebPushNotificationServiceEndpointGuardTests
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["VAPID_PUBLIC_KEY"]  = "x",
+            ["VAPID_PUBLIC_KEY"] = "x",
             ["VAPID_PRIVATE_KEY"] = "y",
         }).Build();
         using var service = new WebPushNotificationService(config);

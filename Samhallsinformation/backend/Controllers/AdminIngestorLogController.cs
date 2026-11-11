@@ -32,7 +32,7 @@ public class AdminIngestorLogController : ControllerBase
             .Select(i => sedan.AddDays(i))
             .Select(d => new
             {
-                Date  = d.ToString("yyyy-MM-dd"),
+                Date = d.ToString("yyyy-MM-dd"),
                 Count = rader.Count(r => !r.Success && r.RunAt.Date == d),
             })
             .ToList();
@@ -41,13 +41,13 @@ public class AdminIngestorLogController : ControllerBase
         // återhämtat sig (Source.LastFetchError fortfarande satt) — skiljer
         // ett fel som självläkte vid nästa körning från ett som kvarstår.
         var felKällor = rader.Where(r => !r.Success).Select(r => r.SourceId).Distinct().ToList();
-        var kritiska  = await _db.Sources.CountAsync(s => felKällor.Contains(s.Id) && s.LastFetchError != null);
+        var kritiska = await _db.Sources.CountAsync(s => felKällor.Contains(s.Id) && s.LastFetchError != null);
 
         return Ok(new
         {
             TotaltFel = rader.Count(r => !r.Success),
-            Kritiska  = kritiska,
-            PerDag    = perDag,
+            Kritiska = kritiska,
+            PerDag = perDag,
         });
     }
 
@@ -64,8 +64,8 @@ public class AdminIngestorLogController : ControllerBase
             .Take(limit)
             .ToListAsync();
 
-        var sourceNames  = await _db.Sources.ToDictionaryAsync(s => s.Id, s => s.ShortName);
-        var aktuellaFel  = await _db.Sources.Where(s => s.LastFetchError != null).Select(s => s.Id).ToListAsync();
+        var sourceNames = await _db.Sources.ToDictionaryAsync(s => s.Id, s => s.ShortName);
+        var aktuellaFel = await _db.Sources.Where(s => s.LastFetchError != null).Select(s => s.Id).ToListAsync();
 
         var result = rader.Select(r => new
         {
@@ -74,8 +74,8 @@ public class AdminIngestorLogController : ControllerBase
             r.Success,
             r.EventsInserted,
             r.ErrorMessage,
-            SourceName          = sourceNames.GetValueOrDefault(r.SourceId, "Okänd källa"),
-            ÅterförsökLyckades  = !r.Success ? !aktuellaFel.Contains(r.SourceId) : (bool?)null,
+            SourceName = sourceNames.GetValueOrDefault(r.SourceId, "Okänd källa"),
+            ÅterförsökLyckades = !r.Success ? !aktuellaFel.Contains(r.SourceId) : (bool?)null,
         });
 
         return Ok(result);

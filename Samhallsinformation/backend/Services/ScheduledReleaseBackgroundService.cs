@@ -79,7 +79,7 @@ public class ScheduledReleaseBackgroundService : BackgroundService
             var målgrupp = punkter.Any(p => p.Synlighet == UppdateringsVärden.SynlighetAlla) ? "Alla" : "Användare";
 
             var annonseringDue = uppdatering.AnnonseringUtc != null && uppdatering.AnnonseringUtc <= now && uppdatering.AnnonseradUtc == null;
-            var lanseringDue   = uppdatering.SchemalagdPubliceringUtc != null && uppdatering.SchemalagdPubliceringUtc <= now;
+            var lanseringDue = uppdatering.SchemalagdPubliceringUtc != null && uppdatering.SchemalagdPubliceringUtc <= now;
 
             // Fas 1: annonsering i förväg (Beslut 2026-10-08). Publicerar
             // posten (den visas som en "Kommer snart"-teaser, se
@@ -111,14 +111,14 @@ public class ScheduledReleaseBackgroundService : BackgroundService
                 {
                     db.MaintenanceBanners.Add(new MaintenanceBanner
                     {
-                        Id        = Guid.NewGuid(),
-                        Message   = uppdatering.Titel,
-                        Rubrik    = $"Kommer {SvenskDatum.FormateraDag(uppdatering.SchemalagdPubliceringUtc!.Value)}",
-                        Stil      = "Kommande",
-                        LankUrl   = "/uppdateringar",
-                        Audience  = målgrupp,
-                        StartUtc  = now,
-                        EndUtc    = uppdatering.SchemalagdPubliceringUtc!.Value, // slutar exakt vid lansering
+                        Id = Guid.NewGuid(),
+                        Message = uppdatering.Titel,
+                        Rubrik = $"Kommer {SvenskDatum.FormateraDag(uppdatering.SchemalagdPubliceringUtc!.Value)}",
+                        Stil = "Kommande",
+                        LankUrl = "/uppdateringar",
+                        Audience = målgrupp,
+                        StartUtc = now,
+                        EndUtc = uppdatering.SchemalagdPubliceringUtc!.Value, // slutar exakt vid lansering
                         CreatedAt = now,
                     });
                     await aktivitetslogg.LogAsync(
@@ -167,14 +167,14 @@ public class ScheduledReleaseBackgroundService : BackgroundService
                 {
                     db.MaintenanceBanners.Add(new MaintenanceBanner
                     {
-                        Id        = Guid.NewGuid(),
-                        Message   = uppdatering.Titel,
-                        Rubrik    = "Nytt på Samhällsinformation",
-                        Stil      = "Nyhet",
-                        LankUrl   = "/uppdateringar",
-                        Audience  = målgrupp,
-                        StartUtc  = now,
-                        EndUtc    = now.AddDays(BannerLängdDagar),
+                        Id = Guid.NewGuid(),
+                        Message = uppdatering.Titel,
+                        Rubrik = "Nytt på Samhällsinformation",
+                        Stil = "Nyhet",
+                        LankUrl = "/uppdateringar",
+                        Audience = målgrupp,
+                        StartUtc = now,
+                        EndUtc = now.AddDays(BannerLängdDagar),
                         CreatedAt = now,
                     });
                     await aktivitetslogg.LogAsync(
@@ -188,9 +188,9 @@ public class ScheduledReleaseBackgroundService : BackgroundService
                 // Del 1: tidigare nollställdes bara tidsstämpeln, vilket
                 // lämnade en missvisande flagg-lista kvar i GET-svaret).
                 uppdatering.SchemalagdPubliceringUtc = null;
-                uppdatering.SchemalagdaFlaggorJson   = null;
+                uppdatering.SchemalagdaFlaggorJson = null;
                 uppdatering.AnnonseringUtc = null;
-                uppdatering.AnnonseradUtc  = null;
+                uppdatering.AnnonseradUtc = null;
                 uppdatering.UpdatedAt = now;
             }
         }

@@ -266,7 +266,7 @@ public class AuthHardeningTests
     public async Task EmailChange_AddressTakenWithOtherCasing_Returns409()
     {
         using var db = TestDb.Create();
-        var user  = LocalUser("kalle@x.se", "lang-nog-1", verified: true);
+        var user = LocalUser("kalle@x.se", "lang-nog-1", verified: true);
         var annan = LocalUser("Annan@Y.se", "lang-nog-1", verified: true);
         db.Users.AddRange(user, annan);
         await db.SaveChangesAsync();
@@ -548,12 +548,12 @@ public class AuthHardeningTests
     public async Task ResetPassword_RevokesAllActiveRefreshTokens()
     {
         using var db = TestDb.Create();
-        var user  = LocalUser("kalle@x.se", "gammalt-losen", verified: true);
+        var user = LocalUser("kalle@x.se", "gammalt-losen", verified: true);
         var annan = LocalUser("annan@x.se", "annat-losen-1", verified: true);
         db.Users.AddRange(user, annan);
         db.RefreshTokens.AddRange(
-            new RefreshToken { UserId = user.Id,  TokenHash = "hash:a", ExpiresAt = DateTime.UtcNow.AddDays(30) },
-            new RefreshToken { UserId = user.Id,  TokenHash = "hash:b", ExpiresAt = DateTime.UtcNow.AddDays(30) },
+            new RefreshToken { UserId = user.Id, TokenHash = "hash:a", ExpiresAt = DateTime.UtcNow.AddDays(30) },
+            new RefreshToken { UserId = user.Id, TokenHash = "hash:b", ExpiresAt = DateTime.UtcNow.AddDays(30) },
             new RefreshToken { UserId = annan.Id, TokenHash = "hash:c", ExpiresAt = DateTime.UtcNow.AddDays(30) });
         var reset = new PasswordResetToken { UserId = user.Id };
         db.PasswordResetTokens.Add(reset);
@@ -639,8 +639,8 @@ public class AuthHardeningTests
     public async Task DataFix_Collision_AbortsWithoutChangingAnything_AndLogsTheCollidingAccounts()
     {
         using var db = TestDb.Create();
-        var a = RawUser("Kalle@x.se",  new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
-        var b = RawUser("kalle@x.se",  new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc));
+        var a = RawUser("Kalle@x.se", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var b = RawUser("kalle@x.se", new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc));
         var c = RawUser("Ovan@Krock.se"); // skulle gå att gemenifiera, men hela fixen ska ändå avbrytas
         db.Users.AddRange(a, b, c);
         await db.SaveChangesAsync();
@@ -677,7 +677,7 @@ public class AuthHardeningTests
         await db.SaveChangesAsync();
 
         var forsta = await EmailNormalizationDataFix.RunAsync(db, new CapturingLogger());
-        var andra  = await EmailNormalizationDataFix.RunAsync(db, new CapturingLogger());
+        var andra = await EmailNormalizationDataFix.RunAsync(db, new CapturingLogger());
 
         Assert.Equal(2, forsta.Updated);
         Assert.False(andra.Aborted);

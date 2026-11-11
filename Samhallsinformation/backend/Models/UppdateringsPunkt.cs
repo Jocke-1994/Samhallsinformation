@@ -2,14 +2,14 @@ namespace Samhallsinformation.Models;
 
 public class UppdateringsPunkt
 {
-    public Guid Id            { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UppdateringId { get; set; }
     public Uppdatering Uppdatering { get; set; } = null!;
 
     /// <summary>ny-funktion | förbättring | buggfix | känt-problem | kommer-snart</summary>
-    public string Typ    { get; set; } = "ny-funktion";
-    public string Plats  { get; set; } = "Allmänt";
-    public string Text   { get; set; } = "";
+    public string Typ { get; set; } = "ny-funktion";
+    public string Plats { get; set; } = "Allmänt";
+    public string Text { get; set; } = "";
 
     /// <summary>
     /// "alla" (syns för utloggade besökare på Nyheter-sidan också) eller

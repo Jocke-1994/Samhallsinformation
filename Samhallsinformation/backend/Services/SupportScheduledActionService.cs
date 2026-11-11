@@ -114,11 +114,11 @@ public class SupportScheduledActionService : BackgroundService
                 var instruktion = string.IsNullOrWhiteSpace(action.Instruction) ? "" : $" — {action.Instruction}";
                 db.SupportTicketMessages.Add(new SupportTicketMessage
                 {
-                    TicketId     = ticket.Id,
-                    SenderType   = "agent",
+                    TicketId = ticket.Id,
+                    SenderType = "agent",
                     AuthorUserId = action.CreatedByUserId,
-                    Text         = $"Ärendet ombokat automatiskt (schemalagd åtgärd){instruktion}",
-                    IsInternal   = true,
+                    Text = $"Ärendet ombokat automatiskt (schemalagd åtgärd){instruktion}",
+                    IsInternal = true,
                 });
                 break;
         }

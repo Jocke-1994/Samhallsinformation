@@ -9,6 +9,6 @@ namespace Samhallsinformation.Models;
 // flaggor" — markörer där skulle både läcka och kunna raderas av misstag (=> seed skriver över).
 public class AppliedSeed
 {
-    public string   Key       { get; set; } = "";
+    public string Key { get; set; } = "";
     public DateTime AppliedAt { get; set; } = DateTime.UtcNow;
 }

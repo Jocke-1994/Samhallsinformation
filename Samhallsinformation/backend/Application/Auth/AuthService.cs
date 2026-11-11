@@ -13,27 +13,27 @@ public class AuthService : IAuthService
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
     private const int MaxEmailLength = 254; // RFC 5321-gränsen för en adress
 
-    private readonly ILogger<AuthService>?    _logger;
-    private readonly AppDbContext             _db;
-    private readonly ITokenService            _tokens;
-    private readonly IPasswordHasher<User>    _hasher;
-    private readonly IEmailService            _email;
-    private readonly IGoogleTokenValidator    _google;
+    private readonly ILogger<AuthService>? _logger;
+    private readonly AppDbContext _db;
+    private readonly ITokenService _tokens;
+    private readonly IPasswordHasher<User> _hasher;
+    private readonly IEmailService _email;
+    private readonly IGoogleTokenValidator _google;
     private readonly IPushNotificationService _push;
-    private readonly IAktivitetsloggService   _aktivitetslogg;
-    private readonly LoginThrottle            _loginThrottle;
-    private readonly string                   _frontendUrl;
+    private readonly IAktivitetsloggService _aktivitetslogg;
+    private readonly LoginThrottle _loginThrottle;
+    private readonly string _frontendUrl;
 
     public AuthService(AppDbContext db, ITokenService tokens, IPasswordHasher<User> hasher, IEmailService email, IGoogleTokenValidator google, IPushNotificationService push, IAktivitetsloggService aktivitetslogg, LoginThrottle loginThrottle, IConfiguration config, ILogger<AuthService>? logger = null)
     {
         _loginThrottle = loginThrottle;
-        _logger      = logger;
-        _db          = db;
-        _tokens      = tokens;
-        _hasher      = hasher;
-        _email       = email;
-        _google      = google;
-        _push        = push;
+        _logger = logger;
+        _db = db;
+        _tokens = tokens;
+        _hasher = hasher;
+        _email = email;
+        _google = google;
+        _push = push;
         _aktivitetslogg = aktivitetslogg;
         _frontendUrl = config["FRONTEND_URL"] ?? "https://samhallsinformation.se";
     }
@@ -171,14 +171,14 @@ public class AuthService : IAuthService
 
             user = new User
             {
-                Name            = payload.Name,
-                Email           = googleEmail,
-                AuthProvider    = "google",
+                Name = payload.Name,
+                Email = googleEmail,
+                AuthProvider = "google",
                 TermsAcceptedAt = DateTime.UtcNow,
                 // Google har redan verifierat ägarskapet av adressen som en del av
                 // OAuth-flödet — en påminnelsebanderoll om att bekräfta e-posten
                 // vore meningslös friktion för något som redan är bevisat sant.
-                EmailVerified   = true,
+                EmailVerified = true,
             };
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
@@ -230,8 +230,8 @@ public class AuthService : IAuthService
     {
         var now = DateTime.UtcNow;
 
-        user.PasswordHash  = string.Empty; // samma tomma värde som övriga Google-konton; LoginAsync avvisar non-local före hash-kontroll
-        user.AuthProvider  = "google";
+        user.PasswordHash = string.Empty; // samma tomma värde som övriga Google-konton; LoginAsync avvisar non-local före hash-kontroll
+        user.AuthProvider = "google";
         user.EmailVerified = true;
 
         var aktivaRefreshTokens = await _db.RefreshTokens
@@ -267,12 +267,12 @@ public class AuthService : IAuthService
 
         var (rawToken, newHash) = _tokens.GenerateRefreshToken();
 
-        existing.RevokedAt           = DateTime.UtcNow;
+        existing.RevokedAt = DateTime.UtcNow;
         existing.ReplacedByTokenHash = newHash;
 
         _db.RefreshTokens.Add(new RefreshToken
         {
-            UserId    = existing.UserId,
+            UserId = existing.UserId,
             TokenHash = newHash,
             ExpiresAt = DateTime.UtcNow.Add(RefreshTokenLifetime),
         });
@@ -333,8 +333,8 @@ public class AuthService : IAuthService
 
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
-            UserId    = resetToken.UserId,
-            Setting   = "password",
+            UserId = resetToken.UserId,
+            Setting = "password",
             ChangedBy = "reset",
         });
 
@@ -403,7 +403,7 @@ public class AuthService : IAuthService
             return AuthResult.Fail(400, "Länken är ogiltig eller har gått ut");
 
         verificationToken.User.EmailVerified = true;
-        verificationToken.UsedAt             = DateTime.UtcNow;
+        verificationToken.UsedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
         return AuthResult.Ok("E-postadressen är bekräftad");
@@ -490,15 +490,18 @@ public class AuthService : IAuthService
             return AuthResult.Fail(409, "E-postadressen används redan");
 
         var oldEmail = changeToken.User.Email;
-        changeToken.User.Email         = newEmail;
+        changeToken.User.Email = newEmail;
         // Länken skickades till och klickades från den nya adressen — det
         // beviset på ägarskap är detsamma som e-postverifiering vid registrering.
         changeToken.User.EmailVerified = true;
-        changeToken.UsedAt             = DateTime.UtcNow;
+        changeToken.UsedAt = DateTime.UtcNow;
 
         _db.UserSettingAuditLogs.Add(new UserSettingAuditLog
         {
-            UserId = changeToken.UserId, Setting = "email", OldValue = oldEmail, NewValue = newEmail,
+            UserId = changeToken.UserId,
+            Setting = "email",
+            OldValue = oldEmail,
+            NewValue = newEmail,
         });
 
         // Ett lyckat e-postbyte loggar ut alla enheter, även den som bekräftade
@@ -541,9 +544,9 @@ public class AuthService : IAuthService
 
         user.DeletionScheduledAt = null;
         user.DeletionCancelToken = null;
-        user.IsActive            = true;
-        user.SuspendedAt         = null;
-        user.SuspendedReason     = null;
+        user.IsActive = true;
+        user.SuspendedAt = null;
+        user.SuspendedReason = null;
 
         await _db.SaveChangesAsync();
         await _aktivitetslogg.LogAsync(
@@ -555,12 +558,12 @@ public class AuthService : IAuthService
 
     private async Task<AuthResult> IssueTokensAsync(User user, bool isNewUser = false)
     {
-        var accessToken         = _tokens.GenerateAccessToken(user);
-        var (rawRefresh, hash)  = _tokens.GenerateRefreshToken();
+        var accessToken = _tokens.GenerateAccessToken(user);
+        var (rawRefresh, hash) = _tokens.GenerateRefreshToken();
 
         _db.RefreshTokens.Add(new RefreshToken
         {
-            UserId    = user.Id,
+            UserId = user.Id,
             TokenHash = hash,
             ExpiresAt = DateTime.UtcNow.Add(RefreshTokenLifetime),
         });

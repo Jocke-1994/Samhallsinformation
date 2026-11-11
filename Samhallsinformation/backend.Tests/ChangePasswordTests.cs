@@ -181,8 +181,14 @@ public class ChangePasswordTests
         var controller = new AuthController(auth, Substitute.For<ITokenService>(), db,
             Substitute.For<IPasswordHasher<User>>(), Substitute.For<IEmailService>(), Substitute.For<IConfiguration>())
         {
-            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(
-                new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }, "TestAuth")) } },
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(
+                new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }, "TestAuth"))
+                }
+            },
         };
 
         var result = Assert.IsType<ObjectResult>(await controller.ChangePassword(new ChangePasswordRequest("gammalt", "nytt", "min-refresh")));

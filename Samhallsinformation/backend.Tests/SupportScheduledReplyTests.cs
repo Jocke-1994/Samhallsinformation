@@ -59,9 +59,14 @@ public class SupportScheduledReplyTests
     {
         var ticket = new SupportTicket
         {
-            Subject = "Testärende", Category = "Tekniskt fel", Channel = "arendehantering",
-            ContactEmail = contactEmail, Status = status, InboundAddress = "info@samhallsinformation.se",
-            CreatedByUserId = createdBy?.Id, TicketNumber = ++_nextTicketNumber,
+            Subject = "Testärende",
+            Category = "Tekniskt fel",
+            Channel = "arendehantering",
+            ContactEmail = contactEmail,
+            Status = status,
+            InboundAddress = "info@samhallsinformation.se",
+            CreatedByUserId = createdBy?.Id,
+            TicketNumber = ++_nextTicketNumber,
         };
         rig.Db.SupportTickets.Add(ticket);
         rig.Db.SaveChanges();
@@ -72,8 +77,11 @@ public class SupportScheduledReplyTests
     {
         var action = new SupportTicketScheduledAction
         {
-            TicketId = ticket.Id, Type = type, ScheduledAt = DateTime.UtcNow.AddMinutes(-1),
-            CreatedByUserId = rig.Agent.Id, Text = text,
+            TicketId = ticket.Id,
+            Type = type,
+            ScheduledAt = DateTime.UtcNow.AddMinutes(-1),
+            CreatedByUserId = rig.Agent.Id,
+            Text = text,
         };
         rig.Db.SupportTicketScheduledActions.Add(action);
         rig.Db.SaveChanges();

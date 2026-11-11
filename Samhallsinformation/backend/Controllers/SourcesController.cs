@@ -79,13 +79,13 @@ public class SourcesController : ControllerBase
     {
         var source = new Source
         {
-            Name      = req.Name,
+            Name = req.Name,
             ShortName = req.ShortName,
-            BaseUrl   = req.BaseUrl,
-            Url       = req.Url,
-            Category  = req.Category,
-            Type        = req.Type,
-            IsActive    = false,
+            BaseUrl = req.BaseUrl,
+            Url = req.Url,
+            Category = req.Category,
+            Type = req.Type,
+            IsActive = false,
             IsPublished = false,
         };
 
@@ -105,11 +105,11 @@ public class SourcesController : ControllerBase
         if (source == null) return NotFound();
 
         var ändringar = new List<string>();
-        if (req.Name      != null && req.Name      != source.Name)      { ändringar.Add($"Namn: {source.Name} → {req.Name}"); source.Name = req.Name; }
+        if (req.Name != null && req.Name != source.Name) { ändringar.Add($"Namn: {source.Name} → {req.Name}"); source.Name = req.Name; }
         if (req.ShortName != null && req.ShortName != source.ShortName) { ändringar.Add($"Kortnamn: {source.ShortName} → {req.ShortName}"); source.ShortName = req.ShortName; }
-        if (req.Url       != null && req.Url       != source.Url)       { ändringar.Add($"URL: {source.Url} → {req.Url}"); source.Url = req.Url; }
-        if (req.Category  != null && req.Category  != source.Category) { ändringar.Add($"Kategori: {source.Category} → {req.Category}"); source.Category = req.Category; }
-        if (req.IsActive.HasValue    && req.IsActive.Value    != source.IsActive)    { ändringar.Add($"Aktiv: {source.IsActive} → {req.IsActive.Value}"); source.IsActive = req.IsActive.Value; }
+        if (req.Url != null && req.Url != source.Url) { ändringar.Add($"URL: {source.Url} → {req.Url}"); source.Url = req.Url; }
+        if (req.Category != null && req.Category != source.Category) { ändringar.Add($"Kategori: {source.Category} → {req.Category}"); source.Category = req.Category; }
+        if (req.IsActive.HasValue && req.IsActive.Value != source.IsActive) { ändringar.Add($"Aktiv: {source.IsActive} → {req.IsActive.Value}"); source.IsActive = req.IsActive.Value; }
         if (req.IsPublished.HasValue && req.IsPublished.Value != source.IsPublished) { ändringar.Add($"Publicerad: {source.IsPublished} → {req.IsPublished.Value}"); source.IsPublished = req.IsPublished.Value; }
 
         await _db.SaveChangesAsync();
@@ -148,7 +148,7 @@ public class SourcesController : ControllerBase
         try
         {
             var (inserted, updated, _) = await EventSync.SyncAsync(_db, ingestor, overwriteExisting: true, logger: _logger);
-            source.LastFetchedAt  = DateTime.UtcNow;
+            source.LastFetchedAt = DateTime.UtcNow;
             source.LastFetchError = null;
             await _db.SaveChangesAsync();
             await _aktivitetslogg.LogAsync(

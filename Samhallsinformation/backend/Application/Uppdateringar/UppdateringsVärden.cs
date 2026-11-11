@@ -12,9 +12,9 @@ namespace Samhallsinformation.Application.Uppdateringar;
 /// </summary>
 public static class UppdateringsVärden
 {
-    public const string SynlighetAlla      = "alla";
+    public const string SynlighetAlla = "alla";
     public const string SynlighetInloggade = "inloggade";
-    public const string TypKommerSnart     = "kommer-snart";
+    public const string TypKommerSnart = "kommer-snart";
 
     public static readonly IReadOnlySet<string> Typer = new HashSet<string>(StringComparer.Ordinal)
     {

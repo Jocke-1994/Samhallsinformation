@@ -7,7 +7,7 @@ using Samhallsinformation.Models;
 
 public class AktivitetsloggService : IAktivitetsloggService
 {
-    private readonly AppDbContext        _db;
+    private readonly AppDbContext _db;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public AktivitetsloggService(AppDbContext db, IHttpContextAccessor httpContextAccessor)
@@ -37,17 +37,17 @@ public class AktivitetsloggService : IAktivitetsloggService
 
         _db.AdminActivityLogs.Add(new AdminActivityLog
         {
-            AktörTyp     = aktörTyp,
-            Vem          = vem,
-            Typ          = typ,
-            Rubrik       = rubrik,
-            Detalj       = detalj,
+            AktörTyp = aktörTyp,
+            Vem = vem,
+            Typ = typ,
+            Rubrik = rubrik,
+            Detalj = detalj,
             GammaltVärde = gammaltVärde,
-            NyttVärde    = nyttVärde,
-            Test         = test,
+            NyttVärde = nyttVärde,
+            Test = test,
             RelateratÄrendeId = relateratÄrendeId,
-            Ip           = http?.Connection.RemoteIpAddress?.ToString(),
-            Enhet        = http?.Request.Headers["User-Agent"].ToString(),
+            Ip = http?.Connection.RemoteIpAddress?.ToString(),
+            Enhet = http?.Request.Headers["User-Agent"].ToString(),
         });
 
         await _db.SaveChangesAsync();

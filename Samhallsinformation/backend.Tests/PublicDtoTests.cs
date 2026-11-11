@@ -64,10 +64,17 @@ public class PublicDtoTests
         using var db = NewDb();
         db.Sources.Add(new Source
         {
-            Id = 1, Name = "Polisen", ShortName = "Polisen", BaseUrl = "https://polisen.se",
-            Url = "https://polisen.se/rss", Category = "Blåljus", Type = SourceType.RSS,
-            IsActive = true, IsPublished = true,
-            LastFetchedAt = DateTime.UtcNow, LastFetchError = "HTTP 500 mot https://intern/detalj",
+            Id = 1,
+            Name = "Polisen",
+            ShortName = "Polisen",
+            BaseUrl = "https://polisen.se",
+            Url = "https://polisen.se/rss",
+            Category = "Blåljus",
+            Type = SourceType.RSS,
+            IsActive = true,
+            IsPublished = true,
+            LastFetchedAt = DateTime.UtcNow,
+            LastFetchError = "HTTP 500 mot https://intern/detalj",
         });
         db.Sources.Add(new Source { Id = 2, Name = "Dold", ShortName = "Dold", BaseUrl = "x", IsPublished = false });
         await db.SaveChangesAsync();

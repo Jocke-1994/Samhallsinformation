@@ -69,7 +69,7 @@ public static class EventSync
                 ingestor.Source.Name, ingestor.Source.Id, duplicateRows);
 
         var inserted = 0;
-        var updated  = 0;
+        var updated = 0;
         var insertedEvents = new List<CanonicalEvent>();
 
         foreach (var incoming in events)
@@ -81,16 +81,16 @@ public static class EventSync
                     // Admin-triggad resync: full omskrivning, inklusive PublishedAt —
                     // används för att se ingestor-ändringar slå igenom på redan sparad
                     // data utan att vänta på en ny händelse.
-                    current.Title       = incoming.Title;
-                    current.Content     = incoming.Content;
-                    current.Url         = incoming.Url;
-                    current.RawData     = incoming.RawData;
-                    current.Geography   = incoming.Geography;
-                    current.EventType   = incoming.EventType;
-                    current.Severity    = incoming.Severity;
-                    current.IsNational  = incoming.IsNational;
+                    current.Title = incoming.Title;
+                    current.Content = incoming.Content;
+                    current.Url = incoming.Url;
+                    current.RawData = incoming.RawData;
+                    current.Geography = incoming.Geography;
+                    current.EventType = incoming.EventType;
+                    current.Severity = incoming.Severity;
+                    current.IsNational = incoming.IsNational;
                     current.PublishedAt = incoming.PublishedAt;
-                    current.UpdatedAt   = DateTime.UtcNow;
+                    current.UpdatedAt = DateTime.UtcNow;
                     updated++;
                 }
                 else if (HasRelevantContentChanged(current, incoming))
@@ -101,15 +101,15 @@ public static class EventSync
                     // hoppades den bara över för alltid. PublishedAt är den ursprungliga
                     // publiceringstiden och rörs INTE här, bara UpdatedAt sätts så en
                     // uppdatering syns.
-                    current.Title      = incoming.Title;
-                    current.Content    = incoming.Content;
-                    current.Url        = incoming.Url;
-                    current.RawData    = incoming.RawData;
-                    current.Geography  = incoming.Geography;
-                    current.EventType  = incoming.EventType;
-                    current.Severity   = incoming.Severity;
+                    current.Title = incoming.Title;
+                    current.Content = incoming.Content;
+                    current.Url = incoming.Url;
+                    current.RawData = incoming.RawData;
+                    current.Geography = incoming.Geography;
+                    current.EventType = incoming.EventType;
+                    current.Severity = incoming.Severity;
                     current.IsNational = incoming.IsNational;
-                    current.UpdatedAt  = DateTime.UtcNow;
+                    current.UpdatedAt = DateTime.UtcNow;
                     updated++;
                 }
                 // annars: identiskt innehåll, raden rörs inte alls.

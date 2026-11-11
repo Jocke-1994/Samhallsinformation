@@ -67,7 +67,10 @@ public class EventsUniqueIndexTests
     {
         var e = new CanonicalEvent
         {
-            SourceId = sourceId, ExternalId = externalId, Title = title, PublishedAt = DateTime.UtcNow,
+            SourceId = sourceId,
+            ExternalId = externalId,
+            Title = title,
+            PublishedAt = DateTime.UtcNow,
             IngestedAt = ingestedAt ?? DateTime.UtcNow,
         };
         if (id != null) e.Id = id.Value;
@@ -107,7 +110,7 @@ public class EventsUniqueIndexTests
     public async Task Deduplicate_SameIngestedAt_KeepsSmallestId()
     {
         using var db = LegacyDb();
-        var low  = Ev(1, "dup", T0, Guid.Parse("00000000-0000-0000-0000-000000000001"));
+        var low = Ev(1, "dup", T0, Guid.Parse("00000000-0000-0000-0000-000000000001"));
         var high = Ev(1, "dup", T0, Guid.Parse("ffffffff-0000-0000-0000-000000000001"));
         db.Events.AddRange(high, low);
         await db.SaveChangesAsync();

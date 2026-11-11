@@ -57,9 +57,9 @@ public sealed class JwtSettings
     public TokenValidationParameters CreateValidationParameters() => new()
     {
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey         = CreateSigningKey(),
-        ValidateIssuer           = false,
-        ValidateAudience         = false,
-        RoleClaimType            = "role",
+        IssuerSigningKey = CreateSigningKey(),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        RoleClaimType = "role",
     };
 }
