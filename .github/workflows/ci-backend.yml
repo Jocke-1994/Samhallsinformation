@@ -32,7 +32,7 @@ jobs:
 
       - name: Format
         working-directory: Samhallsinformation
-        run: dotnet format --verify-no-changes
+        run: dotnet format whitespace --verify-no-changes
 
   build:
     name: Build & Test
