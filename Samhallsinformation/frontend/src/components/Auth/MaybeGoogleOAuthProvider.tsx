@@ -6,5 +6,9 @@ import { GOOGLE_CLIENT_ID } from '../../lib/googleAuth'
 // GoogleSignInButton döljer sig själv på samma villkor.
 export default function MaybeGoogleOAuthProvider({ children }: { children: React.ReactNode }) {
   if (!GOOGLE_CLIENT_ID) return children
-  return <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID} locale="sv">{children}</GoogleOAuthProvider>
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID} locale="sv">
+      {children}
+    </GoogleOAuthProvider>
+  )
 }

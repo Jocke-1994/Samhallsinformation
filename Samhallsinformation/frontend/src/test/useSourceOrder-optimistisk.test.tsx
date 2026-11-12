@@ -15,21 +15,32 @@ vi.mock('../api/userSources')
 vi.mock('../components/NewsFeed/bevakningsToastStore', () => ({
   visaBevakningsToast: vi.fn(),
 }))
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }) }))
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }),
+}))
 
 const api = vi.mocked(userSourcesApi)
 const toast = vi.mocked(toastStore.visaBevakningsToast)
 
 const KALLOR: Source[] = ['A', 'B', 'C'].map((namn, i) => ({
-  id: i + 1, name: namn, shortName: namn, baseUrl: '', isActive: true, scope: 'nationell',
+  id: i + 1,
+  name: namn,
+  shortName: namn,
+  baseUrl: '',
+  isActive: true,
+  scope: 'nationell',
 }))
-const GRUPPER = new Map(KALLOR.map(s => [s.shortName, [s]]))
+const GRUPPER = new Map(KALLOR.map((s) => [s.shortName, [s]]))
 const NAMN = ['A', 'B', 'C']
 
 // Låtsasserver: fetchUserSources speglar `server`, saveUserSources gör
 // ändringen först när testet släpper anropet (eller kastar när det avvisas).
 let server: UserSourcePref[]
-let anrop: { uppdateringar: SourcePrefUpdate[]; lyckas: () => void; misslyckas: (fel: Error) => void }[]
+let anrop: {
+  uppdateringar: SourcePrefUpdate[]
+  lyckas: () => void
+  misslyckas: (fel: Error) => void
+}[]
 
 function Harness() {
   const grupper = useMemo(() => GRUPPER, [])
@@ -47,32 +58,56 @@ function Harness() {
 }
 
 function renderaHook() {
-  const klient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 60_000 }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={klient}><Harness /></QueryClientProvider>)
+  const klient = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: 60_000 }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={klient}>
+      <Harness />
+    </QueryClientProvider>,
+  )
 }
 
 const ordning = () => screen.getByTestId('ordning').textContent
-const klicka = (text: string) => act(() => { screen.getByText(text).click() })
-const serverOrdning = () => [...server].sort((a, b) => a.sortOrder - b.sortOrder).map(p => p.shortName).join(',')
+const klicka = (text: string) =>
+  act(() => {
+    screen.getByText(text).click()
+  })
+const serverOrdning = () =>
+  [...server]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((p) => p.shortName)
+    .join(',')
 
 beforeEach(() => {
-  server = KALLOR.map((s, i) => ({ sourceId: s.id, shortName: s.shortName, isActive: true, sortOrder: i }))
+  server = KALLOR.map((s, i) => ({
+    sourceId: s.id,
+    shortName: s.shortName,
+    isActive: true,
+    sortOrder: i,
+  }))
   anrop = []
   toast.mockReset()
-  api.fetchUserSources.mockReset().mockImplementation(async () => server.map(p => ({ ...p })))
-  api.saveUserSources.mockReset().mockImplementation(uppdateringar => new Promise<void>((klar, fel) => {
-    anrop.push({
-      uppdateringar,
-      lyckas: () => {
-        for (const u of uppdateringar) {
-          const rad = server.find(p => p.sourceId === u.sourceId)
-          if (rad) { rad.sortOrder = u.sortOrder; rad.isActive = u.isActive }
-        }
-        klar()
-      },
-      misslyckas: fel,
-    })
-  }))
+  api.fetchUserSources.mockReset().mockImplementation(async () => server.map((p) => ({ ...p })))
+  api.saveUserSources.mockReset().mockImplementation(
+    (uppdateringar) =>
+      new Promise<void>((klar, fel) => {
+        anrop.push({
+          uppdateringar,
+          lyckas: () => {
+            for (const u of uppdateringar) {
+              const rad = server.find((p) => p.sourceId === u.sourceId)
+              if (rad) {
+                rad.sortOrder = u.sortOrder
+                rad.isActive = u.isActive
+              }
+            }
+            klar()
+          },
+          misslyckas: fel,
+        })
+      }),
+  )
 })
 
 async function vantaPaAnrop(antal: number) {
@@ -98,7 +133,9 @@ describe('useSourceOrder — optimistisk sparning (E5#13)', () => {
     klicka('cab')
     await vantaPaAnrop(1)
 
-    await act(async () => { anrop[0].lyckas() })
+    await act(async () => {
+      anrop[0].lyckas()
+    })
 
     await waitFor(() => expect(serverOrdning()).toBe('C,A,B'))
     expect(ordning()).toBe('C,A,B')
@@ -111,10 +148,15 @@ describe('useSourceOrder — optimistisk sparning (E5#13)', () => {
     klicka('cab')
     await vantaPaAnrop(1)
 
-    await act(async () => { anrop[0].misslyckas(new Error('Du har gjort för många ändringar. Vänta en stund.')) })
+    await act(async () => {
+      anrop[0].misslyckas(new Error('Du har gjort för många ändringar. Vänta en stund.'))
+    })
 
     await waitFor(() => expect(ordning()).toBe('A,B,C'))
-    expect(toast).toHaveBeenCalledWith({ typ: 'fel', text: 'Du har gjort för många ändringar. Vänta en stund.' })
+    expect(toast).toHaveBeenCalledWith({
+      typ: 'fel',
+      text: 'Du har gjort för många ändringar. Vänta en stund.',
+    })
   })
 
   it('tekniskt statusfel ger den reservtext som visaFel väljer', async () => {
@@ -123,10 +165,15 @@ describe('useSourceOrder — optimistisk sparning (E5#13)', () => {
     klicka('cab')
     await vantaPaAnrop(1)
 
-    await act(async () => { anrop[0].misslyckas(new Error('saveUserSources: 500')) })
+    await act(async () => {
+      anrop[0].misslyckas(new Error('saveUserSources: 500'))
+    })
 
     await waitFor(() => expect(ordning()).toBe('A,B,C'))
-    expect(toast).toHaveBeenCalledWith({ typ: 'fel', text: 'Kunde inte spara källordningen. Försök igen.' })
+    expect(toast).toHaveBeenCalledWith({
+      typ: 'fel',
+      text: 'Kunde inte spara källordningen. Försök igen.',
+    })
   })
 
   it('snabb dubbel-omsortering: bara det senaste önskemålet skickas efter det pågående, slutordningen blir rätt', async () => {
@@ -139,7 +186,9 @@ describe('useSourceOrder — optimistisk sparning (E5#13)', () => {
     await waitFor(() => expect(ordning()).toBe('C,B,A'))
     expect(anrop.length).toBe(1) // serialiserat: inget parallellt anrop
 
-    await act(async () => { anrop[0].lyckas() })
+    await act(async () => {
+      anrop[0].lyckas()
+    })
     await vantaPaAnrop(2)
     // Diffat mot serverns bekräftade läge (B,A,C efter första anropet), inte mot startläget.
     expect(anrop[1].uppdateringar).toEqual([
@@ -147,7 +196,9 @@ describe('useSourceOrder — optimistisk sparning (E5#13)', () => {
       { sourceId: 2, isActive: true, sortOrder: 1 },
       { sourceId: 1, isActive: true, sortOrder: 2 },
     ])
-    await act(async () => { anrop[1].lyckas() })
+    await act(async () => {
+      anrop[1].lyckas()
+    })
 
     await waitFor(() => expect(serverOrdning()).toBe('C,B,A'))
     await waitFor(() => expect(ordning()).toBe('C,B,A'))
@@ -162,10 +213,14 @@ describe('useSourceOrder — optimistisk sparning (E5#13)', () => {
     klicka('bac')
     await vantaPaAnrop(1)
     klicka('abc') // tillbaka till start medan B,A,C är på väg
-    await act(async () => { anrop[0].lyckas() })
+    await act(async () => {
+      anrop[0].lyckas()
+    })
 
     await vantaPaAnrop(2)
-    await act(async () => { anrop[1].lyckas() })
+    await act(async () => {
+      anrop[1].lyckas()
+    })
 
     await waitFor(() => expect(serverOrdning()).toBe('A,B,C'))
     expect(ordning()).toBe('A,B,C')
@@ -178,10 +233,14 @@ describe('useSourceOrder — optimistisk sparning (E5#13)', () => {
     klicka('bac')
     await vantaPaAnrop(1)
     klicka('cba')
-    await act(async () => { anrop[0].misslyckas(new Error('nät')) })
+    await act(async () => {
+      anrop[0].misslyckas(new Error('nät'))
+    })
 
     await vantaPaAnrop(2)
-    await act(async () => { anrop[1].lyckas() })
+    await act(async () => {
+      anrop[1].lyckas()
+    })
 
     await waitFor(() => expect(serverOrdning()).toBe('C,B,A'))
     expect(ordning()).toBe('C,B,A')

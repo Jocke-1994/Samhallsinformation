@@ -46,7 +46,9 @@ export async function fetchAdminMaintenanceBanners(): Promise<MaintenanceBanner[
   return res.json()
 }
 
-export async function createMaintenanceBanner(req: MaintenanceBannerRequest): Promise<MaintenanceBanner> {
+export async function createMaintenanceBanner(
+  req: MaintenanceBannerRequest,
+): Promise<MaintenanceBanner> {
   const res = await adminFetch('/api/admin/maintenance-banners', {
     method: 'POST',
     body: JSON.stringify(req),
@@ -55,7 +57,10 @@ export async function createMaintenanceBanner(req: MaintenanceBannerRequest): Pr
   return res.json()
 }
 
-export async function updateMaintenanceBanner(id: string, req: MaintenanceBannerRequest): Promise<MaintenanceBanner> {
+export async function updateMaintenanceBanner(
+  id: string,
+  req: MaintenanceBannerRequest,
+): Promise<MaintenanceBanner> {
   const res = await adminFetch(`/api/admin/maintenance-banners/${id}`, {
     method: 'PUT',
     body: JSON.stringify(req),

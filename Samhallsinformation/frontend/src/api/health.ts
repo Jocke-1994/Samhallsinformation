@@ -5,16 +5,16 @@ export type HälsaStatus = 'OK' | 'Varning' | 'Nere'
 
 export interface AdminHealthDto {
   api: { status: HälsaStatus; latencyMs: number }
-  db:  { status: HälsaStatus; latencyMs: number }
+  db: { status: HälsaStatus; latencyMs: number }
   ingestor: {
-    status:        HälsaStatus
+    status: HälsaStatus
     lastFetchedAt: string | null
-    aktivaKällor:  number
-    källorMedFel:  number
+    aktivaKällor: number
+    källorMedFel: number
   }
   notifieringar: {
-    status:           HälsaStatus
-    felSenaste24h:    number
+    status: HälsaStatus
+    felSenaste24h: number
     totaltSenaste24h: number
   }
 }

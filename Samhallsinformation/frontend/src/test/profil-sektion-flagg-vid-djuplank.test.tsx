@@ -21,20 +21,49 @@ vi.mock('../components/Sidebar/Sidebar', () => ({ default: () => <nav>Sidomeny</
 vi.mock('../components/common/MobilTopBar', () => ({ default: () => null }))
 vi.mock('../components/Profile/MinaKallor', () => ({ default: () => <p>Mina källor-innehåll</p> }))
 vi.mock('../components/Profile/Konto', () => ({ default: () => <p>Konto-innehåll</p> }))
-vi.mock('../components/Profile/Notifieringar', () => ({ default: () => <p>Notifieringar-innehåll</p> }))
-vi.mock('../components/Profile/Uppdateringar', () => ({ default: () => <p>Uppdateringar-innehåll</p> }))
+vi.mock('../components/Profile/Notifieringar', () => ({
+  default: () => <p>Notifieringar-innehåll</p>,
+}))
+vi.mock('../components/Profile/Uppdateringar', () => ({
+  default: () => <p>Uppdateringar-innehåll</p>,
+}))
 vi.mock('../components/Profile/Support', () => ({ default: () => <p>Support-innehåll</p> }))
 
 // Alla FLAG_GRUPPER-flaggor av som standard (via jest.fn-liknande objekt)
 const ALLA_AV = Object.fromEntries(
-  ['flode_olasta_badge', 'flode_sparat', 'flode_dela', 'kallor_lagg_till', 'kallor_aktiva',
-    'kallor_rekommenderade', 'kallor_alla', 'kallor_polisen_filter', 'notif_obligatoriska',
-    'notif_mottagare', 'notif_stor_ej', 'notif_leveranslage', 'notif_historik', 'notif_push',
-    'konto_info', 'konto_losenord', 'konto_visningsnamn', 'konto_tvafaktor', 'konto_sessioner',
-    'konto_aktivitetslogg', 'konto_samtycke', 'konto_datahantering', 'konto_tema',
-    'uppdateringar_senaste', 'uppdateringar_pagang', 'uppdateringar_kanda_problem',
-    'uppdateringar_historik', 'support_arenden', 'support_systemstatus', 'support_faq',
-    'konto_epost_paminnelse'].map(k => [k, false]),
+  [
+    'flode_olasta_badge',
+    'flode_sparat',
+    'flode_dela',
+    'kallor_lagg_till',
+    'kallor_aktiva',
+    'kallor_rekommenderade',
+    'kallor_alla',
+    'kallor_polisen_filter',
+    'notif_obligatoriska',
+    'notif_mottagare',
+    'notif_stor_ej',
+    'notif_leveranslage',
+    'notif_historik',
+    'notif_push',
+    'konto_info',
+    'konto_losenord',
+    'konto_visningsnamn',
+    'konto_tvafaktor',
+    'konto_sessioner',
+    'konto_aktivitetslogg',
+    'konto_samtycke',
+    'konto_datahantering',
+    'konto_tema',
+    'uppdateringar_senaste',
+    'uppdateringar_pagang',
+    'uppdateringar_kanda_problem',
+    'uppdateringar_historik',
+    'support_arenden',
+    'support_systemstatus',
+    'support_faq',
+    'konto_epost_paminnelse',
+  ].map((k) => [k, false]),
 )
 
 function nyKlient() {

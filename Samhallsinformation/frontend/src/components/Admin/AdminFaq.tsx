@@ -1,7 +1,14 @@
 import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { FaqKategori } from '../../types'
-import { type FaqItem, fetchAdminFaq, createFaqItem, updateFaqItem, deleteFaqItem, type FaqRequest } from '../../api/faq'
+import {
+  type FaqItem,
+  fetchAdminFaq,
+  createFaqItem,
+  updateFaqItem,
+  deleteFaqItem,
+  type FaqRequest,
+} from '../../api/faq'
 import { FLAG_DEFINITIONER, type FlagKey } from '../../lib/featureFlags'
 import { useFeatureFlagsAdmin } from '../../context/FeatureFlagsContext'
 import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
@@ -9,34 +16,64 @@ import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
 const KATEGORIER: FaqKategori[] = ['Notifieringar', 'Mina källor', 'Konto', 'Uppdateringar']
 
 const KAT_FÄRG: Record<FaqKategori, string> = {
-  'Notifieringar': 'bg-violet-100 text-violet-700 border-violet-200',
-  'Mina källor':   'bg-blue-100 text-blue-700 border-blue-200',
-  'Konto':         'bg-amber-100 text-amber-700 border-amber-200',
-  'Uppdateringar': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  Notifieringar: 'bg-violet-100 text-violet-700 border-violet-200',
+  'Mina källor': 'bg-blue-100 text-blue-700 border-blue-200',
+  Konto: 'bg-amber-100 text-amber-700 border-amber-200',
+  Uppdateringar: 'bg-emerald-100 text-emerald-700 border-emerald-200',
 }
 
 // ---------------------------------------------------------------------------
 // Ta bort-modal
 // ---------------------------------------------------------------------------
 
-function TaBortModal({ fråga, onBekräfta, onStäng, fel, arIgang }: {
-  fråga: string; onBekräfta: () => void; onStäng: () => void; fel?: unknown; arIgang?: boolean
+function TaBortModal({
+  fråga,
+  onBekräfta,
+  onStäng,
+  fel,
+  arIgang,
+}: {
+  fråga: string
+  onBekräfta: () => void
+  onStäng: () => void
+  fel?: unknown
+  arIgang?: boolean
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onStäng}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="bg-gradient-to-br from-red-600 to-red-800 px-6 py-5 flex items-start justify-between">
           <h2 className="text-lg font-bold text-white">Ta bort fråga</h2>
-          <button onClick={onStäng} className="text-red-300 hover:text-white transition-colors">✕</button>
+          <button onClick={onStäng} className="text-red-300 hover:text-white transition-colors">
+            ✕
+          </button>
         </div>
         <div className="px-6 py-5 flex flex-col gap-4">
           <p className="text-sm text-slate-600">
-            <strong className="text-slate-800">"{fråga}"</strong> tas bort permanent. Åtgärden kan inte ångras.
+            <strong className="text-slate-800">"{fråga}"</strong> tas bort permanent. Åtgärden kan
+            inte ångras.
           </p>
           <MutationFel fel={fel} reserv="Frågan kunde inte tas bort. Försök igen." />
           <div className="flex gap-3">
-            <button onClick={onStäng}      className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Avbryt</button>
-            <button onClick={onBekräfta} disabled={arIgang} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors">{arIgang ? 'Tar bort...' : 'Ta bort'}</button>
+            <button
+              onClick={onStäng}
+              className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors"
+            >
+              Avbryt
+            </button>
+            <button
+              onClick={onBekräfta}
+              disabled={arIgang}
+              className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              {arIgang ? 'Tar bort...' : 'Ta bort'}
+            </button>
           </div>
         </div>
       </div>
@@ -48,17 +85,23 @@ function TaBortModal({ fråga, onBekräfta, onStäng, fel, arIgang }: {
 // Formulärpanel
 // ---------------------------------------------------------------------------
 
-function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
+function FormPanel({
+  redigerar,
+  onSpara,
+  onStäng,
+  sparar,
+  fel,
+}: {
   redigerar: FaqItem | null
-  onSpara:   (fråga: string, svar: string, kategori: FaqKategori, flagKey: string | null) => void
-  onStäng:   () => void
-  sparar?:   boolean
-  fel?:      unknown
+  onSpara: (fråga: string, svar: string, kategori: FaqKategori, flagKey: string | null) => void
+  onStäng: () => void
+  sparar?: boolean
+  fel?: unknown
 }) {
-  const [fråga,    setFråga]    = useState(redigerar?.fraga    ?? '')
-  const [svar,     setSvar]     = useState(redigerar?.svar     ?? '')
+  const [fråga, setFråga] = useState(redigerar?.fraga ?? '')
+  const [svar, setSvar] = useState(redigerar?.svar ?? '')
   const [kategori, setKategori] = useState<FaqKategori>(redigerar?.kategori ?? 'Notifieringar')
-  const [flagKey,  setFlagKey]  = useState<string | null>(redigerar?.flagKey ?? null)
+  const [flagKey, setFlagKey] = useState<string | null>(redigerar?.flagKey ?? null)
 
   const kanSpara = fråga.trim() !== '' && svar.trim() !== ''
 
@@ -66,28 +109,35 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
     <>
       <div className="fixed inset-0 z-30 bg-black/20" onClick={onStäng} />
       <div className="fixed top-0 right-0 bottom-0 z-40 w-[520px] bg-white shadow-2xl flex flex-col">
-
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
           <h2 className="text-base font-semibold text-slate-900">
             {redigerar ? 'Redigera fråga' : 'Ny fråga'}
           </h2>
-          <button onClick={onStäng} className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none">✕</button>
+          <button
+            onClick={onStäng}
+            className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none"
+          >
+            ✕
+          </button>
         </div>
 
         {/* Innehåll */}
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
-
           {/* Kategori */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Kategori</label>
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+              Kategori
+            </label>
             <div className="flex gap-2 flex-wrap">
-              {KATEGORIER.map(k => (
+              {KATEGORIER.map((k) => (
                 <button
                   key={k}
                   onClick={() => setKategori(k)}
                   className={`text-xs font-medium px-3 py-1.5 rounded-xl border transition-colors ${
-                    kategori === k ? KAT_FÄRG[k] + ' border' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                    kategori === k
+                      ? KAT_FÄRG[k] + ' border'
+                      : 'border-slate-200 text-slate-500 hover:bg-slate-50'
                   }`}
                 >
                   {k}
@@ -98,11 +148,13 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
 
           {/* Fråga */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Fråga</label>
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+              Fråga
+            </label>
             <input
               type="text"
               value={fråga}
-              onChange={e => setFråga(e.target.value)}
+              onChange={(e) => setFråga(e.target.value)}
               placeholder="T.ex. 'Varför fick jag ingen notis?'"
               className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
@@ -110,10 +162,12 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
 
           {/* Svar */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Svar</label>
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+              Svar
+            </label>
             <textarea
               value={svar}
-              onChange={e => setSvar(e.target.value)}
+              onChange={(e) => setSvar(e.target.value)}
               rows={5}
               placeholder="Beskriv svaret tydligt och kortfattat..."
               className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"
@@ -122,31 +176,44 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
 
           {/* Kopplad funktion */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Kopplad funktion (valfritt)</label>
+            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+              Kopplad funktion (valfritt)
+            </label>
             <select
               value={flagKey ?? ''}
-              onChange={e => setFlagKey(e.target.value || null)}
+              onChange={(e) => setFlagKey(e.target.value || null)}
               className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 bg-white"
             >
               <option value="">Ingen koppling</option>
-              {FLAG_DEFINITIONER.map(f => (
-                <option key={f.key} value={f.key}>{f.label}</option>
+              {FLAG_DEFINITIONER.map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.label}
+                </option>
               ))}
             </select>
-            <p className="text-xs text-slate-400">Om funktionen stängs av döljs frågan automatiskt för besökare, oavsett status nedan.</p>
+            <p className="text-xs text-slate-400">
+              Om funktionen stängs av döljs frågan automatiskt för besökare, oavsett status nedan.
+            </p>
           </div>
-
         </div>
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 shrink-0">
-          <MutationFel fel={fel} reserv="Frågan kunde inte sparas. Din text finns kvar — försök igen." />
+          <MutationFel
+            fel={fel}
+            reserv="Frågan kunde inte sparas. Din text finns kvar — försök igen."
+          />
           <div className="flex gap-3">
-            <button onClick={onStäng} className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
+            <button
+              onClick={onStäng}
+              className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors"
+            >
               Avbryt
             </button>
             <button
-              onClick={() => kanSpara && !sparar && onSpara(fråga.trim(), svar.trim(), kategori, flagKey)}
+              onClick={() =>
+                kanSpara && !sparar && onSpara(fråga.trim(), svar.trim(), kategori, flagKey)
+              }
               disabled={!kanSpara || sparar}
               className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
             >
@@ -154,7 +221,6 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
             </button>
           </div>
         </div>
-
       </div>
     </>
   )
@@ -169,16 +235,16 @@ export default function AdminFaq() {
   const { flaggor } = useFeatureFlagsAdmin()
   const frågeFråga = useQuery({
     queryKey: ['admin-faq'],
-    queryFn:  fetchAdminFaq,
+    queryFn: fetchAdminFaq,
   })
   const frågor = frågeFråga.data ?? []
   const frågorOkända = frågeFråga.data === undefined
 
-  const [katFilter,   setKatFilter]   = useState<FaqKategori | 'alla'>('alla')
-  const [sökning,     setSökning]     = useState('')
-  const [panelÖppen,  setPanelÖppen]  = useState(false)
-  const [redigerar,   setRedigerar]   = useState<FaqItem | null>(null)
-  const [taBort,      setTaBort]      = useState<FaqItem | null>(null)
+  const [katFilter, setKatFilter] = useState<FaqKategori | 'alla'>('alla')
+  const [sökning, setSökning] = useState('')
+  const [panelÖppen, setPanelÖppen] = useState(false)
+  const [redigerar, setRedigerar] = useState<FaqItem | null>(null)
+  const [taBort, setTaBort] = useState<FaqItem | null>(null)
 
   function invalidera() {
     queryClient.invalidateQueries({ queryKey: ['admin-faq'] })
@@ -187,21 +253,35 @@ export default function AdminFaq() {
   const createMutation = useMutation({ mutationFn: createFaqItem, onSuccess: invalidera })
   const updateMutation = useMutation({
     mutationFn: (vars: { id: string; req: FaqRequest }) => updateFaqItem(vars.id, vars.req),
-    onSuccess:  invalidera,
+    onSuccess: invalidera,
   })
   const deleteMutation = useMutation({ mutationFn: deleteFaqItem, onSuccess: invalidera })
 
   const söktrim = sökning.trim().toLowerCase()
 
-  const filtrerade = frågor.filter(f => {
+  const filtrerade = frågor.filter((f) => {
     const katMatch = katFilter === 'alla' || f.kategori === katFilter
-    const sökMatch = !söktrim || f.fraga.toLowerCase().includes(söktrim) || f.svar.toLowerCase().includes(söktrim)
+    const sökMatch =
+      !söktrim || f.fraga.toLowerCase().includes(söktrim) || f.svar.toLowerCase().includes(söktrim)
     return katMatch && sökMatch
   })
 
-  function öppnaSkapa()              { createMutation.reset(); updateMutation.reset(); setRedigerar(null); setPanelÖppen(true) }
-  function öppnaRedigera(f: FaqItem) { createMutation.reset(); updateMutation.reset(); setRedigerar(f);     setPanelÖppen(true) }
-  function stängPanel()              { setPanelÖppen(false); setRedigerar(null) }
+  function öppnaSkapa() {
+    createMutation.reset()
+    updateMutation.reset()
+    setRedigerar(null)
+    setPanelÖppen(true)
+  }
+  function öppnaRedigera(f: FaqItem) {
+    createMutation.reset()
+    updateMutation.reset()
+    setRedigerar(f)
+    setPanelÖppen(true)
+  }
+  function stängPanel() {
+    setPanelÖppen(false)
+    setRedigerar(null)
+  }
 
   // Panelen stängs först när servern bekräftat (V3-8) — vid fel finns texten kvar och felet visas.
   // Lås i en ref: react-query meddelar komponenten asynkront, så isPending hinner inte
@@ -210,10 +290,18 @@ export default function AdminFaq() {
   function spara(fråga: string, svar: string, kategori: FaqKategori, flagKey: string | null) {
     if (sparaLås.current) return
     sparaLås.current = true
-    const villkor = { onSuccess: stängPanel, onSettled: () => { sparaLås.current = false } }
+    const villkor = {
+      onSuccess: stängPanel,
+      onSettled: () => {
+        sparaLås.current = false
+      },
+    }
     if (redigerar) {
       updateMutation.mutate(
-        { id: redigerar.id, req: { kategori, fraga: fråga, svar, publicerad: redigerar.publicerad, flagKey } },
+        {
+          id: redigerar.id,
+          req: { kategori, fraga: fråga, svar, publicerad: redigerar.publicerad, flagKey },
+        },
         villkor,
       )
     } else {
@@ -223,7 +311,16 @@ export default function AdminFaq() {
 
   function togglePublicerad(f: FaqItem) {
     if (updateMutation.isPending) return
-    updateMutation.mutate({ id: f.id, req: { kategori: f.kategori, fraga: f.fraga, svar: f.svar, publicerad: !f.publicerad, flagKey: f.flagKey } })
+    updateMutation.mutate({
+      id: f.id,
+      req: {
+        kategori: f.kategori,
+        fraga: f.fraga,
+        svar: f.svar,
+        publicerad: !f.publicerad,
+        flagKey: f.flagKey,
+      },
+    })
   }
 
   function flaggaÄrAv(f: FaqItem): boolean {
@@ -231,22 +328,27 @@ export default function AdminFaq() {
   }
 
   const antal = {
-    totalt:        frågor.length,
-    publicerade:   frågor.filter(f => f.publicerad).length,
-    notifieringar: frågor.filter(f => f.kategori === 'Notifieringar').length,
-    kallor:        frågor.filter(f => f.kategori === 'Mina källor').length,
-    konto:         frågor.filter(f => f.kategori === 'Konto').length,
-    uppdateringar: frågor.filter(f => f.kategori === 'Uppdateringar').length,
+    totalt: frågor.length,
+    publicerade: frågor.filter((f) => f.publicerad).length,
+    notifieringar: frågor.filter((f) => f.kategori === 'Notifieringar').length,
+    kallor: frågor.filter((f) => f.kategori === 'Mina källor').length,
+    konto: frågor.filter((f) => f.kategori === 'Konto').length,
+    uppdateringar: frågor.filter((f) => f.kategori === 'Uppdateringar').length,
   }
 
   return (
     <div className="flex flex-col gap-6">
-
       {taBort && (
         <TaBortModal
           fråga={taBort.fraga}
-          onBekräfta={() => { if (!deleteMutation.isPending) deleteMutation.mutate(taBort.id, { onSuccess: () => setTaBort(null) }) }}
-          onStäng={() => { deleteMutation.reset(); setTaBort(null) }}
+          onBekräfta={() => {
+            if (!deleteMutation.isPending)
+              deleteMutation.mutate(taBort.id, { onSuccess: () => setTaBort(null) })
+          }}
+          onStäng={() => {
+            deleteMutation.reset()
+            setTaBort(null)
+          }}
           fel={deleteMutation.error}
           arIgang={deleteMutation.isPending}
         />
@@ -264,41 +366,52 @@ export default function AdminFaq() {
 
       {/* Misslyckad publicera/dölj-växling (panelen visar sitt eget fel) */}
       {!panelÖppen && !taBort && (
-        <MutationFel fel={updateMutation.error} reserv="Ändringen kunde inte sparas. Försök igen." className="bg-red-50 border border-red-200 rounded-2xl px-5 py-3" />
+        <MutationFel
+          fel={updateMutation.error}
+          reserv="Ändringen kunde inte sparas. Försök igen."
+          className="bg-red-50 border border-red-200 rounded-2xl px-5 py-3"
+        />
       )}
 
       {/* Stat-kort */}
       <div className="grid grid-cols-6 gap-4">
         {[
-          { label: 'Totalt',        värde: antal.totalt,        färg: 'text-slate-800' },
-          { label: 'Publicerade',   värde: antal.publicerade,   färg: 'text-green-600' },
+          { label: 'Totalt', värde: antal.totalt, färg: 'text-slate-800' },
+          { label: 'Publicerade', värde: antal.publicerade, färg: 'text-green-600' },
           { label: 'Notifieringar', värde: antal.notifieringar, färg: 'text-violet-600' },
-          { label: 'Mina källor',   värde: antal.kallor,        färg: 'text-blue-600'   },
-          { label: 'Konto',         värde: antal.konto,         färg: 'text-amber-600'  },
+          { label: 'Mina källor', värde: antal.kallor, färg: 'text-blue-600' },
+          { label: 'Konto', värde: antal.konto, färg: 'text-amber-600' },
           { label: 'Uppdateringar', värde: antal.uppdateringar, färg: 'text-emerald-600' },
-        ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-5 text-center">
-            <p className={`text-3xl font-bold ${frågorOkända ? 'text-slate-300' : s.färg}`}>{frågorOkända ? '—' : s.värde}</p>
-            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-medium">{s.label}</p>
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-5 text-center"
+          >
+            <p className={`text-3xl font-bold ${frågorOkända ? 'text-slate-300' : s.färg}`}>
+              {frågorOkända ? '—' : s.värde}
+            </p>
+            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-medium">
+              {s.label}
+            </p>
           </div>
         ))}
       </div>
 
       {/* Lista */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-
         {/* Verktygsfält */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 flex-wrap">
-
           {/* Kategorifiltrar */}
           <div className="flex gap-1 flex-wrap">
-            {(['alla', ...KATEGORIER] as (FaqKategori | 'alla')[]).map(k => (
+            {(['alla', ...KATEGORIER] as (FaqKategori | 'alla')[]).map((k) => (
               <button
                 key={k}
                 onClick={() => setKatFilter(k)}
                 className={`text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
                   katFilter === k
-                    ? k === 'alla' ? 'bg-violet-100 text-violet-700' : KAT_FÄRG[k as FaqKategori] + ' border'
+                    ? k === 'alla'
+                      ? 'bg-violet-100 text-violet-700'
+                      : KAT_FÄRG[k as FaqKategori] + ' border'
                     : 'text-slate-500 hover:bg-slate-100'
                 }`}
               >
@@ -312,13 +425,20 @@ export default function AdminFaq() {
             <input
               type="text"
               value={sökning}
-              onChange={e => setSökning(e.target.value)}
+              onChange={(e) => setSökning(e.target.value)}
               placeholder="Sök fråga eller svar…"
               className="pl-8 pr-7 py-1.5 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent w-56"
             />
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">🔍</span>
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">
+              🔍
+            </span>
             {sökning && (
-              <button onClick={() => setSökning('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">✕</button>
+              <button
+                onClick={() => setSökning('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+              >
+                ✕
+              </button>
             )}
           </div>
 
@@ -342,8 +462,11 @@ export default function AdminFaq() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {filtrerade.map(f => (
-              <tr key={f.id} className={`transition-colors ${f.publicerad ? 'hover:bg-slate-50' : 'bg-slate-50/60 opacity-60 hover:opacity-80'}`}>
+            {filtrerade.map((f) => (
+              <tr
+                key={f.id}
+                className={`transition-colors ${f.publicerad ? 'hover:bg-slate-50' : 'bg-slate-50/60 opacity-60 hover:opacity-80'}`}
+              >
                 <td className="px-6 py-3 w-64">
                   <p className="font-medium text-slate-800 line-clamp-2">{f.fraga}</p>
                 </td>
@@ -351,7 +474,9 @@ export default function AdminFaq() {
                   <p className="text-sm text-slate-500 line-clamp-2">{f.svar}</p>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${KAT_FÄRG[f.kategori]}`}>
+                  <span
+                    className={`text-xs font-medium px-2.5 py-1 rounded-full border ${KAT_FÄRG[f.kategori]}`}
+                  >
                     {f.kategori}
                   </span>
                 </td>
@@ -396,30 +521,47 @@ export default function AdminFaq() {
               </tr>
             ))}
             {frågeFråga.isLoading && (
-              <tr><td colSpan={5} className="px-6 py-10 text-center text-sm text-slate-400">Laddar frågor...</td></tr>
+              <tr>
+                <td colSpan={5} className="px-6 py-10 text-center text-sm text-slate-400">
+                  Laddar frågor...
+                </td>
+              </tr>
             )}
             {frågeFråga.isError && (
-              <tr><td colSpan={5} className="p-0">
-                <HamtningsFel
-                  fel={frågeFråga.error}
-                  reserv={frågorOkända ? 'Kunde inte hämta frågorna. Det här är inte samma sak som att inga frågor finns.' : 'Kunde inte uppdatera listan. Den kan vara inaktuell.'}
-                  onForsokIgen={() => { void frågeFråga.refetch() }}
-                  arIgang={frågeFråga.isFetching}
-                  className="py-10"
-                />
-              </td></tr>
+              <tr>
+                <td colSpan={5} className="p-0">
+                  <HamtningsFel
+                    fel={frågeFråga.error}
+                    reserv={
+                      frågorOkända
+                        ? 'Kunde inte hämta frågorna. Det här är inte samma sak som att inga frågor finns.'
+                        : 'Kunde inte uppdatera listan. Den kan vara inaktuell.'
+                    }
+                    onForsokIgen={() => {
+                      void frågeFråga.refetch()
+                    }}
+                    arIgang={frågeFråga.isFetching}
+                    className="py-10"
+                  />
+                </td>
+              </tr>
             )}
             {!frågeFråga.isLoading && !frågorOkända && filtrerade.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-400">
-                  {sökning ? <>Inga frågor matchade <strong className="text-slate-500">"{sökning}"</strong>.</> : 'Inga frågor i den här kategorin.'}
+                  {sökning ? (
+                    <>
+                      Inga frågor matchade <strong className="text-slate-500">"{sökning}"</strong>.
+                    </>
+                  ) : (
+                    'Inga frågor i den här kategorin.'
+                  )}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-
     </div>
   )
 }

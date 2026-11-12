@@ -11,52 +11,94 @@ import type { AdminUserDto } from '../api/adminUsers'
 // utom "Skapa idé" (Funktionsidéer är Admin-only).
 
 const auth = vi.hoisted(() => ({
-  värde: { roll: 'Admin', aktivVy: 'Admin', email: 'adam@example.com' } as { roll: string; aktivVy: string; email: string },
+  värde: { roll: 'Admin', aktivVy: 'Admin', email: 'adam@example.com' } as {
+    roll: string
+    aktivVy: string
+    email: string
+  },
 }))
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth.värde }))
 
 const DTO = (id: string, name: string, over: Partial<AdminUserDto> = {}): AdminUserDto => ({
-  id, name, email: `${name.toLowerCase()}@example.com`, role: 'Användare', isActive: true,
-  suspendedAt: null, suspendedReason: null, suspensionReminderAt: null, suspensionReminderNote: null,
-  authProvider: 'password', createdAt: '2026-01-01T00:00:00Z', deletedAt: null, deletionScheduledAt: null,
+  id,
+  name,
+  email: `${name.toLowerCase()}@example.com`,
+  role: 'Användare',
+  isActive: true,
+  suspendedAt: null,
+  suspendedReason: null,
+  suspensionReminderAt: null,
+  suspensionReminderNote: null,
+  authProvider: 'password',
+  createdAt: '2026-01-01T00:00:00Z',
+  deletedAt: null,
+  deletionScheduledAt: null,
   ...over,
 })
 
-const ANNA    = DTO('u-anna', 'Anna')
-const BERTIL  = DTO('u-bertil', 'Bertil', { isActive: false, suspendedAt: '2026-09-01T00:00:00Z' })
-const CECILIA = DTO('u-cecilia', 'Cecilia', { isActive: false, deletionScheduledAt: '2099-01-01T00:00:00Z' })
+const ANNA = DTO('u-anna', 'Anna')
+const BERTIL = DTO('u-bertil', 'Bertil', { isActive: false, suspendedAt: '2026-09-01T00:00:00Z' })
+const CECILIA = DTO('u-cecilia', 'Cecilia', {
+  isActive: false,
+  deletionScheduledAt: '2099-01-01T00:00:00Z',
+})
 
 const hämtaNotiser = vi.fn()
 const hämtaAnvändare = vi.fn()
 
-vi.mock('../api/adminUsers', async importOriginal => {
+vi.mock('../api/adminUsers', async (importOriginal) => {
   const orig = await importOriginal<typeof import('../api/adminUsers')>()
   return {
     ...orig,
     fetchAdminUsers: () => hämtaAnvändare(),
     fetchUserNotifications: () => hämtaNotiser(),
     fetchAdminUserSavedEvents: async () => [
-      { eventId: 'e1', title: 'Brand i Kungälv', url: 'https://example.com/e1', sourceName: 'Polisen', publishedAt: '2026-09-01T00:00:00Z', savedAt: '2026-09-02T00:00:00Z' },
+      {
+        eventId: 'e1',
+        title: 'Brand i Kungälv',
+        url: 'https://example.com/e1',
+        sourceName: 'Polisen',
+        publishedAt: '2026-09-01T00:00:00Z',
+        savedAt: '2026-09-02T00:00:00Z',
+      },
     ],
-    fetchAdminUserPolisenBevakningar: async () => [{ id: 'b1', kategorier: ['Brand'], omraden: ['Kungälv'] }],
+    fetchAdminUserPolisenBevakningar: async () => [
+      { id: 'b1', kategorier: ['Brand'], omraden: ['Kungälv'] },
+    ],
     fetchAdminUserNotificationLog: async () => [],
     fetchAdminUserSettingLog: async () => [],
-    fetchAdminUserSources: async () => [{ sourceId: 1, shortName: 'Polisen', name: 'Polisen', isActive: true }],
-    fetchAdminUserPushSettings: async () => ({ pushEnabled: true, pushNyaHandelser: true, pushNyVersion: false, enheter: [] }),
+    fetchAdminUserSources: async () => [
+      { sourceId: 1, shortName: 'Polisen', name: 'Polisen', isActive: true },
+    ],
+    fetchAdminUserPushSettings: async () => ({
+      pushEnabled: true,
+      pushNyaHandelser: true,
+      pushNyVersion: false,
+      enheter: [],
+    }),
     fetchSavedEventsByEvent: async () => ({}),
   }
 })
-vi.mock('../api/support', async importOriginal => {
+vi.mock('../api/support', async (importOriginal) => {
   const orig = await importOriginal<typeof import('../api/support')>()
   return {
     ...orig,
     fetchAdminTickets: async () => [],
     fetchAdminTicket: async (id: string) => ({
       ticket: {
-        id, ticketNumber: 1, subject: 'Frågan', category: 'Fråga', status: 'Öppet', channel: 'arendehantering',
-        isArchived: false, createdAt: '2026-09-01T10:00:00Z', updatedAt: '2026-09-01T10:00:00Z', createdByName: null,
+        id,
+        ticketNumber: 1,
+        subject: 'Frågan',
+        category: 'Fråga',
+        status: 'Öppet',
+        channel: 'arendehantering',
+        isArchived: false,
+        createdAt: '2026-09-01T10:00:00Z',
+        updatedAt: '2026-09-01T10:00:00Z',
+        createdByName: null,
       },
-      messages: [], scheduledActions: [],
+      messages: [],
+      scheduledActions: [],
     }),
     fetchAgents: async () => [],
     fetchSupportNotifications: async () => [],
@@ -67,7 +109,14 @@ vi.mock('../api/events', () => ({ checkEventLinkStatus: vi.fn() }))
 vi.mock('../api/eventSearch', () => ({
   searchEvents: async () => ({
     total: 1,
-    events: [{ id: 'ev1', title: 'Rattfylleri i Göteborg', sourceName: 'Polisen', publishedAt: '2026-09-01T00:00:00Z' }],
+    events: [
+      {
+        id: 'ev1',
+        title: 'Rattfylleri i Göteborg',
+        sourceName: 'Polisen',
+        publishedAt: '2026-09-01T00:00:00Z',
+      },
+    ],
   }),
   fetchSearchableSources: async () => [{ id: 1, name: 'Polisen', shortName: 'Polisen' }],
   fetchEventTypes: async () => [],
@@ -91,8 +140,12 @@ function visa(element: React.ReactElement) {
   return render(<QueryClientProvider client={queryClient}>{element}</QueryClientProvider>)
 }
 
-const somSupport = () => { auth.värde = { roll: 'Support', aktivVy: 'Support', email: 'sanna@example.com' } }
-const somAdmin = () => { auth.värde = { roll: 'Admin', aktivVy: 'Admin', email: 'adam@example.com' } }
+const somSupport = () => {
+  auth.värde = { roll: 'Support', aktivVy: 'Support', email: 'sanna@example.com' }
+}
+const somAdmin = () => {
+  auth.värde = { roll: 'Admin', aktivVy: 'Admin', email: 'adam@example.com' }
+}
 
 // Källsektionen i detaljpanelen (statusfiltret i listan har också en knapp som heter Aktiv).
 const källor = () => screen.getByText('Aktiva källor').parentElement as HTMLElement
@@ -136,8 +189,16 @@ describe('Användare som Support: skrivskyddat', () => {
 
     // Inget som ändrar något
     for (const namn of [
-      'Logga in som', 'Stäng av konto', 'Radera konto (GDPR)', 'Skicka lösenordsåterställning',
-      'Ändra roller', '+ Ny bevakning', 'Ändra', 'Ta bort', 'Aktivera konto', 'Ångra radering',
+      'Logga in som',
+      'Stäng av konto',
+      'Radera konto (GDPR)',
+      'Skicka lösenordsåterställning',
+      'Ändra roller',
+      '+ Ny bevakning',
+      'Ändra',
+      'Ta bort',
+      'Aktivera konto',
+      'Ångra radering',
     ]) {
       expect(knapp(namn), `knappen "${namn}" ska inte finnas`).toBeNull()
     }
@@ -201,8 +262,14 @@ describe('Användare som Admin: oförändrat', () => {
     await öppnaAnna()
 
     for (const namn of [
-      'Stäng av konto', 'Radera konto (GDPR)', 'Skicka lösenordsåterställning',
-      '+ Ny bevakning', 'Ändra', 'Push på', 'Ny händelse på', 'Ny version av',
+      'Stäng av konto',
+      'Radera konto (GDPR)',
+      'Skicka lösenordsåterställning',
+      '+ Ny bevakning',
+      'Ändra',
+      'Push på',
+      'Ny händelse på',
+      'Ny version av',
     ]) {
       expect(knapp(namn), `knappen "${namn}" ska finnas`).not.toBeNull()
     }

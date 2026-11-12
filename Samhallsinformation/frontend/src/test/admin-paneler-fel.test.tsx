@@ -11,14 +11,22 @@ import type { Uppdatering } from '../api/uppdateringar'
 // inmatningen (med serverns/reservtext) vid fel; knappen låses medan anropet pågår.
 
 vi.mock('../api/faq', () => ({
-  fetchAdminFaq: vi.fn(), createFaqItem: vi.fn(), updateFaqItem: vi.fn(), deleteFaqItem: vi.fn(),
+  fetchAdminFaq: vi.fn(),
+  createFaqItem: vi.fn(),
+  updateFaqItem: vi.fn(),
+  deleteFaqItem: vi.fn(),
 }))
 vi.mock('../api/maintenanceBanners', () => ({
-  fetchAdminMaintenanceBanners: vi.fn(), createMaintenanceBanner: vi.fn(),
-  updateMaintenanceBanner: vi.fn(), deleteMaintenanceBanner: vi.fn(),
+  fetchAdminMaintenanceBanners: vi.fn(),
+  createMaintenanceBanner: vi.fn(),
+  updateMaintenanceBanner: vi.fn(),
+  deleteMaintenanceBanner: vi.fn(),
 }))
 vi.mock('../api/uppdateringar', () => ({
-  fetchAdminUppdateringar: vi.fn(), createUppdatering: vi.fn(), updateUppdatering: vi.fn(), deleteUppdatering: vi.fn(),
+  fetchAdminUppdateringar: vi.fn(),
+  createUppdatering: vi.fn(),
+  updateUppdatering: vi.fn(),
+  deleteUppdatering: vi.fn(),
 }))
 vi.mock('../api/featureFlags', () => ({ fetchAdminFeatureFlags: vi.fn() }))
 vi.mock('../api/push', () => ({ sendNewVersionNotice: vi.fn() }))
@@ -29,27 +37,61 @@ const banner = await import('../api/maintenanceBanners')
 const uppd = await import('../api/uppdateringar')
 const { fetchAdminFeatureFlags } = await import('../api/featureFlags')
 const { default: AdminFaq } = await import('../components/Admin/AdminFaq')
-const { default: MaintenanceBannerAdmin } = await import('../components/Admin/MaintenanceBannerAdmin')
+const { default: MaintenanceBannerAdmin } =
+  await import('../components/Admin/MaintenanceBannerAdmin')
 const { default: AdminUppdateringar } = await import('../components/Admin/AdminUppdateringar')
 
 function rendera(ui: React.ReactElement) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
 }
-const väntaLite = () => new Promise(r => setTimeout(r, 50))
+const väntaLite = () => new Promise((r) => setTimeout(r, 50))
 const modalRuta = (rubrik: string) => screen.getByText(rubrik).closest('.fixed') as HTMLElement
 
-const FRÅGA: FaqItem = { id: 'f1', kategori: 'Konto', publicerad: true, fraga: 'Hur byter jag lösenord?', svar: 'Under Konto.', flagKey: null }
-const BANNER: MaintenanceBanner = { id: 'b1', message: 'Underhåll på lördag', startUtc: '2026-10-03T08:00:00Z', endUtc: '2026-10-03T12:00:00Z', audience: 'Alla', stil: 'Drift', rubrik: null, lankUrl: null }
+const FRÅGA: FaqItem = {
+  id: 'f1',
+  kategori: 'Konto',
+  publicerad: true,
+  fraga: 'Hur byter jag lösenord?',
+  svar: 'Under Konto.',
+  flagKey: null,
+}
+const BANNER: MaintenanceBanner = {
+  id: 'b1',
+  message: 'Underhåll på lördag',
+  startUtc: '2026-10-03T08:00:00Z',
+  endUtc: '2026-10-03T12:00:00Z',
+  audience: 'Alla',
+  stil: 'Drift',
+  rubrik: null,
+  lankUrl: null,
+}
 const UPPD: Uppdatering = {
-  id: 'u1', titel: 'Version 0.7', datum: '2026-09-20T00:00:00Z', publicerad: false, schemalagdPubliceringUtc: null,
-  schemalagdaFlaggor: [], punkter: [{ id: 'p1', typ: 'buggfix', plats: 'Allmänt', text: 'Fixade en bugg', synlighet: 'alla' }],
-  skickaPush: false, pushVersion: null, pushMeddelande: null, visaBanderoll: false,
-  annonseringUtc: null, annonseradUtc: null, pushSkickaVid: 'Lansering', createdAt: '2026-09-20T00:00:00Z', visaVadArNytt: false,
+  id: 'u1',
+  titel: 'Version 0.7',
+  datum: '2026-09-20T00:00:00Z',
+  publicerad: false,
+  schemalagdPubliceringUtc: null,
+  schemalagdaFlaggor: [],
+  punkter: [
+    { id: 'p1', typ: 'buggfix', plats: 'Allmänt', text: 'Fixade en bugg', synlighet: 'alla' },
+  ],
+  skickaPush: false,
+  pushVersion: null,
+  pushMeddelande: null,
+  visaBanderoll: false,
+  annonseringUtc: null,
+  annonseradUtc: null,
+  pushSkickaVid: 'Lansering',
+  createdAt: '2026-09-20T00:00:00Z',
+  visaVadArNytt: false,
 }
 
 beforeEach(() => {
-  for (const modul of [faq, banner, uppd]) for (const f of Object.values(modul)) (f as ReturnType<typeof vi.fn>).mockReset()
+  for (const modul of [faq, banner, uppd])
+    for (const f of Object.values(modul)) (f as ReturnType<typeof vi.fn>).mockReset()
   vi.mocked(fetchAdminFeatureFlags).mockReset().mockResolvedValue([])
   vi.mocked(faq.fetchAdminFaq).mockResolvedValue([FRÅGA])
   vi.mocked(banner.fetchAdminMaintenanceBanners).mockResolvedValue([BANNER])
@@ -59,7 +101,9 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 describe('FAQ (admin)', () => {
   it('hämtfel: felmeddelande + Försök igen, "—" i korten, aldrig "Inga frågor i den här kategorin"', async () => {
-    vi.mocked(faq.fetchAdminFaq).mockRejectedValueOnce(new Error('fetchAdminFaq: 500')).mockResolvedValue([FRÅGA])
+    vi.mocked(faq.fetchAdminFaq)
+      .mockRejectedValueOnce(new Error('fetchAdminFaq: 500'))
+      .mockResolvedValue([FRÅGA])
     rendera(<AdminFaq />)
 
     const fel = await screen.findByRole('alert')
@@ -97,7 +141,12 @@ describe('FAQ (admin)', () => {
 
   it('spara lyckas: panelen stänger först när servern svarat', async () => {
     let lös: (f: FaqItem) => void = () => {}
-    vi.mocked(faq.createFaqItem).mockImplementation(() => new Promise<FaqItem>(res => { lös = res }))
+    vi.mocked(faq.createFaqItem).mockImplementation(
+      () =>
+        new Promise<FaqItem>((res) => {
+          lös = res
+        }),
+    )
     rendera(<AdminFaq />)
     await fyllINyFråga()
     await userEvent.click(screen.getByRole('button', { name: 'Skapa fråga' }))
@@ -107,7 +156,9 @@ describe('FAQ (admin)', () => {
     expect(screen.getByRole('button', { name: 'Sparar...' })).toBeDisabled()
 
     lös(FRÅGA)
-    await waitFor(() => expect(screen.queryByPlaceholderText(/Beskriv svaret tydligt/)).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByPlaceholderText(/Beskriv svaret tydligt/)).not.toBeInTheDocument(),
+    )
   })
 
   it('dubbelklick på Skapa fråga ger ETT anrop', async () => {
@@ -134,7 +185,9 @@ describe('FAQ (admin)', () => {
     vi.mocked(faq.deleteFaqItem).mockRejectedValue(new Error('Frågan används av en flagga.'))
     rendera(<AdminFaq />)
     await userEvent.click(await screen.findByRole('button', { name: 'Ta bort' }))
-    await userEvent.click(within(modalRuta('Ta bort fråga')).getByRole('button', { name: 'Ta bort' }))
+    await userEvent.click(
+      within(modalRuta('Ta bort fråga')).getByRole('button', { name: 'Ta bort' }),
+    )
 
     expect(await screen.findByText('Frågan används av en flagga.')).toBeInTheDocument()
     expect(screen.getByText('Ta bort fråga')).toBeInTheDocument()
@@ -144,7 +197,9 @@ describe('FAQ (admin)', () => {
 // ---------------------------------------------------------------------------
 describe('Driftmeddelanden (admin)', () => {
   it('hämtfel: felmeddelande + Försök igen, inte "Inga driftmeddelanden skapade"', async () => {
-    vi.mocked(banner.fetchAdminMaintenanceBanners).mockRejectedValueOnce(new Error('fetchAdminMaintenanceBanners: 500')).mockResolvedValue([BANNER])
+    vi.mocked(banner.fetchAdminMaintenanceBanners)
+      .mockRejectedValueOnce(new Error('fetchAdminMaintenanceBanners: 500'))
+      .mockResolvedValue([BANNER])
     rendera(<MaintenanceBannerAdmin />)
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Kunde inte hämta driftmeddelandena')
@@ -164,26 +219,40 @@ describe('Driftmeddelanden (admin)', () => {
 
   async function fyllINyttMeddelande() {
     await userEvent.click(await screen.findByRole('button', { name: '+ Nytt meddelande' }))
-    await userEvent.type(screen.getByPlaceholderText(/Vi gör en planerad tjänsteuppdatering/), 'Nytt underhåll')
-    const [, , start, slut] = Array.from(document.querySelectorAll('input[type="datetime-local"]')) as HTMLInputElement[]
+    await userEvent.type(
+      screen.getByPlaceholderText(/Vi gör en planerad tjänsteuppdatering/),
+      'Nytt underhåll',
+    )
+    const [, , start, slut] = Array.from(
+      document.querySelectorAll('input[type="datetime-local"]'),
+    ) as HTMLInputElement[]
     // De två första är UTC-hjälpfälten; de lokala start/slut följer.
     fireEvent.change(start, { target: { value: '2030-01-01T10:00' } })
     fireEvent.change(slut, { target: { value: '2030-01-01T12:00' } })
   }
 
   it('spara misslyckas: modalen och meddelandet kvar, felet visas', async () => {
-    vi.mocked(banner.createMaintenanceBanner).mockRejectedValue(new Error('createMaintenanceBanner: 500'))
+    vi.mocked(banner.createMaintenanceBanner).mockRejectedValue(
+      new Error('createMaintenanceBanner: 500'),
+    )
     rendera(<MaintenanceBannerAdmin />)
     await fyllINyttMeddelande()
     await userEvent.click(screen.getByRole('button', { name: 'Skapa meddelande' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Din inmatning finns kvar')
-    expect(screen.getByPlaceholderText(/Vi gör en planerad tjänsteuppdatering/)).toHaveValue('Nytt underhåll')
+    expect(screen.getByPlaceholderText(/Vi gör en planerad tjänsteuppdatering/)).toHaveValue(
+      'Nytt underhåll',
+    )
   })
 
   it('spara lyckas: modalen stänger först när servern svarat, dubbelklick ger ETT anrop', async () => {
     let lös: (b: MaintenanceBanner) => void = () => {}
-    vi.mocked(banner.createMaintenanceBanner).mockImplementation(() => new Promise<MaintenanceBanner>(res => { lös = res }))
+    vi.mocked(banner.createMaintenanceBanner).mockImplementation(
+      () =>
+        new Promise<MaintenanceBanner>((res) => {
+          lös = res
+        }),
+    )
     rendera(<MaintenanceBannerAdmin />)
     await fyllINyttMeddelande()
     await userEvent.dblClick(screen.getByRole('button', { name: 'Skapa meddelande' }))
@@ -194,23 +263,35 @@ describe('Driftmeddelanden (admin)', () => {
     expect(screen.getByPlaceholderText(/Vi gör en planerad tjänsteuppdatering/)).toBeInTheDocument()
 
     lös(BANNER)
-    await waitFor(() => expect(screen.queryByPlaceholderText(/Vi gör en planerad tjänsteuppdatering/)).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(
+        screen.queryByPlaceholderText(/Vi gör en planerad tjänsteuppdatering/),
+      ).not.toBeInTheDocument(),
+    )
   })
 
   it('borttagning som misslyckas: modalen kvar med felet', async () => {
-    vi.mocked(banner.deleteMaintenanceBanner).mockRejectedValue(new Error('deleteMaintenanceBanner: 500'))
+    vi.mocked(banner.deleteMaintenanceBanner).mockRejectedValue(
+      new Error('deleteMaintenanceBanner: 500'),
+    )
     rendera(<MaintenanceBannerAdmin />)
     await userEvent.click(await screen.findByRole('button', { name: 'Ta bort' }))
-    await userEvent.click(within(modalRuta('Ta bort driftmeddelande')).getByRole('button', { name: 'Ta bort' }))
+    await userEvent.click(
+      within(modalRuta('Ta bort driftmeddelande')).getByRole('button', { name: 'Ta bort' }),
+    )
 
-    expect(await screen.findByText('Meddelandet kunde inte tas bort. Försök igen.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Meddelandet kunde inte tas bort. Försök igen.'),
+    ).toBeInTheDocument()
   })
 })
 
 // ---------------------------------------------------------------------------
 describe('Uppdateringar (admin)', () => {
   it('hämtfel: felmeddelande + Försök igen, "—" i korten, inte "Inga uppdateringar matchar filtret"', async () => {
-    vi.mocked(uppd.fetchAdminUppdateringar).mockRejectedValueOnce(new Error('fetchAdminUppdateringar: 500')).mockResolvedValue([UPPD])
+    vi.mocked(uppd.fetchAdminUppdateringar)
+      .mockRejectedValueOnce(new Error('fetchAdminUppdateringar: 500'))
+      .mockResolvedValue([UPPD])
     rendera(<AdminUppdateringar />)
 
     expect(await screen.findByText(/Kunde inte hämta uppdateringarna/)).toBeInTheDocument()
@@ -232,7 +313,10 @@ describe('Uppdateringar (admin)', () => {
   async function fyllINyUppdatering() {
     await userEvent.click(await screen.findByRole('button', { name: '+ Ny uppdatering' }))
     await userEvent.type(screen.getByPlaceholderText(/Logga in och skapa konto/), 'Version 0.8')
-    await userEvent.type(screen.getByPlaceholderText(/Beskriv ändringen kort och tydligt/), 'Tre rader text')
+    await userEvent.type(
+      screen.getByPlaceholderText(/Beskriv ändringen kort och tydligt/),
+      'Tre rader text',
+    )
   }
 
   it('spara misslyckas: panelen och alla rader kvar, felet visas (serverns text)', async () => {
@@ -243,12 +327,19 @@ describe('Uppdateringar (admin)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Du saknar behörighet.')
     expect(screen.getByPlaceholderText(/Logga in och skapa konto/)).toHaveValue('Version 0.8')
-    expect(screen.getByPlaceholderText(/Beskriv ändringen kort och tydligt/)).toHaveValue('Tre rader text')
+    expect(screen.getByPlaceholderText(/Beskriv ändringen kort och tydligt/)).toHaveValue(
+      'Tre rader text',
+    )
   })
 
   it('spara lyckas: panelen stänger först när servern svarat', async () => {
     let lös: (u: Uppdatering) => void = () => {}
-    vi.mocked(uppd.createUppdatering).mockImplementation(() => new Promise<Uppdatering>(res => { lös = res }))
+    vi.mocked(uppd.createUppdatering).mockImplementation(
+      () =>
+        new Promise<Uppdatering>((res) => {
+          lös = res
+        }),
+    )
     rendera(<AdminUppdateringar />)
     await fyllINyUppdatering()
     await userEvent.click(screen.getByRole('button', { name: 'Spara som utkast' }))
@@ -257,7 +348,9 @@ describe('Uppdateringar (admin)', () => {
     expect(screen.getByPlaceholderText(/Logga in och skapa konto/)).toBeInTheDocument()
 
     lös(UPPD)
-    await waitFor(() => expect(screen.queryByPlaceholderText(/Logga in och skapa konto/)).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByPlaceholderText(/Logga in och skapa konto/)).not.toBeInTheDocument(),
+    )
   })
 
   it('dubbelklick på Publicera ger ETT anrop', async () => {
@@ -274,10 +367,13 @@ describe('Uppdateringar (admin)', () => {
   })
 
   it('publicera-växlingen i tabellen behåller version och Prova själv-länkar', async () => {
-    vi.mocked(uppd.fetchAdminUppdateringar).mockResolvedValue([{
-      ...UPPD, version: '1.0',
-      punkter: [{ ...UPPD.punkter[0], provaSjalv: 'support' }],
-    }])
+    vi.mocked(uppd.fetchAdminUppdateringar).mockResolvedValue([
+      {
+        ...UPPD,
+        version: '1.0',
+        punkter: [{ ...UPPD.punkter[0], provaSjalv: 'support' }],
+      },
+    ])
     vi.mocked(uppd.updateUppdatering).mockResolvedValue(undefined as never)
     rendera(<AdminUppdateringar />)
     await userEvent.click(await screen.findByRole('button', { name: 'Publicera' }))
@@ -300,8 +396,12 @@ describe('Uppdateringar (admin)', () => {
     vi.mocked(uppd.deleteUppdatering).mockRejectedValue(new Error('deleteUppdatering: 500'))
     rendera(<AdminUppdateringar />)
     await userEvent.click(await screen.findByRole('button', { name: 'Ta bort' }))
-    await userEvent.click(within(modalRuta('Ta bort uppdatering')).getByRole('button', { name: 'Ta bort' }))
+    await userEvent.click(
+      within(modalRuta('Ta bort uppdatering')).getByRole('button', { name: 'Ta bort' }),
+    )
 
-    expect(await screen.findByText('Uppdateringen kunde inte tas bort. Försök igen.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Uppdateringen kunde inte tas bort. Försök igen.'),
+    ).toBeInTheDocument()
   })
 })

@@ -25,5 +25,5 @@ function arPublik(nyckel: QueryKey): boolean {
 // pågående hämtningar för den (så att en sen respons från den förra användaren
 // inte hamnar i cachen efteråt). Körs när sessionen tar slut.
 export function rensaAnvandardata(queryClient: QueryClient): void {
-  queryClient.removeQueries({ predicate: q => !arPublik(q.queryKey) })
+  queryClient.removeQueries({ predicate: (q) => !arPublik(q.queryKey) })
 }

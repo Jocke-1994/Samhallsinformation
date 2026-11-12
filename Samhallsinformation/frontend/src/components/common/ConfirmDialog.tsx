@@ -19,7 +19,13 @@ interface Props {
  * felträff vid sidan av dialogen ska aldrig avbryta (eller bekräfta) något.
  */
 export default function ConfirmDialog({
-  rubrik, children, bekräftaText, avbrytText = 'Avbryt', destruktiv = true, onBekräfta, onAvbryt,
+  rubrik,
+  children,
+  bekräftaText,
+  avbrytText = 'Avbryt',
+  destruktiv = true,
+  onBekräfta,
+  onAvbryt,
 }: Props) {
   const id = useId()
   const rubrikId = `${id}-rubrik`
@@ -27,7 +33,9 @@ export default function ConfirmDialog({
   const avbrytRef = useRef<HTMLButtonElement>(null)
   const bekräftaRef = useRef<HTMLButtonElement>(null)
   const avbrytRefFn = useRef(onAvbryt)
-  useEffect(() => { avbrytRefFn.current = onAvbryt })
+  useEffect(() => {
+    avbrytRefFn.current = onAvbryt
+  })
 
   useEffect(() => {
     const tidigare = document.activeElement as HTMLElement | null
@@ -46,9 +54,16 @@ export default function ConfirmDialog({
         const sista = bekräftaRef.current
         if (!första || !sista) return
         const aktivt = document.activeElement
-        if (e.shiftKey && aktivt === första) { e.preventDefault(); sista.focus() }
-        else if (!e.shiftKey && aktivt === sista) { e.preventDefault(); första.focus() }
-        else if (aktivt !== första && aktivt !== sista) { e.preventDefault(); första.focus() }
+        if (e.shiftKey && aktivt === första) {
+          e.preventDefault()
+          sista.focus()
+        } else if (!e.shiftKey && aktivt === sista) {
+          e.preventDefault()
+          första.focus()
+        } else if (aktivt !== första && aktivt !== sista) {
+          e.preventDefault()
+          första.focus()
+        }
       }
     }
 
@@ -68,8 +83,12 @@ export default function ConfirmDialog({
         aria-describedby={textId}
         className="bg-white border border-slate-200 rounded-2xl shadow-xl p-5 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
       >
-        <h2 id={rubrikId} className="text-base font-semibold text-slate-800 mb-2">{rubrik}</h2>
-        <div id={textId} className="text-sm text-slate-600 mb-5 flex flex-col gap-2">{children}</div>
+        <h2 id={rubrikId} className="text-base font-semibold text-slate-800 mb-2">
+          {rubrik}
+        </h2>
+        <div id={textId} className="text-sm text-slate-600 mb-5 flex flex-col gap-2">
+          {children}
+        </div>
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <button
             ref={avbrytRef}

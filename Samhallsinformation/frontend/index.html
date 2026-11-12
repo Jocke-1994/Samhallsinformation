@@ -2,7 +2,13 @@
 <html lang="sv">
   <head>
     <meta charset="UTF-8" />
-    <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);if(t==='dark'||t==='true-black')document.documentElement.classList.add('dark')})()</script>
+    <script>
+      ;(function () {
+        var t = localStorage.getItem('theme') || 'dark'
+        document.documentElement.setAttribute('data-theme', t)
+        if (t === 'dark' || t === 'true-black') document.documentElement.classList.add('dark')
+      })()
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
@@ -13,7 +19,10 @@
     <meta name="apple-mobile-web-app-title" content="Samhällsinfo" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Samhällsinformation — nyheter från svenska myndigheter</title>
-    <meta name="description" content="Samla nyheter och uppdateringar från svenska myndigheter, regioner och kommuner på ett ställe. Håll koll på det som händer i samhället." />
+    <meta
+      name="description"
+      content="Samla nyheter och uppdateringar från svenska myndigheter, regioner och kommuner på ett ställe. Håll koll på det som händer i samhället."
+    />
 
     <!-- Canonical -->
     <link rel="canonical" href="https://samhallsinformation.se/" />
@@ -23,23 +32,32 @@
     <meta property="og:url" content="https://samhallsinformation.se/" />
     <meta property="og:site_name" content="Samhällsinformation" />
     <meta property="og:title" content="Samhällsinformation — nyheter från svenska myndigheter" />
-    <meta property="og:description" content="Samla nyheter och uppdateringar från svenska myndigheter, regioner och kommuner på ett ställe. Håll koll på det som händer i samhället." />
+    <meta
+      property="og:description"
+      content="Samla nyheter och uppdateringar från svenska myndigheter, regioner och kommuner på ett ställe. Håll koll på det som händer i samhället."
+    />
     <meta property="og:locale" content="sv_SE" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="Samhällsinformation — nyheter från svenska myndigheter" />
-    <meta name="twitter:description" content="Samla nyheter och uppdateringar från svenska myndigheter, regioner och kommuner på ett ställe." />
+    <meta
+      name="twitter:description"
+      content="Samla nyheter och uppdateringar från svenska myndigheter, regioner och kommuner på ett ställe."
+    />
 
     <!-- Google Analytics (Consent Mode v2 — analytics blocked until user accepts) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-CT3BYVS6JQ"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('consent', 'default', { analytics_storage: 'denied' });
-      gtag('js', new Date());
-      var gaConfig = localStorage.getItem('si_logged_in') === 'true' ? { traffic_type: 'internal' } : {};
-      gtag('config', 'G-CT3BYVS6JQ', gaConfig);
+      window.dataLayer = window.dataLayer || []
+      function gtag() {
+        dataLayer.push(arguments)
+      }
+      gtag('consent', 'default', { analytics_storage: 'denied' })
+      gtag('js', new Date())
+      var gaConfig =
+        localStorage.getItem('si_logged_in') === 'true' ? { traffic_type: 'internal' } : {}
+      gtag('config', 'G-CT3BYVS6JQ', gaConfig)
     </script>
   </head>
   <body>
@@ -47,7 +65,7 @@
     <script type="module" src="/src/main.tsx"></script>
     <script
       src="https://kundtjanstbot-production.up.railway.app/chat.js"
-      data-api-key="lmb_16b098825caba706">
-    </script>
+      data-api-key="lmb_16b098825caba706"
+    ></script>
   </body>
 </html>

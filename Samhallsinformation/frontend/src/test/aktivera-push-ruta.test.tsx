@@ -10,7 +10,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const auth = { isLoggedIn: true, email: 'a@b.se' }
 const flaggor: Record<string, boolean> = {}
-const push = vi.hoisted(() => ({ isSubscribed: false, loading: false, subscribe: vi.fn(), stöds: true }))
+const push = vi.hoisted(() => ({
+  isSubscribed: false,
+  loading: false,
+  subscribe: vi.fn(),
+  stöds: true,
+}))
 const api = vi.hoisted(() => ({
   fetchPushSettings: vi.fn(),
   savePushSettings: vi.fn(),
@@ -21,7 +26,11 @@ vi.mock('../context/FeatureFlagsContext', () => ({ useFlags: () => flaggor }))
 vi.mock('../api/push', () => api)
 vi.mock('../hooks/usePushSubscription', () => ({
   isPushSupported: () => push.stöds,
-  usePushSubscription: () => ({ isSubscribed: push.isSubscribed, loading: push.loading, subscribe: push.subscribe }),
+  usePushSubscription: () => ({
+    isSubscribed: push.isSubscribed,
+    loading: push.loading,
+    subscribe: push.subscribe,
+  }),
 }))
 
 const { default: ProvaSjalvLank } = await import('../components/common/ProvaSjalvLank')
@@ -30,7 +39,9 @@ function rendera(förhandsvisning?: { inloggad: boolean; flaggor: Record<string,
   const klient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={klient}>
-      <MemoryRouter><ProvaSjalvLank mål="aktivera-push" förhandsvisning={förhandsvisning} /></MemoryRouter>
+      <MemoryRouter>
+        <ProvaSjalvLank mål="aktivera-push" förhandsvisning={förhandsvisning} />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
@@ -42,8 +53,12 @@ beforeEach(() => {
   push.isSubscribed = false
   push.loading = false
   push.stöds = true
-  push.subscribe.mockReset().mockImplementation(async () => { push.isSubscribed = true })
-  api.fetchPushSettings.mockReset().mockResolvedValue({ pushEnabled: true, pushNyaHandelser: false, pushNyVersion: false })
+  push.subscribe.mockReset().mockImplementation(async () => {
+    push.isSubscribed = true
+  })
+  api.fetchPushSettings
+    .mockReset()
+    .mockResolvedValue({ pushEnabled: true, pushNyaHandelser: false, pushNyVersion: false })
   api.savePushSettings.mockReset().mockResolvedValue(undefined)
 })
 
@@ -58,7 +73,10 @@ describe('Aktivera push i nyheten', () => {
     rendera()
     await userEvent.click(await screen.findByRole('button', { name: 'Aktivera' }))
     expect(push.subscribe).toHaveBeenCalledOnce()
-    expect(api.savePushSettings).toHaveBeenCalledWith({ pushNyaHandelser: true, pushNyVersion: true })
+    expect(api.savePushSettings).toHaveBeenCalledWith({
+      pushNyaHandelser: true,
+      pushNyVersion: true,
+    })
     await waitFor(() => expect(screen.getByText('✓ Push-notiser är på')).toBeTruthy())
   })
 
@@ -72,7 +90,11 @@ describe('Aktivera push i nyheten', () => {
 
   it('redan påslaget: bara bekräftelsen, ingen knapp', async () => {
     push.isSubscribed = true
-    api.fetchPushSettings.mockResolvedValue({ pushEnabled: true, pushNyaHandelser: true, pushNyVersion: true })
+    api.fetchPushSettings.mockResolvedValue({
+      pushEnabled: true,
+      pushNyaHandelser: true,
+      pushNyVersion: true,
+    })
     rendera()
     expect(await screen.findByText('✓ Push-notiser är på')).toBeTruthy()
     expect(screen.queryByRole('button')).toBeNull()
@@ -81,7 +103,10 @@ describe('Aktivera push i nyheten', () => {
   it('besökare får den vanliga "kräver konto"-länken, ingen knapp', () => {
     auth.isLoggedIn = false
     rendera()
-    expect(screen.getByRole('link', { name: /kräver konto/ })).toHaveAttribute('href', '/login?redirect=%2Fprofil%3Fsection%3Dkonto')
+    expect(screen.getByRole('link', { name: /kräver konto/ })).toHaveAttribute(
+      'href',
+      '/login?redirect=%2Fprofil%3Fsection%3Dkonto',
+    )
     expect(screen.queryByRole('button')).toBeNull()
   })
 

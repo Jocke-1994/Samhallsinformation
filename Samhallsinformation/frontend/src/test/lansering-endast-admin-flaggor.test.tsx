@@ -15,13 +15,14 @@ const LIVE = 'test_redan_live'
 const AV = 'test_av_och_redo'
 
 const FLAGGOR: AdminFeatureFlagOverride[] = [
-  { key: TESTAS, value: true,  redoAttLanseras: true, endastAdmin: true },
-  { key: LIVE,   value: true,  redoAttLanseras: true, endastAdmin: false },
-  { key: AV,     value: false, redoAttLanseras: true, endastAdmin: false },
+  { key: TESTAS, value: true, redoAttLanseras: true, endastAdmin: true },
+  { key: LIVE, value: true, redoAttLanseras: true, endastAdmin: false },
+  { key: AV, value: false, redoAttLanseras: true, endastAdmin: false },
 ]
 
 vi.mock('../api/uppdateringar', async () => {
-  const faktisk = await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
+  const faktisk =
+    await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
   return {
     ...faktisk,
     fetchAdminUppdateringar: vi.fn().mockResolvedValue([]),
@@ -44,7 +45,9 @@ const { default: AdminUppdateringar } = await import('../components/Admin/AdminU
 const { default: FeatureFlagsAdmin } = await import('../components/Admin/FeatureFlagsAdmin')
 
 function nyKlient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
 }
 
 beforeEach(() => {
@@ -53,7 +56,11 @@ beforeEach(() => {
 
 describe('Schemalagd lansering — flaggor som bara är på för Admin', () => {
   it('listar en Endast Admin-flagga som valbar, men inte en som redan är live för alla', async () => {
-    render(<QueryClientProvider client={nyKlient()}><AdminUppdateringar /></QueryClientProvider>)
+    render(
+      <QueryClientProvider client={nyKlient()}>
+        <AdminUppdateringar />
+      </QueryClientProvider>,
+    )
     await userEvent.click(await screen.findByText('+ Ny uppdatering'))
     await userEvent.click(screen.getByText('Schemalägg lansering'))
 
@@ -65,19 +72,21 @@ describe('Schemalagd lansering — flaggor som bara är på för Admin', () => {
 
 describe('Feature flags — "Redo att lanseras" på en Endast Admin-flagga', () => {
   it('visar redo-knappen på en påslagen flagga som bara är på för Admin', async () => {
-    const förstaFlagga = FLAG_GRUPPER[0].flaggor.find(f => !f.mock)!.key
-    const andraFlagga = FLAG_GRUPPER[0].flaggor.filter(f => !f.mock)[1]?.key
+    const förstaFlagga = FLAG_GRUPPER[0].flaggor.find((f) => !f.mock)!.key
+    const andraFlagga = FLAG_GRUPPER[0].flaggor.filter((f) => !f.mock)[1]?.key
     vi.mocked(api.fetchAdminFeatureFlags).mockResolvedValue([
       { key: förstaFlagga, value: true, redoAttLanseras: false, endastAdmin: true },
-      ...(andraFlagga ? [{ key: andraFlagga, value: true, redoAttLanseras: false, endastAdmin: false }] : []),
+      ...(andraFlagga
+        ? [{ key: andraFlagga, value: true, redoAttLanseras: false, endastAdmin: false }]
+        : []),
     ])
     const flaggor = Object.fromEntries(
-      FLAG_DEFINITIONER.map(f => [f.key, f.key === förstaFlagga || f.key === andraFlagga])
+      FLAG_DEFINITIONER.map((f) => [f.key, f.key === förstaFlagga || f.key === andraFlagga]),
     ) as FlagState
     render(
       <QueryClientProvider client={nyKlient()}>
         <FeatureFlagsAdmin flaggor={flaggor} onVäxla={vi.fn()} onÅterställ={vi.fn()} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     )
     await userEvent.click(screen.getByText(FLAG_GRUPPER[0].label))
 
@@ -87,9 +96,13 @@ describe('Feature flags — "Redo att lanseras" på en Endast Admin-flagga', () 
     expect(within(rad).getByRole('button', { name: 'Redo att lanseras?' })).toBeInTheDocument()
 
     if (andraFlagga) {
-      const label = FLAG_DEFINITIONER.find(f => f.key === andraFlagga)!.label
-      const liveRad = screen.getByText(label).closest('div.flex.items-center.justify-between') as HTMLElement
-      expect(within(liveRad).queryByRole('button', { name: 'Redo att lanseras?' })).not.toBeInTheDocument()
+      const label = FLAG_DEFINITIONER.find((f) => f.key === andraFlagga)!.label
+      const liveRad = screen
+        .getByText(label)
+        .closest('div.flex.items-center.justify-between') as HTMLElement
+      expect(
+        within(liveRad).queryByRole('button', { name: 'Redo att lanseras?' }),
+      ).not.toBeInTheDocument()
     }
   })
 })

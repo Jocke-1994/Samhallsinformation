@@ -10,8 +10,12 @@ import type { Uppdatering } from '../api/uppdateringar'
 //    inloggad från anonym (annars delar Nyheter-sidan och Profil-fliken cache).
 
 const OKAND: Uppdatering = {
-  id: 'u1', titel: 'Version med gammal punkt', datum: '2026-09-01T00:00:00Z',
-  publicerad: true, schemalagdPubliceringUtc: null, schemalagdaFlaggor: [],
+  id: 'u1',
+  titel: 'Version med gammal punkt',
+  datum: '2026-09-01T00:00:00Z',
+  publicerad: true,
+  schemalagdPubliceringUtc: null,
+  schemalagdaFlaggor: [],
   punkter: [
     // @ts-expect-error — avsiktligt en typ utanför PunktTyp (backend returnerar gamla rader oförändrade)
     { id: 'p1', typ: 'nytt', plats: 'Allmänt', text: 'Gammal punkt', synlighet: 'alla' },
@@ -26,7 +30,8 @@ const hämtaAdminMock = vi.fn()
 let inloggad = false
 
 vi.mock('../api/uppdateringar', async () => {
-  const faktisk = await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
+  const faktisk =
+    await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
   return {
     ...faktisk,
     fetchUppdateringar: () => hämtaMock(),
@@ -35,7 +40,11 @@ vi.mock('../api/uppdateringar', async () => {
 })
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: inloggad }) }))
 vi.mock('../context/FeatureFlagsContext', () => ({
-  useFlags: () => ({ uppdateringar_senaste: true, uppdateringar_pagang: false, uppdateringar_historik: true }),
+  useFlags: () => ({
+    uppdateringar_senaste: true,
+    uppdateringar_pagang: false,
+    uppdateringar_historik: true,
+  }),
 }))
 vi.mock('../components/Sidebar/Sidebar', () => ({ default: () => null }))
 vi.mock('../components/common/MobilTopBar', () => ({ default: () => null }))
@@ -45,7 +54,8 @@ vi.mock('../api/push', () => ({ sendNewVersionNotice: vi.fn() }))
 
 const { getTypConfig, PUNKT_TYPER } = await import('../lib/uppdateringTyp')
 // Den RIKTIGA fetchUppdateringar (modulen är mockad ovan för komponenttesterna).
-const { fetchUppdateringar, uppdateringarQueryKey } = await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
+const { fetchUppdateringar, uppdateringarQueryKey } =
+  await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
 const { default: UppdateringarPage } = await import('../pages/UppdateringarPage')
 const { default: ProfilUppdateringar } = await import('../components/Profile/Uppdateringar')
 const { default: AdminUppdateringar } = await import('../components/Admin/AdminUppdateringar')
@@ -66,7 +76,13 @@ describe('getTypConfig', () => {
   })
 
   it('känner igen alla fem riktiga typer', () => {
-    expect(PUNKT_TYPER).toEqual(['ny-funktion', 'förbättring', 'buggfix', 'känt-problem', 'kommer-snart'])
+    expect(PUNKT_TYPER).toEqual([
+      'ny-funktion',
+      'förbättring',
+      'buggfix',
+      'känt-problem',
+      'kommer-snart',
+    ])
     for (const typ of PUNKT_TYPER) expect(getTypConfig(typ).label).not.toBe('Övrigt')
   })
 })
@@ -118,7 +134,9 @@ describe('fetchUppdateringar + queryKey (token och cache)', () => {
     vi.stubGlobal('fetch', fetchMock)
     fetchMock.mockReset().mockResolvedValue(new Response('[]', { status: 200 }))
   })
-  afterEach(() => { vi.unstubAllGlobals() })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
 
   it('skickar Authorization när användaren är inloggad', async () => {
     localStorage.setItem('si_token', 'jwt-123')
@@ -149,14 +167,22 @@ describe('fetchUppdateringar + queryKey (token och cache)', () => {
     hämtaMock.mockReset().mockResolvedValueOnce(anonymSvar).mockResolvedValueOnce(inloggadSvar)
 
     inloggad = false
-    const { unmount } = render(<QueryClientProvider client={qc}><UppdateringarPage /></QueryClientProvider>)
+    const { unmount } = render(
+      <QueryClientProvider client={qc}>
+        <UppdateringarPage />
+      </QueryClientProvider>,
+    )
     expect(await screen.findByText('Bara publikt')).toBeInTheDocument()
     unmount()
 
     // Samma QueryClient (t.ex. användaren loggar in i samma flik): ny nyckel → ny hämtning,
     // inte det cachade anonyma svaret.
     inloggad = true
-    render(<QueryClientProvider client={qc}><ProfilUppdateringar /></QueryClientProvider>)
+    render(
+      <QueryClientProvider client={qc}>
+        <ProfilUppdateringar />
+      </QueryClientProvider>,
+    )
     expect(await screen.findByText('Med inloggade punkter')).toBeInTheDocument()
     expect(hämtaMock).toHaveBeenCalledTimes(2)
   })

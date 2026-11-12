@@ -27,10 +27,14 @@ beforeEach(() => {
   fetchMock.mockReset()
   vi.stubGlobal('fetch', fetchMock)
 })
-afterEach(() => { vi.unstubAllGlobals() })
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('timeout i API-lagret', () => {
-  beforeEach(() => { vi.useFakeTimers() })
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
 
   it('adminFetch avbryts efter standardgränsen med ett tydligt TimeoutError', async () => {
     fetchMock.mockImplementation(hangande)
@@ -48,7 +52,9 @@ describe('timeout i API-lagret', () => {
   })
 
   it('ett anrop som svarar under gränsen påverkas inte, inte ens efter att gränsen passerat', async () => {
-    fetchMock.mockImplementation(() => new Promise(ok => setTimeout(() => ok(json(200, { ok: true })), 10_000)))
+    fetchMock.mockImplementation(
+      () => new Promise((ok) => setTimeout(() => ok(json(200, { ok: true })), 10_000)),
+    )
     const utfall = adminFetch('/api/x')
 
     await vi.advanceTimersByTimeAsync(10_000)
@@ -65,7 +71,9 @@ describe('timeout i API-lagret', () => {
 
     await vi.advanceTimersByTimeAsync(STANDARD_TIMEOUT_MS + 60_000)
     let klart = false
-    void utfall.then(() => { klart = true })
+    void utfall.then(() => {
+      klart = true
+    })
     await vi.advanceTimersByTimeAsync(0)
     expect(klart).toBe(false) // 90 s: standardgränsen är passerad men anropet lever
 
@@ -76,7 +84,7 @@ describe('timeout i API-lagret', () => {
   it('timeoutMs: 0 stänger av timeouten', async () => {
     fetchMock.mockImplementation((_url: string, init?: RequestInit) => {
       expect(init?.signal).toBeUndefined()
-      return new Promise(ok => setTimeout(() => ok(json(200, {})), 10 * 60_000))
+      return new Promise((ok) => setTimeout(() => ok(json(200, {})), 10 * 60_000))
     })
     const utfall = adminFetch('/api/x', { timeoutMs: 0 })
     await vi.advanceTimersByTimeAsync(10 * 60_000)
@@ -108,7 +116,9 @@ describe('timeout i API-lagret', () => {
 
     await vi.advanceTimersByTimeAsync(STANDARD_TIMEOUT_MS + 30_000)
     let klart = false
-    void utfall.then(() => { klart = true })
+    void utfall.then(() => {
+      klart = true
+    })
     await vi.advanceTimersByTimeAsync(0)
     expect(klart).toBe(false)
 
@@ -169,7 +179,9 @@ describe('felkroppen bevaras i det kastade felet', () => {
 
     const fel = await saveUserSources([]).catch((e: unknown) => e)
 
-    expect(visaFel(fel, RESERV)).toBe('För många försök på kort tid. Vänta en stund och försök igen.')
+    expect(visaFel(fel, RESERV)).toBe(
+      'För många försök på kort tid. Vänta en stund och försök igen.',
+    )
   })
 
   it('dryRunSource ger statusfelet vid 5xx utan JSON-kropp, inte ett SyntaxError', async () => {

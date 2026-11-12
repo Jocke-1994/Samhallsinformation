@@ -11,7 +11,7 @@ import type { DetaljFlik } from '../components/Admin/Anvandare'
 
 export interface AnvändarDjuplänk {
   epost: string
-  flik:  DetaljFlik
+  flik: DetaljFlik
 }
 
 export function useAdminDjuplank(section: string) {
@@ -31,7 +31,11 @@ export function useAdminDjuplank(section: string) {
   const konsumeraInboxÄrende = useCallback(() => setInboxÄrendeId(undefined), [])
 
   return {
-    användarMål, inboxÄrendeId,
-    öppnaAnvändare, öppnaInboxÄrende, konsumeraAnvändare, konsumeraInboxÄrende,
+    användarMål,
+    inboxÄrendeId,
+    öppnaAnvändare,
+    öppnaInboxÄrende,
+    konsumeraAnvändare,
+    konsumeraInboxÄrende,
   }
 }

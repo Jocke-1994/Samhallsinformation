@@ -37,10 +37,12 @@ export function FelVy() {
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 text-center">
           <div className="text-3xl mb-4">⚠️</div>
-          <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Något gick fel</h1>
+          <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+            Något gick fel
+          </h1>
           <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
-            Sidan kunde inte visas. Försök ladda om sidan — om felet finns kvar,
-            gå till startsidan och försök igen lite senare.
+            Sidan kunde inte visas. Försök ladda om sidan — om felet finns kvar, gå till startsidan
+            och försök igen lite senare.
           </p>
           <button
             type="button"

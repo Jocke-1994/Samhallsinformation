@@ -56,16 +56,16 @@ export default function SiteSettingsAdmin() {
             på ? 'bg-violet-600' : 'bg-slate-300'
           }`}
           aria-label={
-            läget === null
-              ? `${titel} — okänt läge`
-              : `${på ? 'Dölj' : 'Visa'} ${ETIKETT[fält]}`
+            läget === null ? `${titel} — okänt läge` : `${på ? 'Dölj' : 'Visa'} ${ETIKETT[fält]}`
           }
           role="switch"
           aria-checked={läget === null ? undefined : på}
         >
-          <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
-            på ? 'translate-x-5' : 'translate-x-0'
-          }`} />
+          <span
+            className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+              på ? 'translate-x-5' : 'translate-x-0'
+            }`}
+          />
         </button>
       </div>
     )
@@ -76,7 +76,9 @@ export default function SiteSettingsAdmin() {
       <div className="px-6 py-4 border-b border-slate-100">
         <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
           Logga in / Skapa konto-knappar
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">LIVE</span>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
+            LIVE
+          </span>
         </h3>
         <p className="text-xs text-slate-400 mt-0.5">
           Global inställning — gäller direkt för ALLA besökare, till skillnad från de gamla
@@ -85,7 +87,10 @@ export default function SiteSettingsAdmin() {
       </div>
 
       {isError && (
-        <div role="alert" className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+        <div
+          role="alert"
+          className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2"
+        >
           <p className="text-sm text-red-700">Kunde inte läsa inställningen.</p>
           <button
             onClick={() => refetch()}
@@ -98,7 +103,10 @@ export default function SiteSettingsAdmin() {
       )}
 
       {updateMutation.isError && (
-        <div role="alert" className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+        <div
+          role="alert"
+          className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3"
+        >
           <p className="text-sm text-red-700">Ändringen kunde inte sparas. Inget har ändrats.</p>
         </div>
       )}
@@ -107,7 +115,11 @@ export default function SiteSettingsAdmin() {
 
       <div className="divide-y divide-slate-50">
         {rad('showLoginButton', 'Visa Logga in-knapp', 'Synlig i sidomenyn för utloggade besökare')}
-        {rad('showRegisterButton', 'Visa Skapa konto-knapp', 'Synlig i sidomenyn för utloggade besökare')}
+        {rad(
+          'showRegisterButton',
+          'Visa Skapa konto-knapp',
+          'Synlig i sidomenyn för utloggade besökare',
+        )}
       </div>
 
       {väntande && (
@@ -119,8 +131,10 @@ export default function SiteSettingsAdmin() {
           onAvbryt={() => setVäntande(null)}
         >
           <p>
-            Det här är en global inställning som slår igenom direkt för <strong>alla besökare</strong>.
-            {!väntande.nyttVärde && ' Utloggade besökare kan då inte längre nå den här vägen in via sidomenyn.'}
+            Det här är en global inställning som slår igenom direkt för{' '}
+            <strong>alla besökare</strong>.
+            {!väntande.nyttVärde &&
+              ' Utloggade besökare kan då inte längre nå den här vägen in via sidomenyn.'}
           </p>
         </ConfirmDialog>
       )}

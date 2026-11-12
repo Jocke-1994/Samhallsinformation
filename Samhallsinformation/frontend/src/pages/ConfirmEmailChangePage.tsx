@@ -12,7 +12,7 @@ export default function ConfirmEmailChangePage() {
   const token = params.get('token') ?? ''
 
   const [status, setStatus] = useState<Status>(token ? 'confirming' : 'error')
-  const [error, setError]   = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const attempted = useRef(false)
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function ConfirmEmailChangePage() {
         setStatus('success')
         setTimeout(() => navigate('/profil', { replace: true }), 3000)
       })
-      .catch(err => {
+      .catch((err) => {
         setStatus('error')
         setError(err instanceof Error ? err.message : 'Något gick fel')
       })
@@ -35,20 +35,25 @@ export default function ConfirmEmailChangePage() {
   return (
     <div className="min-h-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-
         <div className="text-center mb-8">
           <span className="text-2xl font-bold text-violet-600">Samhällsinfo</span>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 text-center">
           {status === 'confirming' && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">Bekräftar din nya e-postadress…</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Bekräftar din nya e-postadress…
+            </p>
           )}
           {status === 'success' && (
             <>
               <div className="text-3xl mb-4">✅</div>
-              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Din nya e-postadress är bekräftad!</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Av säkerhetsskäl har alla enheter loggats ut — logga in igen med din nya adress.</p>
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                Din nya e-postadress är bekräftad!
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                Av säkerhetsskäl har alla enheter loggats ut — logga in igen med din nya adress.
+              </p>
               <p className="text-xs text-slate-400 mt-2">Du skickas vidare…</p>
             </>
           )}
@@ -57,13 +62,15 @@ export default function ConfirmEmailChangePage() {
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 {error ?? 'Länken är ogiltig eller har gått ut.'}
               </p>
-              <Link to="/" className="text-violet-600 hover:text-violet-500 text-sm mt-3 inline-block">
+              <Link
+                to="/"
+                className="text-violet-600 hover:text-violet-500 text-sm mt-3 inline-block"
+              >
                 Till startsidan
               </Link>
             </>
           )}
         </div>
-
       </div>
     </div>
   )

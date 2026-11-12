@@ -31,7 +31,13 @@ function Visa() {
       <div data-testid="vy">{aktivVy}</div>
       <div data-testid="roll">{roll}</div>
       <button onClick={() => byttVy('Support')}>till-support</button>
-      <button onClick={() => { void login('annan@test.se', 'hemligt') }}>logga-in-annan</button>
+      <button
+        onClick={() => {
+          void login('annan@test.se', 'hemligt')
+        }}
+      >
+        logga-in-annan
+      </button>
     </div>
   )
 }
@@ -42,11 +48,17 @@ function renderaSom(roll: string, lagradVy?: string, epost = 'admin@test.se') {
   localStorage.setItem('si_token', skapaJwt(roll, epost, NU + 15 * 60_000))
   localStorage.setItem('si_refresh_token', 'refresh-1')
   if (lagradVy) localStorage.setItem('si_aktiv_vy', lagradVy)
-  return render(<AuthMedQuery><Visa /></AuthMedQuery>)
+  return render(
+    <AuthMedQuery>
+      <Visa />
+    </AuthMedQuery>,
+  )
 }
 
 async function spolaTillRefresh() {
-  await act(async () => { await vi.advanceTimersByTimeAsync(13 * 60_000 + 1000) })
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(13 * 60_000 + 1000)
+  })
 }
 
 describe('aktivVy vid tokenförnyelse (V4-2, E5#6)', () => {
@@ -58,14 +70,20 @@ describe('aktivVy vid tokenförnyelse (V4-2, E5#6)', () => {
     fetchMock.mockReset()
     vi.stubGlobal('fetch', fetchMock)
   })
-  afterEach(() => { vi.unstubAllGlobals() })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
 
   it('en admin som valt Support-vyn behåller den efter förnyelse', async () => {
-    fetchMock.mockResolvedValue(tokenSvar(skapaJwt('Admin', 'admin@test.se', NU + 40 * 60_000), 'refresh-2'))
+    fetchMock.mockResolvedValue(
+      tokenSvar(skapaJwt('Admin', 'admin@test.se', NU + 40 * 60_000), 'refresh-2'),
+    )
     renderaSom('Admin')
     expect(vy()).toBe('Admin')
 
-    act(() => { screen.getByText('till-support').click() })
+    act(() => {
+      screen.getByText('till-support').click()
+    })
     expect(vy()).toBe('Support')
 
     await spolaTillRefresh()
@@ -77,7 +95,9 @@ describe('aktivVy vid tokenförnyelse (V4-2, E5#6)', () => {
   })
 
   it('saknad vy sätts till rollen vid förnyelsen', async () => {
-    fetchMock.mockResolvedValue(tokenSvar(skapaJwt('Admin', 'admin@test.se', NU + 40 * 60_000), 'refresh-2'))
+    fetchMock.mockResolvedValue(
+      tokenSvar(skapaJwt('Admin', 'admin@test.se', NU + 40 * 60_000), 'refresh-2'),
+    )
     renderaSom('Admin')
     localStorage.removeItem('si_aktiv_vy')
 
@@ -89,7 +109,9 @@ describe('aktivVy vid tokenförnyelse (V4-2, E5#6)', () => {
 
   it('en vy som blivit ogiltig för rollen (Admin -> Support-konto) ersätts av rollen', async () => {
     // Kontot är nu Support men den lagrade vyn är kvar från en tidigare admin-roll.
-    fetchMock.mockResolvedValue(tokenSvar(skapaJwt('Support', 'admin@test.se', NU + 40 * 60_000), 'refresh-2'))
+    fetchMock.mockResolvedValue(
+      tokenSvar(skapaJwt('Support', 'admin@test.se', NU + 40 * 60_000), 'refresh-2'),
+    )
     renderaSom('Admin', 'Admin')
     expect(vy()).toBe('Admin')
 
@@ -105,12 +127,18 @@ describe('aktivVy vid tokenförnyelse (V4-2, E5#6)', () => {
   })
 
   it('en annan användare som loggar in får sin rolls startvy, inte den förras val', async () => {
-    fetchMock.mockResolvedValue(tokenSvar(skapaJwt('Admin', 'annan@test.se', NU + 40 * 60_000), 'refresh-9'))
+    fetchMock.mockResolvedValue(
+      tokenSvar(skapaJwt('Admin', 'annan@test.se', NU + 40 * 60_000), 'refresh-9'),
+    )
     renderaSom('Admin')
-    act(() => { screen.getByText('till-support').click() })
+    act(() => {
+      screen.getByText('till-support').click()
+    })
     expect(vy()).toBe('Support')
 
-    await act(async () => { screen.getByText('logga-in-annan').click() })
+    await act(async () => {
+      screen.getByText('logga-in-annan').click()
+    })
 
     expect(vy()).toBe('Admin')
   })

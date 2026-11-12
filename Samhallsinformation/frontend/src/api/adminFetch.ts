@@ -17,7 +17,11 @@ export type AdminInit = Omit<RequestInit, 'body'> & {
   timeoutMs?: number
 }
 
-function skicka(path: string, init: AdminInit | undefined, token: string | null): Promise<Response> {
+function skicka(
+  path: string,
+  init: AdminInit | undefined,
+  token: string | null,
+): Promise<Response> {
   const body = typeof init?.body === 'function' ? init.body() : init?.body
   return fetchMedTimeout(`${API_BASE}${path}`, {
     ...init,

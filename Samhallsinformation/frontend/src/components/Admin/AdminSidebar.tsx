@@ -22,7 +22,7 @@ export default function AdminSidebar({
   badges?: Partial<Record<AdminSection, number>>
 }) {
   const navigate = useNavigate()
-  const synliga = ADMIN_NAV.filter(item => item.roller.includes(roll))
+  const synliga = ADMIN_NAV.filter((item) => item.roller.includes(roll))
 
   return (
     <>
@@ -31,13 +31,14 @@ export default function AdminSidebar({
         className={`fixed inset-0 bg-black/30 z-40 md:hidden transition-opacity duration-200 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
       />
-      <div className={`
+      <div
+        className={`
         w-64 h-full bg-slate-900 flex flex-col shrink-0
         fixed inset-y-0 left-0 z-50 transition-transform duration-200
         md:static md:translate-x-0 md:z-auto
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-
+      `}
+      >
         {/* Logo / titel */}
         <div className="px-6 py-6 border-b border-slate-700">
           <div className="flex items-center gap-2.5">
@@ -53,12 +54,15 @@ export default function AdminSidebar({
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
-          {synliga.map(item => {
+          {synliga.map((item) => {
             const badge = badges?.[item.key]
             return (
               <button
                 key={item.key}
-                onClick={() => { onSelect(item.key); onClose() }}
+                onClick={() => {
+                  onSelect(item.key)
+                  onClose()
+                }}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left w-full ${
                   active === item.key
                     ? 'bg-violet-600 text-white'
@@ -87,7 +91,6 @@ export default function AdminSidebar({
             Tillbaka till sajten
           </button>
         </div>
-
       </div>
     </>
   )

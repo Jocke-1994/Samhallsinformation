@@ -32,7 +32,10 @@ export interface InloggadHamtning<T> {
   uppdatera: (fn: (prev: T) => T) => void
 }
 
-export function useInloggadHamtning<T>(nyckel: string, hamta: () => Promise<T>): InloggadHamtning<T> {
+export function useInloggadHamtning<T>(
+  nyckel: string,
+  hamta: () => Promise<T>,
+): InloggadHamtning<T> {
   const { isLoggedIn, email, accessToken } = useAuth()
   const queryClient = useQueryClient()
   const anvandare = email ?? null
@@ -69,12 +72,19 @@ export function useInloggadHamtning<T>(nyckel: string, hamta: () => Promise<T>):
   const arFel = query.status === 'error' && query.fetchStatus !== 'fetching'
   const lage: HamtLage = query.data !== undefined ? 'klar' : arFel ? 'fel' : 'laddar'
 
-  const uppdatera = useCallback((fn: (prev: T) => T) => {
-    queryClient.setQueryData<T>([nyckel, anvandare], prev => (prev === undefined ? prev : fn(prev)))
-  }, [queryClient, nyckel, anvandare])
+  const uppdatera = useCallback(
+    (fn: (prev: T) => T) => {
+      queryClient.setQueryData<T>([nyckel, anvandare], (prev) =>
+        prev === undefined ? prev : fn(prev),
+      )
+    },
+    [queryClient, nyckel, anvandare],
+  )
 
   const refetch = query.refetch
-  const forsokIgen = useCallback(() => { void refetch() }, [refetch])
+  const forsokIgen = useCallback(() => {
+    void refetch()
+  }, [refetch])
 
   return { data: query.data, lage, forsokIgen, uppdatera }
 }

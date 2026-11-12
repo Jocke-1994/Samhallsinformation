@@ -22,8 +22,12 @@ export async function avregistreraPushEnhet(token: string | null): Promise<void>
     const endpoint = prenumeration.endpoint
     // allSettled: ett fel i det ena stoppar inte det andra, och inget kastas.
     await Promise.allSettled([
-      (async () => { if (token) await unsubscribeDeviceMedToken(endpoint, token) })(),
-      (async () => { await prenumeration.unsubscribe() })(),
+      (async () => {
+        if (token) await unsubscribeDeviceMedToken(endpoint, token)
+      })(),
+      (async () => {
+        await prenumeration.unsubscribe()
+      })(),
     ])
   } catch {
     /* best effort — utloggningen påverkas aldrig */

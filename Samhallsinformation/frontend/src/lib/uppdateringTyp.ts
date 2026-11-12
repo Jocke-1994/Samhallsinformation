@@ -24,11 +24,51 @@ export interface TypConfig {
 const FORM_PILL = 'border-slate-200 text-slate-500 hover:bg-slate-50'
 
 const TYP_CONFIG: Record<PunktTyp, TypConfig> = {
-  'ny-funktion':  { label: 'Nytt', adminLabel: 'Ny funktion',         badge: 'bg-violet-100 text-violet-700',   dot: 'bg-violet-500',  formPill: FORM_PILL, formPillAktiv: 'bg-violet-100 text-violet-700 border-violet-200',   listPill: 'bg-violet-100 text-violet-700 border border-violet-200'   },
-  'förbättring':  { label: 'Förbättrat', adminLabel: 'Förbättring',   badge: 'bg-amber-100 text-amber-700',     dot: 'bg-amber-400',   formPill: FORM_PILL, formPillAktiv: 'bg-amber-100 text-amber-700 border-amber-200',       listPill: 'bg-amber-100 text-amber-700 border border-amber-200'       },
-  'buggfix':      { label: 'Fixat', adminLabel: 'Buggfix',        badge: 'bg-green-100 text-green-700',     dot: 'bg-green-500',   formPill: FORM_PILL, formPillAktiv: 'bg-green-100 text-green-700 border-green-200',       listPill: 'bg-green-100 text-green-700 border border-green-200'       },
-  'känt-problem': { label: 'Känt problem', adminLabel: 'Känt problem', badge: 'bg-red-100 text-red-700',         dot: 'bg-red-500',     formPill: FORM_PILL, formPillAktiv: 'bg-red-100 text-red-700 border-red-200',             listPill: 'bg-red-100 text-red-700 border border-red-200'             },
-  'kommer-snart': { label: 'Kommer snart', adminLabel: 'Kommer snart', badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500', formPill: FORM_PILL, formPillAktiv: 'bg-emerald-100 text-emerald-700 border-emerald-200', listPill: 'bg-emerald-100 text-emerald-700 border border-emerald-200' },
+  'ny-funktion': {
+    label: 'Nytt',
+    adminLabel: 'Ny funktion',
+    badge: 'bg-violet-100 text-violet-700',
+    dot: 'bg-violet-500',
+    formPill: FORM_PILL,
+    formPillAktiv: 'bg-violet-100 text-violet-700 border-violet-200',
+    listPill: 'bg-violet-100 text-violet-700 border border-violet-200',
+  },
+  förbättring: {
+    label: 'Förbättrat',
+    adminLabel: 'Förbättring',
+    badge: 'bg-amber-100 text-amber-700',
+    dot: 'bg-amber-400',
+    formPill: FORM_PILL,
+    formPillAktiv: 'bg-amber-100 text-amber-700 border-amber-200',
+    listPill: 'bg-amber-100 text-amber-700 border border-amber-200',
+  },
+  buggfix: {
+    label: 'Fixat',
+    adminLabel: 'Buggfix',
+    badge: 'bg-green-100 text-green-700',
+    dot: 'bg-green-500',
+    formPill: FORM_PILL,
+    formPillAktiv: 'bg-green-100 text-green-700 border-green-200',
+    listPill: 'bg-green-100 text-green-700 border border-green-200',
+  },
+  'känt-problem': {
+    label: 'Känt problem',
+    adminLabel: 'Känt problem',
+    badge: 'bg-red-100 text-red-700',
+    dot: 'bg-red-500',
+    formPill: FORM_PILL,
+    formPillAktiv: 'bg-red-100 text-red-700 border-red-200',
+    listPill: 'bg-red-100 text-red-700 border border-red-200',
+  },
+  'kommer-snart': {
+    label: 'Kommer snart',
+    adminLabel: 'Kommer snart',
+    badge: 'bg-emerald-100 text-emerald-700',
+    dot: 'bg-emerald-500',
+    formPill: FORM_PILL,
+    formPillAktiv: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    listPill: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+  },
 }
 
 /** Ordningen typerna visas i (formulär/filter). */
@@ -36,13 +76,13 @@ export const PUNKT_TYPER = Object.keys(TYP_CONFIG) as PunktTyp[]
 
 // Neutral stil för en okänd typ — ingen krasch, ingen felaktig färgkodning.
 const OKAND_TYP: TypConfig = {
-  label:         'Övrigt',
-  adminLabel:    'Övrigt',
-  badge:         'bg-slate-100 text-slate-600',
-  formPill:      FORM_PILL,
+  label: 'Övrigt',
+  adminLabel: 'Övrigt',
+  badge: 'bg-slate-100 text-slate-600',
+  formPill: FORM_PILL,
   formPillAktiv: 'bg-slate-100 text-slate-700 border-slate-200',
-  listPill:      'bg-slate-100 text-slate-600 border border-slate-200',
-  dot:           'bg-slate-400',
+  listPill: 'bg-slate-100 text-slate-600 border border-slate-200',
+  dot: 'bg-slate-400',
 }
 
 /**
@@ -52,7 +92,5 @@ const OKAND_TYP: TypConfig = {
  * råkar matcha via prototypkedjan.
  */
 export function getTypConfig(typ: string | null | undefined): TypConfig {
-  return typ != null && Object.hasOwn(TYP_CONFIG, typ)
-    ? TYP_CONFIG[typ as PunktTyp]
-    : OKAND_TYP
+  return typ != null && Object.hasOwn(TYP_CONFIG, typ) ? TYP_CONFIG[typ as PunktTyp] : OKAND_TYP
 }

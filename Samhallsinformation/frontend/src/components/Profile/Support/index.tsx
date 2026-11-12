@@ -8,7 +8,6 @@ export default function Support() {
 
   return (
     <div className="flex flex-col gap-8 mt-6">
-
       {flaggor.support_arenden && <ArendehanteringKort />}
 
       {flaggor.support_systemstatus && flaggor.support_faq && (
@@ -27,7 +26,6 @@ export default function Support() {
           </div>
         </div>
       )}
-
     </div>
   )
 }

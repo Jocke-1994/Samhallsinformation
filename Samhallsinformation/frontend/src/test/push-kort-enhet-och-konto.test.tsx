@@ -27,11 +27,18 @@ vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ email: 'a@b.se' }) 
 const pushMock = vi.mocked(pushApi)
 
 function renderaKort() {
-  const klient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={klient}><PushKort /></QueryClientProvider>)
+  const klient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={klient}>
+      <PushKort />
+    </QueryClientProvider>,
+  )
 }
 
-const reglage = () => screen.getAllByRole('button').filter(b => b.className.includes('rounded-full'))
+const reglage = () =>
+  screen.getAllByRole('button').filter((b) => b.className.includes('rounded-full'))
 const arPa = (b: HTMLElement) => b.className.includes('bg-violet-600')
 
 beforeEach(() => {
@@ -40,7 +47,11 @@ beforeEach(() => {
   hook.loading = false
   hook.subscribe.mockResolvedValue({})
   hook.unsubscribe.mockResolvedValue(undefined)
-  pushMock.fetchPushSettings.mockResolvedValue({ pushEnabled: true, pushNyaHandelser: true, pushNyVersion: false })
+  pushMock.fetchPushSettings.mockResolvedValue({
+    pushEnabled: true,
+    pushNyaHandelser: true,
+    pushNyVersion: false,
+  })
   pushMock.savePushSettings.mockResolvedValue(undefined)
 })
 
@@ -58,7 +69,9 @@ describe('PushKort — enhet utan prenumeration', () => {
   it('visar enhetsstatus separat och skickar ingen inställningsändring av sig själv', async () => {
     renderaKort()
 
-    expect(await screen.findByText('Den här enheten är inte registrerad för notiser.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Den här enheten är inte registrerad för notiser.'),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Aktivera på den här enheten' })).toBeInTheDocument()
     expect(pushMock.savePushSettings).not.toHaveBeenCalled()
   })
@@ -104,28 +117,40 @@ describe('PushKort — enhet utan prenumeration', () => {
     pushMock.fetchPushSettings.mockRejectedValue(new Error('fetchPushSettings: 500'))
     renderaKort()
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('notisinställningar kunde inte hämtas')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'notisinställningar kunde inte hämtas',
+    )
     expect(reglage()).toHaveLength(0)
     expect(pushMock.savePushSettings).not.toHaveBeenCalled()
   })
 })
 
 describe('PushKort — enhet med prenumeration', () => {
-  beforeEach(() => { hook.isSubscribed = true })
+  beforeEach(() => {
+    hook.isSubscribed = true
+  })
 
   it('visar att enheten är registrerad och kontots läge, utan aktiveringsknapp', async () => {
     renderaKort()
 
-    expect(await screen.findByText('Den här enheten är registrerad för notiser.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Den här enheten är registrerad för notiser.'),
+    ).toBeInTheDocument()
     await waitFor(() => expect(reglage()).toHaveLength(2))
     expect(arPa(reglage()[0])).toBe(true)
-    expect(screen.queryByRole('button', { name: 'Aktivera på den här enheten' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Aktivera på den här enheten' }),
+    ).not.toBeInTheDocument()
   })
 
   it('avstängning av den enda aktiva kategorin sparar först, avregistrerar sedan enheten', async () => {
     const ordning: string[] = []
-    pushMock.savePushSettings.mockImplementation(async () => { ordning.push('spara') })
-    hook.unsubscribe.mockImplementation(async () => { ordning.push('avregistrera') })
+    pushMock.savePushSettings.mockImplementation(async () => {
+      ordning.push('spara')
+    })
+    hook.unsubscribe.mockImplementation(async () => {
+      ordning.push('avregistrera')
+    })
     const user = userEvent.setup()
     renderaKort()
     await waitFor(() => expect(reglage()).toHaveLength(2))
@@ -144,20 +169,28 @@ describe('PushKort — enhet med prenumeration', () => {
 
     await user.click(reglage()[0])
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Notisinställningen kunde inte sparas')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Notisinställningen kunde inte sparas',
+    )
     expect(hook.unsubscribe).not.toHaveBeenCalled()
     expect(arPa(reglage()[0])).toBe(true)
   })
 
   it('avstängning när en annan kategori är kvar på: enheten behålls', async () => {
-    pushMock.fetchPushSettings.mockResolvedValue({ pushEnabled: true, pushNyaHandelser: true, pushNyVersion: true })
+    pushMock.fetchPushSettings.mockResolvedValue({
+      pushEnabled: true,
+      pushNyaHandelser: true,
+      pushNyVersion: true,
+    })
     const user = userEvent.setup()
     renderaKort()
     await waitFor(() => expect(reglage()).toHaveLength(2))
 
     await user.click(reglage()[0])
 
-    await waitFor(() => expect(pushMock.savePushSettings).toHaveBeenCalledWith({ pushNyaHandelser: false }))
+    await waitFor(() =>
+      expect(pushMock.savePushSettings).toHaveBeenCalledWith({ pushNyaHandelser: false }),
+    )
     expect(hook.unsubscribe).not.toHaveBeenCalled()
   })
 })

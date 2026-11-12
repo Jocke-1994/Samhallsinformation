@@ -19,17 +19,33 @@ vi.mock('../api/auth')
 vi.mock('../api/push')
 vi.mock('../hooks/usePushSubscription', () => ({
   isPushSupported: () => true,
-  usePushSubscription: () => ({ isSubscribed: true, loading: false, subscribe: vi.fn(), unsubscribe: vi.fn() }),
+  usePushSubscription: () => ({
+    isSubscribed: true,
+    loading: false,
+    subscribe: vi.fn(),
+    unsubscribe: vi.fn(),
+  }),
 }))
-const auth = { roll: 'Användare', setAccessToken: vi.fn(), isLoggedIn: true, emailVerified: false, email: 'a@b.se', logout: vi.fn() }
+const auth = {
+  roll: 'Användare',
+  setAccessToken: vi.fn(),
+  isLoggedIn: true,
+  emailVerified: false,
+  email: 'a@b.se',
+  logout: vi.fn(),
+}
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }))
-vi.mock('../context/FeatureFlagsContext', () => ({ useFlags: () => ({ konto_info: true, konto_epost_paminnelse: true }) }))
+vi.mock('../context/FeatureFlagsContext', () => ({
+  useFlags: () => ({ konto_info: true, konto_epost_paminnelse: true }),
+}))
 
 const authMock = vi.mocked(authApi)
 const pushMock = vi.mocked(pushApi)
 
 function med(ui: React.ReactElement) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>{ui}</MemoryRouter>
@@ -40,8 +56,13 @@ function med(ui: React.ReactElement) {
 beforeEach(() => {
   vi.clearAllMocks()
   authMock.fetchMe.mockResolvedValue({
-    email: 'a@b.se', name: 'Anna', displayName: null, role: 'Användare',
-    emailVerified: true, pendingEmail: null, authProvider: 'google',
+    email: 'a@b.se',
+    name: 'Anna',
+    displayName: null,
+    role: 'Användare',
+    emailVerified: true,
+    pendingEmail: null,
+    authProvider: 'google',
   })
 })
 
@@ -106,7 +127,11 @@ describe('Konto: kontouppgifter', () => {
   it('låser "Skicka bekräftelse" under pågående anrop (inga två mejl)', async () => {
     const user = userEvent.setup()
     let avsluta!: () => void
-    authMock.requestEmailChange.mockReturnValue(new Promise<void>(resolve => { avsluta = resolve }))
+    authMock.requestEmailChange.mockReturnValue(
+      new Promise<void>((resolve) => {
+        avsluta = resolve
+      }),
+    )
     med(<Konto />)
 
     const falt = await screen.findByDisplayValue('a@b.se')
@@ -126,8 +151,13 @@ describe('Konto: kontouppgifter', () => {
   it('misslyckad avbrytning av e-postbyte: felet syns och bannern står kvar', async () => {
     const user = userEvent.setup()
     authMock.fetchMe.mockResolvedValue({
-      email: 'a@b.se', name: 'Anna', displayName: null, role: 'Användare',
-      emailVerified: true, pendingEmail: 'ny@b.se', authProvider: 'google',
+      email: 'a@b.se',
+      name: 'Anna',
+      displayName: null,
+      role: 'Användare',
+      emailVerified: true,
+      pendingEmail: 'ny@b.se',
+      authProvider: 'google',
     })
     authMock.cancelEmailChange.mockRejectedValue(new Error('cancelEmailChange: 500'))
     med(<Konto />)
@@ -141,7 +171,10 @@ describe('Konto: kontouppgifter', () => {
 
 describe('Push-kategorier', () => {
   beforeEach(() => {
-    pushMock.fetchPushSettings.mockResolvedValue({ pushNyaHandelser: false, pushNyVersion: false } as never)
+    pushMock.fetchPushSettings.mockResolvedValue({
+      pushNyaHandelser: false,
+      pushNyVersion: false,
+    } as never)
   })
 
   it('misslyckad växling: felmeddelande och reglaget står kvar i sitt gamla läge', async () => {
@@ -152,7 +185,9 @@ describe('Push-kategorier', () => {
     const reglage = (await screen.findAllByRole('button'))[0]
     await user.click(reglage)
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Notisinställningen kunde inte sparas')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Notisinställningen kunde inte sparas',
+    )
     expect(reglage.className).toContain('bg-slate-200')
     expect(reglage).toBeEnabled()
   })
@@ -172,7 +207,11 @@ describe('Push-kategorier', () => {
   it('låser reglagen under pågående anrop', async () => {
     const user = userEvent.setup()
     let avsluta!: () => void
-    pushMock.savePushSettings.mockReturnValue(new Promise<void>(resolve => { avsluta = resolve }))
+    pushMock.savePushSettings.mockReturnValue(
+      new Promise<void>((resolve) => {
+        avsluta = resolve
+      }),
+    )
     med(<PushKort />)
 
     const [forsta, andra] = await screen.findAllByRole('button')

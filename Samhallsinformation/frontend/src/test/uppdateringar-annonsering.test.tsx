@@ -9,7 +9,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 // här testar bara att formuläret samlar in och validerar rätt data.
 
 vi.mock('../api/uppdateringar', async () => {
-  const faktisk = await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
+  const faktisk =
+    await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
   return {
     ...faktisk,
     fetchAdminUppdateringar: vi.fn().mockResolvedValue([]),
@@ -26,14 +27,23 @@ const api = await import('../api/uppdateringar')
 const { default: AdminUppdateringar } = await import('../components/Admin/AdminUppdateringar')
 
 function rendera() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={qc}><AdminUppdateringar /></QueryClientProvider>)
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={qc}>
+      <AdminUppdateringar />
+    </QueryClientProvider>,
+  )
 }
 
 async function öppnaOchFyllGrunduppgifter() {
   await userEvent.click(await screen.findByText('+ Ny uppdatering'))
   await userEvent.type(screen.getByPlaceholderText(/Logga in och skapa konto/), 'Titel')
-  await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'En rad text')
+  await userEvent.type(
+    screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+    'En rad text',
+  )
   await userEvent.click(screen.getByText('Schemalägg lansering'))
   const datumFält = document.querySelector('input[type="datetime-local"]') as HTMLInputElement
   fireEvent.change(datumFält, { target: { value: '2026-11-15T10:00' } })
@@ -81,7 +91,9 @@ describe('AdminUppdateringar — annonsering i förväg', () => {
     await userEvent.click(screen.getByText('Annonsera i förväg'))
     expect(screen.getByText('Skicka vid')).toBeInTheDocument()
     // Avgränsat till "Skicka vid"-raden: förhandsvisningen har en egen "Lansering"-knapp (Fas).
-    expect(within(screen.getByText('Skicka vid').parentElement!).getByText('Lansering')).toBeInTheDocument()
+    expect(
+      within(screen.getByText('Skicka vid').parentElement!).getByText('Lansering'),
+    ).toBeInTheDocument()
   })
 
   it('sparar annonseringUtc och pushSkickaVid korrekt', async () => {

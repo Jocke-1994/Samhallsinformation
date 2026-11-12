@@ -4,21 +4,21 @@ import { felFranSvar } from './hamta'
 export type AlertSeverity = 'info' | 'warning' | 'critical'
 
 export interface AdminAlertDto {
-  id:              string
-  ruleId:          string
-  severity:        AlertSeverity
-  title:           string
-  detail:          string
-  firstRaisedAt:   string
-  lastSeenAt:      string
+  id: string
+  ruleId: string
+  severity: AlertSeverity
+  title: string
+  detail: string
+  firstRaisedAt: string
+  lastSeenAt: string
   occurrenceCount: number
-  acknowledgedAt:  string | null
-  acknowledgedBy:  string | null
-  resolvedAt:      string | null
+  acknowledgedAt: string | null
+  acknowledgedBy: string | null
+  resolvedAt: string | null
 }
 
 export interface AdminAlertListDto {
-  open:             AdminAlertDto[]
+  open: AdminAlertDto[]
   recentlyResolved: AdminAlertDto[]
 }
 

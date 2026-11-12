@@ -9,18 +9,36 @@ export type KalenderFas = 'Annonsering' | 'Lansering' | 'Publicerad'
 export type KalenderKind = 'kommer-snart' | 'ny-funktion' | 'publicerad'
 
 export interface KalenderEntry {
-  id:            string
-  uppdatering:   Uppdatering
-  datum:         Date
-  fas:           KalenderFas
-  icon:          string
-  kind:          KalenderKind
+  id: string
+  uppdatering: Uppdatering
+  datum: Date
+  fas: KalenderFas
+  icon: string
+  kind: KalenderKind
 }
 
-export const KALENDER_STIL: Record<KalenderKind, { bg: string; fg: string; dot: string; label: string }> = {
-  'ny-funktion':  { bg: 'bg-violet-100',  fg: 'text-violet-700',  dot: 'bg-violet-600',  label: 'Ny funktion / lansering' },
-  'kommer-snart': { bg: 'bg-emerald-100', fg: 'text-emerald-700', dot: 'bg-emerald-500', label: 'Kommer snart (annonsering)' },
-  publicerad:     { bg: 'bg-green-100',   fg: 'text-green-700',   dot: 'bg-green-600',   label: 'Publicerad' },
+export const KALENDER_STIL: Record<
+  KalenderKind,
+  { bg: string; fg: string; dot: string; label: string }
+> = {
+  'ny-funktion': {
+    bg: 'bg-violet-100',
+    fg: 'text-violet-700',
+    dot: 'bg-violet-600',
+    label: 'Ny funktion / lansering',
+  },
+  'kommer-snart': {
+    bg: 'bg-emerald-100',
+    fg: 'text-emerald-700',
+    dot: 'bg-emerald-500',
+    label: 'Kommer snart (annonsering)',
+  },
+  publicerad: {
+    bg: 'bg-green-100',
+    fg: 'text-green-700',
+    dot: 'bg-green-600',
+    label: 'Publicerad',
+  },
 }
 
 // Härleder kalenderposter rakt av ur fälten som redan finns på Uppdatering —
@@ -32,25 +50,50 @@ export function byggKalenderEntries(uppdateringar: Uppdatering[]): KalenderEntry
   const entries: KalenderEntry[] = []
   for (const u of uppdateringar) {
     if (u.annonseringUtc) {
-      entries.push({ id: `${u.id}-annonsering`, uppdatering: u, datum: new Date(u.annonseringUtc), fas: 'Annonsering', icon: '📣', kind: 'kommer-snart' })
+      entries.push({
+        id: `${u.id}-annonsering`,
+        uppdatering: u,
+        datum: new Date(u.annonseringUtc),
+        fas: 'Annonsering',
+        icon: '📣',
+        kind: 'kommer-snart',
+      })
     }
     if (u.schemalagdPubliceringUtc) {
-      entries.push({ id: `${u.id}-lansering`, uppdatering: u, datum: new Date(u.schemalagdPubliceringUtc), fas: 'Lansering', icon: '🚀', kind: 'ny-funktion' })
+      entries.push({
+        id: `${u.id}-lansering`,
+        uppdatering: u,
+        datum: new Date(u.schemalagdPubliceringUtc),
+        fas: 'Lansering',
+        icon: '🚀',
+        kind: 'ny-funktion',
+      })
     } else if (u.publicerad) {
-      entries.push({ id: `${u.id}-publicerad`, uppdatering: u, datum: new Date(u.datum), fas: 'Publicerad', icon: '✅', kind: 'publicerad' })
+      entries.push({
+        id: `${u.id}-publicerad`,
+        uppdatering: u,
+        datum: new Date(u.datum),
+        fas: 'Publicerad',
+        icon: '✅',
+        kind: 'publicerad',
+      })
     }
   }
   return entries.sort((a, b) => a.datum.getTime() - b.datum.getTime())
 }
 
 export function sammaDag(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
 }
 
 export interface MånadsCell {
-  datum:    Date
+  datum: Date
   iAktuellMånad: boolean
-  idag:     boolean
+  idag: boolean
 }
 
 // 6×7-rutnät (42 celler), svensk vecka (mån–sön), inkl. spill från grann-
@@ -72,7 +115,7 @@ export function byggMånadsCeller(år: number, månad: number): MånadsCell[] {
 }
 
 export function visningsMålgrupp(u: Uppdatering): string {
-  return u.punkter.some(p => p.synlighet === 'alla') ? 'Alla (även besökare)' : 'Endast inloggade'
+  return u.punkter.some((p) => p.synlighet === 'alla') ? 'Alla (även besökare)' : 'Endast inloggade'
 }
 
 // Push-raden gäller bara för de faser PushSkickaVid faktiskt styr

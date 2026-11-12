@@ -10,7 +10,7 @@ export default function CancelDeletionPage() {
   const token = params.get('token') ?? ''
 
   const [status, setStatus] = useState<Status>(token ? 'avbryter' : 'error')
-  const [error, setError]   = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const attempted = useRef(false)
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export default function CancelDeletionPage() {
         setStatus('success')
         setTimeout(() => navigate('/login', { replace: true }), 4000)
       })
-      .catch(err => {
+      .catch((err) => {
         setStatus('error')
         setError(err instanceof Error ? err.message : 'Något gick fel')
       })
@@ -30,7 +30,6 @@ export default function CancelDeletionPage() {
   return (
     <div className="min-h-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-
         <div className="text-center mb-8">
           <span className="text-2xl font-bold text-violet-600">Samhällsinfo</span>
         </div>
@@ -42,8 +41,12 @@ export default function CancelDeletionPage() {
           {status === 'success' && (
             <>
               <div className="text-3xl mb-4">✅</div>
-              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Raderingen är avbruten!</p>
-              <p className="text-xs text-slate-400 mt-2">Ditt konto är tillbaka. Du skickas vidare till inloggningen…</p>
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                Raderingen är avbruten!
+              </p>
+              <p className="text-xs text-slate-400 mt-2">
+                Ditt konto är tillbaka. Du skickas vidare till inloggningen…
+              </p>
             </>
           )}
           {status === 'error' && (
@@ -54,13 +57,15 @@ export default function CancelDeletionPage() {
               <p className="text-xs text-slate-400 mt-2">
                 Behöver du hjälp? Kontakta support via Hjälp &amp; Feedback-knappen.
               </p>
-              <Link to="/" className="text-violet-600 hover:text-violet-500 text-sm mt-3 inline-block">
+              <Link
+                to="/"
+                className="text-violet-600 hover:text-violet-500 text-sm mt-3 inline-block"
+              >
                 Till startsidan
               </Link>
             </>
           )}
         </div>
-
       </div>
     </div>
   )

@@ -4,15 +4,20 @@ import type { Source } from '../types'
 
 function kalla(overrides: Partial<Source>): Source {
   return {
-    id: 1, name: 'X', shortName: 'X', baseUrl: 'https://example.com',
-    isActive: true, scope: 'nationell', ...overrides,
+    id: 1,
+    name: 'X',
+    shortName: 'X',
+    baseUrl: 'https://example.com',
+    isActive: true,
+    scope: 'nationell',
+    ...overrides,
   }
 }
 
 describe('grupperaKallor', () => {
   it('källor med olika shortName hamnar i varsin grupp', () => {
     const polisen = kalla({ id: 1, name: 'Polisen', shortName: 'Polisen' })
-    const smhi    = kalla({ id: 2, name: 'SMHI', shortName: 'SMHI' })
+    const smhi = kalla({ id: 2, name: 'SMHI', shortName: 'SMHI' })
 
     const grupper = grupperaKallor([polisen, smhi])
 
@@ -22,7 +27,7 @@ describe('grupperaKallor', () => {
   })
 
   it('källor med samma shortName hamnar i samma grupp, i ordningen de kom in', () => {
-    const polisen        = kalla({ id: 1, name: 'Polisen', shortName: 'Polisen' })
+    const polisen = kalla({ id: 1, name: 'Polisen', shortName: 'Polisen' })
     const efterlysningar = kalla({ id: 2, name: 'Polisen Efterlysningar', shortName: 'Polisen' })
 
     const grupper = grupperaKallor([polisen, efterlysningar])
@@ -35,7 +40,7 @@ describe('grupperaKallor', () => {
 describe('representant', () => {
   it('väljer källan vars Name exakt matchar ShortName (huvudkällan)', () => {
     const efterlysningar = kalla({ id: 2, name: 'Polisen Efterlysningar', shortName: 'Polisen' })
-    const polisen        = kalla({ id: 1, name: 'Polisen', shortName: 'Polisen' })
+    const polisen = kalla({ id: 1, name: 'Polisen', shortName: 'Polisen' })
 
     // Ordningen i arrayen ska inte spela roll — huvudkällan vinner oavsett.
     expect(representant([efterlysningar, polisen])).toBe(polisen)

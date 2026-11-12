@@ -2,13 +2,13 @@ import { adminFetch } from './adminFetch'
 import { LANG_TIMEOUT_MS, felFranSvar } from './hamta'
 
 export interface MeDto {
-  email:         string
-  name:          string
-  displayName:   string | null
-  role:          string
+  email: string
+  name: string
+  displayName: string | null
+  role: string
   emailVerified: boolean
-  pendingEmail:  string | null
-  authProvider:  string
+  pendingEmail: string | null
+  authProvider: string
 }
 
 export async function fetchMe(): Promise<MeDto> {
@@ -51,21 +51,24 @@ export async function changePassword(currentPassword: string, newPassword: strin
       // Funktion, inte sträng: får anropet 401 förnyas sessionen och
       // refresh-token roteras — omförsöket måste skicka den NYA, annars
       // återkallar backend enhetens egen session tillsammans med de övriga.
-      body: () => JSON.stringify({
-        currentPassword,
-        newPassword,
-        refreshToken: localStorage.getItem('si_refresh_token'),
-      }),
+      body: () =>
+        JSON.stringify({
+          currentPassword,
+          newPassword,
+          refreshToken: localStorage.getItem('si_refresh_token'),
+        }),
     })
   } catch {
     throw new Error('Kunde inte nå servern. Kontrollera din anslutning och försök igen.')
   }
   if (res.ok) return
 
-  const err = await res.json().catch(() => ({})) as { error?: string }
+  const err = (await res.json().catch(() => ({}))) as { error?: string }
   if (res.status === 400 && err.error) throw new Error(err.error)
-  if (res.status === 401) throw new Error('Din session har gått ut. Logga in igen och försök på nytt.')
-  if (res.status === 429) throw new Error('För många försök på kort tid. Vänta en minut och försök igen.')
+  if (res.status === 401)
+    throw new Error('Din session har gått ut. Logga in igen och försök på nytt.')
+  if (res.status === 429)
+    throw new Error('För många försök på kort tid. Vänta en minut och försök igen.')
   throw new Error('Något gick fel när lösenordet skulle bytas. Försök igen om en stund.')
 }
 
@@ -73,7 +76,10 @@ export async function changePassword(currentPassword: string, newPassword: strin
 // adressen. Kontots e-post ändras först när länken klickas (confirmEmailChange).
 // currentPassword krävs för lösenordskonton (kollas av backend) — en kapad
 // inloggad session ska inte ensam räcka för att byta bort kontots e-post.
-export async function requestEmailChange(newEmail: string, currentPassword?: string): Promise<void> {
+export async function requestEmailChange(
+  newEmail: string,
+  currentPassword?: string,
+): Promise<void> {
   const res = await adminFetch('/api/auth/me/email-change', {
     method: 'POST',
     body: JSON.stringify({ newEmail, currentPassword }),

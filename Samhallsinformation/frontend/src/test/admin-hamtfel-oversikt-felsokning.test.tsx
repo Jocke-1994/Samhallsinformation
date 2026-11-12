@@ -26,21 +26,32 @@ const { fetchAdminAlerts } = await import('../api/alerts')
 const { default: Oversikt } = await import('../components/Admin/Oversikt')
 const { default: Felsökning } = await import('../components/Admin/Felsökning')
 
-const källa = (id: number, over: Partial<AdminSource> = {}): AdminSource => ({
-  id, name: `Källa ${id}`, shortName: `K${id}`, isActive: true, lastFetchError: null,
-  lastFetchedAt: new Date().toISOString(), type: 0, url: `https://k${id}.se/rss`, baseUrl: `https://k${id}.se`,
-  ...over,
-} as unknown as AdminSource)
+const källa = (id: number, over: Partial<AdminSource> = {}): AdminSource =>
+  ({
+    id,
+    name: `Källa ${id}`,
+    shortName: `K${id}`,
+    isActive: true,
+    lastFetchError: null,
+    lastFetchedAt: new Date().toISOString(),
+    type: 0,
+    url: `https://k${id}.se/rss`,
+    baseUrl: `https://k${id}.se`,
+    ...over,
+  }) as unknown as AdminSource
 
 const hälsa = (over: Partial<AdminHealthDto> = {}): AdminHealthDto => ({
-  api: { status: 'OK', latencyMs: 3 }, db: { status: 'OK', latencyMs: 5 },
+  api: { status: 'OK', latencyMs: 3 },
+  db: { status: 'OK', latencyMs: 5 },
   ingestor: { status: 'OK', lastFetchedAt: null, aktivaKällor: 2, källorMedFel: 0 },
   notifieringar: { status: 'OK', felSenaste24h: 0, totaltSenaste24h: 0 },
   ...over,
 })
 
 function rendera(ui: React.ReactElement) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
 }
 
@@ -75,11 +86,16 @@ describe('Översikt — hämtfel är inte 0 eller "100 % frisk"', () => {
   })
 
   it('Försök igen hämtar om och visar data när det lyckas', async () => {
-    vi.mocked(fetchAdminSources).mockRejectedValueOnce(new Error('fetchAdminSources: 500'))
+    vi.mocked(fetchAdminSources)
+      .mockRejectedValueOnce(new Error('fetchAdminSources: 500'))
       .mockResolvedValue([källa(1), källa(2, { lastFetchError: 'timeout' })])
     vi.mocked(fetchAdminUsers).mockResolvedValue([])
     vi.mocked(fetchAdminTickets).mockResolvedValue([])
-    vi.mocked(fetchAdminActivityLog).mockResolvedValue({ rader: [], totalt: 0, sammanfattning: { ingestor: 0, fel: 0, varningar: 0 } })
+    vi.mocked(fetchAdminActivityLog).mockResolvedValue({
+      rader: [],
+      totalt: 0,
+      sammanfattning: { ingestor: 0, fel: 0, varningar: 0 },
+    })
     rendera(<Oversikt onNavigate={() => {}} />)
 
     await screen.findAllByText('Kunde inte hämtas')
@@ -94,7 +110,11 @@ describe('Översikt — hämtfel är inte 0 eller "100 % frisk"', () => {
     vi.mocked(fetchAdminSources).mockResolvedValue([])
     vi.mocked(fetchAdminUsers).mockResolvedValue([])
     vi.mocked(fetchAdminTickets).mockResolvedValue([])
-    vi.mocked(fetchAdminActivityLog).mockResolvedValue({ rader: [], totalt: 0, sammanfattning: { ingestor: 0, fel: 0, varningar: 0 } })
+    vi.mocked(fetchAdminActivityLog).mockResolvedValue({
+      rader: [],
+      totalt: 0,
+      sammanfattning: { ingestor: 0, fel: 0, varningar: 0 },
+    })
     rendera(<Oversikt onNavigate={() => {}} />)
 
     expect(await screen.findByText('Inga aktiva källor.')).toBeInTheDocument()
@@ -111,7 +131,11 @@ describe('Översikt — hämtfel är inte 0 eller "100 % frisk"', () => {
     vi.mocked(fetchAdminSources).mockResolvedValue([källa(1), källa(2)])
     vi.mocked(fetchAdminUsers).mockResolvedValue([])
     vi.mocked(fetchAdminTickets).mockResolvedValue([])
-    vi.mocked(fetchAdminActivityLog).mockResolvedValue({ rader: [], totalt: 0, sammanfattning: { ingestor: 0, fel: 0, varningar: 0 } })
+    vi.mocked(fetchAdminActivityLog).mockResolvedValue({
+      rader: [],
+      totalt: 0,
+      sammanfattning: { ingestor: 0, fel: 0, varningar: 0 },
+    })
     rendera(<Oversikt onNavigate={() => {}} />)
 
     expect(await screen.findByText('100%')).toBeInTheDocument()
@@ -135,7 +159,9 @@ describe('Felsökning / Systemhälsa — hälsofel är inte "frisk"', () => {
 
   it('Försök igen efter hälsofel ger riktig status', async () => {
     vi.mocked(fetchAdminSources).mockResolvedValue([källa(1)])
-    vi.mocked(fetchAdminHealth).mockRejectedValueOnce(new Error('fetchAdminHealth: 500')).mockResolvedValue(hälsa())
+    vi.mocked(fetchAdminHealth)
+      .mockRejectedValueOnce(new Error('fetchAdminHealth: 500'))
+      .mockResolvedValue(hälsa())
     rendera(<Felsökning />)
 
     await userEvent.click(await screen.findByRole('button', { name: 'Försök igen' }))
@@ -159,7 +185,9 @@ describe('Felsökning / Systemhälsa — hälsofel är inte "frisk"', () => {
     rendera(<Felsökning />)
 
     // Komponenten har egen retry: 1 (1 s väntan) — därför längre timeout.
-    expect(await screen.findByText('Kunde inte hämta källorna.', {}, { timeout: 4000 })).toBeInTheDocument()
+    expect(
+      await screen.findByText('Kunde inte hämta källorna.', {}, { timeout: 4000 }),
+    ).toBeInTheDocument()
     expect(screen.getByText('Källor okända')).toBeInTheDocument()
     expect(screen.queryByText('Inga källor finns.')).not.toBeInTheDocument()
   })
@@ -185,6 +213,8 @@ describe('Felsökning / Systemhälsa — hälsofel är inte "frisk"', () => {
     await screen.findByText('Källa 1')
     await userEvent.click(screen.getByText('Aktiv').nextElementSibling as HTMLElement)
 
-    expect(await screen.findByText('Kunde inte ändra källans status. Försök igen.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Kunde inte ändra källans status. Försök igen.'),
+    ).toBeInTheDocument()
   })
 })

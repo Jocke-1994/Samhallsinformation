@@ -25,11 +25,11 @@ export function markAsRead(eventId: string): void {
 
 export function markAllAsRead(eventIds: string[]): void {
   const ids = getReadIds()
-  eventIds.forEach(id => ids.add(id))
+  eventIds.forEach((id) => ids.add(id))
   saveReadIds(ids)
 }
 
 export function getReadStatus(eventIds: string[]): Record<string, boolean> {
   const ids = getReadIds()
-  return Object.fromEntries(eventIds.map(id => [id, ids.has(id)]))
+  return Object.fromEntries(eventIds.map((id) => [id, ids.has(id)]))
 }

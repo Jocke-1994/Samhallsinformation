@@ -2,7 +2,12 @@ import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchSources } from '../../../api/sources'
-import { fetchUserSources, saveUserSources, type SourcePrefUpdate, type UserSourcePref } from '../../../api/userSources'
+import {
+  fetchUserSources,
+  saveUserSources,
+  type SourcePrefUpdate,
+  type UserSourcePref,
+} from '../../../api/userSources'
 import LaggTillKort from './LaggTillKort'
 import AktivaKallorKort from './AktivaKallorKort'
 import RekommenderadeKallorKort from './RekommenderadeKallorKort'
@@ -13,7 +18,7 @@ import { anvandarKallorNyckel } from '../../../lib/queryNycklar'
 import type { Source } from '../../../types'
 
 export default function MinaKallor() {
-  const location    = useLocation()
+  const location = useLocation()
   const [highlightId, setHighlightId] = useState<string | null>(location.state?.highlightId ?? null)
   const flaggor = useFlags()
   const queryClient = useQueryClient()
@@ -28,12 +33,12 @@ export default function MinaKallor() {
 
   const { data: sources = [] } = useQuery<Source[]>({
     queryKey: ['sources'],
-    queryFn:  fetchSources,
+    queryFn: fetchSources,
   })
 
   const { data: prefs = [] } = useQuery({
     queryKey: kallorNyckel,
-    queryFn:  fetchUserSources,
+    queryFn: fetchUserSources,
   })
 
   // Skriver mutationens egna indata direkt in i cachen istället för att bara
@@ -44,12 +49,15 @@ export default function MinaKallor() {
     mutationFn: saveUserSources,
     onSuccess: (_data, variables) => {
       queryClient.setQueryData<UserSourcePref[]>(kallorNyckel, (old = []) => {
-        const byId = new Map(old.map(p => [p.sourceId, p]))
+        const byId = new Map(old.map((p) => [p.sourceId, p]))
         for (const v of variables) {
           byId.set(v.sourceId, {
-            sourceId:  v.sourceId,
-            shortName: byId.get(v.sourceId)?.shortName ?? sources.find(s => s.id === v.sourceId)?.shortName ?? '',
-            isActive:  v.isActive,
+            sourceId: v.sourceId,
+            shortName:
+              byId.get(v.sourceId)?.shortName ??
+              sources.find((s) => s.id === v.sourceId)?.shortName ??
+              '',
+            isActive: v.isActive,
             sortOrder: v.sortOrder,
           })
         }
@@ -60,8 +68,8 @@ export default function MinaKallor() {
     },
   })
 
-  const activeIds     = new Set(prefs.filter(p => p.isActive).map(p => p.sourceId))
-  const activeSources = sources.filter(s => activeIds.has(s.id))
+  const activeIds = new Set(prefs.filter((p) => p.isActive).map((p) => p.sourceId))
+  const activeSources = sources.filter((s) => activeIds.has(s.id))
 
   // Ett skrivande anrop i taget: medan PUT:en pågår är korten låsta, så att ett
   // andra klick inte skickar en ny ändring ovanpå en ännu obekräftad.
@@ -69,9 +77,9 @@ export default function MinaKallor() {
 
   function handleAdd(ids: number[]) {
     if (sparar) return
-    let nastaOrdning = prefs.filter(p => p.isActive).length
-    const uppdateringar: SourcePrefUpdate[] = ids.map(sourceId => {
-      const befintlig = prefs.find(p => p.sourceId === sourceId)
+    let nastaOrdning = prefs.filter((p) => p.isActive).length
+    const uppdateringar: SourcePrefUpdate[] = ids.map((sourceId) => {
+      const befintlig = prefs.find((p) => p.sourceId === sourceId)
       return { sourceId, isActive: true, sortOrder: befintlig?.sortOrder ?? nastaOrdning++ }
     })
     mutation.mutate(uppdateringar)
@@ -79,8 +87,8 @@ export default function MinaKallor() {
 
   function handleRemove(ids: number[]) {
     if (sparar) return
-    const uppdateringar: SourcePrefUpdate[] = ids.map(sourceId => {
-      const befintlig = prefs.find(p => p.sourceId === sourceId)
+    const uppdateringar: SourcePrefUpdate[] = ids.map((sourceId) => {
+      const befintlig = prefs.find((p) => p.sourceId === sourceId)
       return { sourceId, isActive: false, sortOrder: befintlig?.sortOrder ?? 0 }
     })
     mutation.mutate(uppdateringar)
@@ -88,19 +96,23 @@ export default function MinaKallor() {
 
   function handleDeleteAll() {
     if (sparar) return
-    mutation.mutate(prefs.filter(p => p.isActive).map(p => ({ ...p, isActive: false })))
+    mutation.mutate(prefs.filter((p) => p.isActive).map((p) => ({ ...p, isActive: false })))
   }
 
   return (
     <div className="flex flex-col gap-6 mt-6">
-
       {/* Cachen uppdateras först när servern bekräftat (onSuccess), så ett
           misslyckat anrop lämnar listan orörd — det enda som saknades var att
           tala om det. Felet försvinner när nästa försök startar. */}
       {mutation.isError && (
-        <div role="alert" className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+        <div
+          role="alert"
+          className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3"
+        >
           <span className="text-red-500 text-sm">⚠</span>
-          <p className="text-xs font-medium text-red-600">Ändringen kunde inte sparas — dina källor är oförändrade. Försök igen.</p>
+          <p className="text-xs font-medium text-red-600">
+            Ändringen kunde inte sparas — dina källor är oförändrade. Försök igen.
+          </p>
         </div>
       )}
 
@@ -113,7 +125,10 @@ export default function MinaKallor() {
           till" där skulle ge ett backend-fel (FK-brott) om flaggan slås på.
           Rörs inte förrän kortet antingen kopplas mot riktig data eller byggs
           om i grunden. */}
-      {(flaggor.kallor_lagg_till || flaggor.kallor_aktiva || flaggor.kallor_rekommenderade || flaggor.kallor_alla) && (
+      {(flaggor.kallor_lagg_till ||
+        flaggor.kallor_aktiva ||
+        flaggor.kallor_rekommenderade ||
+        flaggor.kallor_alla) && (
         <div
           aria-busy={sparar}
           className={`flex flex-col lg:flex-row gap-6 items-stretch lg:items-start transition-opacity ${sparar ? 'opacity-60 pointer-events-none' : ''}`}
@@ -146,7 +161,6 @@ export default function MinaKallor() {
           )}
         </div>
       )}
-
     </div>
   )
 }

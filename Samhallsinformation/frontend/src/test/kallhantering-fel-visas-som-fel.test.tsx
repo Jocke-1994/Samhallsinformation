@@ -19,14 +19,29 @@ const { fetchAdminSources, updateAdminSource, createAdminSource } = await import
 const { default: Kallhantering } = await import('../components/Admin/Kallhantering')
 
 const KÄLLA: AdminSource = {
-  id: 7, name: 'Testkällan', shortName: 'TK', baseUrl: 'https://kalla.example', url: 'https://kalla.example/rss',
-  category: 'Nationell', type: 0, isActive: true, isPublished: false, eventCount: 12,
-  lastFetchedAt: null, lastFetchError: null,
+  id: 7,
+  name: 'Testkällan',
+  shortName: 'TK',
+  baseUrl: 'https://kalla.example',
+  url: 'https://kalla.example/rss',
+  category: 'Nationell',
+  type: 0,
+  isActive: true,
+  isPublished: false,
+  eventCount: 12,
+  lastFetchedAt: null,
+  lastFetchError: null,
 }
 
 function rendera() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}><Kallhantering /></QueryClientProvider>)
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <Kallhantering />
+    </QueryClientProvider>,
+  )
 }
 
 async function öppnaRedigering() {
@@ -54,7 +69,9 @@ describe('Källhantering — hämtfel', () => {
       .mockResolvedValue([KÄLLA])
     rendera()
 
-    expect(await screen.findByText('Kunde inte hämta källista från backend', {}, { timeout: 4000 })).toBeInTheDocument()
+    expect(
+      await screen.findByText('Kunde inte hämta källista från backend', {}, { timeout: 4000 }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(screen.getByText(/Antal okänt/)).toBeInTheDocument()
     expect(screen.queryByText(/0 källor registrerade/)).not.toBeInTheDocument()
@@ -77,13 +94,17 @@ describe('Källhantering — hämtfel', () => {
 
 describe('Källhantering — redigering', () => {
   it('FEL: formuläret förblir öppet med inmatningen kvar och serverns text visas', async () => {
-    vi.mocked(updateAdminSource).mockRejectedValue(new Error('En källa med den adressen finns redan.'))
+    vi.mocked(updateAdminSource).mockRejectedValue(
+      new Error('En källa med den adressen finns redan.'),
+    )
     rendera()
     await öppnaRedigering()
     await skrivNamn('Nytt namn')
     await userEvent.click(screen.getByRole('button', { name: 'Spara' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('En källa med den adressen finns redan.')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'En källa med den adressen finns redan.',
+    )
     expect(screen.getByDisplayValue('Nytt namn')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Spara' })).not.toBeDisabled()
   })
@@ -101,7 +122,12 @@ describe('Källhantering — redigering', () => {
 
   it('LYCKAT: formuläret stängs först när servern svarat', async () => {
     let lös: (s: AdminSource) => void = () => {}
-    vi.mocked(updateAdminSource).mockImplementation(() => new Promise<AdminSource>(res => { lös = res }))
+    vi.mocked(updateAdminSource).mockImplementation(
+      () =>
+        new Promise<AdminSource>((res) => {
+          lös = res
+        }),
+    )
     rendera()
     await öppnaRedigering()
     await skrivNamn('Nytt namn')
@@ -122,7 +148,7 @@ describe('Källhantering — redigering', () => {
     await userEvent.dblClick(screen.getByRole('button', { name: 'Spara' }))
 
     await waitFor(() => expect(updateAdminSource).toHaveBeenCalledTimes(1))
-    await new Promise(r => setTimeout(r, 50))
+    await new Promise((r) => setTimeout(r, 50))
     expect(updateAdminSource).toHaveBeenCalledTimes(1)
   })
 })

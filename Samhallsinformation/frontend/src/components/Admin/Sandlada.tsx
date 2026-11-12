@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { fetchPreviewEvents, dryRunSource, type PreviewSource, type DryRunResult } from '../../api/testing'
+import {
+  fetchPreviewEvents,
+  dryRunSource,
+  type PreviewSource,
+  type DryRunResult,
+} from '../../api/testing'
 import NewsItem from '../NewsFeed/NewsItem'
 
 type Flik = 'forhandsvisning' | 'testa'
@@ -11,12 +16,18 @@ export default function Sandlada() {
   return (
     <div>
       <p className="text-sm text-slate-500 mb-6">
-        Sandlådan låter dig förhandsgranska händelser från opublicerade källor och testa nya RSS-flöden utan att de syns för besökare.
+        Sandlådan låter dig förhandsgranska händelser från opublicerade källor och testa nya
+        RSS-flöden utan att de syns för besökare.
       </p>
 
       {/* Tabbar */}
       <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit mb-8">
-        {([['forhandsvisning', '🔭 Förhandsvisning'], ['testa', '⚗️ Testa källa']] as [Flik, string][]).map(([key, label]) => (
+        {(
+          [
+            ['forhandsvisning', '🔭 Förhandsvisning'],
+            ['testa', '⚗️ Testa källa'],
+          ] as [Flik, string][]
+        ).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setFlik(key)}
@@ -32,7 +43,7 @@ export default function Sandlada() {
       </div>
 
       {flik === 'forhandsvisning' && <Forhandsvisning />}
-      {flik === 'testa'           && <TestaKalla />}
+      {flik === 'testa' && <TestaKalla />}
     </div>
   )
 }
@@ -40,29 +51,35 @@ export default function Sandlada() {
 function Forhandsvisning() {
   const { data, isLoading, isError, refetch } = useQuery<PreviewSource[]>({
     queryKey: ['testing-preview'],
-    queryFn:  fetchPreviewEvents,
+    queryFn: fetchPreviewEvents,
   })
 
   if (isLoading) return <Spinner />
 
-  if (isError) return (
-    <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-      Kunde inte hämta förhandsvisning.{' '}
-      <button onClick={() => refetch()} className="underline font-medium">Försök igen</button>
-    </div>
-  )
+  if (isError)
+    return (
+      <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+        Kunde inte hämta förhandsvisning.{' '}
+        <button onClick={() => refetch()} className="underline font-medium">
+          Försök igen
+        </button>
+      </div>
+    )
 
-  if (!data || data.length === 0) return (
-    <div className="text-center py-16 text-slate-400">
-      <p className="text-3xl mb-3">🔭</p>
-      <p className="text-sm font-medium">Inga aktiva testflöden just nu</p>
-      <p className="text-xs mt-1">Aktivera en källa i källhanteringen utan att publicera den — händelserna visas här.</p>
-    </div>
-  )
+  if (!data || data.length === 0)
+    return (
+      <div className="text-center py-16 text-slate-400">
+        <p className="text-3xl mb-3">🔭</p>
+        <p className="text-sm font-medium">Inga aktiva testflöden just nu</p>
+        <p className="text-xs mt-1">
+          Aktivera en källa i källhanteringen utan att publicera den — händelserna visas här.
+        </p>
+      </div>
+    )
 
   return (
     <div className="flex flex-col gap-10">
-      {data.map(src => (
+      {data.map((src) => (
         <SourceBlock key={src.sourceId} src={src} />
       ))}
     </div>
@@ -75,40 +92,43 @@ function SourceBlock({ src }: { src: PreviewSource }) {
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
-        <button
-          onClick={() => setExpanded(v => !v)}
-          className="flex items-center gap-2 group"
-        >
-          <span className="text-slate-400 text-xs transition-transform duration-200" style={{ display: 'inline-block', transform: expanded ? 'rotate(90deg)' : '' }}>▶</span>
+        <button onClick={() => setExpanded((v) => !v)} className="flex items-center gap-2 group">
+          <span
+            className="text-slate-400 text-xs transition-transform duration-200"
+            style={{ display: 'inline-block', transform: expanded ? 'rotate(90deg)' : '' }}
+          >
+            ▶
+          </span>
           <h3 className="text-base font-semibold text-slate-800 group-hover:text-violet-600 transition-colors">
             {src.sourceName}
           </h3>
         </button>
-        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Opublicerad</span>
+        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+          Opublicerad
+        </span>
         <span className="text-xs text-slate-400">{src.events.length} händelser</span>
       </div>
 
-      {expanded && (
-        src.events.length === 0
-          ? <p className="text-sm text-slate-400 pl-5">Inga händelser ingestade ännu.</p>
-          : (
-            <div className="flex flex-col gap-2 pl-5">
-              {src.events.map(e => (
-                <NewsItem key={e.id} event={e} isRead={false} sourceName={src.sourceName} />
-              ))}
-            </div>
-          )
-      )}
+      {expanded &&
+        (src.events.length === 0 ? (
+          <p className="text-sm text-slate-400 pl-5">Inga händelser ingestade ännu.</p>
+        ) : (
+          <div className="flex flex-col gap-2 pl-5">
+            {src.events.map((e) => (
+              <NewsItem key={e.id} event={e} isRead={false} sourceName={src.sourceName} />
+            ))}
+          </div>
+        ))}
     </div>
   )
 }
 
 function TestaKalla() {
-  const [url,     setUrl]     = useState('')
-  const [name,    setName]    = useState('')
+  const [url, setUrl] = useState('')
+  const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
-  const [result,  setResult]  = useState<DryRunResult | null>(null)
-  const [error,   setError]   = useState<string | null>(null)
+  const [result, setResult] = useState<DryRunResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   async function run() {
     if (!url.trim()) return
@@ -132,11 +152,13 @@ function TestaKalla() {
 
         <div className="flex flex-col gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">URL till RSS/Atom-flöde</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">
+              URL till RSS/Atom-flöde
+            </label>
             <input
               type="url"
               value={url}
-              onChange={e => setUrl(e.target.value)}
+              onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com/rss"
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
             />
@@ -147,7 +169,7 @@ function TestaKalla() {
             <input
               type="text"
               value={name}
-              onChange={e => setName(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Hämtas från URL om tomt"
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
             />

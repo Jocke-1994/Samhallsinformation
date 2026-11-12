@@ -8,11 +8,11 @@ import {
 } from '../lib/refreshPolicy'
 
 describe('beslutaAtgardVidFel', () => {
-  it.each([401, 403])('loggar ut vid %i (servern avvisar token)', status => {
+  it.each([401, 403])('loggar ut vid %i (servern avvisar token)', (status) => {
     expect(beslutaAtgardVidFel(status)).toBe('loggaUt')
   })
 
-  it.each([400, 408, 429, 500, 502, 503, 504])('försöker igen vid %i', status => {
+  it.each([400, 408, 429, 500, 502, 503, 504])('försöker igen vid %i', (status) => {
     expect(beslutaAtgardVidFel(status)).toBe('forsokIgen')
   })
 
@@ -50,7 +50,9 @@ describe('beraknaRefreshFordrojning', () => {
 
   it('golv för en nyss erhållen token som ser utgången ut (klockskillnad)', () => {
     expect(beraknaRefreshFordrojning(NU + MIN, NU, null, 0)).toBe(MIN_REFRESH_FORDROJNING_MS)
-    expect(beraknaRefreshFordrojning(NU - 5 * MIN, NU, null, 5_000)).toBe(MIN_REFRESH_FORDROJNING_MS)
+    expect(beraknaRefreshFordrojning(NU - 5 * MIN, NU, null, 5_000)).toBe(
+      MIN_REFRESH_FORDROJNING_MS,
+    )
   })
 
   it('inget golv när token lästs in vid start (null) eller erhölls för länge sedan', () => {

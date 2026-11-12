@@ -22,7 +22,9 @@ let bro: AuthBridge = standardBro
 // Returnerar en avregistreringsfunktion (för cleanup i useLayoutEffect).
 export function registerAuthBridge(ny: AuthBridge): () => void {
   bro = ny
-  return () => { if (bro === ny) bro = standardBro }
+  return () => {
+    if (bro === ny) bro = standardBro
+  }
 }
 
 export function hamtaAktuellToken(): string | null {
@@ -45,10 +47,15 @@ export async function fornyaEfter401(avvisadToken: string): Promise<string | nul
 
   if (!pagaende) {
     const aktuell = bro
-    pagaende = aktuell.refresh()
-      .catch(() => { /* utfallet avgörs av om en ny token finns nedan */ })
+    pagaende = aktuell
+      .refresh()
+      .catch(() => {
+        /* utfallet avgörs av om en ny token finns nedan */
+      })
       .then(() => aktuell.getToken())
-      .finally(() => { pagaende = null })
+      .finally(() => {
+        pagaende = null
+      })
   }
   const ny = await pagaende
   return ny && ny !== avvisadToken ? ny : null

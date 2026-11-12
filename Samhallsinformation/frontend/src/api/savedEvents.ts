@@ -4,7 +4,10 @@ import { felFranSvar } from './hamta'
 
 // De sparade händelserna själva (inte bara id:n), paginerat på servern — så att
 // en sparad händelse syns oavsett hur gammal den är (V3-11).
-export async function fetchSparadeHandelser(page: number, pageSize: number): Promise<EventsResponse> {
+export async function fetchSparadeHandelser(
+  page: number,
+  pageSize: number,
+): Promise<EventsResponse> {
   const res = await adminFetch(`/api/user/saved-events/events?page=${page}&pageSize=${pageSize}`)
   if (!res.ok) throw await felFranSvar(res, 'fetchSparadeHandelser')
   return res.json()

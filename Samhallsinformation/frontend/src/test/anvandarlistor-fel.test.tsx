@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { PolisenBevakningarProvider, usePolisenBevakningar } from '../context/PolisenBevakningarContext'
+import {
+  PolisenBevakningarProvider,
+  usePolisenBevakningar,
+} from '../context/PolisenBevakningarContext'
 import { SavedEventsProvider, useSavedEvents } from '../context/SavedEventsContext'
 import * as bevakApi from '../api/polisenBevakningar'
 import * as sparatApi from '../api/savedEvents'
@@ -19,7 +22,11 @@ vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }))
 const mockBevak = vi.mocked(bevakApi)
 const mockSparat = vi.mocked(sparatApi)
 
-const uppsalaInbrott: bevakApi.BevakningDto = { id: 'b1', kategorier: ['Inbrott'], omraden: ['Uppsala'] }
+const uppsalaInbrott: bevakApi.BevakningDto = {
+  id: 'b1',
+  kategorier: ['Inbrott'],
+  omraden: ['Uppsala'],
+}
 
 function BevakProbe() {
   const { lage, bevakningar, matchar, forsokIgen } = usePolisenBevakningar()
@@ -49,9 +56,7 @@ function SparatProbe() {
 // omrenderingen och den (mockade) useAuth läses inte om.
 function renderaMed(ui: () => React.ReactElement) {
   const queryClient = new QueryClient()
-  const helhet = () => (
-    <QueryClientProvider client={queryClient}>{ui()}</QueryClientProvider>
-  )
+  const helhet = () => <QueryClientProvider client={queryClient}>{ui()}</QueryClientProvider>
   const r = render(helhet())
   return { ...r, omrendera: () => r.rerender(helhet()) }
 }
@@ -60,7 +65,9 @@ const lage = () => screen.getByTestId('lage').textContent
 const text = (id: string) => screen.getByTestId(id).textContent
 
 async function spola(ms: number) {
-  await act(async () => { await vi.advanceTimersByTimeAsync(ms) })
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms)
+  })
 }
 
 beforeEach(() => {
@@ -71,12 +78,18 @@ beforeEach(() => {
   mockSparat.saveEvent.mockReset()
   mockSparat.unsaveEvent.mockReset()
 })
-afterEach(() => { vi.useRealTimers() })
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 describe('PolisenBevakningarContext — fel är inte "tom lista"', () => {
   it('misslyckad hämtning ger lage=fel, och Polisen-filtret faller INTE tillbaka på "visa allt"', async () => {
     mockBevak.fetchBevakningar.mockRejectedValue(new Error('fetchBevakningar: 401'))
-    renderaMed(() => <PolisenBevakningarProvider><BevakProbe /></PolisenBevakningarProvider>)
+    renderaMed(() => (
+      <PolisenBevakningarProvider>
+        <BevakProbe />
+      </PolisenBevakningarProvider>
+    ))
 
     await spola(60_000) // alla omförsök förbrukade
 
@@ -88,7 +101,11 @@ describe('PolisenBevakningarContext — fel är inte "tom lista"', () => {
 
   it('laddar medan omförsök pågår och matchar inte alla under tiden', async () => {
     mockBevak.fetchBevakningar.mockRejectedValue(new Error('nätverk'))
-    renderaMed(() => <PolisenBevakningarProvider><BevakProbe /></PolisenBevakningarProvider>)
+    renderaMed(() => (
+      <PolisenBevakningarProvider>
+        <BevakProbe />
+      </PolisenBevakningarProvider>
+    ))
 
     await spola(500)
 
@@ -98,7 +115,11 @@ describe('PolisenBevakningarContext — fel är inte "tom lista"', () => {
 
   it('omförsök med exponentiell backoff (1 s, 2 s, 4 s) och sedan stopp', async () => {
     mockBevak.fetchBevakningar.mockRejectedValue(new Error('nätverk'))
-    renderaMed(() => <PolisenBevakningarProvider><BevakProbe /></PolisenBevakningarProvider>)
+    renderaMed(() => (
+      <PolisenBevakningarProvider>
+        <BevakProbe />
+      </PolisenBevakningarProvider>
+    ))
 
     await spola(0)
     expect(mockBevak.fetchBevakningar).toHaveBeenCalledTimes(1)
@@ -121,7 +142,11 @@ describe('PolisenBevakningarContext — fel är inte "tom lista"', () => {
     mockBevak.fetchBevakningar
       .mockRejectedValueOnce(new Error('tillfälligt'))
       .mockResolvedValueOnce([uppsalaInbrott])
-    renderaMed(() => <PolisenBevakningarProvider><BevakProbe /></PolisenBevakningarProvider>)
+    renderaMed(() => (
+      <PolisenBevakningarProvider>
+        <BevakProbe />
+      </PolisenBevakningarProvider>
+    ))
 
     await spola(1500)
 
@@ -133,7 +158,11 @@ describe('PolisenBevakningarContext — fel är inte "tom lista"', () => {
 
   it('omhämtning efter token-byte (lyckad refresh/inloggning) fyller listan direkt', async () => {
     mockBevak.fetchBevakningar.mockRejectedValue(new Error('fetchBevakningar: 401'))
-    const { omrendera } = renderaMed(() => <PolisenBevakningarProvider><BevakProbe /></PolisenBevakningarProvider>)
+    const { omrendera } = renderaMed(() => (
+      <PolisenBevakningarProvider>
+        <BevakProbe />
+      </PolisenBevakningarProvider>
+    ))
     await spola(60_000)
     expect(lage()).toBe('fel')
 
@@ -149,7 +178,11 @@ describe('PolisenBevakningarContext — fel är inte "tom lista"', () => {
 
   it('"Försök igen" hämtar om', async () => {
     mockBevak.fetchBevakningar.mockRejectedValue(new Error('x'))
-    renderaMed(() => <PolisenBevakningarProvider><BevakProbe /></PolisenBevakningarProvider>)
+    renderaMed(() => (
+      <PolisenBevakningarProvider>
+        <BevakProbe />
+      </PolisenBevakningarProvider>
+    ))
     await spola(60_000)
     expect(lage()).toBe('fel')
 
@@ -163,7 +196,11 @@ describe('PolisenBevakningarContext — fel är inte "tom lista"', () => {
 
   it('en lyckad tom lista (bekräftat "inga bevakningar") visar fortfarande allt', async () => {
     mockBevak.fetchBevakningar.mockResolvedValue([])
-    renderaMed(() => <PolisenBevakningarProvider><BevakProbe /></PolisenBevakningarProvider>)
+    renderaMed(() => (
+      <PolisenBevakningarProvider>
+        <BevakProbe />
+      </PolisenBevakningarProvider>
+    ))
     await spola(0)
 
     expect(lage()).toBe('klar')
@@ -172,7 +209,11 @@ describe('PolisenBevakningarContext — fel är inte "tom lista"', () => {
 
   it('misslyckad omhämtning efter lyckad hämtning behåller senast kända lista', async () => {
     mockBevak.fetchBevakningar.mockResolvedValueOnce([uppsalaInbrott])
-    renderaMed(() => <PolisenBevakningarProvider><BevakProbe /></PolisenBevakningarProvider>)
+    renderaMed(() => (
+      <PolisenBevakningarProvider>
+        <BevakProbe />
+      </PolisenBevakningarProvider>
+    ))
     await spola(0)
     expect(text('antal')).toBe('1')
 
@@ -189,7 +230,11 @@ describe('PolisenBevakningarContext — fel är inte "tom lista"', () => {
 describe('SavedEventsContext — fel är inte "inget sparat"', () => {
   it('misslyckad hämtning ger lage=fel, och toggle gör inget anrop (ingen gissning)', async () => {
     mockSparat.fetchSavedEventIds.mockRejectedValue(new Error('fetchSavedEventIds: 401'))
-    renderaMed(() => <SavedEventsProvider><SparatProbe /></SavedEventsProvider>)
+    renderaMed(() => (
+      <SavedEventsProvider>
+        <SparatProbe />
+      </SavedEventsProvider>
+    ))
 
     await spola(60_000)
     expect(lage()).toBe('fel')
@@ -201,7 +246,11 @@ describe('SavedEventsContext — fel är inte "inget sparat"', () => {
 
   it('omhämtning efter token-byte fyller listan', async () => {
     mockSparat.fetchSavedEventIds.mockRejectedValue(new Error('401'))
-    const { omrendera } = renderaMed(() => <SavedEventsProvider><SparatProbe /></SavedEventsProvider>)
+    const { omrendera } = renderaMed(() => (
+      <SavedEventsProvider>
+        <SparatProbe />
+      </SavedEventsProvider>
+    ))
     await spola(60_000)
     expect(lage()).toBe('fel')
 
@@ -217,8 +266,13 @@ describe('SavedEventsContext — fel är inte "inget sparat"', () => {
   it('toggle på känd lista är optimistisk och rullas tillbaka vid fel', async () => {
     mockSparat.fetchSavedEventIds.mockResolvedValue([])
     mockSparat.saveEvent.mockImplementation(
-      () => new Promise<void>((_, avvisa) => setTimeout(() => avvisa(new Error('500')), 1000)))
-    renderaMed(() => <SavedEventsProvider><SparatProbe /></SavedEventsProvider>)
+      () => new Promise<void>((_, avvisa) => setTimeout(() => avvisa(new Error('500')), 1000)),
+    )
+    renderaMed(() => (
+      <SavedEventsProvider>
+        <SparatProbe />
+      </SavedEventsProvider>
+    ))
     await spola(0)
 
     fireEvent.click(screen.getByText('toggla'))

@@ -1,7 +1,11 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { usePolisenBevakningar } from '../../context/PolisenBevakningarContext'
-import { stängBevakningsToast, useBevakningsToast, visaBevakningsToast } from './bevakningsToastStore'
+import {
+  stängBevakningsToast,
+  useBevakningsToast,
+  visaBevakningsToast,
+} from './bevakningsToastStore'
 
 // Renderar bekräftelse-/fel-/Ångra-toasten för bevakningsklockan. Måste
 // monteras på en nivå som överlever att enskilda flödeskort avmonteras (App).
@@ -22,9 +26,15 @@ export default function BevakningsToastHost() {
     stängBevakningsToast()
     if (!ångra) return
     try {
-      const lyckades = await skapa(ångra.kategorier ? [...ångra.kategorier] : null, ångra.omraden ? [...ångra.omraden] : null)
+      const lyckades = await skapa(
+        ångra.kategorier ? [...ångra.kategorier] : null,
+        ångra.omraden ? [...ångra.omraden] : null,
+      )
       if (!lyckades) {
-        visaBevakningsToast({ typ: 'fel', text: 'Kunde inte ångra — du har redan max antal bevakningar. Hantera dem i Mina källor.' })
+        visaBevakningsToast({
+          typ: 'fel',
+          text: 'Kunde inte ångra — du har redan max antal bevakningar. Hantera dem i Mina källor.',
+        })
       }
     } catch {
       visaBevakningsToast({ typ: 'fel', text: 'Kunde inte återskapa bevakningen. Försök igen.' })
@@ -38,7 +48,10 @@ export default function BevakningsToastHost() {
     >
       <span>{toast.text}</span>
       {ångra && (
-        <button onClick={hanteraÅngra} className="font-semibold text-violet-300 hover:text-violet-200 transition-colors shrink-0">
+        <button
+          onClick={hanteraÅngra}
+          className="font-semibold text-violet-300 hover:text-violet-200 transition-colors shrink-0"
+        >
           Ångra
         </button>
       )}

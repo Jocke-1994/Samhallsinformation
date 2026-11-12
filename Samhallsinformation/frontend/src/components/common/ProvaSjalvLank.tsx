@@ -9,7 +9,10 @@ import AktiveraPushRuta, { AktiveraPushRutaForhandsvisning } from './AktiveraPus
 // Uppdateringar, Vad är nytt-rutan och förhandsvisningen i admin). Textlänk,
 // inte knapp, så kort med flera rader förblir lugna (skiss 2026-11-02).
 
-export interface ProvaSjalvFörhandsvisning { inloggad: boolean; flaggor: Partial<FlagState> }
+export interface ProvaSjalvFörhandsvisning {
+  inloggad: boolean
+  flaggor: Partial<FlagState>
+}
 
 interface Props {
   mål: string | null | undefined
@@ -32,27 +35,54 @@ function Levande(props: Props) {
   return <Visning {...props} inloggad={isLoggedIn} flaggor={flaggor} />
 }
 
-const KLASS = 'inline-flex items-center gap-1.5 self-start py-1 text-sm font-semibold text-violet-700 hover:text-violet-900 dark:text-violet-300 dark:hover:text-violet-200'
+const KLASS =
+  'inline-flex items-center gap-1.5 self-start py-1 text-sm font-semibold text-violet-700 hover:text-violet-900 dark:text-violet-300 dark:hover:text-violet-200'
 
-function Visning({ mål, härifrån, förhandsvisning, onKlick, inloggad, flaggor }: Props & ProvaSjalvFörhandsvisning) {
+function Visning({
+  mål,
+  härifrån,
+  förhandsvisning,
+  onKlick,
+  inloggad,
+  flaggor,
+}: Props & ProvaSjalvFörhandsvisning) {
   const länk = provaSjalvLänk(mål, { inloggad, flaggor, härifrån })
   if (!länk) return null
 
   // "aktivera-push" är en ruta med knapp, inte en länk — men bara för
   // inloggade. En besökare får den vanliga "kräver konto"-länken nedan.
   if (mål === 'aktivera-push' && !länk.kräverKonto)
-    return förhandsvisning ? <AktiveraPushRutaForhandsvisning /> : <AktiveraPushRuta onKlick={onKlick} />
+    return förhandsvisning ? (
+      <AktiveraPushRutaForhandsvisning />
+    ) : (
+      <AktiveraPushRuta onKlick={onKlick} />
+    )
 
   const innehåll = (
     <>
       {länk.kräverKonto && (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="4" y="11" width="16" height="10" rx="2" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
         </svg>
       )}
       {länk.kräverKonto ? 'Prova själv · kräver konto →' : 'Prova själv →'}
     </>
   )
   if (förhandsvisning) return <span className={KLASS}>{innehåll}</span>
-  return <Link to={länk.href} onClick={onKlick} className={KLASS}>{innehåll}</Link>
+  return (
+    <Link to={länk.href} onClick={onKlick} className={KLASS}>
+      {innehåll}
+    </Link>
+  )
 }

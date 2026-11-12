@@ -11,17 +11,29 @@ import * as supportApi from '../api/support'
 // får inte radera det användaren skrivit, fel ska synas, och knappen ska vara
 // låst under pågående anrop. V2-9:s begränsningar (maxLength, 429-texten,
 // TicketError) ska finnas kvar.
-vi.mock('../api/support', async importOriginal => {
+vi.mock('../api/support', async (importOriginal) => {
   const faktisk = await importOriginal<typeof import('../api/support')>()
-  return { ...faktisk, createTicket: vi.fn(), fetchMyTickets: vi.fn(), fetchMyTicket: vi.fn(), replyToTicket: vi.fn() }
+  return {
+    ...faktisk,
+    createTicket: vi.fn(),
+    fetchMyTickets: vi.fn(),
+    fetchMyTicket: vi.fn(),
+    replyToTicket: vi.fn(),
+  }
 })
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }) }))
-vi.mock('../betaConfig', () => ({ BETA: { aktiv: true, sokesFor: 'x', beskrivning: 'x', mall: 'BETAMALL: beskriv vad du testade' } }))
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }),
+}))
+vi.mock('../betaConfig', () => ({
+  BETA: { aktiv: true, sokesFor: 'x', beskrivning: 'x', mall: 'BETAMALL: beskriv vad du testade' },
+}))
 
 const api = vi.mocked(supportApi)
 
 function renderaKort() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={queryClient}>
       <ArendehanteringKort />
@@ -31,7 +43,8 @@ function renderaKort() {
 
 const kategoriVal = () => screen.getByRole('combobox') as HTMLSelectElement
 const amneFalt = () => screen.getByPlaceholderText(/Beskriv kortfattat/) as HTMLInputElement
-const meddelandeFalt = () => screen.getByPlaceholderText(/Berätta vad som hänt/) as HTMLTextAreaElement
+const meddelandeFalt = () =>
+  screen.getByPlaceholderText(/Berätta vad som hänt/) as HTMLTextAreaElement
 const skickaKnapp = () => screen.getByRole('button', { name: /Skicka ärende|Skickar/ })
 
 beforeEach(() => {
@@ -94,7 +107,9 @@ describe('Skicka nytt ärende', () => {
 
   it('misslyckat anrop: felmeddelande syns, ingen bekräftelse, texten finns kvar', async () => {
     const user = userEvent.setup()
-    api.createTicket.mockRejectedValue(new TicketError(500, 'Något gick fel. Försök igen eller kontakta oss direkt.'))
+    api.createTicket.mockRejectedValue(
+      new TicketError(500, 'Något gick fel. Försök igen eller kontakta oss direkt.'),
+    )
     renderaKort()
 
     await user.selectOptions(kategoriVal(), 'Tekniskt fel')
@@ -141,7 +156,11 @@ describe('Skicka nytt ärende', () => {
   it('låser knappen under pågående anrop (ingen dubbel-submit)', async () => {
     const user = userEvent.setup()
     let avsluta!: (v: { id: string; ticketNumber: number }) => void
-    api.createTicket.mockReturnValue(new Promise(resolve => { avsluta = resolve }))
+    api.createTicket.mockReturnValue(
+      new Promise((resolve) => {
+        avsluta = resolve
+      }),
+    )
     renderaKort()
 
     await user.selectOptions(kategoriVal(), 'Konto')
@@ -160,8 +179,13 @@ describe('Skicka nytt ärende', () => {
 
 describe('Svara på ärende', () => {
   const ticket = {
-    id: 't1', ticketNumber: 7, subject: 'Hjälp', category: 'Konto', status: 'Öppet',
-    createdAt: '2026-09-01T10:00:00Z', updatedAt: '2026-09-01T10:00:00Z',
+    id: 't1',
+    ticketNumber: 7,
+    subject: 'Hjälp',
+    category: 'Konto',
+    status: 'Öppet',
+    createdAt: '2026-09-01T10:00:00Z',
+    updatedAt: '2026-09-01T10:00:00Z',
   }
 
   async function oppnaArende(user: ReturnType<typeof userEvent.setup>) {
@@ -201,7 +225,11 @@ describe('Svara på ärende', () => {
   it('låser Skicka svar under pågående anrop', async () => {
     const user = userEvent.setup()
     let avsluta!: () => void
-    api.replyToTicket.mockReturnValue(new Promise<void>(resolve => { avsluta = resolve }))
+    api.replyToTicket.mockReturnValue(
+      new Promise<void>((resolve) => {
+        avsluta = resolve
+      }),
+    )
     const falt = await oppnaArende(user)
 
     await user.type(falt, 'Tack')
@@ -243,7 +271,11 @@ describe('Feedback-modalen', () => {
   it('låser knappen under pågående anrop och visar tack när det lyckats', async () => {
     const user = userEvent.setup()
     let avsluta!: (v: { id: string; ticketNumber: number }) => void
-    api.createTicket.mockReturnValue(new Promise(resolve => { avsluta = resolve }))
+    api.createTicket.mockReturnValue(
+      new Promise((resolve) => {
+        avsluta = resolve
+      }),
+    )
     renderaModal()
 
     await user.type(screen.getByPlaceholderText(/Vad tänker du på/), 'Hej')

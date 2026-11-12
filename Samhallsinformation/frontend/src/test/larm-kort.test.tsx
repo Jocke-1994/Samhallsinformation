@@ -16,15 +16,29 @@ const { fetchAdminAlerts, acknowledgeAdminAlert } = await import('../api/alerts'
 const { default: LarmKort } = await import('../components/Admin/LarmKort')
 
 const larm = (over: Partial<AdminAlertDto> = {}): AdminAlertDto => ({
-  id: 'a1', ruleId: 'source_failing', severity: 'critical',
-  title: 'Källan "Polisen" fungerar inte', detail: '3 misslyckade hämtningar i rad.',
-  firstRaisedAt: '2026-09-25T10:00:00Z', lastSeenAt: '2026-09-25T10:20:00Z', occurrenceCount: 4,
-  acknowledgedAt: null, acknowledgedBy: null, resolvedAt: null, ...over,
+  id: 'a1',
+  ruleId: 'source_failing',
+  severity: 'critical',
+  title: 'Källan "Polisen" fungerar inte',
+  detail: '3 misslyckade hämtningar i rad.',
+  firstRaisedAt: '2026-09-25T10:00:00Z',
+  lastSeenAt: '2026-09-25T10:20:00Z',
+  occurrenceCount: 4,
+  acknowledgedAt: null,
+  acknowledgedBy: null,
+  resolvedAt: null,
+  ...over,
 })
 
 function rendera() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}><LarmKort /></QueryClientProvider>)
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <LarmKort />
+    </QueryClientProvider>,
+  )
 }
 
 beforeEach(() => {
@@ -35,7 +49,15 @@ beforeEach(() => {
 describe('LarmKort', () => {
   it('renderar öppna larm med allvarlighet, titel, antal och Kvittera-knapp', async () => {
     vi.mocked(fetchAdminAlerts).mockResolvedValue({
-      open: [larm(), larm({ id: 'a2', severity: 'warning', title: 'Många push-utskick misslyckas', occurrenceCount: 1 })],
+      open: [
+        larm(),
+        larm({
+          id: 'a2',
+          severity: 'warning',
+          title: 'Många push-utskick misslyckas',
+          occurrenceCount: 1,
+        }),
+      ],
       recentlyResolved: [],
     })
     rendera()
@@ -51,8 +73,13 @@ describe('LarmKort', () => {
   it('Kvittera anropar API:t med rätt id och hämtar om listan', async () => {
     vi.mocked(fetchAdminAlerts)
       .mockResolvedValueOnce({ open: [larm()], recentlyResolved: [] })
-      .mockResolvedValue({ open: [larm({ acknowledgedAt: '2026-09-25T11:00:00Z', acknowledgedBy: 'Anna' })], recentlyResolved: [] })
-    vi.mocked(acknowledgeAdminAlert).mockResolvedValue(larm({ acknowledgedAt: '2026-09-25T11:00:00Z', acknowledgedBy: 'Anna' }))
+      .mockResolvedValue({
+        open: [larm({ acknowledgedAt: '2026-09-25T11:00:00Z', acknowledgedBy: 'Anna' })],
+        recentlyResolved: [],
+      })
+    vi.mocked(acknowledgeAdminAlert).mockResolvedValue(
+      larm({ acknowledgedAt: '2026-09-25T11:00:00Z', acknowledgedBy: 'Anna' }),
+    )
     rendera()
 
     await userEvent.click(await screen.findByRole('button', { name: 'Kvittera' }))

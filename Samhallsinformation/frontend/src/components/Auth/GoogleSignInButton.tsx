@@ -23,7 +23,10 @@ function decodeGoogleProfile(idToken: string): GoogleProfile | null {
   try {
     const payload = JSON.parse(atob(idToken.split('.')[1]))
     if (typeof payload.email !== 'string') return null
-    return { email: payload.email, name: typeof payload.name === 'string' ? payload.name : payload.email }
+    return {
+      email: payload.email,
+      name: typeof payload.name === 'string' ? payload.name : payload.email,
+    }
   } catch {
     return null
   }
@@ -71,7 +74,12 @@ export default function GoogleSignInButton({ onError, onStart, onSuccess }: Prop
 
       <p className="text-xs text-slate-400 text-center">
         Genom att fortsätta med Google godkänner du{' '}
-        <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:text-violet-500">
+        <Link
+          to="/villkor"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-violet-600 hover:text-violet-500"
+        >
           användarvillkoren
         </Link>
       </p>

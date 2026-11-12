@@ -20,9 +20,18 @@ interface Props {
 }
 
 const SEVERITY_CONFIG = {
-  'Kritisk':      { pill: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',        severityBorder: 'border-l-red-500'   },
-  'Viktigt':      { pill: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400', severityBorder: 'border-l-amber-400' },
-  'Bra att veta': { pill: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',          severityBorder: 'border-l-sky-300'   },
+  Kritisk: {
+    pill: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
+    severityBorder: 'border-l-red-500',
+  },
+  Viktigt: {
+    pill: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
+    severityBorder: 'border-l-amber-400',
+  },
+  'Bra att veta': {
+    pill: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+    severityBorder: 'border-l-sky-300',
+  },
 }
 
 const SOURCE_BORDER: Record<number, string> = {
@@ -56,12 +65,22 @@ function EventContent({ content }: { content: string }) {
 
   return (
     <div className="space-y-3">
-      {paragraphs.map((p, i) => <ContentParagraph key={i} text={p} />)}
+      {paragraphs.map((p, i) => (
+        <ContentParagraph key={i} text={p} />
+      ))}
     </div>
   )
 }
 
-export default function NewsItem({ event, isRead, sourceName, sourceShortName, viewMode = 'allt', checkbox, markerad = false }: Props) {
+export default function NewsItem({
+  event,
+  isRead,
+  sourceName,
+  sourceShortName,
+  viewMode = 'allt',
+  checkbox,
+  markerad = false,
+}: Props) {
   const { isLoggedIn } = useAuth()
   const flaggor = useFlags()
   const { sparade, lage: sparatLage, toggleSparad } = useSavedEvents()
@@ -85,16 +104,16 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
     ? (SOURCE_BORDER[event.sourceId] ?? 'border-l-slate-300')
     : cfg.severityBorder
 
-  const showGeography = !!event.geography &&
-    !event.title.toLowerCase().includes(event.geography.toLowerCase())
+  const showGeography =
+    !!event.geography && !event.title.toLowerCase().includes(event.geography.toLowerCase())
 
   const ärPolisen = isLoggedIn && sourceShortName === 'Polisen'
-  const polisenTyp    = ärPolisen ? extraheraPolisenTyp(event.eventType) : null
+  const polisenTyp = ärPolisen ? extraheraPolisenTyp(event.eventType) : null
   const polisenOmrade = ärPolisen ? extraheraPolisenOmrade(event.geography) : null
 
   function handleToggle() {
     if (!isRead) markAsRead(event.id)
-    setExpanded(prev => !prev)
+    setExpanded((prev) => !prev)
   }
 
   // Själva länken är en vanlig <a target="_blank"> och öppnas av webbläsaren
@@ -106,8 +125,12 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
   // 'alive', 'unknown', nätverksfel — lämnar knappen som den är.
   function handleLäsMer() {
     checkEventLinkStatus(event.id)
-      .then(status => { if (status === 'dead') setLänkDöd(true) })
-      .catch(() => { /* kollen är bara en bonus — ett fel ska aldrig synas eller störa */ })
+      .then((status) => {
+        if (status === 'dead') setLänkDöd(true)
+      })
+      .catch(() => {
+        /* kollen är bara en bonus — ett fel ska aldrig synas eller störa */
+      })
   }
 
   // Delar alltid källänken (inte vår egen sida) — grundprincipen om
@@ -145,12 +168,13 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
       data-markerad={markerad || undefined}
       className={`rounded-xl border border-slate-200 dark:border-slate-700 border-l-4 ${borderClass} bg-white dark:bg-slate-800 shadow-sm overflow-hidden ${markerad ? 'ring-2 ring-violet-500 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-900' : ''}`}
     >
-
       <div
         role="button"
         tabIndex={0}
         onClick={handleToggle}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleToggle() }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') handleToggle()
+        }}
         className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer"
       >
         {/* Rad 1: severity + titel får hela bredden, ingen konkurrens om plats */}
@@ -159,7 +183,7 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
             <input
               type="checkbox"
               checked={checkbox.checked}
-              onClick={e => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               onChange={checkbox.onChange}
               className="shrink-0 rounded border-slate-300 text-violet-600 focus:ring-violet-400 cursor-pointer"
             />
@@ -173,7 +197,9 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
             {event.title}
           </p>
 
-          <span className={`text-slate-300 text-xs shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}>
+          <span
+            className={`text-slate-300 text-xs shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          >
             ▾
           </span>
         </div>
@@ -193,23 +219,36 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
           <span className="shrink-0">{formatTime(event.publishedAt)}</span>
 
           {flaggor.kallor_polisen_filter && (polisenTyp || polisenOmrade) && (
-            <div onClick={e => e.stopPropagation()}>
-              <PrenumerationsKlocka polisenTyp={polisenTyp} polisenOmrade={polisenOmrade} mode={viewMode} />
+            <div onClick={(e) => e.stopPropagation()}>
+              <PrenumerationsKlocka
+                polisenTyp={polisenTyp}
+                polisenOmrade={polisenOmrade}
+                mode={viewMode}
+              />
             </div>
           )}
 
           {flaggor.flode_sparat && isLoggedIn && (
             <button
-              onClick={e => { e.stopPropagation(); toggleSparad(event.id) }}
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleSparad(event.id)
+              }}
               // Listan över sparade är okänd (hämtas/misslyckades): ikonen kan
               // inte visa sanningen och ett tryck vore en gissning.
               disabled={sparatLage !== 'klar'}
-              title={sparatLage !== 'klar'
-                ? 'Dina sparade händelser är inte hämtade just nu'
-                : ärSparad ? 'Ta bort från Sparat' : 'Spara den här händelsen'}
+              title={
+                sparatLage !== 'klar'
+                  ? 'Dina sparade händelser är inte hämtade just nu'
+                  : ärSparad
+                    ? 'Ta bort från Sparat'
+                    : 'Spara den här händelsen'
+              }
               aria-label={ärSparad ? 'Ta bort från Sparat' : 'Spara'}
               className={`p-1.5 -my-1.5 rounded-full shrink-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                ärSparad ? 'text-amber-500 hover:text-amber-600' : 'text-slate-300 hover:text-slate-500 dark:hover:text-slate-300'
+                ärSparad
+                  ? 'text-amber-500 hover:text-amber-600'
+                  : 'text-slate-300 hover:text-slate-500 dark:hover:text-slate-300'
               }`}
             >
               <span className="text-base leading-none">{ärSparad ? '🔖' : '📑'}</span>
@@ -228,7 +267,9 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
           )}
 
           {delaFeedback && (
-            <span className="shrink-0 text-violet-600 dark:text-violet-400 font-medium">{delaFeedback}</span>
+            <span className="shrink-0 text-violet-600 dark:text-violet-400 font-medium">
+              {delaFeedback}
+            </span>
           )}
         </div>
       </div>
@@ -238,7 +279,8 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
           <EventContent content={event.content} />
           {länkDöd && (
             <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-              ⚠️ Originalsidan finns inte längre hos {sourceName ?? 'källan'} — sammandraget ovan är vad vi sparade.
+              ⚠️ Originalsidan finns inte längre hos {sourceName ?? 'källan'} — sammandraget ovan är
+              vad vi sparade.
             </p>
           )}
           <a
@@ -248,7 +290,10 @@ export default function NewsItem({ event, isRead, sourceName, sourceShortName, v
             onClick={handleLäsMer}
             className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-500 transition-colors"
           >
-            {event.url.includes('trafikinformation') ? 'Se trafikläget hos Trafikverket' : 'Läs mer hos källan'} →
+            {event.url.includes('trafikinformation')
+              ? 'Se trafikläget hos Trafikverket'
+              : 'Läs mer hos källan'}{' '}
+            →
           </a>
         </div>
       )}

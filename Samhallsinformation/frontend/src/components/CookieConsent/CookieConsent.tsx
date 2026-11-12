@@ -31,16 +31,16 @@ export default function CookieConsent() {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9000] p-4 flex justify-center pointer-events-none">
       <div className="pointer-events-auto w-full max-w-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl px-6 py-5 flex flex-col gap-4">
-
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1">
               Den här webbplatsen använder cookies
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Vi använder nödvändiga cookies för att tjänsten ska fungera. Med ditt samtycke använder vi även analys-cookies för att förstå hur appen används och förbättra den.{' '}
+              Vi använder nödvändiga cookies för att tjänsten ska fungera. Med ditt samtycke
+              använder vi även analys-cookies för att förstå hur appen används och förbättra den.{' '}
               <button
-                onClick={() => setExpanded(v => !v)}
+                onClick={() => setExpanded((v) => !v)}
                 className="text-violet-600 dark:text-violet-400 hover:underline font-medium"
               >
                 {expanded ? 'Dölj detaljer' : 'Läs mer'}
@@ -70,7 +70,12 @@ export default function CookieConsent() {
                 Nödvändiga (alltid aktiva)
               </p>
               <ul className="text-xs text-slate-500 dark:text-slate-400 space-y-1 leading-relaxed">
-                <li><span className="font-medium text-slate-600 dark:text-slate-300">cookie_consent</span> — sparar ditt samtycke lokalt, skickas aldrig vidare</li>
+                <li>
+                  <span className="font-medium text-slate-600 dark:text-slate-300">
+                    cookie_consent
+                  </span>{' '}
+                  — sparar ditt samtycke lokalt, skickas aldrig vidare
+                </li>
               </ul>
             </div>
             <div>
@@ -78,7 +83,12 @@ export default function CookieConsent() {
                 Analys (kräver samtycke)
               </p>
               <ul className="text-xs text-slate-500 dark:text-slate-400 space-y-1 leading-relaxed">
-                <li><span className="font-medium text-slate-600 dark:text-slate-300">Google Analytics</span> — sidvisningar och sessionslängd</li>
+                <li>
+                  <span className="font-medium text-slate-600 dark:text-slate-300">
+                    Google Analytics
+                  </span>{' '}
+                  — sidvisningar och sessionslängd
+                </li>
                 <li>Ungefärlig geografisk plats (land/region, ej exakt adress)</li>
                 <li>Enhetstyp och webbläsare</li>
                 <li>IP-adress anonymiseras innan lagring</li>
@@ -86,7 +96,6 @@ export default function CookieConsent() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   )

@@ -10,10 +10,10 @@ export default function ResetPasswordPage() {
   const token = params.get('token') ?? ''
 
   const [password, setPassword] = useState('')
-  const [confirm, setConfirm]   = useState('')
-  const [error, setError]       = useState<string | null>(null)
-  const [done, setDone]         = useState(false)
-  const [loading, setLoading]   = useState(false)
+  const [confirm, setConfirm] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -23,9 +23,9 @@ export default function ResetPasswordPage() {
     setLoading(true)
     try {
       const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ token, newPassword: password }),
+        body: JSON.stringify({ token, newPassword: password }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error ?? 'Något gick fel')
@@ -43,7 +43,12 @@ export default function ResetPasswordPage() {
       <div className="min-h-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center px-4">
         <div className="text-center">
           <p className="text-slate-600 dark:text-slate-300">Ogiltig återställningslänk.</p>
-          <Link to="/login" className="text-violet-600 hover:text-violet-500 text-sm mt-2 inline-block">Tillbaka till inloggning</Link>
+          <Link
+            to="/login"
+            className="text-violet-600 hover:text-violet-500 text-sm mt-2 inline-block"
+          >
+            Tillbaka till inloggning
+          </Link>
         </div>
       </div>
     )
@@ -52,7 +57,6 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-
         <div className="text-center mb-8">
           <span className="text-2xl font-bold text-violet-600">Samhällsinfo</span>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Välj nytt lösenord</p>
@@ -62,28 +66,34 @@ export default function ResetPasswordPage() {
           {done ? (
             <div className="text-center py-2">
               <div className="text-3xl mb-4">✅</div>
-              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Lösenordet är uppdaterat!</p>
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                Lösenordet är uppdaterat!
+              </p>
               <p className="text-xs text-slate-400 mt-2">Du skickas vidare till inloggningen…</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Nytt lösenord</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  Nytt lösenord
+                </label>
                 <input
                   type="password"
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="Minst 8 tecken"
                   required
                   className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Bekräfta lösenord</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  Bekräfta lösenord
+                </label>
                 <input
                   type="password"
                   value={confirm}
-                  onChange={e => setConfirm(e.target.value)}
+                  onChange={(e) => setConfirm(e.target.value)}
                   placeholder="••••••••"
                   required
                   className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
@@ -104,7 +114,6 @@ export default function ResetPasswordPage() {
             </form>
           )}
         </div>
-
       </div>
     </div>
   )

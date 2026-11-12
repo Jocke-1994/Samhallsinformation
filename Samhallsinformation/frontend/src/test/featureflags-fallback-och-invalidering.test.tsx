@@ -66,7 +66,9 @@ afterEach(() => {
 })
 
 async function släppMikrotasks() {
-  await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0)
+  })
 }
 
 describe('Feature flags: normalfall och laddar-läge', () => {
@@ -77,7 +79,7 @@ describe('Feature flags: normalfall och laddar-läge', () => {
     await vi.waitFor(() => expect(result.current.läge).toBe('klar'))
     expect(result.current.laddat).toBe(true)
     expect(result.current.flaggor.support_faq).toBe(false)
-    const kallorAktiva = FLAG_DEFINITIONER.find(f => f.key === 'kallor_aktiva')!.defaultAktiv
+    const kallorAktiva = FLAG_DEFINITIONER.find((f) => f.key === 'kallor_aktiva')!.defaultAktiv
     expect(result.current.flaggor.kallor_aktiva).toBe(kallorAktiva)
   })
 
@@ -108,7 +110,10 @@ describe('Feature flags: normalfall och laddar-läge', () => {
 describe('Feature flags: fel vid hämtning', () => {
   it('behåller senast kända override (avstängd förblir avstängd) i stället för defaultAktiv', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    vi.mocked(api.fetchFeatureFlagOverrides).mockResolvedValue({ support_faq: false, kallor_aktiva: false })
+    vi.mocked(api.fetchFeatureFlagOverrides).mockResolvedValue({
+      support_faq: false,
+      kallor_aktiva: false,
+    })
     const första = renderHook(() => useFeatureFlags(), { wrapper: wrapper(nyKlient()) })
     await vi.waitFor(() => expect(första.result.current.läge).toBe('klar'))
     första.unmount()
@@ -118,11 +123,13 @@ describe('Feature flags: fel vid hämtning', () => {
     vi.mocked(api.fetchFeatureFlagOverrides).mockRejectedValue(new Error('500'))
     const { result } = renderHook(() => useFeatureFlags(), { wrapper: wrapper(nyKlient()) })
     await släppMikrotasks()
-    await act(async () => { await vi.advanceTimersByTimeAsync(20_000) })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000)
+    })
 
     expect(result.current.läge).toBe('fel')
     for (const k of PÅ_SOM_DEFAULT) {
-      expect(FLAG_DEFINITIONER.find(f => f.key === k)!.defaultAktiv).toBe(true)
+      expect(FLAG_DEFINITIONER.find((f) => f.key === k)!.defaultAktiv).toBe(true)
       expect(result.current.flaggor[k]).toBe(false)
     }
     expect(warn).toHaveBeenCalled()
@@ -139,7 +146,9 @@ describe('Feature flags: fel vid hämtning', () => {
     vi.mocked(api.fetchFeatureFlagOverrides).mockRejectedValue(new Error('nätverksfel'))
     void klient.invalidateQueries({ queryKey: FLAGG_QUERY_KEY })
     await släppMikrotasks()
-    await act(async () => { await vi.advanceTimersByTimeAsync(20_000) })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000)
+    })
 
     expect(result.current.flaggor.support_faq).toBe(false)
     expect(result.current.läge).toBe('fel')
@@ -158,17 +167,27 @@ describe('Feature flags: fel vid hämtning', () => {
     expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(1)
     expect(result.current.läge).toBe('laddar')
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(999) })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(999)
+    })
     expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(1)
-    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1)
+    })
     expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(2)
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(1999) })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1999)
+    })
     expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(2)
-    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1)
+    })
     expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(3)
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(10) })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10)
+    })
     expect(result.current.läge).toBe('klar')
     expect(result.current.flaggor.support_faq).toBe(false)
     expect(warn).toHaveBeenCalledTimes(2)
@@ -181,7 +200,9 @@ describe('Feature flags: fel vid hämtning', () => {
     const { result } = renderHook(() => useFeatureFlags(), { wrapper: wrapper(nyKlient()) })
 
     await släppMikrotasks()
-    await act(async () => { await vi.advanceTimersByTimeAsync(60_000) })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000)
+    })
 
     expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(4)
     expect(result.current.läge).toBe('fel')
@@ -197,13 +218,18 @@ describe('Feature flags: mutationsvägarna invaliderar flagg-queryn', () => {
   }
 
   it('växlaFlagg (adminens toggle) uppdaterar både publik och admin-vy', async () => {
-    vi.mocked(api.fetchFeatureFlagOverrides).mockResolvedValueOnce({}).mockResolvedValue({ support_faq: false })
+    vi.mocked(api.fetchFeatureFlagOverrides)
+      .mockResolvedValueOnce({})
+      .mockResolvedValue({ support_faq: false })
     const klient = nyKlient()
-    const { result } = renderHook(() => {
-      const f = useFeatureFlags()
-      useQuery({ queryKey: ['admin-feature-flags'], queryFn: api.fetchAdminFeatureFlags })
-      return f
-    }, { wrapper: wrapper(klient) })
+    const { result } = renderHook(
+      () => {
+        const f = useFeatureFlags()
+        useQuery({ queryKey: ['admin-feature-flags'], queryFn: api.fetchAdminFeatureFlags })
+        return f
+      },
+      { wrapper: wrapper(klient) },
+    )
     await vi.waitFor(() => expect(result.current.läge).toBe('klar'))
     expect(result.current.flaggor.support_faq).toBe(true)
     expect(api.fetchAdminFeatureFlags).toHaveBeenCalledTimes(1)
@@ -216,13 +242,18 @@ describe('Feature flags: mutationsvägarna invaliderar flagg-queryn', () => {
   })
 
   it('återställ uppdaterar både publik och admin-vy (redo-markeringarna rensas)', async () => {
-    vi.mocked(api.fetchFeatureFlagOverrides).mockResolvedValueOnce({ support_faq: false }).mockResolvedValue({})
+    vi.mocked(api.fetchFeatureFlagOverrides)
+      .mockResolvedValueOnce({ support_faq: false })
+      .mockResolvedValue({})
     const klient = nyKlient()
-    const { result } = renderHook(() => {
-      const f = useFeatureFlags()
-      useQuery({ queryKey: ['admin-feature-flags'], queryFn: api.fetchAdminFeatureFlags })
-      return f
-    }, { wrapper: wrapper(klient) })
+    const { result } = renderHook(
+      () => {
+        const f = useFeatureFlags()
+        useQuery({ queryKey: ['admin-feature-flags'], queryFn: api.fetchAdminFeatureFlags })
+        return f
+      },
+      { wrapper: wrapper(klient) },
+    )
     await vi.waitFor(() => expect(result.current.flaggor.support_faq).toBe(false))
 
     act(() => result.current.återställ())
@@ -233,12 +264,12 @@ describe('Feature flags: mutationsvägarna invaliderar flagg-queryn', () => {
 
   it('"Redo att lanseras" i FeatureFlagsAdmin uppdaterar även den publika flagg-queryn', async () => {
     vi.mocked(api.fetchFeatureFlagOverrides).mockResolvedValue({})
-    const flaggor = Object.fromEntries(FLAG_DEFINITIONER.map(f => [f.key, false])) as FlagState
+    const flaggor = Object.fromEntries(FLAG_DEFINITIONER.map((f) => [f.key, false])) as FlagState
     render(
       <QueryClientProvider client={nyKlient()}>
         <FlaggProbe />
         <FeatureFlagsAdmin flaggor={flaggor} onVäxla={vi.fn()} onÅterställ={vi.fn()} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     )
     await vi.waitFor(() => expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(1))
 
@@ -256,7 +287,7 @@ describe('Feature flags: mutationsvägarna invaliderar flagg-queryn', () => {
     vi.mocked(api.fetchFeatureFlagOverrides).mockResolvedValue({})
     const förstaFlagga = FLAG_GRUPPER[0].flaggor[0].key
     const flaggor = Object.fromEntries(
-      FLAG_DEFINITIONER.map(f => [f.key, f.key === förstaFlagga])
+      FLAG_DEFINITIONER.map((f) => [f.key, f.key === förstaFlagga]),
     ) as FlagState
     vi.mocked(api.fetchAdminFeatureFlags).mockResolvedValue([
       { key: förstaFlagga, value: true, redoAttLanseras: false, endastAdmin: false },
@@ -265,14 +296,16 @@ describe('Feature flags: mutationsvägarna invaliderar flagg-queryn', () => {
       <QueryClientProvider client={nyKlient()}>
         <FlaggProbe />
         <FeatureFlagsAdmin flaggor={flaggor} onVäxla={vi.fn()} onÅterställ={vi.fn()} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     )
     await vi.waitFor(() => expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(1))
 
     await userEvent.click(screen.getByText(FLAG_GRUPPER[0].label))
     await userEvent.click(await screen.findByRole('button', { name: 'Begränsa till Admin?' }))
 
-    await vi.waitFor(() => expect(api.setFeatureFlagEndastAdmin).toHaveBeenCalledWith(förstaFlagga, true))
+    await vi.waitFor(() =>
+      expect(api.setFeatureFlagEndastAdmin).toHaveBeenCalledWith(förstaFlagga, true),
+    )
     await vi.waitFor(() => expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(2))
     await vi.waitFor(() => expect(api.fetchAdminFeatureFlags).toHaveBeenCalledTimes(2))
   })
@@ -280,19 +313,33 @@ describe('Feature flags: mutationsvägarna invaliderar flagg-queryn', () => {
   it('publicering av en Uppdatering (aktiverar flaggor server-side) uppdaterar flagg-queryn direkt', async () => {
     vi.mocked(api.fetchFeatureFlagOverrides).mockResolvedValue({})
     const utkast: Uppdatering = {
-      id: 'u1', titel: 'Version 9.9.9', datum: '2026-09-25T00:00:00Z', publicerad: false,
-      punkter: [], schemalagdPubliceringUtc: null, schemalagdaFlaggor: ['support_faq'],
-      skickaPush: false, pushVersion: null, pushMeddelande: null, visaBanderoll: false,
-      annonseringUtc: null, annonseradUtc: null, pushSkickaVid: 'Lansering', createdAt: '2026-09-25T00:00:00Z', visaVadArNytt: false,
+      id: 'u1',
+      titel: 'Version 9.9.9',
+      datum: '2026-09-25T00:00:00Z',
+      publicerad: false,
+      punkter: [],
+      schemalagdPubliceringUtc: null,
+      schemalagdaFlaggor: ['support_faq'],
+      skickaPush: false,
+      pushVersion: null,
+      pushMeddelande: null,
+      visaBanderoll: false,
+      annonseringUtc: null,
+      annonseradUtc: null,
+      pushSkickaVid: 'Lansering',
+      createdAt: '2026-09-25T00:00:00Z',
+      visaVadArNytt: false,
     }
     vi.mocked(fetchAdminUppdateringar).mockReset().mockResolvedValue([utkast])
-    vi.mocked(updateUppdatering).mockReset().mockResolvedValue(undefined as never)
+    vi.mocked(updateUppdatering)
+      .mockReset()
+      .mockResolvedValue(undefined as never)
     vi.mocked(fetchAdminFaq).mockReset().mockResolvedValue([])
     render(
       <QueryClientProvider client={nyKlient()}>
         <FlaggProbe />
         <AdminUppdateringar />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     )
     await vi.waitFor(() => expect(api.fetchFeatureFlagOverrides).toHaveBeenCalledTimes(1))
 

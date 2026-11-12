@@ -94,8 +94,11 @@ async function lasServerText(res: Response): Promise<string | null> {
 
   try {
     const json: unknown = JSON.parse(rå)
-    const fel = json !== null && typeof json === 'object' ? (json as { error?: unknown }).error : undefined
-    return typeof fel === 'string' && fel.trim() !== '' && fel.length <= MAX_TEXTLANGD ? fel.trim() : null
+    const fel =
+      json !== null && typeof json === 'object' ? (json as { error?: unknown }).error : undefined
+    return typeof fel === 'string' && fel.trim() !== '' && fel.length <= MAX_TEXTLANGD
+      ? fel.trim()
+      : null
   } catch {
     // Ingen JSON. Ren text är serverns eget klientfel (t.ex. BadRequest("Max 5
     // bevakningar …")) — men aldrig HTML (proxy-/felsidor) eller text från 5xx,

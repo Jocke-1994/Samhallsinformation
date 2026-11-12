@@ -2,17 +2,31 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { AdminScheduledActionDto, AdminTicketDetailDto, AdminTicketListItemDto } from '../api/support'
+import type {
+  AdminScheduledActionDto,
+  AdminTicketDetailDto,
+  AdminTicketListItemDto,
+} from '../api/support'
 
 // V4-3 (E6#14 + E6#18): redigering av en schemalagd åtgärd ska uppdatera (inte
 // bara avbryt+skapa utan validering), och tomma datum-/tidsfält (skapa, redigera,
 // påminnelse) ska hålla knappen disabled i stället för att kasta ett RangeError.
 
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ roll: 'Admin', aktivVy: 'Admin', email: 'adam@example.com' }) }))
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({ roll: 'Admin', aktivVy: 'Admin', email: 'adam@example.com' }),
+}))
 vi.mock('../api/support', () => ({
-  fetchAdminTickets: vi.fn(), fetchAdminTicket: vi.fn(), fetchAgents: vi.fn(), fetchSupportNotifications: vi.fn(),
-  replyAsAgent: vi.fn(), setTicketStatus: vi.fn(), assignTicket: vi.fn(), setTicketReminder: vi.fn(),
-  setTicketArchived: vi.fn(), addScheduledAction: vi.fn(), cancelScheduledAction: vi.fn(),
+  fetchAdminTickets: vi.fn(),
+  fetchAdminTicket: vi.fn(),
+  fetchAgents: vi.fn(),
+  fetchSupportNotifications: vi.fn(),
+  replyAsAgent: vi.fn(),
+  setTicketStatus: vi.fn(),
+  assignTicket: vi.fn(),
+  setTicketReminder: vi.fn(),
+  setTicketArchived: vi.fn(),
+  addScheduledAction: vi.fn(),
+  cancelScheduledAction: vi.fn(),
 }))
 vi.mock('../api/featureIdeas', () => ({ createFeatureIdea: vi.fn() }))
 
@@ -20,25 +34,54 @@ const api = await import('../api/support')
 const { default: SupportInbox } = await import('../components/Admin/SupportInbox')
 
 const rad = (over: Partial<AdminTicketListItemDto> = {}): AdminTicketListItemDto => ({
-  id: 't1', ticketNumber: 7, subject: 'Får inga notiser', category: 'Notifieringar', status: 'Öppet',
-  channel: 'arendehantering', contactName: 'Anna', contactEmail: 'anna@example.se', isArchived: false,
-  createdAt: '2026-09-20T10:00:00Z', updatedAt: '2026-09-20T10:00:00Z', ...over,
+  id: 't1',
+  ticketNumber: 7,
+  subject: 'Får inga notiser',
+  category: 'Notifieringar',
+  status: 'Öppet',
+  channel: 'arendehantering',
+  contactName: 'Anna',
+  contactEmail: 'anna@example.se',
+  isArchived: false,
+  createdAt: '2026-09-20T10:00:00Z',
+  updatedAt: '2026-09-20T10:00:00Z',
+  ...over,
 })
 
 const schemaSvar = (over: Partial<AdminScheduledActionDto> = {}): AdminScheduledActionDto => ({
-  id: 'sch1', type: 'svar', scheduledAt: '2030-01-01T09:00:00Z', createdByName: 'Agnes',
-  text: 'Ursprunglig text', executed: false, ...over,
+  id: 'sch1',
+  type: 'svar',
+  scheduledAt: '2030-01-01T09:00:00Z',
+  createdByName: 'Agnes',
+  text: 'Ursprunglig text',
+  executed: false,
+  ...over,
 })
 
 const detalj = (scheduledActions: AdminScheduledActionDto[] = []): AdminTicketDetailDto => ({
   ticket: { ...rad(), createdByName: 'Anna', reminderAt: null, reminderNote: null },
-  messages: [{ id: 'm1', senderType: 'user', isInternal: false, text: 'Hjälp!', createdAt: '2026-09-20T10:00:00Z', authorName: 'Anna' }] as AdminTicketDetailDto['messages'],
+  messages: [
+    {
+      id: 'm1',
+      senderType: 'user',
+      isInternal: false,
+      text: 'Hjälp!',
+      createdAt: '2026-09-20T10:00:00Z',
+      authorName: 'Anna',
+    },
+  ] as AdminTicketDetailDto['messages'],
   scheduledActions,
 })
 
 function rendera() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}><SupportInbox /></QueryClientProvider>)
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <SupportInbox />
+    </QueryClientProvider>,
+  )
 }
 
 async function öppnaÄrendet() {
@@ -91,14 +134,26 @@ describe('SupportInbox — redigera schemalagd åtgärd (E6#14)', () => {
   })
 
   it('en "tilldela"-åtgärd utan vald agent: Spara-knappen är disabled', async () => {
-    vi.mocked(api.fetchAdminTicket).mockResolvedValue(detalj([schemaSvar({ id: 'sch1', type: 'tilldela', text: null, reassignToUserId: 'a1', reassignToName: 'Agnes' })]))
+    vi.mocked(api.fetchAdminTicket).mockResolvedValue(
+      detalj([
+        schemaSvar({
+          id: 'sch1',
+          type: 'tilldela',
+          text: null,
+          reassignToUserId: 'a1',
+          reassignToName: 'Agnes',
+        }),
+      ]),
+    )
     rendera()
     await öppnaÄrendet()
 
     await userEvent.click(await screen.findByText(/kl \d\d:\d\d/))
     await userEvent.click(screen.getByRole('button', { name: 'Redigera' }))
 
-    const agentSelect = screen.getAllByRole('combobox').find(s => (s as HTMLSelectElement).value === 'a1') as HTMLSelectElement
+    const agentSelect = screen
+      .getAllByRole('combobox')
+      .find((s) => (s as HTMLSelectElement).value === 'a1') as HTMLSelectElement
     fireEvent.change(agentSelect, { target: { value: '' } })
 
     expect(screen.getByRole('button', { name: 'Spara' })).toBeDisabled()
@@ -144,8 +199,12 @@ describe('SupportInbox — tomma datum-/tidsfält i skapa-formulären (E6#18)', 
     await öppnaÄrendet()
 
     await userEvent.click(screen.getAllByRole('button', { name: '+ Lägg till' })[0])
-    const [datumFält] = Array.from(document.querySelectorAll('input[type="date"]')) as HTMLInputElement[]
-    const [tidFält] = Array.from(document.querySelectorAll('input[type="time"]')) as HTMLInputElement[]
+    const [datumFält] = Array.from(
+      document.querySelectorAll('input[type="date"]'),
+    ) as HTMLInputElement[]
+    const [tidFält] = Array.from(
+      document.querySelectorAll('input[type="time"]'),
+    ) as HTMLInputElement[]
     fireEvent.change(datumFält, { target: { value: '2030-01-01' } })
     fireEvent.change(tidFält, { target: { value: '' } })
 
@@ -161,8 +220,12 @@ describe('SupportInbox — tomma datum-/tidsfält i skapa-formulären (E6#18)', 
     await öppnaÄrendet()
 
     await userEvent.click(screen.getAllByRole('button', { name: '+ Lägg till' })[1])
-    const datumFält = Array.from(document.querySelectorAll('input[type="date"]')).pop() as HTMLInputElement
-    const tidFält = Array.from(document.querySelectorAll('input[type="time"]')).pop() as HTMLInputElement
+    const datumFält = Array.from(
+      document.querySelectorAll('input[type="date"]'),
+    ).pop() as HTMLInputElement
+    const tidFält = Array.from(
+      document.querySelectorAll('input[type="time"]'),
+    ).pop() as HTMLInputElement
     fireEvent.change(datumFält, { target: { value: '2030-01-01' } })
     fireEvent.change(tidFält, { target: { value: '' } })
     await userEvent.type(screen.getByPlaceholderText('Meddelande till användaren...'), 'X')

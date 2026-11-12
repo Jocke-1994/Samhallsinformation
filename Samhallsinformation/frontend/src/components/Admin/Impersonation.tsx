@@ -6,18 +6,18 @@ interface ImpersonationProps {
   onNavigate: (section: AdminSection) => void
 }
 
-type Roll           = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
-type Status         = 'Aktiv' | 'Inaktiv' | 'Avstängd'
+type Roll = 'Admin' | 'Support' | 'Betatestare' | 'Användare'
+type Status = 'Aktiv' | 'Inaktiv' | 'Avstängd'
 type Inloggningsmetod = 'E-post' | 'Google' | 'BankID'
 
 interface AnvändareSök {
-  id:               number
-  namn:             string
-  epost:            string
-  roller:           Roll[]
-  status:           Status
+  id: number
+  namn: string
+  epost: string
+  roller: Roll[]
+  status: Status
   inloggningsmetod: Inloggningsmetod
-  telefon?:         string
+  telefon?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -26,16 +26,92 @@ interface AnvändareSök {
 
 // Påhittade exempelanvändare — inga riktiga konton. Sidan är en MOCK (V3-20, D3).
 const ANVÄNDARE: AnvändareSök[] = [
-  { id: 1,  namn: 'Joakim Rehn',     epost: 'joakim@example.com',      roller: ['Admin', 'Support', 'Användare'],  status: 'Aktiv',    inloggningsmetod: 'E-post', telefon: '+46 70 123 45 67' },
-  { id: 2,  namn: 'Anna Svensson',   epost: 'anna.svensson@mail.se',   roller: ['Support', 'Användare'],           status: 'Aktiv',    inloggningsmetod: 'Google', telefon: '+46 73 234 56 78' },
-  { id: 3,  namn: 'Erik Lindqvist',  epost: 'erik.l@gmail.com',        roller: ['Betatestare', 'Användare'],       status: 'Aktiv',    inloggningsmetod: 'Google', telefon: '+46 76 345 67 89' },
-  { id: 4,  namn: 'Maria Johansson', epost: 'maria.j@outlook.com',     roller: ['Betatestare', 'Användare'],       status: 'Aktiv',    inloggningsmetod: 'E-post'                              },
-  { id: 5,  namn: 'Lars Petersson',  epost: 'lars.p@hotmail.com',      roller: ['Användare'],                      status: 'Aktiv',    inloggningsmetod: 'E-post'                              },
-  { id: 6,  namn: 'Sofia Nilsson',   epost: 'sofia.n@gmail.com',       roller: ['Betatestare', 'Användare'],       status: 'Aktiv',    inloggningsmetod: 'Google', telefon: '+46 72 456 78 90' },
-  { id: 7,  namn: 'Johan Karlsson',  epost: 'johan.k@company.se',      roller: ['Användare'],                      status: 'Inaktiv',  inloggningsmetod: 'E-post'                              },
-  { id: 8,  namn: 'Karin Andersson', epost: 'karin.a@mail.se',         roller: ['Användare'],                      status: 'Aktiv',    inloggningsmetod: 'BankID', telefon: '+46 70 567 89 01' },
-  { id: 9,  namn: 'Magnus Bergström',epost: 'magnus.b@gmail.com',      roller: ['Betatestare', 'Användare'],       status: 'Avstängd', inloggningsmetod: 'E-post'                              },
-  { id: 10, namn: 'Lena Holm',       epost: 'lena.h@outlook.com',      roller: ['Användare'],                      status: 'Aktiv',    inloggningsmetod: 'BankID', telefon: '+46 73 678 90 12' },
+  {
+    id: 1,
+    namn: 'Joakim Rehn',
+    epost: 'joakim@example.com',
+    roller: ['Admin', 'Support', 'Användare'],
+    status: 'Aktiv',
+    inloggningsmetod: 'E-post',
+    telefon: '+46 70 123 45 67',
+  },
+  {
+    id: 2,
+    namn: 'Anna Svensson',
+    epost: 'anna.svensson@mail.se',
+    roller: ['Support', 'Användare'],
+    status: 'Aktiv',
+    inloggningsmetod: 'Google',
+    telefon: '+46 73 234 56 78',
+  },
+  {
+    id: 3,
+    namn: 'Erik Lindqvist',
+    epost: 'erik.l@gmail.com',
+    roller: ['Betatestare', 'Användare'],
+    status: 'Aktiv',
+    inloggningsmetod: 'Google',
+    telefon: '+46 76 345 67 89',
+  },
+  {
+    id: 4,
+    namn: 'Maria Johansson',
+    epost: 'maria.j@outlook.com',
+    roller: ['Betatestare', 'Användare'],
+    status: 'Aktiv',
+    inloggningsmetod: 'E-post',
+  },
+  {
+    id: 5,
+    namn: 'Lars Petersson',
+    epost: 'lars.p@hotmail.com',
+    roller: ['Användare'],
+    status: 'Aktiv',
+    inloggningsmetod: 'E-post',
+  },
+  {
+    id: 6,
+    namn: 'Sofia Nilsson',
+    epost: 'sofia.n@gmail.com',
+    roller: ['Betatestare', 'Användare'],
+    status: 'Aktiv',
+    inloggningsmetod: 'Google',
+    telefon: '+46 72 456 78 90',
+  },
+  {
+    id: 7,
+    namn: 'Johan Karlsson',
+    epost: 'johan.k@company.se',
+    roller: ['Användare'],
+    status: 'Inaktiv',
+    inloggningsmetod: 'E-post',
+  },
+  {
+    id: 8,
+    namn: 'Karin Andersson',
+    epost: 'karin.a@mail.se',
+    roller: ['Användare'],
+    status: 'Aktiv',
+    inloggningsmetod: 'BankID',
+    telefon: '+46 70 567 89 01',
+  },
+  {
+    id: 9,
+    namn: 'Magnus Bergström',
+    epost: 'magnus.b@gmail.com',
+    roller: ['Betatestare', 'Användare'],
+    status: 'Avstängd',
+    inloggningsmetod: 'E-post',
+  },
+  {
+    id: 10,
+    namn: 'Lena Holm',
+    epost: 'lena.h@outlook.com',
+    roller: ['Användare'],
+    status: 'Aktiv',
+    inloggningsmetod: 'BankID',
+    telefon: '+46 73 678 90 12',
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -43,36 +119,40 @@ const ANVÄNDARE: AnvändareSök[] = [
 // ---------------------------------------------------------------------------
 
 const ROLL_CLS: Record<Roll, string> = {
-  'Admin':       'bg-red-100 text-red-700 border border-red-200',
-  'Support':     'bg-violet-100 text-violet-700 border border-violet-200',
-  'Betatestare': 'bg-amber-100 text-amber-700 border border-amber-200',
-  'Användare':   'bg-slate-100 text-slate-600 border border-slate-200',
+  Admin: 'bg-red-100 text-red-700 border border-red-200',
+  Support: 'bg-violet-100 text-violet-700 border border-violet-200',
+  Betatestare: 'bg-amber-100 text-amber-700 border border-amber-200',
+  Användare: 'bg-slate-100 text-slate-600 border border-slate-200',
 }
 
 const STATUS_CLS: Record<Status, string> = {
-  'Aktiv':    'bg-green-100 text-green-700 border border-green-200',
-  'Inaktiv':  'bg-slate-100 text-slate-500 border border-slate-200',
-  'Avstängd': 'bg-red-100 text-red-700 border border-red-200',
+  Aktiv: 'bg-green-100 text-green-700 border border-green-200',
+  Inaktiv: 'bg-slate-100 text-slate-500 border border-slate-200',
+  Avstängd: 'bg-red-100 text-red-700 border border-red-200',
 }
 
 const STATUS_DOT: Record<Status, string> = {
-  'Aktiv':    'bg-green-500',
-  'Inaktiv':  'bg-slate-300',
-  'Avstängd': 'bg-red-500',
+  Aktiv: 'bg-green-500',
+  Inaktiv: 'bg-slate-300',
+  Avstängd: 'bg-red-500',
 }
 
 const INLOGGNING_CLS: Record<Inloggningsmetod, string> = {
   'E-post': 'bg-slate-100 text-slate-600 border border-slate-200',
-  'Google': 'bg-blue-100 text-blue-700 border border-blue-200',
-  'BankID': 'bg-sky-100 text-sky-700 border border-sky-200',
+  Google: 'bg-blue-100 text-blue-700 border border-blue-200',
+  BankID: 'bg-sky-100 text-sky-700 border border-sky-200',
 }
 
-const ALLA_ROLLER:      Array<Roll | 'Alla'>            = ['Alla', 'Admin', 'Support', 'Betatestare', 'Användare']
-const ALLA_STATUSAR:    Array<Status | 'Alla'>          = ['Alla', 'Aktiv', 'Inaktiv', 'Avstängd']
-const ALLA_INLOGGNING:  Array<Inloggningsmetod | 'Alla'>= ['Alla', 'E-post', 'Google', 'BankID']
+const ALLA_ROLLER: Array<Roll | 'Alla'> = ['Alla', 'Admin', 'Support', 'Betatestare', 'Användare']
+const ALLA_STATUSAR: Array<Status | 'Alla'> = ['Alla', 'Aktiv', 'Inaktiv', 'Avstängd']
+const ALLA_INLOGGNING: Array<Inloggningsmetod | 'Alla'> = ['Alla', 'E-post', 'Google', 'BankID']
 
 function initialer(namn: string) {
-  return namn.split(' ').map(n => n[0]).join('').slice(0, 2)
+  return namn
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
 }
 
 // ---------------------------------------------------------------------------
@@ -80,8 +160,8 @@ function initialer(namn: string) {
 // ---------------------------------------------------------------------------
 
 export default function Impersonation({ onNavigate: _onNavigate }: ImpersonationProps) {
-  const [sökning, setSökning]           = useState('')
-  const [rollFilter, setRollFilter]     = useState<Roll | 'Alla'>('Alla')
+  const [sökning, setSökning] = useState('')
+  const [rollFilter, setRollFilter] = useState<Roll | 'Alla'>('Alla')
   const [statusFilter, setStatusFilter] = useState<Status | 'Alla'>('Alla')
   const [inloggFilter, setInloggFilter] = useState<Inloggningsmetod | 'Alla'>('Alla')
 
@@ -120,7 +200,7 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
     )
   }
 
-  const filtrerade = ANVÄNDARE.filter(u => {
+  const filtrerade = ANVÄNDARE.filter((u) => {
     if (rollFilter !== 'Alla' && !u.roller.includes(rollFilter)) return false
     if (statusFilter !== 'Alla' && u.status !== statusFilter) return false
     if (inloggFilter !== 'Alla' && u.inloggningsmetod !== inloggFilter) return false
@@ -129,18 +209,21 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
 
   return (
     <div className="flex flex-col gap-6">
-
       <MockBanner>
-        Impersonation finns inte på riktigt: det finns ingen backend som ger en admin en session som en annan användare,
-        och inget loggas i aktivitetsloggen. Användarna nedan är påhittade exempel — inte riktiga konton — och
-        knapparna är avstängda så att inget låtsas hända.
+        Impersonation finns inte på riktigt: det finns ingen backend som ger en admin en session som
+        en annan användare, och inget loggas i aktivitetsloggen. Användarna nedan är påhittade
+        exempel — inte riktiga konton — och knapparna är avstängda så att inget låtsas hända.
       </MockBanner>
 
       {/* Sök & filtrera */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">Sök användare <MockBadge /></h3>
-          <p className="text-xs text-slate-400 mt-0.5">Filtrera på namn, e-post, ID eller telefonnummer</p>
+          <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+            Sök användare <MockBadge />
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Filtrera på namn, e-post, ID eller telefonnummer
+          </p>
         </div>
 
         <div className="px-6 py-4 flex flex-col gap-3 border-b border-slate-100">
@@ -148,7 +231,7 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
             <input
               type="text"
               value={sökning}
-              onChange={e => setSökning(e.target.value)}
+              onChange={(e) => setSökning(e.target.value)}
               placeholder="#3 · namn: Anna · mail: anna@ · tel: 070..."
               className="text-sm border border-slate-200 rounded-xl px-4 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 w-full"
             />
@@ -156,7 +239,8 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
               Prefix: <code className="bg-slate-100 px-1 rounded">#</code> ID &nbsp;·&nbsp;
               <code className="bg-slate-100 px-1 rounded">namn:</code> &nbsp;·&nbsp;
               <code className="bg-slate-100 px-1 rounded">mail:</code> &nbsp;·&nbsp;
-              <code className="bg-slate-100 px-1 rounded">tel:</code> &nbsp;— utan prefix söks alla fält
+              <code className="bg-slate-100 px-1 rounded">tel:</code> &nbsp;— utan prefix söks alla
+              fält
             </p>
           </div>
 
@@ -164,9 +248,12 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-slate-400 font-medium w-20 shrink-0">Roll</span>
               <div className="flex gap-1 flex-wrap">
-                {ALLA_ROLLER.map(r => (
-                  <button key={r} onClick={() => setRollFilter(r)}
-                    className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${rollFilter === r ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:bg-slate-100'}`}>
+                {ALLA_ROLLER.map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRollFilter(r)}
+                    className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${rollFilter === r ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:bg-slate-100'}`}
+                  >
                     {r}
                   </button>
                 ))}
@@ -176,9 +263,12 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-slate-400 font-medium w-20 shrink-0">Status</span>
               <div className="flex gap-1 flex-wrap">
-                {ALLA_STATUSAR.map(s => (
-                  <button key={s} onClick={() => setStatusFilter(s)}
-                    className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${statusFilter === s ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:bg-slate-100'}`}>
+                {ALLA_STATUSAR.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setStatusFilter(s)}
+                    className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${statusFilter === s ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:bg-slate-100'}`}
+                  >
                     {s}
                   </button>
                 ))}
@@ -188,9 +278,12 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-slate-400 font-medium w-20 shrink-0">Inloggning</span>
               <div className="flex gap-1 flex-wrap">
-                {ALLA_INLOGGNING.map(i => (
-                  <button key={i} onClick={() => setInloggFilter(i)}
-                    className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${inloggFilter === i ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:bg-slate-100'}`}>
+                {ALLA_INLOGGNING.map((i) => (
+                  <button
+                    key={i}
+                    onClick={() => setInloggFilter(i)}
+                    className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${inloggFilter === i ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:bg-slate-100'}`}
+                  >
                     {i}
                   </button>
                 ))}
@@ -212,7 +305,7 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {filtrerade.map(u => (
+            {filtrerade.map((u) => (
               <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-6 py-3">
                   <div className="flex items-center gap-3">
@@ -221,25 +314,38 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
                     </div>
                     <div>
                       <p className="font-medium text-slate-800">{u.namn}</p>
-                      <p className="text-xs text-slate-400">{u.epost} · ID #{u.id}</p>
+                      <p className="text-xs text-slate-400">
+                        {u.epost} · ID #{u.id}
+                      </p>
                     </div>
                   </div>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
-                    {u.roller.map(r => (
-                      <span key={r} className={`text-xs font-medium px-2 py-0.5 rounded-full border ${ROLL_CLS[r]}`}>{r}</span>
+                    {u.roller.map((r) => (
+                      <span
+                        key={r}
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full border ${ROLL_CLS[r]}`}
+                      >
+                        {r}
+                      </span>
                     ))}
                   </div>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[u.status]}`} />
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_CLS[u.status]}`}>{u.status}</span>
+                    <span
+                      className={`text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_CLS[u.status]}`}
+                    >
+                      {u.status}
+                    </span>
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${INLOGGNING_CLS[u.inloggningsmetod]}`}>
+                  <span
+                    className={`text-xs font-medium px-2.5 py-1 rounded-full border ${INLOGGNING_CLS[u.inloggningsmetod]}`}
+                  >
                     {u.inloggningsmetod}
                   </span>
                 </td>
@@ -274,10 +380,10 @@ export default function Impersonation({ onNavigate: _onNavigate }: Impersonation
           <h3 className="text-base font-semibold text-slate-900">Sessionshistorik</h3>
         </div>
         <IngetKopplatAn rubrik="Ingen sessionshistorik">
-          Inga impersonation-sessioner startas eller sparas, så det finns inget riktigt spår att visa.
+          Inga impersonation-sessioner startas eller sparas, så det finns inget riktigt spår att
+          visa.
         </IngetKopplatAn>
       </div>
-
     </div>
   )
 }

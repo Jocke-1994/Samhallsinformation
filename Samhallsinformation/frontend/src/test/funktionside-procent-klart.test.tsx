@@ -11,13 +11,76 @@ import type { FeatureIdeaListItemDto } from '../api/featureIdeas'
 // se Sidebar/useSourceOrder-testerna som bara kör spara(order) direkt).
 
 const IDÉER: FeatureIdeaListItemDto[] = [
-  { id: '1', ideaNumber: 1, title: 'Brainstorm-idé',  stage: 'brainstorm',     priority: 0, källaTyp: 'admin', createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z' },
-  { id: '2', ideaNumber: 2, title: 'Triage-idé',       stage: 'triage',         priority: 1, källaTyp: 'admin', createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z' },
-  { id: '3', ideaNumber: 3, title: 'Bygger-idé',       stage: 'byggs',          priority: 2, källaTyp: 'admin', createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z' },
-  { id: '4', ideaNumber: 4, title: 'Testar-idé',       stage: 'testas',         priority: 3, källaTyp: 'admin', createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z' },
-  { id: '5', ideaNumber: 5, title: 'Klar-idé',         stage: 'lanseringsklar', priority: 4, källaTyp: 'admin', createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z' },
-  { id: '6', ideaNumber: 6, title: 'Lanserad-idé',     stage: 'lanserad',       priority: 5, källaTyp: 'admin', createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z' },
-  { id: '7', ideaNumber: 7, title: 'Avfärdad-idé',     stage: 'avfärdad',       priority: 6, källaTyp: 'admin', createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z' },
+  {
+    id: '1',
+    ideaNumber: 1,
+    title: 'Brainstorm-idé',
+    stage: 'brainstorm',
+    priority: 0,
+    källaTyp: 'admin',
+    createdAt: '2026-10-01T00:00:00Z',
+    updatedAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: '2',
+    ideaNumber: 2,
+    title: 'Triage-idé',
+    stage: 'triage',
+    priority: 1,
+    källaTyp: 'admin',
+    createdAt: '2026-10-01T00:00:00Z',
+    updatedAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: '3',
+    ideaNumber: 3,
+    title: 'Bygger-idé',
+    stage: 'byggs',
+    priority: 2,
+    källaTyp: 'admin',
+    createdAt: '2026-10-01T00:00:00Z',
+    updatedAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: '4',
+    ideaNumber: 4,
+    title: 'Testar-idé',
+    stage: 'testas',
+    priority: 3,
+    källaTyp: 'admin',
+    createdAt: '2026-10-01T00:00:00Z',
+    updatedAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: '5',
+    ideaNumber: 5,
+    title: 'Klar-idé',
+    stage: 'lanseringsklar',
+    priority: 4,
+    källaTyp: 'admin',
+    createdAt: '2026-10-01T00:00:00Z',
+    updatedAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: '6',
+    ideaNumber: 6,
+    title: 'Lanserad-idé',
+    stage: 'lanserad',
+    priority: 5,
+    källaTyp: 'admin',
+    createdAt: '2026-10-01T00:00:00Z',
+    updatedAt: '2026-10-01T00:00:00Z',
+  },
+  {
+    id: '7',
+    ideaNumber: 7,
+    title: 'Avfärdad-idé',
+    stage: 'avfärdad',
+    priority: 6,
+    källaTyp: 'admin',
+    createdAt: '2026-10-01T00:00:00Z',
+    updatedAt: '2026-10-01T00:00:00Z',
+  },
 ]
 
 vi.mock('../api/featureIdeas', async () => {
@@ -33,8 +96,14 @@ vi.mock('../api/featureIdeas', async () => {
 const { default: FunktionsIdePipeline } = await import('../components/Admin/FunktionsIdePipeline')
 
 function rendera() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={qc}><FunktionsIdePipeline /></QueryClientProvider>)
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={qc}>
+      <FunktionsIdePipeline />
+    </QueryClientProvider>,
+  )
 }
 
 function radFor(titel: string) {

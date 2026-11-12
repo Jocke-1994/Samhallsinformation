@@ -31,13 +31,15 @@ function skriptUrler(html: string): string[] {
   const dok = new DOMParser().parseFromString(html, 'text/html')
   return [
     ...dok.querySelectorAll('script[src]'),
-    ...dok.querySelectorAll('link[rel~="modulepreload"][href], link[rel~="preload"][as="script"][href]'),
-  ].map(el => el.getAttribute('src') ?? el.getAttribute('href') ?? '')
+    ...dok.querySelectorAll(
+      'link[rel~="modulepreload"][href], link[rel~="preload"][as="script"][href]',
+    ),
+  ].map((el) => el.getAttribute('src') ?? el.getAttribute('href') ?? '')
 }
 
 // Externa skript-URL:er vars origin inte står på tillåtelselistan.
 function hittaOtillatnaSkriptkallor(html: string, tillatna: string[]): string[] {
-  return skriptUrler(html).filter(url => {
+  return skriptUrler(html).filter((url) => {
     let origin: string
     try {
       origin = new URL(url, EGEN_ORIGIN).origin
@@ -50,16 +52,16 @@ function hittaOtillatnaSkriptkallor(html: string, tillatna: string[]): string[] 
 
 describe('index.html: externa skriptkällor', () => {
   it('laddar bara skript från tillåtelselistan', () => {
-    const otillatna = hittaOtillatnaSkriptkallor(indexHtml, Object.keys(TILLATNA_EXTERNA_SKRIPTKALLOR))
+    const otillatna = hittaOtillatnaSkriptkallor(
+      indexHtml,
+      Object.keys(TILLATNA_EXTERNA_SKRIPTKALLOR),
+    )
 
-    expect(
-      otillatna,
-      `${VARNING}\nOtillåtna källor: ${otillatna.join(', ')}`,
-    ).toEqual([])
+    expect(otillatna, `${VARNING}\nOtillåtna källor: ${otillatna.join(', ')}`).toEqual([])
   })
 
   it('tillåtelselistan innehåller inga källor som inte längre används (håll den ärlig)', () => {
-    const anvanda = skriptUrler(indexHtml).map(url => new URL(url, EGEN_ORIGIN).origin)
+    const anvanda = skriptUrler(indexHtml).map((url) => new URL(url, EGEN_ORIGIN).origin)
 
     for (const origin of Object.keys(TILLATNA_EXTERNA_SKRIPTKALLOR)) {
       expect(anvanda, `${origin} står på listan men laddas inte i index.html`).toContain(origin)

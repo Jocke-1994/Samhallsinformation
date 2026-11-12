@@ -12,8 +12,12 @@ import { pushInstallningarNyckel } from '../../../lib/queryNycklar'
 // att slå på en kategori på en enhet som inte är registrerad triggar
 // webbläsarens prenumeration i bakgrunden.
 const NOTISTYPER = [
-  { key: 'pushNyaHandelser', label: 'Ny händelse', beskrivning: 'När dina källor i Mitt flöde publicerar något nytt' },
-  { key: 'pushNyVersion',    label: 'Ny version',   beskrivning: 'När en ny version av appen släpps' },
+  {
+    key: 'pushNyaHandelser',
+    label: 'Ny händelse',
+    beskrivning: 'När dina källor i Mitt flöde publicerar något nytt',
+  },
+  { key: 'pushNyVersion', label: 'Ny version', beskrivning: 'När en ny version av appen släpps' },
 ] as const satisfies readonly { key: NotisKategori; label: string; beskrivning: string }[]
 
 type NotisKategori = 'pushNyaHandelser' | 'pushNyVersion'
@@ -39,7 +43,9 @@ export default function PushKort() {
     mutationFn: (andring: Partial<PushSettingsDto>) => savePushSettings(andring),
     // Cachen (och därmed reglaget) byter först när servern bekräftat.
     onSuccess: (_data, andring) => {
-      queryClient.setQueryData<PushSettingsDto>(nyckel, gammal => (gammal ? { ...gammal, ...andring } : gammal))
+      queryClient.setQueryData<PushSettingsDto>(nyckel, (gammal) =>
+        gammal ? { ...gammal, ...andring } : gammal,
+      )
     },
   })
 
@@ -71,7 +77,9 @@ export default function PushKort() {
       try {
         await unsubscribe()
       } catch (err) {
-        setFel(visaFel(err, 'Inställningen sparades, men den här enheten kunde inte avregistreras.'))
+        setFel(
+          visaFel(err, 'Inställningen sparades, men den här enheten kunde inte avregistreras.'),
+        )
       }
     }
     setSparar(false)
@@ -96,7 +104,9 @@ export default function PushKort() {
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-6 pt-6 pb-5 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-xl shrink-0">🔔</div>
+          <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-xl shrink-0">
+            🔔
+          </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900">Push-notiser</h2>
             <p className="text-sm text-slate-500 mt-0.5">Välj vad du vill bli notifierad om</p>
@@ -109,18 +119,29 @@ export default function PushKort() {
           <p className="text-sm text-slate-400 py-4">Push stöds inte i den här webbläsaren.</p>
         )}
 
-        {stodjs && installningar.data && NOTISTYPER.map(n => (
-          <div key={n.key} className="flex items-center justify-between gap-4 py-4 border-b border-slate-100 last:border-0">
-            <div>
-              <p className="text-sm font-medium text-slate-700">{n.label}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{n.beskrivning}</p>
+        {stodjs &&
+          installningar.data &&
+          NOTISTYPER.map((n) => (
+            <div
+              key={n.key}
+              className="flex items-center justify-between gap-4 py-4 border-b border-slate-100 last:border-0"
+            >
+              <div>
+                <p className="text-sm font-medium text-slate-700">{n.label}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{n.beskrivning}</p>
+              </div>
+              <Toggle
+                on={installningar.data[n.key]}
+                onChange={(next) => toggleKategori(n.key, next)}
+                disabled={sparar}
+              />
             </div>
-            <Toggle on={installningar.data[n.key]} onChange={next => toggleKategori(n.key, next)} disabled={sparar} />
-          </div>
-        ))}
+          ))}
 
         {stodjs && installningar.isError && (
-          <p role="alert" className="text-xs text-red-500 py-4">Dina notisinställningar kunde inte hämtas. Ladda om sidan och försök igen.</p>
+          <p role="alert" className="text-xs text-red-500 py-4">
+            Dina notisinställningar kunde inte hämtas. Ladda om sidan och försök igen.
+          </p>
         )}
 
         {stodjs && !loading && (
@@ -143,7 +164,11 @@ export default function PushKort() {
           </div>
         )}
 
-        {fel && <p role="alert" className="text-xs text-red-500 pb-4">{fel}</p>}
+        {fel && (
+          <p role="alert" className="text-xs text-red-500 pb-4">
+            {fel}
+          </p>
+        )}
       </div>
     </div>
   )

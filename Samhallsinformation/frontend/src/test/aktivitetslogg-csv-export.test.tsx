@@ -10,25 +10,44 @@ import { escapaCsvCell, exporteraCsv } from '../components/Admin/Aktivitetslogg'
 // = + - @ (eller tabb/CR) ska neutraliseras (OWASP CSV-injektionsskydd), (c) inga
 // fabricerade Notis-mockrader ska följa med exporten.
 
-vi.mock('../api/activityLog', () => ({ fetchAdminActivityLog: vi.fn(), undoActivityLogEntry: vi.fn() }))
+vi.mock('../api/activityLog', () => ({
+  fetchAdminActivityLog: vi.fn(),
+  undoActivityLogEntry: vi.fn(),
+}))
 vi.mock('../api/adminUsers', () => ({ saveAdminUserEvent: vi.fn(), unsaveAdminUserEvent: vi.fn() }))
 
 const { fetchAdminActivityLog, undoActivityLogEntry } = await import('../api/activityLog')
 const { default: Aktivitetslogg } = await import('../components/Admin/Aktivitetslogg')
 
 const post = (over: Partial<LoggPost> = {}): LoggPost => ({
-  id: 'l1', tid: '2026-09-25T10:00:00Z', vem: 'Admin', aktörTyp: 'Admin', typ: 'Kontoåtgärd',
-  rubrik: 'Sparade händelse till Anna', detalj: 'Vanlig detaljtext',
-  status: 'OK', ångrad: false, arkiverad: false, test: false,
+  id: 'l1',
+  tid: '2026-09-25T10:00:00Z',
+  vem: 'Admin',
+  aktörTyp: 'Admin',
+  typ: 'Kontoåtgärd',
+  rubrik: 'Sparade händelse till Anna',
+  detalj: 'Vanlig detaljtext',
+  status: 'OK',
+  ångrad: false,
+  arkiverad: false,
+  test: false,
   ...over,
 })
 const svar = (rader: LoggPost[]): ActivityLogResponse => ({
-  rader, totalt: rader.length, sammanfattning: { ingestor: 3, fel: 2, varningar: 1 },
+  rader,
+  totalt: rader.length,
+  sammanfattning: { ingestor: 3, fel: 2, varningar: 1 },
 })
 
 function rendera() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}><Aktivitetslogg /></QueryClientProvider>)
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <Aktivitetslogg />
+    </QueryClientProvider>,
+  )
 }
 
 beforeEach(() => {
@@ -42,11 +61,15 @@ describe('escapaCsvCell — ren funktion', () => {
   })
 
   it('kommatecken och radbrytning i värdet bevaras inom EN cell', () => {
-    expect(escapaCsvCell('Rad 1,med komma\noch radbrytning')).toBe('"Rad 1,med komma\noch radbrytning"')
+    expect(escapaCsvCell('Rad 1,med komma\noch radbrytning')).toBe(
+      '"Rad 1,med komma\noch radbrytning"',
+    )
   })
 
   it('ett värde som börjar med = neutraliseras med en apostrof (formelinjektion)', () => {
-    expect(escapaCsvCell('=HYPERLINK("http://evil.example")')).toBe('"\'=HYPERLINK(""http://evil.example"")"')
+    expect(escapaCsvCell('=HYPERLINK("http://evil.example")')).toBe(
+      '"\'=HYPERLINK(""http://evil.example"")"',
+    )
   })
 
   it('+, -, @, tabb och CR i cellens BÖRJAN neutraliseras också', () => {
@@ -82,9 +105,14 @@ describe('exporteraCsv — hela filen', () => {
     try {
       const rader = [
         {
-          id: 'l1', tid: '10:00', datum: '2026-09-27', typ: 'Kontoåtgärd' as const,
-          rubrik: '=HYPERLINK("http://evil.example")', detalj: 'Innehåller "citattecken", komma och\nradbrytning',
-          status: 'OK' as const, vem: 'En, Användare',
+          id: 'l1',
+          tid: '10:00',
+          datum: '2026-09-27',
+          typ: 'Kontoåtgärd' as const,
+          rubrik: '=HYPERLINK("http://evil.example")',
+          detalj: 'Innehåller "citattecken", komma och\nradbrytning',
+          status: 'OK' as const,
+          vem: 'En, Användare',
         },
       ]
       exporteraCsv(rader)

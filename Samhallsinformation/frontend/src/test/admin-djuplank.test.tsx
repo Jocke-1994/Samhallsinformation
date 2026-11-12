@@ -16,22 +16,39 @@ import type { AdminTicketListItemDto } from '../api/support'
 // exakt samma sätt som AdminPage.
 
 const DTO = (id: string, name: string, over: Partial<AdminUserDto> = {}): AdminUserDto => ({
-  id, name, email: `${name.toLowerCase()}@example.com`, role: 'Användare', isActive: true,
-  suspendedAt: null, suspendedReason: null, suspensionReminderAt: null, suspensionReminderNote: null,
-  authProvider: 'password', createdAt: '2026-01-01T00:00:00Z', deletedAt: null, deletionScheduledAt: null,
+  id,
+  name,
+  email: `${name.toLowerCase()}@example.com`,
+  role: 'Användare',
+  isActive: true,
+  suspendedAt: null,
+  suspendedReason: null,
+  suspensionReminderAt: null,
+  suspensionReminderNote: null,
+  authProvider: 'password',
+  createdAt: '2026-01-01T00:00:00Z',
+  deletedAt: null,
+  deletionScheduledAt: null,
   ...over,
 })
 
 const TICKET = (id: string, nr: number): AdminTicketListItemDto => ({
-  id, ticketNumber: nr, subject: `Ärende ${nr}`, category: 'Fråga', status: 'Öppet', channel: 'arendehantering',
-  isArchived: false, createdAt: '2026-09-01T10:00:00Z', updatedAt: '2026-09-01T10:00:00Z',
+  id,
+  ticketNumber: nr,
+  subject: `Ärende ${nr}`,
+  category: 'Fråga',
+  status: 'Öppet',
+  channel: 'arendehantering',
+  isArchived: false,
+  createdAt: '2026-09-01T10:00:00Z',
+  updatedAt: '2026-09-01T10:00:00Z',
 })
 
 const hämtaAnvändare = vi.fn()
 const hämtaNotisLogg = vi.fn()
-const hämtaÄrende    = vi.fn()
+const hämtaÄrende = vi.fn()
 
-vi.mock('../api/adminUsers', async importOriginal => {
+vi.mock('../api/adminUsers', async (importOriginal) => {
   const orig = await importOriginal<typeof import('../api/adminUsers')>()
   return {
     ...orig,
@@ -42,10 +59,15 @@ vi.mock('../api/adminUsers', async importOriginal => {
     fetchAdminUserNotificationLog: (id: string) => hämtaNotisLogg(id),
     fetchAdminUserSettingLog: async () => [],
     fetchAdminUserSources: async () => [],
-    fetchAdminUserPushSettings: async () => ({ pushEnabled: true, pushNyaHandelser: true, pushNyVersion: true, enheter: [] }),
+    fetchAdminUserPushSettings: async () => ({
+      pushEnabled: true,
+      pushNyaHandelser: true,
+      pushNyVersion: true,
+      enheter: [],
+    }),
   }
 })
-vi.mock('../api/support', async importOriginal => {
+vi.mock('../api/support', async (importOriginal) => {
   const orig = await importOriginal<typeof import('../api/support')>()
   return {
     ...orig,
@@ -69,8 +91,12 @@ type Sektion = 'oversikt' | 'anvandare' | 'support-inbox'
 function Sektionsväxlare() {
   const [section, setSection] = useState<Sektion>('oversikt')
   const {
-    användarMål, inboxÄrendeId,
-    öppnaAnvändare, öppnaInboxÄrende, konsumeraAnvändare, konsumeraInboxÄrende,
+    användarMål,
+    inboxÄrendeId,
+    öppnaAnvändare,
+    öppnaInboxÄrende,
+    konsumeraAnvändare,
+    konsumeraInboxÄrende,
   } = useAdminDjuplank(section)
 
   return (
@@ -78,10 +104,33 @@ function Sektionsväxlare() {
       <button onClick={() => setSection('oversikt')}>till-oversikt</button>
       <button onClick={() => setSection('anvandare')}>till-anvandare</button>
       <button onClick={() => setSection('support-inbox')}>till-inbox</button>
-      <button onClick={() => { öppnaAnvändare('anna@example.com', 'oversikt'); setSection('anvandare') }}>länk-anna</button>
-      <button onClick={() => { öppnaInboxÄrende('t1'); setSection('support-inbox') }}>länk-t1</button>
-      <button onClick={() => { öppnaInboxÄrende('t2'); setSection('support-inbox') }}>länk-t2</button>
-      <span data-testid="mål">{användarMål?.epost ?? '-'}|{inboxÄrendeId ?? '-'}</span>
+      <button
+        onClick={() => {
+          öppnaAnvändare('anna@example.com', 'oversikt')
+          setSection('anvandare')
+        }}
+      >
+        länk-anna
+      </button>
+      <button
+        onClick={() => {
+          öppnaInboxÄrende('t1')
+          setSection('support-inbox')
+        }}
+      >
+        länk-t1
+      </button>
+      <button
+        onClick={() => {
+          öppnaInboxÄrende('t2')
+          setSection('support-inbox')
+        }}
+      >
+        länk-t2
+      </button>
+      <span data-testid="mål">
+        {användarMål?.epost ?? '-'}|{inboxÄrendeId ?? '-'}
+      </span>
 
       {section === 'anvandare' && (
         <Anvandare
@@ -110,13 +159,18 @@ const klicka = (text: string) => fireEvent.click(screen.getByText(text))
 // Detaljpanelens header (span med GUID-title); raderna i listan har också GUID-title på en <td>.
 const panel = (id: string) => document.querySelector(`span[title="GUID: ${id}"]`)
 const panelÖppen = (id: string) => waitFor(() => expect(panel(id)).not.toBeNull())
-const väntaLite = () => act(async () => { await new Promise(r => setTimeout(r, 60)) })
+const väntaLite = () =>
+  act(async () => {
+    await new Promise((r) => setTimeout(r, 60))
+  })
 
 beforeEach(() => {
   hämtaAnvändare.mockReset().mockResolvedValue([DTO('a1', 'Anna'), DTO('b1', 'Bertil')])
   hämtaNotisLogg.mockReset().mockResolvedValue([])
   hämtaÄrende.mockReset().mockImplementation(async (id: string) => ({
-    ticket: { ...TICKET(id, id === 't1' ? 1 : 2), createdByName: null }, messages: [], scheduledActions: [],
+    ticket: { ...TICKET(id, id === 't1' ? 1 : 2), createdByName: null },
+    messages: [],
+    scheduledActions: [],
   }))
 })
 
@@ -139,7 +193,9 @@ describe('Användare: djuplänk', () => {
     await panelÖppen('b1')
 
     hämtaAnvändare.mockResolvedValue([DTO('a1', 'Anna'), DTO('b1', 'Bertil', { isActive: false })])
-    await act(async () => { await queryClient.refetchQueries({ queryKey: ['admin-users'] }) })
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: ['admin-users'] })
+    })
     await väntaLite()
 
     expect(hämtaAnvändare).toHaveBeenCalledTimes(2)

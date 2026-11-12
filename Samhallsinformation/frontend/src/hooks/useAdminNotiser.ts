@@ -46,10 +46,22 @@ export function useAdminNotiser(aktiv: boolean, adminRoll: AdminRoll): PendingNo
   const { data: ärendeNotiser = [] } = useSupportNotiser(aktiv)
   const { data: kontoNotiser = [] } = useKontoNotiser(aktiv && adminRoll === 'Admin')
 
-  return useMemo(() => [
-    ...ärendeNotiser.map(n => ({ arendeId: n.ticketId, amne: n.amne, typ: n.typ, notering: n.notering })),
-    ...kontoNotiser.map(n => ({
-      arendeId: n.userId, amne: n.namn, typ: 'kontospärrning' as const, notering: n.notering, epost: n.epost,
-    })),
-  ], [ärendeNotiser, kontoNotiser])
+  return useMemo(
+    () => [
+      ...ärendeNotiser.map((n) => ({
+        arendeId: n.ticketId,
+        amne: n.amne,
+        typ: n.typ,
+        notering: n.notering,
+      })),
+      ...kontoNotiser.map((n) => ({
+        arendeId: n.userId,
+        amne: n.namn,
+        typ: 'kontospärrning' as const,
+        notering: n.notering,
+        epost: n.epost,
+      })),
+    ],
+    [ärendeNotiser, kontoNotiser],
+  )
 }

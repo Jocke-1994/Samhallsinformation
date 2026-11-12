@@ -17,7 +17,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 vi.mock('../context/FeatureFlagsContext', () => ({
   useFlags: () => ({
-    'mina-kallor': true, notifieringar: false, konto: true, support: true,
+    'mina-kallor': true,
+    notifieringar: false,
+    konto: true,
+    support: true,
   }),
 }))
 
@@ -30,7 +33,9 @@ vi.mock('../api/siteSettings', () => ({
 }))
 
 vi.mock('../components/Sidebar/Sidebar', () => ({
-  default: ({ isOpen }: { isOpen: boolean }) => <nav data-testid="sidebar">{isOpen ? 'öppen' : 'stängd'}</nav>,
+  default: ({ isOpen }: { isOpen: boolean }) => (
+    <nav data-testid="sidebar">{isOpen ? 'öppen' : 'stängd'}</nav>
+  ),
 }))
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: false }) }))
 

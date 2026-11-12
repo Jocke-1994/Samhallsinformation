@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
-  extraheraPolisenTyp, extraheraPolisenOmrade, länFörGeografi, kommunerILän, groupBy,
-  POLISEN_KATEGORIER, LÄN_KOMMUNER,
+  extraheraPolisenTyp,
+  extraheraPolisenOmrade,
+  länFörGeografi,
+  kommunerILän,
+  groupBy,
+  POLISEN_KATEGORIER,
+  LÄN_KOMMUNER,
 } from '../components/Profile/MinaKallor/kallorUtils'
 
 // Enhet-8 (E8, avsnitt 5, F5): dessa var listade som de föreslagna första
@@ -45,7 +50,9 @@ describe('extraheraPolisenTyp', () => {
   })
 
   it('"Sammanfattning kväll och natt" matchar sig själv, inte av misstag "Sammanfattning natt" (ordning i POLISEN_KATEGORIER)', () => {
-    expect(extraheraPolisenTyp('Sammanfattning kväll och natt')).toBe('Sammanfattning kväll och natt')
+    expect(extraheraPolisenTyp('Sammanfattning kväll och natt')).toBe(
+      'Sammanfattning kväll och natt',
+    )
     expect(extraheraPolisenTyp('Sammanfattning natt')).toBe('Sammanfattning natt')
   })
 
@@ -127,13 +134,13 @@ describe('groupBy', () => {
       { id: 4, typ: 'a' },
       { id: 5, typ: 'b' },
     ]
-    const grupperat = groupBy(items, i => i.typ)
+    const grupperat = groupBy(items, (i) => i.typ)
     expect(Object.keys(grupperat).sort()).toEqual(['a', 'b'])
-    expect(grupperat.a.map(i => i.id)).toEqual([1, 3, 4])
-    expect(grupperat.b.map(i => i.id)).toEqual([2, 5])
+    expect(grupperat.a.map((i) => i.id)).toEqual([1, 3, 4])
+    expect(grupperat.b.map((i) => i.id)).toEqual([2, 5])
   })
 
   it('en tom lista ger ett tomt objekt', () => {
-    expect(groupBy<{ typ: string }>([], i => i.typ)).toEqual({})
+    expect(groupBy<{ typ: string }>([], (i) => i.typ)).toEqual({})
   })
 })

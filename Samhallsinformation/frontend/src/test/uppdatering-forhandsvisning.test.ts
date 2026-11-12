@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
-  banderoll, checklista, formateraDag, punkterNyhetersidan, punkterProfilen, punkterVadÄrNytt, push,
+  banderoll,
+  checklista,
+  formateraDag,
+  punkterNyhetersidan,
+  punkterProfilen,
+  punkterVadÄrNytt,
+  push,
   type FörhandsData,
 } from '../lib/uppdateringForhandsvisning'
 
@@ -10,14 +16,36 @@ import {
 
 function data(över: Partial<FörhandsData> = {}): FörhandsData {
   return {
-    titel: 'Filtrera på plats', datum: '2026-11-15',
+    titel: 'Filtrera på plats',
+    datum: '2026-11-15',
     punkter: [
-      { typ: 'ny-funktion', plats: 'Senaste nytt', text: 'Filtrera på kommun', synlighet: 'alla', provaSjalv: 'senaste-nytt-plats' },
-      { typ: 'ny-funktion', plats: 'Konto', text: 'Sparas på kontot', synlighet: 'inloggade', provaSjalv: 'mina-kallor' },
+      {
+        typ: 'ny-funktion',
+        plats: 'Senaste nytt',
+        text: 'Filtrera på kommun',
+        synlighet: 'alla',
+        provaSjalv: 'senaste-nytt-plats',
+      },
+      {
+        typ: 'ny-funktion',
+        plats: 'Konto',
+        text: 'Sparas på kontot',
+        synlighet: 'inloggade',
+        provaSjalv: 'mina-kallor',
+      },
     ],
-    schemalagd: true, schemaDatum: '2026-11-15T08:00', annonsera: false, annonseDatum: '2026-11-10T08:00',
-    skickaPush: true, pushVersion: '0.9.0', pushMeddelande: 'Nu kan du filtrera', pushSkickaVid: 'Lansering',
-    visaBanderoll: true, visaVadArNytt: true, valdaFlaggor: ['flode_platsfilter'], kopplatFaq: [],
+    schemalagd: true,
+    schemaDatum: '2026-11-15T08:00',
+    annonsera: false,
+    annonseDatum: '2026-11-10T08:00',
+    skickaPush: true,
+    pushVersion: '0.9.0',
+    pushMeddelande: 'Nu kan du filtrera',
+    pushSkickaVid: 'Lansering',
+    visaBanderoll: true,
+    visaVadArNytt: true,
+    valdaFlaggor: ['flode_platsfilter'],
+    kopplatFaq: [],
     profilUppdateringarPå: true,
     ...över,
   }
@@ -31,7 +59,9 @@ describe('formateraDag', () => {
 
 describe('Nyheter-sidan', () => {
   it('visar bara "alla"-punkter, även för inloggade', () => {
-    expect(punkterNyhetersidan(data(), 'lansering').map(p => p.text)).toEqual(['Filtrera på kommun'])
+    expect(punkterNyhetersidan(data(), 'lansering').map((p) => p.text)).toEqual([
+      'Filtrera på kommun',
+    ])
   })
 
   it('visar "Släpps X"-teasern under annonseringen', () => {
@@ -41,14 +71,19 @@ describe('Nyheter-sidan', () => {
   })
 
   it('hoppar över rader utan text', () => {
-    const d = data({ punkter: [{ typ: 'buggfix', plats: 'Allmänt', text: '  ', synlighet: 'alla' }] })
+    const d = data({
+      punkter: [{ typ: 'buggfix', plats: 'Allmänt', text: '  ', synlighet: 'alla' }],
+    })
     expect(punkterNyhetersidan(d, 'lansering')).toEqual([])
   })
 })
 
 describe('Profil → Uppdateringar', () => {
   it('visar alla ifyllda punkter, även "Endast inloggade"', () => {
-    expect(punkterProfilen(data(), 'lansering').map(p => p.text)).toEqual(['Filtrera på kommun', 'Sparas på kontot'])
+    expect(punkterProfilen(data(), 'lansering').map((p) => p.text)).toEqual([
+      'Filtrera på kommun',
+      'Sparas på kontot',
+    ])
   })
 
   it('visar samma "Släpps X"-teaser som Nyheter-sidan under annonseringen', () => {
@@ -67,17 +102,25 @@ describe('Vad är nytt', () => {
 describe('banderoll', () => {
   it('lansering: "Nytt på Samhällsinformation", stil Nyhet, länk till /uppdateringar', () => {
     expect(banderoll(data(), 'lansering', 'besokare')).toMatchObject({
-      rubrik: 'Nytt på Samhällsinformation', message: 'Filtrera på plats', stil: 'Nyhet', lankUrl: '/uppdateringar', audience: 'Alla',
+      rubrik: 'Nytt på Samhällsinformation',
+      message: 'Filtrera på plats',
+      stil: 'Nyhet',
+      lankUrl: '/uppdateringar',
+      audience: 'Alla',
     })
   })
 
   it('annonsering: "Kommer 15 november", stil Kommande', () => {
-    expect(banderoll(data({ annonsera: true }), 'annonsering', 'besokare'))
-      .toMatchObject({ rubrik: 'Kommer 15 november', stil: 'Kommande' })
+    expect(banderoll(data({ annonsera: true }), 'annonsering', 'besokare')).toMatchObject({
+      rubrik: 'Kommer 15 november',
+      stil: 'Kommande',
+    })
   })
 
   it('bara inloggade-punkter: målgrupp Användare, syns inte för besökare', () => {
-    const d = data({ punkter: [{ typ: 'ny-funktion', plats: 'Konto', text: 'x', synlighet: 'inloggade' }] })
+    const d = data({
+      punkter: [{ typ: 'ny-funktion', plats: 'Konto', text: 'x', synlighet: 'inloggade' }],
+    })
     expect(banderoll(d, 'lansering', 'besokare')).toBeNull()
     expect(banderoll(d, 'lansering', 'inloggad')).toMatchObject({ audience: 'Användare' })
   })
@@ -89,12 +132,17 @@ describe('banderoll', () => {
 
 describe('push', () => {
   it('lansering: titel "Ny version: 0.9.0" och meddelandet', () => {
-    expect(push(data(), 'lansering')).toEqual({ titel: 'Ny version: 0.9.0', text: 'Nu kan du filtrera' })
+    expect(push(data(), 'lansering')).toEqual({
+      titel: 'Ny version: 0.9.0',
+      text: 'Nu kan du filtrera',
+    })
   })
 
   it('annonsering med Skicka vid = Båda: titel "Kommer 15 november"', () => {
-    expect(push(data({ annonsera: true, pushSkickaVid: 'Båda' }), 'annonsering'))
-      .toEqual({ titel: 'Kommer 15 november', text: 'Nu kan du filtrera' })
+    expect(push(data({ annonsera: true, pushSkickaVid: 'Båda' }), 'annonsering')).toEqual({
+      titel: 'Kommer 15 november',
+      text: 'Nu kan du filtrera',
+    })
   })
 
   it('ingen push i en fas som inte är vald', () => {
@@ -107,36 +155,59 @@ describe('push', () => {
 })
 
 describe('checklista', () => {
-  const texter = (d: FörhandsData) => checklista(d).map(p => `${p.nivå}: ${p.text}`)
+  const texter = (d: FörhandsData) => checklista(d).map((p) => `${p.nivå}: ${p.text}`)
 
   it('varnar när besökare inte ser något alls', () => {
-    const d = data({ punkter: [{ typ: 'ny-funktion', plats: 'Konto', text: 'x', synlighet: 'inloggade' }] })
-    expect(texter(d).some(t => t.startsWith('varning: Besökare ser ingenting'))).toBe(true)
+    const d = data({
+      punkter: [{ typ: 'ny-funktion', plats: 'Konto', text: 'x', synlighet: 'inloggade' }],
+    })
+    expect(texter(d).some((t) => t.startsWith('varning: Besökare ser ingenting'))).toBe(true)
   })
 
   it('varnar när "Endast inloggade"-punkter inte syns någonstans för att Profil → Uppdateringar är av', () => {
-    expect(texter(data({ profilUppdateringarPå: false })).some(t => t.includes('syns bara i Vad är nytt-rutan'))).toBe(true)
+    expect(
+      texter(data({ profilUppdateringarPå: false })).some((t) =>
+        t.includes('syns bara i Vad är nytt-rutan'),
+      ),
+    ).toBe(true)
   })
 
   it('upplyser om att pushen länkar till en avstängd sida', () => {
-    expect(texter(data({ profilUppdateringarPå: false })).some(t => t.startsWith('info: Pushen öppnar Profil'))).toBe(true)
+    expect(
+      texter(data({ profilUppdateringarPå: false })).some((t) =>
+        t.startsWith('info: Pushen öppnar Profil'),
+      ),
+    ).toBe(true)
   })
 
   it('varnar för push utan version', () => {
-    expect(texter(data({ pushVersion: ' ' })).some(t => t.includes('version eller meddelande saknas'))).toBe(true)
+    expect(
+      texter(data({ pushVersion: ' ' })).some((t) => t.includes('version eller meddelande saknas')),
+    ).toBe(true)
   })
 
   it('frågar om Vad är nytt saknas för en "Ny funktion"', () => {
-    expect(texter(data({ visaVadArNytt: false })).some(t => t.includes('Avsiktligt?'))).toBe(true)
+    expect(texter(data({ visaVadArNytt: false })).some((t) => t.includes('Avsiktligt?'))).toBe(true)
   })
 
   it('räknar opublicerade FAQ-frågor', () => {
-    const d = data({ kopplatFaq: [{ fraga: 'a', publicerad: true }, { fraga: 'b', publicerad: false }] })
-    expect(texter(d).some(t => t.includes('2 FAQ-frågor') && t.includes('varav 1 opublicerad'))).toBe(true)
+    const d = data({
+      kopplatFaq: [
+        { fraga: 'a', publicerad: true },
+        { fraga: 'b', publicerad: false },
+      ],
+    })
+    expect(
+      texter(d).some((t) => t.includes('2 FAQ-frågor') && t.includes('varav 1 opublicerad')),
+    ).toBe(true)
   })
 
   it('frågar när nyhetens datum inte är lanseringsdagen', () => {
-    expect(texter(data({ datum: '2026-11-02' })).some(t => t.includes('datumet 2 november, men lanseringen är 15 november'))).toBe(true)
+    expect(
+      texter(data({ datum: '2026-11-02' })).some((t) =>
+        t.includes('datumet 2 november, men lanseringen är 15 november'),
+      ),
+    ).toBe(true)
   })
 
   it('inget att anmärka på när allt är ifyllt och synligt', () => {
@@ -146,14 +217,22 @@ describe('checklista', () => {
   it('frågar om en "Ny funktion"-rad saknar Prova själv-länk', () => {
     const d = data()
     d.punkter[1] = { ...d.punkter[1], provaSjalv: null }
-    expect(checklista(d).map(p => p.text)).toContain('Rad 2 är "Ny funktion" men har ingen Prova själv-länk. Avsiktligt?')
+    expect(checklista(d).map((p) => p.text)).toContain(
+      'Rad 2 är "Ny funktion" men har ingen Prova själv-länk. Avsiktligt?',
+    )
   })
 
   it('varnar när Prova själv leder till en funktion som är av efter lanseringen', () => {
     const avstängd = checklista(data({ flaggorEfterLansering: { flode_platsfilter: false } }))
-    expect(avstängd.some(p => p.nivå === 'varning' && p.text.startsWith('Rad 1: Prova själv leder till Senaste nytt → Filtrera på plats'))).toBe(true)
+    expect(
+      avstängd.some(
+        (p) =>
+          p.nivå === 'varning' &&
+          p.text.startsWith('Rad 1: Prova själv leder till Senaste nytt → Filtrera på plats'),
+      ),
+    ).toBe(true)
 
     const påslagen = checklista(data({ flaggorEfterLansering: { flode_platsfilter: true } }))
-    expect(påslagen.some(p => p.text.includes('Prova själv leder till'))).toBe(false)
+    expect(påslagen.some((p) => p.text.includes('Prova själv leder till'))).toBe(false)
   })
 })

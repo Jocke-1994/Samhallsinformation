@@ -10,14 +10,26 @@ import type { CanonicalEvent, Source } from '../types'
 vi.mock('../api/events')
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: false }) }))
 vi.mock('../context/FeatureFlagsContext', () => ({ useFlags: () => ({}) }))
-vi.mock('react-router', () => ({ useNavigate: () => vi.fn(), useSearchParams: () => [new URLSearchParams()], useLocation: () => ({ key: 'default' }) }))
+vi.mock('react-router', () => ({
+  useNavigate: () => vi.fn(),
+  useSearchParams: () => [new URLSearchParams()],
+  useLocation: () => ({ key: 'default' }),
+}))
 vi.mock('../components/common/MobilTopBar', () => ({ default: () => null }))
 vi.mock('../context/SavedEventsContext', () => ({
-  useSavedEvents: () => ({ sparade: new Set(), lage: 'klar', forsokIgen: vi.fn(), toggleSparad: vi.fn() }),
+  useSavedEvents: () => ({
+    sparade: new Set(),
+    lage: 'klar',
+    forsokIgen: vi.fn(),
+    toggleSparad: vi.fn(),
+  }),
 }))
 vi.mock('../components/NewsFeed/NewsItem', () => ({
-  default: ({ event, markerad }: { event: CanonicalEvent; markerad?: boolean }) =>
-    <li data-testid="handelse" data-markerad={markerad ? 'ja' : 'nej'}>{event.title}</li>,
+  default: ({ event, markerad }: { event: CanonicalEvent; markerad?: boolean }) => (
+    <li data-testid="handelse" data-markerad={markerad ? 'ja' : 'nej'}>
+      {event.title}
+    </li>
+  ),
 }))
 
 import * as eventsApi from '../api/events'
@@ -26,24 +38,49 @@ import NewsFeed from '../components/NewsFeed/NewsFeed'
 const api = vi.mocked(eventsApi)
 
 function ev(id: string): CanonicalEvent {
-  return { id, sourceId: 12, title: `Händelse ${id}`, content: 'x', publishedAt: '2026-11-03T10:00:00Z', url: 'https://x.se', geography: null, severity: 'Bra att veta', isNational: false }
+  return {
+    id,
+    sourceId: 12,
+    title: `Händelse ${id}`,
+    content: 'x',
+    publishedAt: '2026-11-03T10:00:00Z',
+    url: 'https://x.se',
+    geography: null,
+    severity: 'Bra att veta',
+    isNational: false,
+  }
 }
 
-const KALLOR = [{ id: 12, name: 'Polisen Efterlysningar', shortName: 'Polisen', isActive: true }] as unknown as Source[]
+const KALLOR = [
+  { id: 12, name: 'Polisen Efterlysningar', shortName: 'Polisen', isActive: true },
+] as unknown as Source[]
 
 function rendera(markeradHandelseId: string | null) {
   const klient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
     <QueryClientProvider client={klient}>
-      <NewsFeed shortName="Polisen" sources={KALLOR} viewMode="Allt" onViewModeChange={vi.fn()} onOpenSidebar={vi.fn()} markeradHandelseId={markeradHandelseId} />
+      <NewsFeed
+        shortName="Polisen"
+        sources={KALLOR}
+        viewMode="Allt"
+        onViewModeChange={vi.fn()}
+        onOpenSidebar={vi.fn()}
+        markeradHandelseId={markeradHandelseId}
+      />
     </QueryClientProvider>,
   )
 }
 
-const markerade = () => screen.queryAllByTestId('handelse').filter(e => e.dataset.markerad === 'ja').map(e => e.textContent)
+const markerade = () =>
+  screen
+    .queryAllByTestId('handelse')
+    .filter((e) => e.dataset.markerad === 'ja')
+    .map((e) => e.textContent)
 
 beforeEach(() => {
-  api.fetchEvents.mockReset().mockResolvedValue({ total: 2, page: 1, pageSize: 50, events: [ev('a'), ev('b')] })
+  api.fetchEvents
+    .mockReset()
+    .mockResolvedValue({ total: 2, page: 1, pageSize: 50, events: [ev('a'), ev('b')] })
   api.fetchEvent.mockReset()
 })
 

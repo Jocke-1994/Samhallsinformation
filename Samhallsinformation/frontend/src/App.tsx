@@ -37,7 +37,7 @@ function HomePage() {
   // öppnar källans flöde och scrollar fram och fäller ut händelsen. Utan
   // handelse (en push om flera händelser) öppnas bara källans flöde.
   const [selectedShortName, setSelectedShortName] = useState<string | null>(
-    (location.state as { shortName?: string } | null)?.shortName ?? searchParams.get('shortName')
+    (location.state as { shortName?: string } | null)?.shortName ?? searchParams.get('shortName'),
   )
   const länkadKälla = searchParams.get('shortName')
   const markeradHandelse = searchParams.get('handelse')
@@ -52,15 +52,19 @@ function HomePage() {
   }
   // /?vy=sparat (Prova själv → Mitt flöde → Sparat) startar i Mitt flöde.
   const [viewMode, setViewMode] = useState<'Allt' | 'Mitt'>(
-    (location.state as { viewMode?: 'Allt' | 'Mitt' } | null)?.viewMode
-      ?? (searchParams.get('vy') === 'sparat' ? 'Mitt' : 'Allt')
+    (location.state as { viewMode?: 'Allt' | 'Mitt' } | null)?.viewMode ??
+      (searchParams.get('vy') === 'sparat' ? 'Mitt' : 'Allt'),
   )
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Allt/Mitt är bara meningsfullt i det kombinerade flödet för inloggade —
   // annars filtrerar ett kvarhängande "Mitt"-läge tyst en enskild källas vy.
-  useEffect(() => { if (!isLoggedIn) setViewMode('Allt') }, [isLoggedIn])
-  useEffect(() => { if (selectedShortName !== null) setViewMode('Allt') }, [selectedShortName])
+  useEffect(() => {
+    if (!isLoggedIn) setViewMode('Allt')
+  }, [isLoggedIn])
+  useEffect(() => {
+    if (selectedShortName !== null) setViewMode('Allt')
+  }, [selectedShortName])
 
   // Prova själv-länk hit (/?vy=…) medan flödet redan visas, t.ex. från Vad är
   // nytt-rutan: platsfiltret och Sparat finns bara i det kombinerade flödet.
@@ -78,8 +82,10 @@ function HomePage() {
   })
 
   const swipeHandlers = useSwipeable({
-    onSwipedRight: (e) => { if (e.initial[0] < 30) setSidebarOpen(true) },
-    onSwipedLeft:  ()  => setSidebarOpen(false),
+    onSwipedRight: (e) => {
+      if (e.initial[0] < 30) setSidebarOpen(true)
+    },
+    onSwipedLeft: () => setSidebarOpen(false),
     preventScrollOnSwipe: true,
     touchEventOptions: { passive: false },
   })
@@ -124,16 +130,18 @@ function MaintenanceBanners() {
   })
 
   const nu = useNu()
-  const aktiva = banners.filter(b => {
+  const aktiva = banners.filter((b) => {
     if (nu < new Date(b.startUtc).getTime() || nu > new Date(b.endUtc).getTime()) return false
-    if (b.audience === 'Besökare' && isLoggedIn)  return false
+    if (b.audience === 'Besökare' && isLoggedIn) return false
     if (b.audience === 'Användare' && !isLoggedIn) return false
     return true
   })
 
   return (
     <>
-      {aktiva.map(b => <Banderoll key={b.id} banner={b} />)}
+      {aktiva.map((b) => (
+        <Banderoll key={b.id} banner={b} />
+      ))}
     </>
   )
 }

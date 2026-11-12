@@ -17,7 +17,11 @@ function renderaKort(harLosenord = true) {
   )
 }
 
-async function fyllIFormularet(gammalt = 'gammalt-losen', nytt = 'helt-nytt-losen', bekrafta = nytt) {
+async function fyllIFormularet(
+  gammalt = 'gammalt-losen',
+  nytt = 'helt-nytt-losen',
+  bekrafta = nytt,
+) {
   await userEvent.type(screen.getByLabelText('Nuvarande lösenord'), gammalt)
   await userEvent.type(screen.getByLabelText('Nytt lösenord'), nytt)
   await userEvent.type(screen.getByLabelText('Bekräfta nytt lösenord'), bekrafta)
@@ -75,7 +79,11 @@ describe('LösenordByte (V1-1)', () => {
 
   it('låser knappen under pågående anrop så det inte går att skicka två gånger', async () => {
     let avsluta!: () => void
-    changePasswordMock.mockReturnValue(new Promise<void>(resolve => { avsluta = resolve }))
+    changePasswordMock.mockReturnValue(
+      new Promise<void>((resolve) => {
+        avsluta = resolve
+      }),
+    )
     renderaKort()
 
     await fyllIFormularet()

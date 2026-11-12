@@ -2,9 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sendNewVersionNotice } from '../../api/push'
 import {
-  fetchAdminUppdateringar, createUppdatering, updateUppdatering, deleteUppdatering,
-  type Uppdatering, type UppdateringRequest, type UppdateringsPunkt, type PunktRequest,
-  type PunktTyp, type Synlighet, type PushSkickaVid,
+  fetchAdminUppdateringar,
+  createUppdatering,
+  updateUppdatering,
+  deleteUppdatering,
+  type Uppdatering,
+  type UppdateringRequest,
+  type UppdateringsPunkt,
+  type PunktRequest,
+  type PunktTyp,
+  type Synlighet,
+  type PushSkickaVid,
 } from '../../api/uppdateringar'
 import { fetchAdminFeatureFlags } from '../../api/featureFlags'
 import { ADMIN_FLAGG_QUERY_KEY, invalideraFlaggor } from '../../lib/flaggCache'
@@ -19,13 +27,25 @@ import UppdateringForhandsvisning from './UppdateringForhandsvisning'
 import { FLAG_DEFINITIONER } from '../../lib/featureFlags'
 import { PROVA_SJALV, PROVA_SJALV_MÅL } from '../../lib/provaSjalv'
 import type { FörhandsData } from '../../lib/uppdateringForhandsvisning'
-import { läsUtkast, rensaUtkast, sparaUtkast, type NyUppdateringUtkast } from '../../lib/nyUppdateringUtkast'
+import {
+  läsUtkast,
+  rensaUtkast,
+  sparaUtkast,
+  type NyUppdateringUtkast,
+} from '../../lib/nyUppdateringUtkast'
 
 // ---------------------------------------------------------------------------
 // Konfiguration
 // ---------------------------------------------------------------------------
 
-const ALLA_TYPER:    Array<PunktTyp | 'Alla'>  = ['Alla', 'ny-funktion', 'förbättring', 'buggfix', 'känt-problem', 'kommer-snart']
+const ALLA_TYPER: Array<PunktTyp | 'Alla'> = [
+  'Alla',
+  'ny-funktion',
+  'förbättring',
+  'buggfix',
+  'känt-problem',
+  'kommer-snart',
+]
 const ALLA_STATUSAR: Array<'publicerad' | 'utkast' | 'Alla'> = ['Alla', 'publicerad', 'utkast']
 const PLATS_OPTIONS = ['Allmänt', 'Nyhetsflöde', 'Mina källor', 'Notifieringar', 'Konto']
 const ALLA_TYPER_FORM = PUNKT_TYPER
@@ -58,7 +78,11 @@ function SkickaNyVersionKort() {
     setResultat(null)
     try {
       const { sent } = await sendNewVersionNotice(version.trim(), meddelande.trim())
-      setResultat(sent === 0 ? 'Skickat — men ingen hade opt:at in på "Ny version" än.' : `Skickat till ${sent} enhet${sent === 1 ? '' : 'er'}.`)
+      setResultat(
+        sent === 0
+          ? 'Skickat — men ingen hade opt:at in på "Ny version" än.'
+          : `Skickat till ${sent} enhet${sent === 1 ? '' : 'er'}.`,
+      )
       setVersion('')
       setMeddelande('')
     } catch (err) {
@@ -73,7 +97,8 @@ function SkickaNyVersionKort() {
       <div className="px-6 py-4 border-b border-violet-100 bg-violet-50">
         <h2 className="text-sm font-bold text-violet-800">Skicka "Ny version"-notis</h2>
         <p className="text-xs text-violet-500 mt-0.5">
-          Riktig push till alla som slagit på kategorin Ny version under Konto — fristående från listan nedan.
+          Riktig push till alla som slagit på kategorin Ny version under Konto — fristående från
+          listan nedan.
         </p>
       </div>
       <div className="px-6 py-5 flex flex-col gap-3">
@@ -81,14 +106,14 @@ function SkickaNyVersionKort() {
           <input
             type="text"
             value={version}
-            onChange={e => setVersion(e.target.value)}
+            onChange={(e) => setVersion(e.target.value)}
             placeholder="T.ex. 0.6.0"
             className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
           />
           <input
             type="text"
             value={meddelande}
-            onChange={e => setMeddelande(e.target.value)}
+            onChange={(e) => setMeddelande(e.target.value)}
             placeholder="T.ex. 'Nya källor och en snabbare sidomeny'"
             className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
           />
@@ -102,7 +127,11 @@ function SkickaNyVersionKort() {
             {skickar ? 'Skickar…' : 'Skicka nu'}
           </button>
           {resultat && <p className="text-sm text-green-600">{resultat}</p>}
-          {fel && <p role="alert" className="text-sm text-red-500">{fel}</p>}
+          {fel && (
+            <p role="alert" className="text-sm text-red-500">
+              {fel}
+            </p>
+          )}
         </div>
       </div>
       {bekräfta && (
@@ -132,24 +161,54 @@ function SkickaNyVersionKort() {
 // Ta bort-modal
 // ---------------------------------------------------------------------------
 
-function TaBortModal({ titel, onBekräfta, onStäng, fel, arIgang }: {
-  titel: string; onBekräfta: () => void; onStäng: () => void; fel?: unknown; arIgang?: boolean
+function TaBortModal({
+  titel,
+  onBekräfta,
+  onStäng,
+  fel,
+  arIgang,
+}: {
+  titel: string
+  onBekräfta: () => void
+  onStäng: () => void
+  fel?: unknown
+  arIgang?: boolean
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onStäng}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onStäng}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="bg-gradient-to-br from-red-600 to-red-800 px-6 py-5 flex items-start justify-between">
           <h2 className="text-lg font-bold text-white">Ta bort uppdatering</h2>
-          <button onClick={onStäng} className="text-red-300 hover:text-white transition-colors">✕</button>
+          <button onClick={onStäng} className="text-red-300 hover:text-white transition-colors">
+            ✕
+          </button>
         </div>
         <div className="px-6 py-5 flex flex-col gap-4">
           <p className="text-sm text-slate-600">
-            <strong className="text-slate-800">"{titel}"</strong> tas bort permanent. Åtgärden kan inte ångras.
+            <strong className="text-slate-800">"{titel}"</strong> tas bort permanent. Åtgärden kan
+            inte ångras.
           </p>
           <MutationFel fel={fel} reserv="Uppdateringen kunde inte tas bort. Försök igen." />
           <div className="flex gap-3">
-            <button onClick={onStäng} className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">Avbryt</button>
-            <button onClick={onBekräfta} disabled={arIgang} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors">{arIgang ? 'Tar bort...' : 'Ta bort'}</button>
+            <button
+              onClick={onStäng}
+              className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors"
+            >
+              Avbryt
+            </button>
+            <button
+              onClick={onBekräfta}
+              disabled={arIgang}
+              className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              {arIgang ? 'Tar bort...' : 'Ta bort'}
+            </button>
           </div>
         </div>
       </div>
@@ -166,22 +225,39 @@ interface PunktFormRad extends PunktRequest {
 }
 
 function nyPunkt(radId: number): PunktFormRad {
-  return { radId, typ: 'ny-funktion', plats: 'Allmänt', text: '', synlighet: 'alla', provaSjalv: null }
+  return {
+    radId,
+    typ: 'ny-funktion',
+    plats: 'Allmänt',
+    text: '',
+    synlighet: 'alla',
+    provaSjalv: null,
+  }
 }
 
 let nästaRadId = 0
 
-function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
+function FormPanel({
+  redigerar,
+  onSpara,
+  onStäng,
+  sparar,
+  fel,
+}: {
   redigerar: Uppdatering | null
-  onSpara:   (data: UppdateringRequest) => void
-  onStäng:   () => void
-  sparar?:   boolean
-  fel?:      unknown
+  onSpara: (data: UppdateringRequest) => void
+  onStäng: () => void
+  sparar?: boolean
+  fel?: unknown
 }) {
   // Läses en gång vid öppning. Bara för en ny post.
-  const [utkast, setUtkast] = useState<NyUppdateringUtkast | null>(() => redigerar ? null : läsUtkast())
-  const [titel,      setTitel]      = useState(redigerar?.titel ?? utkast?.titel ?? '')
-  const [datum,      setDatum]      = useState(redigerar?.datum.split('T')[0] ?? utkast?.datum ?? new Date().toISOString().split('T')[0])
+  const [utkast, setUtkast] = useState<NyUppdateringUtkast | null>(() =>
+    redigerar ? null : läsUtkast(),
+  )
+  const [titel, setTitel] = useState(redigerar?.titel ?? utkast?.titel ?? '')
+  const [datum, setDatum] = useState(
+    redigerar?.datum.split('T')[0] ?? utkast?.datum ?? new Date().toISOString().split('T')[0],
+  )
   const [publicerad, setPublicerad] = useState(redigerar?.publicerad ?? false)
   // Bara en HELT NY post får en tom startrad injicerad — redigeras en
   // befintlig post visas exakt vad som är sparat, även 0 rader (en giltig
@@ -191,61 +267,119 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   // injicerade raden hade tom text, utan någon förklaring i UI:t.
   const [punkter, setPunkter] = useState<PunktFormRad[]>(
     redigerar
-      ? redigerar.punkter.map(p => ({ radId: nästaRadId++, typ: p.typ, plats: p.plats, text: p.text, synlighet: p.synlighet, provaSjalv: p.provaSjalv ?? null }))
+      ? redigerar.punkter.map((p) => ({
+          radId: nästaRadId++,
+          typ: p.typ,
+          plats: p.plats,
+          text: p.text,
+          synlighet: p.synlighet,
+          provaSjalv: p.provaSjalv ?? null,
+        }))
       : utkast && utkast.punkter.length > 0
-        ? utkast.punkter.map(p => ({ ...p, radId: nästaRadId++ }))
-        : [nyPunkt(nästaRadId++)]
+        ? utkast.punkter.map((p) => ({ ...p, radId: nästaRadId++ }))
+        : [nyPunkt(nästaRadId++)],
   )
 
   // Schemalagd lansering — ett delat datum/tid för både changelog-
   // publicering OCH aktivering av valda feature-flaggor (se
   // ScheduledReleaseBackgroundService på backend).
-  const [schemalagd,   setSchemalagd]   = useState(redigerar ? redigerar.schemalagdPubliceringUtc != null : utkast?.schemalagd ?? false)
-  const [schemaDatum,  setSchemaDatum]  = useState(redigerar?.schemalagdPubliceringUtc ? isoTillDatetimeLocal(redigerar.schemalagdPubliceringUtc) : utkast?.schemaDatum ?? '')
-  const [valdaFlaggor, setValdaFlaggor] = useState<string[]>(redigerar?.schemalagdaFlaggor ?? utkast?.valdaFlaggor ?? [])
+  const [schemalagd, setSchemalagd] = useState(
+    redigerar ? redigerar.schemalagdPubliceringUtc != null : (utkast?.schemalagd ?? false),
+  )
+  const [schemaDatum, setSchemaDatum] = useState(
+    redigerar?.schemalagdPubliceringUtc
+      ? isoTillDatetimeLocal(redigerar.schemalagdPubliceringUtc)
+      : (utkast?.schemaDatum ?? ''),
+  )
+  const [valdaFlaggor, setValdaFlaggor] = useState<string[]>(
+    redigerar?.schemalagdaFlaggor ?? utkast?.valdaFlaggor ?? [],
+  )
 
   // Del 2 av Schemalagd lanserings "Ny version"-tillägg (Beslut 2026-10-08) —
   // skapas av ScheduledReleaseBackgroundService vid lanseringstidpunkten,
   // inte här vid sparande.
-  const [skickaPush,     setSkickaPush]     = useState(redigerar?.skickaPush ?? utkast?.skickaPush ?? false)
+  const [skickaPush, setSkickaPush] = useState(redigerar?.skickaPush ?? utkast?.skickaPush ?? false)
   // Versionsnumret (beslut 2026-11-02) — visas som bricka och är också pushens
   // "Ny version: X". Äldre poster hade bara pushens version, den tas då som start.
-  const [version,        setVersion]        = useState(redigerar?.version ?? redigerar?.pushVersion ?? utkast?.version ?? utkast?.pushVersion ?? '')
-  const [pushMeddelande, setPushMeddelande] = useState(redigerar?.pushMeddelande ?? utkast?.pushMeddelande ?? '')
-  const [visaBanderoll,  setVisaBanderoll]  = useState(redigerar?.visaBanderoll ?? utkast?.visaBanderoll ?? false)
+  const [version, setVersion] = useState(
+    redigerar?.version ?? redigerar?.pushVersion ?? utkast?.version ?? utkast?.pushVersion ?? '',
+  )
+  const [pushMeddelande, setPushMeddelande] = useState(
+    redigerar?.pushMeddelande ?? utkast?.pushMeddelande ?? '',
+  )
+  const [visaBanderoll, setVisaBanderoll] = useState(
+    redigerar?.visaBanderoll ?? utkast?.visaBanderoll ?? false,
+  )
   // Vad är nytt-rutan — oberoende av schemaläggning, så den ligger utanför
   // schema-sektionen i formuläret.
-  const [visaVadArNytt,  setVisaVadArNytt]  = useState(redigerar?.visaVadArNytt ?? utkast?.visaVadArNytt ?? false)
+  const [visaVadArNytt, setVisaVadArNytt] = useState(
+    redigerar?.visaVadArNytt ?? utkast?.visaVadArNytt ?? false,
+  )
 
   // Del 3: annonsering i förväg (Beslut 2026-10-08) — en andra, tidigare
   // tidpunkt. Posten visas som en "Kommer snart"-teaser från den tidpunkten
   // tills schemaDatum (lanseringen) ovan slår in.
-  const [annonsera,     setAnnonsera]     = useState(redigerar ? redigerar.annonseringUtc != null : utkast?.annonsera ?? false)
-  const [annonseDatum,  setAnnonseDatum]  = useState(redigerar?.annonseringUtc ? isoTillDatetimeLocal(redigerar.annonseringUtc) : utkast?.annonseDatum ?? '')
-  const [pushSkickaVid, setPushSkickaVid] = useState<PushSkickaVid>(redigerar?.pushSkickaVid ?? utkast?.pushSkickaVid ?? 'Lansering')
+  const [annonsera, setAnnonsera] = useState(
+    redigerar ? redigerar.annonseringUtc != null : (utkast?.annonsera ?? false),
+  )
+  const [annonseDatum, setAnnonseDatum] = useState(
+    redigerar?.annonseringUtc
+      ? isoTillDatetimeLocal(redigerar.annonseringUtc)
+      : (utkast?.annonseDatum ?? ''),
+  )
+  const [pushSkickaVid, setPushSkickaVid] = useState<PushSkickaVid>(
+    redigerar?.pushSkickaVid ?? utkast?.pushSkickaVid ?? 'Lansering',
+  )
 
   // Spara utkastet vid varje ändring (bara ny post). Tomt formulär = inget utkast.
   const nuvarandeUtkast: NyUppdateringUtkast = {
-    titel, datum, punkter: punkter.map(({ typ, plats, text, synlighet, provaSjalv }) => ({ typ, plats, text, synlighet, provaSjalv })),
-    schemalagd, schemaDatum, valdaFlaggor, skickaPush, pushVersion: version, version, pushMeddelande,
-    visaBanderoll, visaVadArNytt, annonsera, annonseDatum, pushSkickaVid,
+    titel,
+    datum,
+    punkter: punkter.map(({ typ, plats, text, synlighet, provaSjalv }) => ({
+      typ,
+      plats,
+      text,
+      synlighet,
+      provaSjalv,
+    })),
+    schemalagd,
+    schemaDatum,
+    valdaFlaggor,
+    skickaPush,
+    pushVersion: version,
+    version,
+    pushMeddelande,
+    visaBanderoll,
+    visaVadArNytt,
+    annonsera,
+    annonseDatum,
+    pushSkickaVid,
   }
   const utkastJson = JSON.stringify(nuvarandeUtkast)
-  const ärTomt = titel.trim() === '' && punkter.every(p => p.text.trim() === '') && !schemalagd
+  const ärTomt = titel.trim() === '' && punkter.every((p) => p.text.trim() === '') && !schemalagd
   useEffect(() => {
     if (redigerar) return
-    sparaUtkast(ärTomt ? null : JSON.parse(utkastJson) as NyUppdateringUtkast)
+    sparaUtkast(ärTomt ? null : (JSON.parse(utkastJson) as NyUppdateringUtkast))
   }, [redigerar, utkastJson, ärTomt])
 
   function börjaOm() {
     rensaUtkast()
     setUtkast(null)
-    setTitel(''); setDatum(new Date().toISOString().split('T')[0]); setPublicerad(false)
+    setTitel('')
+    setDatum(new Date().toISOString().split('T')[0])
+    setPublicerad(false)
     setPunkter([nyPunkt(nästaRadId++)])
-    setSchemalagd(false); setSchemaDatum(''); setValdaFlaggor([])
-    setSkickaPush(false); setVersion(''); setPushMeddelande('')
-    setVisaBanderoll(false); setVisaVadArNytt(false)
-    setAnnonsera(false); setAnnonseDatum(''); setPushSkickaVid('Lansering')
+    setSchemalagd(false)
+    setSchemaDatum('')
+    setValdaFlaggor([])
+    setSkickaPush(false)
+    setVersion('')
+    setPushMeddelande('')
+    setVisaBanderoll(false)
+    setVisaVadArNytt(false)
+    setAnnonsera(false)
+    setAnnonseDatum('')
+    setPushSkickaVid('Lansering')
   }
 
   const flaggFråga = useQuery({ queryKey: ADMIN_FLAGG_QUERY_KEY, queryFn: fetchAdminFeatureFlags })
@@ -256,31 +390,39 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   // lanseringen öppnar den för alla (FeatureFlagActivation nollställer
   // EndastAdmin). Mock-flaggor hoppas över: de visar aldrig något för
   // användare. "Redo att lanseras"-markerade hamnar först, med en ✓.
-  const ärRedo = (key: string) => adminFlaggor.some(f => f.key === key && f.redoAttLanseras)
+  const ärRedo = (key: string) => adminFlaggor.some((f) => f.key === key && f.redoAttLanseras)
   const valbaraNycklar = new Set<string>([
-    ...FLAG_DEFINITIONER.filter(d => !d.mock && !påFörAnvändare(d.key)).map(d => d.key),
-    ...adminFlaggor.filter(f => f.redoAttLanseras && !(f.value && !f.endastAdmin)).map(f => f.key),
+    ...FLAG_DEFINITIONER.filter((d) => !d.mock && !påFörAnvändare(d.key)).map((d) => d.key),
+    ...adminFlaggor
+      .filter((f) => f.redoAttLanseras && !(f.value && !f.endastAdmin))
+      .map((f) => f.key),
     ...valdaFlaggor,
   ])
   const valbaraFlaggor = [...valbaraNycklar]
-    .map(key => ({ key, redo: ärRedo(key), label: FLAG_DEFINITIONER.find(d => d.key === key)?.label }))
+    .map((key) => ({
+      key,
+      redo: ärRedo(key),
+      label: FLAG_DEFINITIONER.find((d) => d.key === key)?.label,
+    }))
     .sort((a, b) => Number(b.redo) - Number(a.redo))
 
   const { data: faqItems = [] } = useQuery({ queryKey: ['admin-faq'], queryFn: fetchAdminFaq })
-  const kopplatFaq = faqItems.filter(f => f.flagKey && valdaFlaggor.includes(f.flagKey))
+  const kopplatFaq = faqItems.filter((f) => f.flagKey && valdaFlaggor.includes(f.flagKey))
 
   function toggleFlagga(key: string) {
-    setValdaFlaggor(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
+    setValdaFlaggor((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]))
   }
 
-  function addPunkt() { setPunkter(prev => [...prev, nyPunkt(nästaRadId++)]) }
+  function addPunkt() {
+    setPunkter((prev) => [...prev, nyPunkt(nästaRadId++)])
+  }
 
   function removePunkt(radId: number) {
-    setPunkter(prev => prev.filter(p => p.radId !== radId))
+    setPunkter((prev) => prev.filter((p) => p.radId !== radId))
   }
 
   function updatePunkt<K extends keyof PunktFormRad>(radId: number, key: K, val: PunktFormRad[K]) {
-    setPunkter(prev => prev.map(p => p.radId === radId ? { ...p, [key]: val } : p))
+    setPunkter((prev) => prev.map((p) => (p.radId === radId ? { ...p, [key]: val } : p)))
   }
 
   // En schemalagd lansering med minst en flagga vald får sakna innehåll
@@ -290,28 +432,38 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
   // spärren nedan), en gång rakt av och en gång som en dubbel negation —
   // en enda delad boolean istället (code review-fynd, PR #590).
   const kanHaNollPunkter = schemalagd && valdaFlaggor.length > 0
-  const harInnehåll      = punkter.length > 0 && punkter.every(p => p.text.trim() !== '')
-  const rentFlaggSchema  = kanHaNollPunkter && punkter.length === 0
+  const harInnehåll = punkter.length > 0 && punkter.every((p) => p.text.trim() !== '')
+  const rentFlaggSchema = kanHaNollPunkter && punkter.length === 0
   // E6#18: `type="date"`/`datetime-local` går att tömma helt — `new Date('')` är en
   // Invalid Date vars `toISOString()` kastar ett `RangeError` i klickhanteraren
   // (ingen felruta, knappen ser bara "död" ut). Både publiceringsdatumet och ett
   // ev. schemalagt datum/tid valideras nu innan de får skickas.
-  const datumGiltigt       = datum !== '' && !Number.isNaN(new Date(datum).getTime())
-  const schemaDatumGiltigt = !schemalagd || (schemaDatum !== '' && !Number.isNaN(new Date(schemaDatum).getTime()))
+  const datumGiltigt = datum !== '' && !Number.isNaN(new Date(datum).getTime())
+  const schemaDatumGiltigt =
+    !schemalagd || (schemaDatum !== '' && !Number.isNaN(new Date(schemaDatum).getTime()))
   // En banderoll har ingenting att visa utan riktigt innehåll — samma spärr
   // som backend (UppdateringarController.ValideraPunkter). Målgruppen
   // härleds från punkternas "Syns för" så formuläret aldrig gissar.
   const kanVisaBanderoll = harInnehåll
-  const banderollMålgrupp = punkter.some(p => p.synlighet === 'alla') ? 'alla (även besökare)' : 'bara inloggade'
+  const banderollMålgrupp = punkter.some((p) => p.synlighet === 'alla')
+    ? 'alla (även besökare)'
+    : 'bara inloggade'
   const pushGiltigt = !skickaPush || (version.trim() !== '' && pushMeddelande.trim() !== '')
   const versionGiltig = version.trim().length <= 20
   // Del 3: annonseringsdatumet måste vara giltigt OCH ligga före lanseringen
   // (samma regel som backend, UppdateringarController.ValideraPunkter).
-  const annonseDatumGiltigt = !annonsera || (annonseDatum !== '' && !Number.isNaN(new Date(annonseDatum).getTime()))
-  const annonseFoeLansering = !annonsera || !schemaDatum || new Date(annonseDatum) < new Date(schemaDatum)
-  const kanSpara = titel.trim() !== '' && datumGiltigt && schemaDatumGiltigt && pushGiltigt && versionGiltig
-    && (!schemalagd || (annonseDatumGiltigt && annonseFoeLansering))
-    && (harInnehåll || rentFlaggSchema)
+  const annonseDatumGiltigt =
+    !annonsera || (annonseDatum !== '' && !Number.isNaN(new Date(annonseDatum).getTime()))
+  const annonseFoeLansering =
+    !annonsera || !schemaDatum || new Date(annonseDatum) < new Date(schemaDatum)
+  const kanSpara =
+    titel.trim() !== '' &&
+    datumGiltigt &&
+    schemaDatumGiltigt &&
+    pushGiltigt &&
+    versionGiltig &&
+    (!schemalagd || (annonseDatumGiltigt && annonseFoeLansering)) &&
+    (harInnehåll || rentFlaggSchema)
 
   function spara(publicera: boolean) {
     if (sparar || !kanSpara) return
@@ -319,43 +471,72 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
       titel: titel.trim(),
       datum: new Date(datum).toISOString(),
       publicerad: schemalagd ? false : publicera,
-      punkter: punkter.map(({ typ, plats, text, synlighet, provaSjalv }) => ({ typ, plats, text, synlighet, provaSjalv: provaSjalv ?? null })),
-      schemalagdPubliceringUtc: schemalagd && schemaDatum ? new Date(schemaDatum).toISOString() : null,
+      punkter: punkter.map(({ typ, plats, text, synlighet, provaSjalv }) => ({
+        typ,
+        plats,
+        text,
+        synlighet,
+        provaSjalv: provaSjalv ?? null,
+      })),
+      schemalagdPubliceringUtc:
+        schemalagd && schemaDatum ? new Date(schemaDatum).toISOString() : null,
       schemalagdaFlaggor: schemalagd ? valdaFlaggor : [],
-      skickaPush:     schemalagd && skickaPush,
-      pushVersion:    schemalagd && skickaPush ? version.trim() : null,
-      version:        version.trim(),
+      skickaPush: schemalagd && skickaPush,
+      pushVersion: schemalagd && skickaPush ? version.trim() : null,
+      version: version.trim(),
       pushMeddelande: schemalagd && skickaPush ? pushMeddelande.trim() : null,
-      visaBanderoll:  schemalagd && visaBanderoll && kanVisaBanderoll,
-      annonseringUtc: schemalagd && annonsera && annonseDatum ? new Date(annonseDatum).toISOString() : null,
-      pushSkickaVid:  schemalagd && annonsera ? pushSkickaVid : 'Lansering',
-      visaVadArNytt:  visaVadArNytt && harInnehåll,
+      visaBanderoll: schemalagd && visaBanderoll && kanVisaBanderoll,
+      annonseringUtc:
+        schemalagd && annonsera && annonseDatum ? new Date(annonseDatum).toISOString() : null,
+      pushSkickaVid: schemalagd && annonsera ? pushSkickaVid : 'Lansering',
+      visaVadArNytt: visaVadArNytt && harInnehåll,
     })
   }
 
   // Flaggans effektiva läge för vanliga användare: adminens avvikelse, annars
   // kodens default. En flagga som bara syns för admin räknas som av.
   function påFörAnvändare(key: string): boolean {
-    const o = adminFlaggor.find(f => f.key === key)
+    const o = adminFlaggor.find((f) => f.key === key)
     if (o) return o.value && !o.endastAdmin
-    return FLAG_DEFINITIONER.find(f => f.key === key)?.defaultAktiv ?? false
+    return FLAG_DEFINITIONER.find((f) => f.key === key)?.defaultAktiv ?? false
   }
 
   const förhandsData: FörhandsData = {
-    titel, datum, punkter, schemalagd, schemaDatum, annonsera, annonseDatum,
-    skickaPush, pushVersion: version, pushMeddelande, pushSkickaVid, visaBanderoll, visaVadArNytt, version,
+    titel,
+    datum,
+    punkter,
+    schemalagd,
+    schemaDatum,
+    annonsera,
+    annonseDatum,
+    skickaPush,
+    pushVersion: version,
+    pushMeddelande,
+    pushSkickaVid,
+    visaBanderoll,
+    visaVadArNytt,
+    version,
     valdaFlaggor: schemalagd ? valdaFlaggor : [],
-    kopplatFaq: schemalagd ? kopplatFaq.map(f => ({ fraga: f.fraga, publicerad: f.publicerad })) : [],
+    kopplatFaq: schemalagd
+      ? kopplatFaq.map((f) => ({ fraga: f.fraga, publicerad: f.publicerad }))
+      : [],
     // Räknar också med det lanseringen själv slår på — annars varnade
     // checklistan för en avstängd profilsida i just den lansering som öppnar
     // den (2026-11-02).
-    profilUppdateringarPå: ['uppdateringar_senaste', 'uppdateringar_historik']
-      .some(k => påFörAnvändare(k) || (schemalagd && valdaFlaggor.includes(k))),
-    vadArNyttPå: påFörAnvändare('uppdateringar_vad_ar_nytt') || (schemalagd && valdaFlaggor.includes('uppdateringar_vad_ar_nytt')),
+    profilUppdateringarPå: ['uppdateringar_senaste', 'uppdateringar_historik'].some(
+      (k) => påFörAnvändare(k) || (schemalagd && valdaFlaggor.includes(k)),
+    ),
+    vadArNyttPå:
+      påFörAnvändare('uppdateringar_vad_ar_nytt') ||
+      (schemalagd && valdaFlaggor.includes('uppdateringar_vad_ar_nytt')),
     // Flaggornas läge för användarna EFTER lanseringen — styr vilka Prova själv-
     // länkar förhandsvisningen visar och vilka checklistan varnar för.
-    flaggorEfterLansering: Object.fromEntries(FLAG_DEFINITIONER.map(d =>
-      [d.key, påFörAnvändare(d.key) || (schemalagd && valdaFlaggor.includes(d.key))])),
+    flaggorEfterLansering: Object.fromEntries(
+      FLAG_DEFINITIONER.map((d) => [
+        d.key,
+        påFörAnvändare(d.key) || (schemalagd && valdaFlaggor.includes(d.key)),
+      ]),
+    ),
   }
 
   return (
@@ -364,449 +545,566 @@ function FormPanel({ redigerar, onSpara, onStäng, sparar, fel }: {
       {/* Bredare på dator (lg) för att rymma förhandsvisningen bredvid formuläret.
           På mindre skärmar ser panelen ut som tidigare (beslut 2026-11-02). */}
       <div className="fixed top-0 right-0 bottom-0 z-40 w-[560px] max-w-full lg:w-[min(1180px,100vw)] bg-white shadow-2xl flex flex-col">
-
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
           <h2 className="text-base font-semibold text-slate-900">
             {redigerar ? 'Redigera uppdatering' : 'Ny uppdatering'}
           </h2>
-          <button onClick={onStäng} aria-label="Stäng formuläret" className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none">✕</button>
+          <button
+            onClick={onStäng}
+            aria-label="Stäng formuläret"
+            className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none"
+          >
+            ✕
+          </button>
         </div>
 
         <div className="flex-1 min-h-0 flex">
-        <div className="w-full lg:w-[560px] shrink-0 flex flex-col min-h-0">
-
-        {/* Innehåll */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
-
-          {utkast && (
-            <div role="status" className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-              <p className="text-xs text-slate-600">Ditt osparade utkast är återställt.</p>
-              <button type="button" onClick={börjaOm} className="text-xs font-medium text-violet-600 hover:text-violet-800 shrink-0">
-                Börja om
-              </button>
-            </div>
-          )}
-
-          {/* Titel */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Titel</label>
-            <input
-              type="text"
-              value={titel}
-              onChange={e => setTitel(e.target.value)}
-              placeholder="T.ex. 'Logga in och skapa konto'"
-              className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-            />
-          </div>
-
-          {/* Version + Datum + Status */}
-          <div className="grid grid-cols-[96px_1fr_1fr] gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="uppdatering-version" className="text-xs font-medium text-slate-500 uppercase tracking-wide">Version</label>
-              <input
-                id="uppdatering-version"
-                type="text"
-                value={version}
-                onChange={e => setVersion(e.target.value)}
-                placeholder="1.1"
-                className={`text-sm border rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 ${versionGiltig ? 'border-slate-200' : 'border-red-400'}`}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Datum</label>
-              <input
-                type="date"
-                value={datum}
-                onChange={e => setDatum(e.target.value)}
-                className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Status</label>
-              <div className="flex gap-2 h-[42px]">
-                {([false, true] as boolean[]).map(p => (
-                  <button key={String(p)} onClick={() => setPublicerad(p)}
-                    className={`flex-1 rounded-xl text-sm font-medium border transition-colors ${
-                      publicerad === p
-                        ? (p ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200')
-                        : 'border-slate-200 text-slate-400 hover:bg-slate-50'
-                    }`}>
-                    {p ? 'Publicerad' : 'Utkast'}
+          <div className="w-full lg:w-[560px] shrink-0 flex flex-col min-h-0">
+            {/* Innehåll */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+              {utkast && (
+                <div
+                  role="status"
+                  className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2"
+                >
+                  <p className="text-xs text-slate-600">Ditt osparade utkast är återställt.</p>
+                  <button
+                    type="button"
+                    onClick={börjaOm}
+                    className="text-xs font-medium text-violet-600 hover:text-violet-800 shrink-0"
+                  >
+                    Börja om
                   </button>
-                ))}
+                </div>
+              )}
+
+              {/* Titel */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  Titel
+                </label>
+                <input
+                  type="text"
+                  value={titel}
+                  onChange={(e) => setTitel(e.target.value)}
+                  placeholder="T.ex. 'Logga in och skapa konto'"
+                  className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                />
               </div>
-            </div>
-          </div>
 
-          {/* Schemalägg lansering */}
-          <div className="flex flex-col gap-3 border border-slate-200 rounded-xl p-4">
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={schemalagd}
-                onChange={e => setSchemalagd(e.target.checked)}
-                className="rounded border-slate-300 text-violet-600 focus:ring-violet-400"
-              />
-              Schemalägg lansering
-            </label>
-
-            {schemalagd && (
-              <div className="flex flex-col gap-3 pl-6">
+              {/* Version + Datum + Status */}
+              <div className="grid grid-cols-[96px_1fr_1fr] gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Datum/tid (din lokala tid)</label>
+                  <label
+                    htmlFor="uppdatering-version"
+                    className="text-xs font-medium text-slate-500 uppercase tracking-wide"
+                  >
+                    Version
+                  </label>
                   <input
-                    type="datetime-local"
-                    value={schemaDatum}
-                    onChange={e => setSchemaDatum(e.target.value)}
+                    id="uppdatering-version"
+                    type="text"
+                    value={version}
+                    onChange={(e) => setVersion(e.target.value)}
+                    placeholder="1.1"
+                    className={`text-sm border rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 ${versionGiltig ? 'border-slate-200' : 'border-red-400'}`}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Datum
+                  </label>
+                  <input
+                    type="date"
+                    value={datum}
+                    onChange={(e) => setDatum(e.target.value)}
                     className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
                   />
                 </div>
-
-                {/* Del 3: annonsering i förväg (Beslut 2026-10-08) — en andra,
-                    tidigare tidpunkt. Posten visas som "Kommer snart" från
-                    den tidpunkten tills lanseringen ovan slår in. */}
-                <div className="flex flex-col gap-2">
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={annonsera}
-                      onChange={e => setAnnonsera(e.target.checked)}
-                      className="rounded border-slate-300 text-violet-600 focus:ring-violet-400"
-                    />
-                    Annonsera i förväg
-                  </label>
-                  {annonsera && (
-                    <div className="flex flex-col gap-1.5 pl-6">
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Annonseringsdatum/tid (din lokala tid)</label>
-                      <input
-                        type="datetime-local"
-                        value={annonseDatum}
-                        onChange={e => setAnnonseDatum(e.target.value)}
-                        className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                      />
-                      {!annonseFoeLansering && (
-                        <p className="text-xs text-red-500">Måste vara före lanseringsdatumet.</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Flaggor att aktivera</label>
-                  {flaggFråga.isError && flaggFråga.data === undefined ? (
-                    <HamtningsFel
-                      fel={flaggFråga.error}
-                      reserv="Kunde inte hämta flaggorna. Listan är inte tom — den gick bara inte att läsa."
-                      onForsokIgen={() => { void flaggFråga.refetch() }}
-                      arIgang={flaggFråga.isFetching}
-                      className="items-start text-left"
-                    />
-                  ) : valbaraFlaggor.length === 0 ? (
-                    <p className="text-xs text-slate-400">
-                      Alla flaggor är redan på för användarna — det finns inget att lansera.
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {valbaraFlaggor.map(f => (
-                        <button
-                          key={f.key}
-                          type="button"
-                          title={f.label ? `${f.label}${f.redo ? ' — markerad redo att lanseras' : ''}` : undefined}
-                          aria-pressed={valdaFlaggor.includes(f.key)}
-                          onClick={() => toggleFlagga(f.key)}
-                          className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors ${
-                            valdaFlaggor.includes(f.key)
-                              ? 'bg-violet-100 text-violet-700 border-violet-200'
-                              : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-                          }`}
-                        >
-                          {f.key}
-                          {f.redo && <span aria-hidden="true" className="ml-1 text-emerald-600">✓</span>}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {valbaraFlaggor.some(f => f.redo) && (
-                    <p className="text-[11px] text-slate-400">✓ = markerad "redo att lanseras" i Feature flags. Håll muspekaren över en flagga för att se vad den heter.</p>
-                  )}
-                </div>
-
-                {/* Del 4: FAQ-listan i formuläret (Beslut 2026-10-08) — inget
-                    nytt beteende, bara synliggjort. FaqItem.FlagKey styr
-                    redan den faktiska visningen (session 42). */}
-                {kopplatFaq.length > 0 && (
-                  <div className="flex flex-col gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                    <p className="text-xs font-medium text-amber-800">
-                      {kopplatFaq.length} FAQ-{kopplatFaq.length === 1 ? 'fråga' : 'frågor'} kopplad{kopplatFaq.length === 1 ? '' : 'e'} till valda flaggor:
-                    </p>
-                    <ul className="flex flex-col gap-1">
-                      {kopplatFaq.map(f => (
-                        <li key={f.id} className="text-xs text-amber-700 flex items-start justify-between gap-2">
-                          <span className="flex-1">{f.fraga}</span>
-                          <span className={`shrink-0 font-medium ${f.publicerad ? 'text-green-700' : 'text-slate-500'}`}>
-                            {f.publicerad ? 'Syns vid lansering' : 'Förblir dold'}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="text-xs text-amber-600">Granska/uppdatera dem i FAQ-fliken innan lansering.</p>
-                  </div>
-                )}
-
-                {/* Del 2: push + banderoll vid lansering (Beslut 2026-10-08).
-                    Skapas av bakgrundstjänsten vid lanseringstidpunkten, inte
-                    nu vid sparande. */}
-                <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={skickaPush}
-                      onChange={e => {
-                        const checked = e.target.checked
-                        setSkickaPush(checked)
-                        if (checked && pushMeddelande.trim() === '') setPushMeddelande(titel)
-                      }}
-                      className="rounded border-slate-300 text-violet-600 focus:ring-violet-400"
-                    />
-                    Skicka push till inloggade
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Status
                   </label>
-                  {skickaPush && (
-                    <div className="flex flex-col gap-1.5 pl-6">
-                      <p className={`text-xs ${version.trim() ? 'text-slate-500' : 'text-red-500'}`}>
-                        {version.trim() ? `Rubrik: "Ny version: ${version.trim()}"` : 'Fyll i Version högst upp — pushen använder den.'}
-                      </p>
-                      <input
-                        type="text"
-                        value={pushMeddelande}
-                        onChange={e => setPushMeddelande(e.target.value)}
-                        placeholder="Pushens meddelande"
-                        className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                      />
-                    </div>
-                  )}
-                  {skickaPush && annonsera && (
-                    <div className="flex items-center gap-2 pl-6">
-                      <span className="text-[11px] text-slate-400 shrink-0">Skicka vid</span>
-                      {(['Annonsering', 'Lansering', 'Båda'] as PushSkickaVid[]).map(v => (
-                        <button key={v} type="button" onClick={() => setPushSkickaVid(v)}
-                          className={`text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
-                            pushSkickaVid === v
-                              ? 'bg-slate-800 text-white border-slate-800'
-                              : 'border-slate-200 text-slate-400 hover:bg-slate-50'
-                          }`}>
-                          {v}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className={`flex items-center gap-2 text-sm font-medium cursor-pointer ${kanVisaBanderoll ? 'text-slate-700' : 'text-slate-400 cursor-not-allowed'}`}>
-                    <input
-                      type="checkbox"
-                      checked={visaBanderoll}
-                      disabled={!kanVisaBanderoll}
-                      onChange={e => setVisaBanderoll(e.target.checked)}
-                      className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 disabled:opacity-40"
-                    />
-                    Visa banderoll på sajten
-                  </label>
-                  {!kanVisaBanderoll ? (
-                    <p className="text-xs text-slate-400 pl-6">Kräver minst en ifylld innehållsrad.</p>
-                  ) : visaBanderoll ? (
-                    <p className="text-xs text-slate-400 pl-6">Visas för: {banderollMålgrupp}</p>
-                  ) : null}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Vad är nytt-rutan (Ideer/Vad ar nytt-modal.md) — samma "kräver
-              innehåll"-spärr som banderollen, men gäller även utan schema. */}
-          <div className="flex flex-col gap-1.5">
-            <label className={`flex items-center gap-2 text-sm font-medium cursor-pointer ${harInnehåll ? 'text-slate-700' : 'text-slate-400 cursor-not-allowed'}`}>
-              <input
-                type="checkbox"
-                checked={visaVadArNytt}
-                disabled={!harInnehåll}
-                onChange={e => setVisaVadArNytt(e.target.checked)}
-                className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 disabled:opacity-40"
-              />
-              Visa som Vad är nytt
-            </label>
-            <p className="text-xs text-slate-400 pl-6">
-              {harInnehåll
-                ? 'Inloggade som inte sett den får en ruta en gång. Bara den senaste ikryssade releasen visas.'
-                : 'Kräver minst en ifylld innehållsrad för att visas som Vad är nytt.'}
-            </p>
-          </div>
-
-          {/* Separator */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-slate-100" />
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Innehåll</span>
-            <div className="flex-1 h-px bg-slate-100" />
-          </div>
-
-          {/* Punkter */}
-          <div className="flex flex-col gap-3">
-            {punkter.map((p, idx) => (
-              <div key={p.radId} className="border border-slate-200 rounded-xl overflow-hidden">
-
-                {/* Topprad: nummer + typ-pills + plats + ta bort */}
-                <div className="bg-slate-50 px-3 py-2 flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-slate-400 w-4 shrink-0">{idx + 1}</span>
-
-                  {/* Typ-pills */}
-                  <div className="flex gap-1 flex-wrap flex-1">
-                    {ALLA_TYPER_FORM.map(t => (
-                      <button key={t} onClick={() => updatePunkt(p.radId, 'typ', t)}
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full border transition-colors ${
-                          p.typ === t ? getTypConfig(t).formPillAktiv : getTypConfig(t).formPill
-                        }`}>
-                        {getTypConfig(t).adminLabel}
+                  <div className="flex gap-2 h-[42px]">
+                    {([false, true] as boolean[]).map((p) => (
+                      <button
+                        key={String(p)}
+                        onClick={() => setPublicerad(p)}
+                        className={`flex-1 rounded-xl text-sm font-medium border transition-colors ${
+                          publicerad === p
+                            ? p
+                              ? 'bg-green-100 text-green-700 border-green-200'
+                              : 'bg-slate-100 text-slate-500 border-slate-200'
+                            : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+                        }`}
+                      >
+                        {p ? 'Publicerad' : 'Utkast'}
                       </button>
                     ))}
                   </div>
-
-                  {/* Plats */}
-                  <select
-                    value={p.plats}
-                    onChange={e => updatePunkt(p.radId, 'plats', e.target.value)}
-                    className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:border-violet-400 shrink-0"
-                  >
-                    {PLATS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-
-                  {/* Ta bort */}
-                  <button
-                    onClick={() => removePunkt(p.radId)}
-                    disabled={punkter.length === 1 && !kanHaNollPunkter}
-                    className="text-slate-300 hover:text-red-400 disabled:opacity-30 transition-colors text-sm shrink-0"
-                    title="Ta bort rad"
-                  >
-                    ✕
-                  </button>
                 </div>
-
-                {/* Text */}
-                <div className="px-3 py-2">
-                  <input
-                    type="text"
-                    value={p.text}
-                    onChange={e => updatePunkt(p.radId, 'text', e.target.value)}
-                    placeholder="Beskriv ändringen kort och tydligt..."
-                    className="w-full text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none bg-transparent"
-                  />
-                </div>
-
-                {/* Synlighet — vem ser den här punkten */}
-                <div className="px-3 pb-2.5 flex items-center gap-2">
-                  <span className="text-[11px] text-slate-400 shrink-0">Syns för</span>
-                  {(['alla', 'inloggade'] as Synlighet[]).map(s => (
-                    <button key={s} onClick={() => updatePunkt(p.radId, 'synlighet', s)}
-                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
-                        p.synlighet === s
-                          ? 'bg-slate-800 text-white border-slate-800'
-                          : 'border-slate-200 text-slate-400 hover:bg-slate-50'
-                      }`}>
-                      {s === 'alla' ? 'Alla (även besökare)' : 'Endast inloggade'}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Prova själv — fast lista med mål, aldrig fritext (lib/provaSjalv.ts) */}
-                <label className="px-3 pb-3 flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-violet-700 shrink-0">Prova själv</span>
-                  <select
-                    value={p.provaSjalv ?? ''}
-                    onChange={e => updatePunkt(p.radId, 'provaSjalv', e.target.value || null)}
-                    className="flex-1 min-w-0 text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:border-violet-400"
-                  >
-                    <option value="">Ingen länk</option>
-                    {PROVA_SJALV_MÅL.map(m => (
-                      <option key={m} value={m}>
-                        {PROVA_SJALV[m].etikett}{PROVA_SJALV[m].kräverKonto ? ' · kräver konto' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
               </div>
-            ))}
 
-            <button
-              onClick={addPunkt}
-              className="text-sm font-medium text-violet-600 hover:text-violet-800 border border-dashed border-violet-200 hover:border-violet-400 rounded-xl py-2.5 transition-colors"
-            >
-              + Lägg till rad
-            </button>
+              {/* Schemalägg lansering */}
+              <div className="flex flex-col gap-3 border border-slate-200 rounded-xl p-4">
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={schemalagd}
+                    onChange={(e) => setSchemalagd(e.target.checked)}
+                    className="rounded border-slate-300 text-violet-600 focus:ring-violet-400"
+                  />
+                  Schemalägg lansering
+                </label>
+
+                {schemalagd && (
+                  <div className="flex flex-col gap-3 pl-6">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                        Datum/tid (din lokala tid)
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={schemaDatum}
+                        onChange={(e) => setSchemaDatum(e.target.value)}
+                        className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                      />
+                    </div>
+
+                    {/* Del 3: annonsering i förväg (Beslut 2026-10-08) — en andra,
+                    tidigare tidpunkt. Posten visas som "Kommer snart" från
+                    den tidpunkten tills lanseringen ovan slår in. */}
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={annonsera}
+                          onChange={(e) => setAnnonsera(e.target.checked)}
+                          className="rounded border-slate-300 text-violet-600 focus:ring-violet-400"
+                        />
+                        Annonsera i förväg
+                      </label>
+                      {annonsera && (
+                        <div className="flex flex-col gap-1.5 pl-6">
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                            Annonseringsdatum/tid (din lokala tid)
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={annonseDatum}
+                            onChange={(e) => setAnnonseDatum(e.target.value)}
+                            className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                          />
+                          {!annonseFoeLansering && (
+                            <p className="text-xs text-red-500">
+                              Måste vara före lanseringsdatumet.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                        Flaggor att aktivera
+                      </label>
+                      {flaggFråga.isError && flaggFråga.data === undefined ? (
+                        <HamtningsFel
+                          fel={flaggFråga.error}
+                          reserv="Kunde inte hämta flaggorna. Listan är inte tom — den gick bara inte att läsa."
+                          onForsokIgen={() => {
+                            void flaggFråga.refetch()
+                          }}
+                          arIgang={flaggFråga.isFetching}
+                          className="items-start text-left"
+                        />
+                      ) : valbaraFlaggor.length === 0 ? (
+                        <p className="text-xs text-slate-400">
+                          Alla flaggor är redan på för användarna — det finns inget att lansera.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {valbaraFlaggor.map((f) => (
+                            <button
+                              key={f.key}
+                              type="button"
+                              title={
+                                f.label
+                                  ? `${f.label}${f.redo ? ' — markerad redo att lanseras' : ''}`
+                                  : undefined
+                              }
+                              aria-pressed={valdaFlaggor.includes(f.key)}
+                              onClick={() => toggleFlagga(f.key)}
+                              className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors ${
+                                valdaFlaggor.includes(f.key)
+                                  ? 'bg-violet-100 text-violet-700 border-violet-200'
+                                  : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                              }`}
+                            >
+                              {f.key}
+                              {f.redo && (
+                                <span aria-hidden="true" className="ml-1 text-emerald-600">
+                                  ✓
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {valbaraFlaggor.some((f) => f.redo) && (
+                        <p className="text-[11px] text-slate-400">
+                          ✓ = markerad "redo att lanseras" i Feature flags. Håll muspekaren över en
+                          flagga för att se vad den heter.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Del 4: FAQ-listan i formuläret (Beslut 2026-10-08) — inget
+                    nytt beteende, bara synliggjort. FaqItem.FlagKey styr
+                    redan den faktiska visningen (session 42). */}
+                    {kopplatFaq.length > 0 && (
+                      <div className="flex flex-col gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <p className="text-xs font-medium text-amber-800">
+                          {kopplatFaq.length} FAQ-{kopplatFaq.length === 1 ? 'fråga' : 'frågor'}{' '}
+                          kopplad{kopplatFaq.length === 1 ? '' : 'e'} till valda flaggor:
+                        </p>
+                        <ul className="flex flex-col gap-1">
+                          {kopplatFaq.map((f) => (
+                            <li
+                              key={f.id}
+                              className="text-xs text-amber-700 flex items-start justify-between gap-2"
+                            >
+                              <span className="flex-1">{f.fraga}</span>
+                              <span
+                                className={`shrink-0 font-medium ${f.publicerad ? 'text-green-700' : 'text-slate-500'}`}
+                              >
+                                {f.publicerad ? 'Syns vid lansering' : 'Förblir dold'}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-xs text-amber-600">
+                          Granska/uppdatera dem i FAQ-fliken innan lansering.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Del 2: push + banderoll vid lansering (Beslut 2026-10-08).
+                    Skapas av bakgrundstjänsten vid lanseringstidpunkten, inte
+                    nu vid sparande. */}
+                    <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
+                      <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={skickaPush}
+                          onChange={(e) => {
+                            const checked = e.target.checked
+                            setSkickaPush(checked)
+                            if (checked && pushMeddelande.trim() === '') setPushMeddelande(titel)
+                          }}
+                          className="rounded border-slate-300 text-violet-600 focus:ring-violet-400"
+                        />
+                        Skicka push till inloggade
+                      </label>
+                      {skickaPush && (
+                        <div className="flex flex-col gap-1.5 pl-6">
+                          <p
+                            className={`text-xs ${version.trim() ? 'text-slate-500' : 'text-red-500'}`}
+                          >
+                            {version.trim()
+                              ? `Rubrik: "Ny version: ${version.trim()}"`
+                              : 'Fyll i Version högst upp — pushen använder den.'}
+                          </p>
+                          <input
+                            type="text"
+                            value={pushMeddelande}
+                            onChange={(e) => setPushMeddelande(e.target.value)}
+                            placeholder="Pushens meddelande"
+                            className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                          />
+                        </div>
+                      )}
+                      {skickaPush && annonsera && (
+                        <div className="flex items-center gap-2 pl-6">
+                          <span className="text-[11px] text-slate-400 shrink-0">Skicka vid</span>
+                          {(['Annonsering', 'Lansering', 'Båda'] as PushSkickaVid[]).map((v) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => setPushSkickaVid(v)}
+                              className={`text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
+                                pushSkickaVid === v
+                                  ? 'bg-slate-800 text-white border-slate-800'
+                                  : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+                              }`}
+                            >
+                              {v}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label
+                        className={`flex items-center gap-2 text-sm font-medium cursor-pointer ${kanVisaBanderoll ? 'text-slate-700' : 'text-slate-400 cursor-not-allowed'}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={visaBanderoll}
+                          disabled={!kanVisaBanderoll}
+                          onChange={(e) => setVisaBanderoll(e.target.checked)}
+                          className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 disabled:opacity-40"
+                        />
+                        Visa banderoll på sajten
+                      </label>
+                      {!kanVisaBanderoll ? (
+                        <p className="text-xs text-slate-400 pl-6">
+                          Kräver minst en ifylld innehållsrad.
+                        </p>
+                      ) : visaBanderoll ? (
+                        <p className="text-xs text-slate-400 pl-6">
+                          Visas för: {banderollMålgrupp}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Vad är nytt-rutan (Ideer/Vad ar nytt-modal.md) — samma "kräver
+              innehåll"-spärr som banderollen, men gäller även utan schema. */}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  className={`flex items-center gap-2 text-sm font-medium cursor-pointer ${harInnehåll ? 'text-slate-700' : 'text-slate-400 cursor-not-allowed'}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={visaVadArNytt}
+                    disabled={!harInnehåll}
+                    onChange={(e) => setVisaVadArNytt(e.target.checked)}
+                    className="rounded border-slate-300 text-violet-600 focus:ring-violet-400 disabled:opacity-40"
+                  />
+                  Visa som Vad är nytt
+                </label>
+                <p className="text-xs text-slate-400 pl-6">
+                  {harInnehåll
+                    ? 'Inloggade som inte sett den får en ruta en gång. Bara den senaste ikryssade releasen visas.'
+                    : 'Kräver minst en ifylld innehållsrad för att visas som Vad är nytt.'}
+                </p>
+              </div>
+
+              {/* Separator */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-slate-100" />
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                  Innehåll
+                </span>
+                <div className="flex-1 h-px bg-slate-100" />
+              </div>
+
+              {/* Punkter */}
+              <div className="flex flex-col gap-3">
+                {punkter.map((p, idx) => (
+                  <div key={p.radId} className="border border-slate-200 rounded-xl overflow-hidden">
+                    {/* Topprad: nummer + typ-pills + plats + ta bort */}
+                    <div className="bg-slate-50 px-3 py-2 flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-slate-400 w-4 shrink-0">
+                        {idx + 1}
+                      </span>
+
+                      {/* Typ-pills */}
+                      <div className="flex gap-1 flex-wrap flex-1">
+                        {ALLA_TYPER_FORM.map((t) => (
+                          <button
+                            key={t}
+                            onClick={() => updatePunkt(p.radId, 'typ', t)}
+                            className={`text-xs font-medium px-2 py-0.5 rounded-full border transition-colors ${
+                              p.typ === t ? getTypConfig(t).formPillAktiv : getTypConfig(t).formPill
+                            }`}
+                          >
+                            {getTypConfig(t).adminLabel}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Plats */}
+                      <select
+                        value={p.plats}
+                        onChange={(e) => updatePunkt(p.radId, 'plats', e.target.value)}
+                        className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:border-violet-400 shrink-0"
+                      >
+                        {PLATS_OPTIONS.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Ta bort */}
+                      <button
+                        onClick={() => removePunkt(p.radId)}
+                        disabled={punkter.length === 1 && !kanHaNollPunkter}
+                        className="text-slate-300 hover:text-red-400 disabled:opacity-30 transition-colors text-sm shrink-0"
+                        title="Ta bort rad"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* Text */}
+                    <div className="px-3 py-2">
+                      <input
+                        type="text"
+                        value={p.text}
+                        onChange={(e) => updatePunkt(p.radId, 'text', e.target.value)}
+                        placeholder="Beskriv ändringen kort och tydligt..."
+                        className="w-full text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none bg-transparent"
+                      />
+                    </div>
+
+                    {/* Synlighet — vem ser den här punkten */}
+                    <div className="px-3 pb-2.5 flex items-center gap-2">
+                      <span className="text-[11px] text-slate-400 shrink-0">Syns för</span>
+                      {(['alla', 'inloggade'] as Synlighet[]).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => updatePunkt(p.radId, 'synlighet', s)}
+                          className={`text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
+                            p.synlighet === s
+                              ? 'bg-slate-800 text-white border-slate-800'
+                              : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+                          }`}
+                        >
+                          {s === 'alla' ? 'Alla (även besökare)' : 'Endast inloggade'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Prova själv — fast lista med mål, aldrig fritext (lib/provaSjalv.ts) */}
+                    <label className="px-3 pb-3 flex items-center gap-2">
+                      <span className="text-[11px] font-semibold text-violet-700 shrink-0">
+                        Prova själv
+                      </span>
+                      <select
+                        value={p.provaSjalv ?? ''}
+                        onChange={(e) => updatePunkt(p.radId, 'provaSjalv', e.target.value || null)}
+                        className="flex-1 min-w-0 text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:border-violet-400"
+                      >
+                        <option value="">Ingen länk</option>
+                        {PROVA_SJALV_MÅL.map((m) => (
+                          <option key={m} value={m}>
+                            {PROVA_SJALV[m].etikett}
+                            {PROVA_SJALV[m].kräverKonto ? ' · kräver konto' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                ))}
+
+                <button
+                  onClick={addPunkt}
+                  className="text-sm font-medium text-violet-600 hover:text-violet-800 border border-dashed border-violet-200 hover:border-violet-400 rounded-xl py-2.5 transition-colors"
+                >
+                  + Lägg till rad
+                </button>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 shrink-0">
+              <MutationFel
+                fel={fel}
+                reserv="Uppdateringen kunde inte sparas. Din text finns kvar — försök igen."
+              />
+
+              {/* Sammanfattning — inget syns förrän schemat slår in (Beslut 2026-10-08). */}
+              {schemalagd && annonsera && annonseDatum && (
+                <ul className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 flex flex-col gap-0.5">
+                  <li>Vid {annonseDatum.replace('T', ' ')} (annonsering):</li>
+                  {harInnehåll && <li>• Uppdateringen publiceras som "Kommer snart"</li>}
+                  {skickaPush && (pushSkickaVid === 'Annonsering' || pushSkickaVid === 'Båda') && (
+                    <li>• Push skickas till inloggade</li>
+                  )}
+                  {visaBanderoll && kanVisaBanderoll && (
+                    <li>• Banderoll visas för {banderollMålgrupp}</li>
+                  )}
+                </ul>
+              )}
+              {schemalagd && schemaDatum && (
+                <ul className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 flex flex-col gap-0.5">
+                  <li>
+                    Vid {schemaDatum.replace('T', ' ')} ({annonsera ? 'lansering' : 'publicering'}):
+                  </li>
+                  {valdaFlaggor.length > 0 && (
+                    <li>
+                      • {valdaFlaggor.length} flagg{valdaFlaggor.length === 1 ? 'a' : 'or'}{' '}
+                      aktiveras
+                    </li>
+                  )}
+                  {harInnehåll && (
+                    <li>
+                      • Uppdateringen {annonsera ? 'byts till sitt riktiga innehåll' : 'publiceras'}
+                    </li>
+                  )}
+                  {skickaPush &&
+                    (!annonsera || pushSkickaVid === 'Lansering' || pushSkickaVid === 'Båda') && (
+                      <li>• Push skickas till inloggade med "Ny version"-notiser</li>
+                    )}
+                  {visaBanderoll && kanVisaBanderoll && (
+                    <li>• Banderoll visas för {banderollMålgrupp}</li>
+                  )}
+                </ul>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={onStäng}
+                  className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors"
+                >
+                  Avbryt
+                </button>
+                {schemalagd ? (
+                  <button
+                    onClick={() => kanSpara && spara(false)}
+                    disabled={!kanSpara || sparar}
+                    className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+                  >
+                    {sparar
+                      ? 'Sparar...'
+                      : schemaDatum
+                        ? `Sparas, publiceras automatiskt ${schemaDatum.replace('T', ' ')}`
+                        : 'Schemalägg'}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => kanSpara && spara(false)}
+                      disabled={!kanSpara || sparar}
+                      className="flex-1 py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                    >
+                      {sparar ? 'Sparar...' : 'Spara som utkast'}
+                    </button>
+                    <button
+                      onClick={() => kanSpara && spara(true)}
+                      disabled={!kanSpara || sparar}
+                      className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+                    >
+                      {redigerar?.publicerad ? 'Uppdatera' : 'Publicera'}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-
+          <aside
+            aria-label="Förhandsvisning"
+            className="hidden lg:flex flex-1 min-w-0 flex-col border-l border-slate-200"
+          >
+            <UppdateringForhandsvisning data={förhandsData} />
+          </aside>
         </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 shrink-0">
-          <MutationFel fel={fel} reserv="Uppdateringen kunde inte sparas. Din text finns kvar — försök igen." />
-
-          {/* Sammanfattning — inget syns förrän schemat slår in (Beslut 2026-10-08). */}
-          {schemalagd && annonsera && annonseDatum && (
-            <ul className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 flex flex-col gap-0.5">
-              <li>Vid {annonseDatum.replace('T', ' ')} (annonsering):</li>
-              {harInnehåll && <li>• Uppdateringen publiceras som "Kommer snart"</li>}
-              {skickaPush && (pushSkickaVid === 'Annonsering' || pushSkickaVid === 'Båda') && <li>• Push skickas till inloggade</li>}
-              {visaBanderoll && kanVisaBanderoll && <li>• Banderoll visas för {banderollMålgrupp}</li>}
-            </ul>
-          )}
-          {schemalagd && schemaDatum && (
-            <ul className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 flex flex-col gap-0.5">
-              <li>Vid {schemaDatum.replace('T', ' ')} ({annonsera ? 'lansering' : 'publicering'}):</li>
-              {valdaFlaggor.length > 0 && <li>• {valdaFlaggor.length} flagg{valdaFlaggor.length === 1 ? 'a' : 'or'} aktiveras</li>}
-              {harInnehåll && <li>• Uppdateringen {annonsera ? 'byts till sitt riktiga innehåll' : 'publiceras'}</li>}
-              {skickaPush && (!annonsera || pushSkickaVid === 'Lansering' || pushSkickaVid === 'Båda') && <li>• Push skickas till inloggade med "Ny version"-notiser</li>}
-              {visaBanderoll && kanVisaBanderoll && <li>• Banderoll visas för {banderollMålgrupp}</li>}
-            </ul>
-          )}
-          <div className="flex gap-3">
-          <button onClick={onStäng} className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
-            Avbryt
-          </button>
-          {schemalagd ? (
-            <button
-              onClick={() => kanSpara && spara(false)}
-              disabled={!kanSpara || sparar}
-              className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
-            >
-              {sparar ? 'Sparar...' : schemaDatum ? `Sparas, publiceras automatiskt ${schemaDatum.replace('T', ' ')}` : 'Schemalägg'}
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={() => kanSpara && spara(false)}
-                disabled={!kanSpara || sparar}
-                className="flex-1 py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 disabled:opacity-40 transition-colors"
-              >
-                {sparar ? 'Sparar...' : 'Spara som utkast'}
-              </button>
-              <button
-                onClick={() => kanSpara && spara(true)}
-                disabled={!kanSpara || sparar}
-                className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
-              >
-                {redigerar?.publicerad ? 'Uppdatera' : 'Publicera'}
-              </button>
-            </>
-          )}
-          </div>
-        </div>
-
-        </div>
-        <aside aria-label="Förhandsvisning" className="hidden lg:flex flex-1 min-w-0 flex-col border-l border-slate-200">
-          <UppdateringForhandsvisning data={förhandsData} />
-        </aside>
-        </div>
-
       </div>
     </>
   )
@@ -820,18 +1118,18 @@ export default function AdminUppdateringar() {
   const queryClient = useQueryClient()
   const uppdFråga = useQuery({
     queryKey: ['admin-uppdateringar'],
-    queryFn:  fetchAdminUppdateringar,
+    queryFn: fetchAdminUppdateringar,
   })
   const uppdateringar = uppdFråga.data ?? []
   const uppdOkända = uppdFråga.data === undefined
   const { data: faqItems = [] } = useQuery({ queryKey: ['admin-faq'], queryFn: fetchAdminFaq })
 
-  const [vy,            setVy]            = useState<'lista' | 'kalender'>('lista')
-  const [typFilter,     setTypFilter]     = useState<PunktTyp | 'Alla'>('Alla')
-  const [statusFilter,  setStatusFilter]  = useState<'publicerad' | 'utkast' | 'Alla'>('Alla')
-  const [panelÖppen,    setPanelÖppen]    = useState(false)
-  const [redigerar,     setRedigerar]     = useState<Uppdatering | null>(null)
-  const [taBort,        setTaBort]        = useState<Uppdatering | null>(null)
+  const [vy, setVy] = useState<'lista' | 'kalender'>('lista')
+  const [typFilter, setTypFilter] = useState<PunktTyp | 'Alla'>('Alla')
+  const [statusFilter, setStatusFilter] = useState<'publicerad' | 'utkast' | 'Alla'>('Alla')
+  const [panelÖppen, setPanelÖppen] = useState(false)
+  const [redigerar, setRedigerar] = useState<Uppdatering | null>(null)
+  const [taBort, setTaBort] = useState<Uppdatering | null>(null)
 
   function invalidera() {
     queryClient.invalidateQueries({ queryKey: ['admin-uppdateringar'] })
@@ -843,20 +1141,34 @@ export default function AdminUppdateringar() {
 
   const createMutation = useMutation({ mutationFn: createUppdatering, onSuccess: invalidera })
   const updateMutation = useMutation({
-    mutationFn: (vars: { id: string; req: UppdateringRequest }) => updateUppdatering(vars.id, vars.req),
-    onSuccess:  invalidera,
+    mutationFn: (vars: { id: string; req: UppdateringRequest }) =>
+      updateUppdatering(vars.id, vars.req),
+    onSuccess: invalidera,
   })
   const deleteMutation = useMutation({ mutationFn: deleteUppdatering, onSuccess: invalidera })
 
-  const filtrerade = uppdateringar.filter(u => {
+  const filtrerade = uppdateringar.filter((u) => {
     if (statusFilter !== 'Alla' && (statusFilter === 'publicerad') !== u.publicerad) return false
-    if (typFilter !== 'Alla' && !u.punkter.some(p => p.typ === typFilter)) return false
+    if (typFilter !== 'Alla' && !u.punkter.some((p) => p.typ === typFilter)) return false
     return true
   })
 
-  function öppnaSkapa()                 { createMutation.reset(); updateMutation.reset(); setRedigerar(null); setPanelÖppen(true) }
-  function öppnaRedigera(u: Uppdatering) { createMutation.reset(); updateMutation.reset(); setRedigerar(u);    setPanelÖppen(true) }
-  function stängPanel()                 { setPanelÖppen(false); setRedigerar(null) }
+  function öppnaSkapa() {
+    createMutation.reset()
+    updateMutation.reset()
+    setRedigerar(null)
+    setPanelÖppen(true)
+  }
+  function öppnaRedigera(u: Uppdatering) {
+    createMutation.reset()
+    updateMutation.reset()
+    setRedigerar(u)
+    setPanelÖppen(true)
+  }
+  function stängPanel() {
+    setPanelÖppen(false)
+    setRedigerar(null)
+  }
 
   // Panelen stängs först när servern bekräftat (V3-8) — en uppdatering med flera rader
   // får inte försvinna vid ett 403/500/nätverksfel.
@@ -864,12 +1176,23 @@ export default function AdminUppdateringar() {
   function spara(data: UppdateringRequest) {
     if (sparaLås.current) return
     sparaLås.current = true
-    const villkor = { onSuccess: stängPanel, onSettled: () => { sparaLås.current = false } }
+    const villkor = {
+      onSuccess: stängPanel,
+      onSettled: () => {
+        sparaLås.current = false
+      },
+    }
     if (redigerar) {
       updateMutation.mutate({ id: redigerar.id, req: data }, villkor)
     } else {
       // Utkastet rensas först när servern bekräftat — ett fel lämnar det kvar.
-      createMutation.mutate(data, { ...villkor, onSuccess: () => { rensaUtkast(); stängPanel() } })
+      createMutation.mutate(data, {
+        ...villkor,
+        onSuccess: () => {
+          rensaUtkast()
+          stängPanel()
+        },
+      })
     }
   }
 
@@ -879,11 +1202,17 @@ export default function AdminUppdateringar() {
     // annars skulle en ihågkommen schemaläggning kunna publicera om posten
     // igen senare, mot admins uttryckliga handling här.
     const req: UppdateringRequest = {
-      titel:      u.titel,
-      datum:      u.datum,
+      titel: u.titel,
+      datum: u.datum,
       publicerad: !u.publicerad,
-      punkter:    u.punkter.map(({ typ, plats, text, synlighet, provaSjalv }: UppdateringsPunkt) => ({ typ, plats, text, synlighet, provaSjalv: provaSjalv ?? null })),
-      version:    u.version ?? '',
+      punkter: u.punkter.map(({ typ, plats, text, synlighet, provaSjalv }: UppdateringsPunkt) => ({
+        typ,
+        plats,
+        text,
+        synlighet,
+        provaSjalv: provaSjalv ?? null,
+      })),
+      version: u.version ?? '',
       schemalagdPubliceringUtc: null,
       schemalagdaFlaggor: [],
     }
@@ -891,19 +1220,24 @@ export default function AdminUppdateringar() {
   }
 
   const antal = {
-    totalt:      uppdateringar.length,
-    publicerade: uppdateringar.filter(u => u.publicerad).length,
-    utkast:      uppdateringar.filter(u => !u.publicerad).length,
+    totalt: uppdateringar.length,
+    publicerade: uppdateringar.filter((u) => u.publicerad).length,
+    utkast: uppdateringar.filter((u) => !u.publicerad).length,
   }
 
   return (
     <div className="flex flex-col gap-6">
-
       {taBort && (
         <TaBortModal
           titel={taBort.titel}
-          onBekräfta={() => { if (!deleteMutation.isPending) deleteMutation.mutate(taBort.id, { onSuccess: () => setTaBort(null) }) }}
-          onStäng={() => { deleteMutation.reset(); setTaBort(null) }}
+          onBekräfta={() => {
+            if (!deleteMutation.isPending)
+              deleteMutation.mutate(taBort.id, { onSuccess: () => setTaBort(null) })
+          }}
+          onStäng={() => {
+            deleteMutation.reset()
+            setTaBort(null)
+          }}
           fel={deleteMutation.error}
           arIgang={deleteMutation.isPending}
         />
@@ -921,7 +1255,11 @@ export default function AdminUppdateringar() {
 
       {/* Misslyckad publicera/avpublicera (panelen visar sitt eget fel) */}
       {!panelÖppen && !taBort && (
-        <MutationFel fel={updateMutation.error} reserv="Ändringen kunde inte sparas. Försök igen." className="bg-red-50 border border-red-200 rounded-2xl px-5 py-3" />
+        <MutationFel
+          fel={updateMutation.error}
+          reserv="Ändringen kunde inte sparas. Försök igen."
+          className="bg-red-50 border border-red-200 rounded-2xl px-5 py-3"
+        />
       )}
 
       <SkickaNyVersionKort />
@@ -929,20 +1267,32 @@ export default function AdminUppdateringar() {
       {/* Stat-kort */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Totalt',      värde: antal.totalt,      färg: 'text-slate-800' },
+          { label: 'Totalt', värde: antal.totalt, färg: 'text-slate-800' },
           { label: 'Publicerade', värde: antal.publicerade, färg: 'text-green-600' },
-          { label: 'Utkast',      värde: antal.utkast,      färg: 'text-slate-400' },
-        ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-5 text-center">
-            <p className={`text-3xl font-bold ${uppdOkända ? 'text-slate-300' : s.färg}`}>{uppdOkända ? '—' : s.värde}</p>
-            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-medium">{s.label}</p>
+          { label: 'Utkast', värde: antal.utkast, färg: 'text-slate-400' },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-5 text-center"
+          >
+            <p className={`text-3xl font-bold ${uppdOkända ? 'text-slate-300' : s.färg}`}>
+              {uppdOkända ? '—' : s.värde}
+            </p>
+            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-medium">
+              {s.label}
+            </p>
           </div>
         ))}
       </div>
 
       {/* Lista/Kalender-växling */}
       <div className="inline-flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
-        {([['lista', '📋 Lista'], ['kalender', '📅 Kalender']] as const).map(([v, label]) => (
+        {(
+          [
+            ['lista', '📋 Lista'],
+            ['kalender', '📅 Kalender'],
+          ] as const
+        ).map(([v, label]) => (
           <button
             key={v}
             onClick={() => setVy(v)}
@@ -956,141 +1306,183 @@ export default function AdminUppdateringar() {
       </div>
 
       {vy === 'kalender' && (
-        <UppdateringarKalender uppdateringar={uppdateringar} faqItems={faqItems} onRedigera={öppnaRedigera} />
+        <UppdateringarKalender
+          uppdateringar={uppdateringar}
+          faqItems={faqItems}
+          onRedigera={öppnaRedigera}
+        />
       )}
 
       {/* Lista */}
       {vy === 'lista' && (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-
-        {/* Verktygsfält */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 flex-wrap">
-          <div className="flex gap-1 flex-wrap">
-            {ALLA_TYPER.map(t => (
-              <button key={t} onClick={() => setTypFilter(t)}
-                className={`text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
-                  typFilter === t
-                    ? t === 'Alla' ? 'bg-violet-100 text-violet-700' : getTypConfig(t).listPill
-                    : 'text-slate-500 hover:bg-slate-100'
-                }`}>
-                {t === 'Alla' ? 'Alla typer' : getTypConfig(t).adminLabel}
-              </button>
-            ))}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {/* Verktygsfält */}
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 flex-wrap">
+            <div className="flex gap-1 flex-wrap">
+              {ALLA_TYPER.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTypFilter(t)}
+                  className={`text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
+                    typFilter === t
+                      ? t === 'Alla'
+                        ? 'bg-violet-100 text-violet-700'
+                        : getTypConfig(t).listPill
+                      : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  {t === 'Alla' ? 'Alla typer' : getTypConfig(t).adminLabel}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1">
+              {ALLA_STATUSAR.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
+                    statusFilter === s
+                      ? 'bg-violet-100 text-violet-700'
+                      : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  {s === 'Alla' ? 'Alla statusar' : s === 'publicerad' ? 'Publicerad' : 'Utkast'}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={öppnaSkapa}
+              className="ml-auto text-sm font-semibold px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white transition-colors shrink-0"
+            >
+              + Ny uppdatering
+            </button>
           </div>
-          <div className="flex gap-1">
-            {ALLA_STATUSAR.map(s => (
-              <button key={s} onClick={() => setStatusFilter(s)}
-                className={`text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
-                  statusFilter === s ? 'bg-violet-100 text-violet-700' : 'text-slate-500 hover:bg-slate-100'
-                }`}>
-                {s === 'Alla' ? 'Alla statusar' : s === 'publicerad' ? 'Publicerad' : 'Utkast'}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={öppnaSkapa}
-            className="ml-auto text-sm font-semibold px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white transition-colors shrink-0"
-          >
-            + Ny uppdatering
-          </button>
-        </div>
 
-        {/* Tabell */}
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase tracking-wide">
-              <th className="text-left px-6 py-3 font-medium">Titel</th>
-              <th className="text-left px-4 py-3 font-medium">Innehåll</th>
-              <th className="text-left px-4 py-3 font-medium">Datum</th>
-              <th className="text-left px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {filtrerade.map(u => {
-              const summary = typSummary(u.punkter)
-              return (
-                <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-3">
-                    <p className="font-medium text-slate-800">{u.titel}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{u.punkter.length} {u.punkter.length === 1 ? 'rad' : 'rader'}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {summary.map(({ typ, antal }) => (
-                        <span key={typ} className={`text-xs font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${getTypConfig(typ).listPill}`}>
-                          {getTypConfig(typ).adminLabel}{antal > 1 ? ` ×${antal}` : ''}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-500 font-mono whitespace-nowrap">{u.datum.split('T')[0]}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full border whitespace-nowrap ${
-                        u.publicerad ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'
-                      }`}>
-                        {u.publicerad ? 'Publicerad' : 'Utkast'}
-                      </span>
-                      {u.schemalagdPubliceringUtc && (
+          {/* Tabell */}
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase tracking-wide">
+                <th className="text-left px-6 py-3 font-medium">Titel</th>
+                <th className="text-left px-4 py-3 font-medium">Innehåll</th>
+                <th className="text-left px-4 py-3 font-medium">Datum</th>
+                <th className="text-left px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filtrerade.map((u) => {
+                const summary = typSummary(u.punkter)
+                return (
+                  <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-3">
+                      <p className="font-medium text-slate-800">{u.titel}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {u.punkter.length} {u.punkter.length === 1 ? 'rad' : 'rader'}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {summary.map(({ typ, antal }) => (
+                          <span
+                            key={typ}
+                            className={`text-xs font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${getTypConfig(typ).listPill}`}
+                          >
+                            {getTypConfig(typ).adminLabel}
+                            {antal > 1 ? ` ×${antal}` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-500 font-mono whitespace-nowrap">
+                      {u.datum.split('T')[0]}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span
-                          className="text-xs font-medium px-2 py-1 rounded-full border border-violet-200 bg-violet-50 text-violet-700 whitespace-nowrap"
-                          title={`Schemalagd till ${isoTillDatetimeLocal(u.schemalagdPubliceringUtc).replace('T', ' ')}`}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full border whitespace-nowrap ${
+                            u.publicerad
+                              ? 'bg-green-100 text-green-700 border-green-200'
+                              : 'bg-slate-100 text-slate-500 border-slate-200'
+                          }`}
                         >
-                          ⏰ Schemalagd
+                          {u.publicerad ? 'Publicerad' : 'Utkast'}
                         </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2 justify-end">
-                      <button onClick={() => togglePublicerad(u)}
-                        className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors whitespace-nowrap ${
-                          u.publicerad
-                            ? 'border-slate-200 text-slate-500 hover:bg-slate-50'
-                            : 'border-green-200 text-green-700 hover:bg-green-50'
-                        }`}>
-                        {u.publicerad ? 'Avpublicera' : 'Publicera'}
-                      </button>
-                      <button onClick={() => öppnaRedigera(u)}
-                        className="text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
-                        Redigera
-                      </button>
-                      <button onClick={() => setTaBort(u)}
-                        className="text-xs font-medium px-2.5 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
-                        Ta bort
-                      </button>
-                    </div>
+                        {u.schemalagdPubliceringUtc && (
+                          <span
+                            className="text-xs font-medium px-2 py-1 rounded-full border border-violet-200 bg-violet-50 text-violet-700 whitespace-nowrap"
+                            title={`Schemalagd till ${isoTillDatetimeLocal(u.schemalagdPubliceringUtc).replace('T', ' ')}`}
+                          >
+                            ⏰ Schemalagd
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2 justify-end">
+                        <button
+                          onClick={() => togglePublicerad(u)}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors whitespace-nowrap ${
+                            u.publicerad
+                              ? 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                              : 'border-green-200 text-green-700 hover:bg-green-50'
+                          }`}
+                        >
+                          {u.publicerad ? 'Avpublicera' : 'Publicera'}
+                        </button>
+                        <button
+                          onClick={() => öppnaRedigera(u)}
+                          className="text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
+                        >
+                          Redigera
+                        </button>
+                        <button
+                          onClick={() => setTaBort(u)}
+                          className="text-xs font-medium px-2.5 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          Ta bort
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+              {uppdFråga.isLoading && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-10 text-center text-sm text-slate-400">
+                    Laddar uppdateringar...
                   </td>
                 </tr>
-              )
-            })}
-            {uppdFråga.isLoading && (
-              <tr><td colSpan={5} className="px-6 py-10 text-center text-sm text-slate-400">Laddar uppdateringar...</td></tr>
-            )}
-            {uppdFråga.isError && (
-              <tr><td colSpan={5} className="p-0">
-                <HamtningsFel
-                  fel={uppdFråga.error}
-                  reserv={uppdOkända ? 'Kunde inte hämta uppdateringarna. Det här är inte samma sak som att inga finns.' : 'Kunde inte uppdatera listan. Den kan vara inaktuell.'}
-                  onForsokIgen={() => { void uppdFråga.refetch() }}
-                  arIgang={uppdFråga.isFetching}
-                  className="py-10"
-                />
-              </td></tr>
-            )}
-            {!uppdFråga.isLoading && !uppdOkända && filtrerade.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-6 py-10 text-center text-sm text-slate-400">
-                  Inga uppdateringar matchar filtret.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+              {uppdFråga.isError && (
+                <tr>
+                  <td colSpan={5} className="p-0">
+                    <HamtningsFel
+                      fel={uppdFråga.error}
+                      reserv={
+                        uppdOkända
+                          ? 'Kunde inte hämta uppdateringarna. Det här är inte samma sak som att inga finns.'
+                          : 'Kunde inte uppdatera listan. Den kan vara inaktuell.'
+                      }
+                      onForsokIgen={() => {
+                        void uppdFråga.refetch()
+                      }}
+                      arIgang={uppdFråga.isFetching}
+                      className="py-10"
+                    />
+                  </td>
+                </tr>
+              )}
+              {!uppdFråga.isLoading && !uppdOkända && filtrerade.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-10 text-center text-sm text-slate-400">
+                    Inga uppdateringar matchar filtret.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
-
     </div>
   )
 }

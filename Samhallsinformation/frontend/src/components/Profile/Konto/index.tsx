@@ -47,7 +47,7 @@ export default function Konto() {
   useEffect(() => {
     let avbruten = false
     fetchMe()
-      .then(data => {
+      .then((data) => {
         if (avbruten) return
         setNamn({ value: data.name, saved: true, error: '' })
         setEpost({ value: data.email, saved: true, error: '' })
@@ -56,12 +56,16 @@ export default function Konto() {
         setPendingEmail(data.pendingEmail)
         setMeLaddad(true)
       })
-      .catch(() => { if (!avbruten) setLaddningsfel(true) })
-    return () => { avbruten = true }
+      .catch(() => {
+        if (!avbruten) setLaddningsfel(true)
+      })
+    return () => {
+      avbruten = true
+    }
   }, [])
 
   function update(setter: React.Dispatch<React.SetStateAction<FormField>>, value: string) {
-    setter(prev => ({ ...prev, value, saved: false, error: '' }))
+    setter((prev) => ({ ...prev, value, saved: false, error: '' }))
   }
 
   async function saveField(
@@ -72,14 +76,21 @@ export default function Konto() {
   ) {
     if (sparar) return
     const err = validate()
-    if (err) { setter(prev => ({ ...prev, error: err, saved: false })); return }
+    if (err) {
+      setter((prev) => ({ ...prev, error: err, saved: false }))
+      return
+    }
     setSparar(true)
     try {
       const res = await updateMyProfile({ [field]: value })
       setAccessToken(res.accessToken)
-      setter(prev => ({ ...prev, saved: true, error: '' }))
+      setter((prev) => ({ ...prev, saved: true, error: '' }))
     } catch (e) {
-      setter(prev => ({ ...prev, error: visaFel(e, 'Namnet kunde inte sparas. Försök igen.'), saved: false }))
+      setter((prev) => ({
+        ...prev,
+        error: visaFel(e, 'Namnet kunde inte sparas. Försök igen.'),
+        saved: false,
+      }))
     } finally {
       setSparar(false)
     }
@@ -89,11 +100,15 @@ export default function Konto() {
     if (sparar) return
     const value = epost.value.trim()
     if (!value.includes('@')) {
-      setEpost(prev => ({ ...prev, error: 'Ange en giltig e-postadress.', saved: false }))
+      setEpost((prev) => ({ ...prev, error: 'Ange en giltig e-postadress.', saved: false }))
       return
     }
     if (authProvider === 'local' && !emailPassword) {
-      setEpost(prev => ({ ...prev, error: 'Ange ditt lösenord för att bekräfta bytet.', saved: false }))
+      setEpost((prev) => ({
+        ...prev,
+        error: 'Ange ditt lösenord för att bekräfta bytet.',
+        saved: false,
+      }))
       return
     }
     setSparar(true)
@@ -101,9 +116,13 @@ export default function Konto() {
       await requestEmailChange(value, emailPassword || undefined)
       setPendingEmail(value)
       setEmailPassword('')
-      setEpost(prev => ({ ...prev, error: '' }))
+      setEpost((prev) => ({ ...prev, error: '' }))
     } catch (e) {
-      setEpost(prev => ({ ...prev, error: visaFel(e, 'Bekräftelsen kunde inte skickas. Försök igen om en stund.'), saved: false }))
+      setEpost((prev) => ({
+        ...prev,
+        error: visaFel(e, 'Bekräftelsen kunde inte skickas. Försök igen om en stund.'),
+        saved: false,
+      }))
     } finally {
       setSparar(false)
     }
@@ -115,10 +134,14 @@ export default function Konto() {
     try {
       await cancelEmailChange()
       setPendingEmail(null)
-      setEpost(prev => ({ ...prev, error: '' }))
+      setEpost((prev) => ({ ...prev, error: '' }))
     } catch {
       // Bannern ligger kvar (bytet är fortfarande aktivt), så felet måste synas.
-      setEpost(prev => ({ ...prev, error: 'Bytet kunde inte avbrytas. Försök igen.', saved: false }))
+      setEpost((prev) => ({
+        ...prev,
+        error: 'Bytet kunde inte avbrytas. Försök igen.',
+        saved: false,
+      }))
     } finally {
       setSparar(false)
     }
@@ -126,19 +149,14 @@ export default function Konto() {
 
   return (
     <div className="flex flex-col gap-6 mt-6">
-
       {/* Avatar + namn-banner */}
       <div className="bg-gradient-to-br from-violet-600 to-violet-800 rounded-2xl px-8 py-8 flex items-center gap-6 shadow-md">
         <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-white text-2xl font-extrabold shrink-0 backdrop-blur-sm">
           {namn.value ? namn.value[0].toUpperCase() : 'JO'}
         </div>
         <div>
-          <p className="text-white text-xl font-bold tracking-tight">
-            {namn.value || 'Ditt namn'}
-          </p>
-          <p className="text-violet-200 text-sm mt-0.5">
-            {accountEmail || 'din@epost.se'}
-          </p>
+          <p className="text-white text-xl font-bold tracking-tight">{namn.value || 'Ditt namn'}</p>
+          <p className="text-violet-200 text-sm mt-0.5">{accountEmail || 'din@epost.se'}</p>
         </div>
       </div>
 
@@ -150,24 +168,31 @@ export default function Konto() {
 
       {/* Tvåkolumns grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-
         {/* Vänster kolumn */}
         <div className="flex flex-col gap-6">
-          {flaggor.konto_info && <KontoInfo
-            namn={namn}
-            epost={epost}
-            pendingEmail={pendingEmail}
-            requiresPassword={authProvider === 'local'}
-            sparar={sparar}
-            emailPassword={emailPassword}
-            onUpdateNamn={value => update(setNamn, value)}
-            onUpdateEpost={value => update(setEpost, value)}
-            onSaveNamn={() => saveField(setNamn, namn.value.trim(), 'name', () => namn.value.trim() ? '' : 'Ange ett namn.')}
-            onUpdateEmailPassword={setEmailPassword}
-            onRequestEmailChange={handleRequestEmailChange}
-            onCancelEmailChange={handleCancelEmailChange}
-          />}
-          {flaggor.konto_losenord && meLaddad && <LösenordByte harLosenord={authProvider === 'local'} />}
+          {flaggor.konto_info && (
+            <KontoInfo
+              namn={namn}
+              epost={epost}
+              pendingEmail={pendingEmail}
+              requiresPassword={authProvider === 'local'}
+              sparar={sparar}
+              emailPassword={emailPassword}
+              onUpdateNamn={(value) => update(setNamn, value)}
+              onUpdateEpost={(value) => update(setEpost, value)}
+              onSaveNamn={() =>
+                saveField(setNamn, namn.value.trim(), 'name', () =>
+                  namn.value.trim() ? '' : 'Ange ett namn.',
+                )
+              }
+              onUpdateEmailPassword={setEmailPassword}
+              onRequestEmailChange={handleRequestEmailChange}
+              onCancelEmailChange={handleCancelEmailChange}
+            />
+          )}
+          {flaggor.konto_losenord && meLaddad && (
+            <LösenordByte harLosenord={authProvider === 'local'} />
+          )}
           {flaggor.konto_visningsnamn && ärSupportEllerAdmin && <SupportVisningsnamnKort />}
           {flaggor.konto_tvafaktor && <TvafaktorKort harTelefon={false} />}
           {flaggor.konto_samtycke && <SparSamtycke />}
@@ -181,9 +206,7 @@ export default function Konto() {
           {flaggor.konto_aktivitetslogg && <AktivitetsloggKort />}
           {flaggor.konto_datahantering && <Datahantering highlightId={highlightId} />}
         </div>
-
       </div>
-
     </div>
   )
 }

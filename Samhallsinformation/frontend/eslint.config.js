@@ -28,7 +28,10 @@ export default defineConfig([
       // (useAuth, useFlags …) — att dela upp dem är inte värt det.
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       // Konventionen _namn = medvetet oanvänd (t.ex. en prop som ännu inte används).
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
   },
 ])
