@@ -17,6 +17,8 @@ using Xunit;
 /// och frontend/ ligger som syskon under Samhallsinformation/, samma antagande CI:s checkout ger).
 /// Testet hoppar över sig självt (Skip) om filen inte hittas, i stället för att fela hårt, så att
 /// en eventuell framtida ommöblering av repot inte tyst gör hela backend-sviten röd.
+/// OBS: frontend/src/lib/featureFlags.ts måste stå i paths i .github/workflows/ci-backend.yml,
+/// annars körs inte det här testet när bara frontend-filen ändras.
 /// </summary>
 public class FeatureFlagFrontendParityTests
 {
@@ -34,13 +36,15 @@ public class FeatureFlagFrontendParityTests
 
     /// <summary>
     /// Nyckel -> defaultAktiv, extraherat ur varje flagg-post (INTE grupp-posterna högre upp i
-    /// samma fil, t.ex. <c>{ key: 'flode', label: 'Flöde', ... }</c> — de saknar defaultAktiv på
-    /// samma rad, vilket är precis vad som skiljer ut dem här).
+    /// samma fil, t.ex. <c>{ key: 'flode', label: 'Flöde', flaggor: [ ... ] }</c>). <c>[^{}]</c>
+    /// stannar matchningen inom ett och samma objekt: en grupp har ett nästlat <c>{</c> före
+    /// första <c>defaultAktiv</c> och träffar därför inte. Radbrytningar tillåts, så att
+    /// Prettier kan dela upp objekten på flera rader.
     /// </summary>
     private static Dictionary<string, bool> ParseFrontendDefaults(string text)
     {
         var result = new Dictionary<string, bool>();
-        foreach (Match m in Regex.Matches(text, @"key:\s*'([a-z0-9_]+)',[^\n]*?defaultAktiv:\s*(true|false)"))
+        foreach (Match m in Regex.Matches(text, @"key:\s*'([a-z0-9_]+)',[^{}]*?defaultAktiv:\s*(true|false)"))
             result[m.Groups[1].Value] = m.Groups[2].Value == "true";
         return result;
     }

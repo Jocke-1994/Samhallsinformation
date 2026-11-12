@@ -10,6 +10,9 @@ using Xunit;
 /// flagga och kontokrav (<c>frontend/src/lib/provaSjalv.ts</c>). Ett mål som
 /// bara läggs till på ena sidan blir antingen omöjligt att spara (400) eller
 /// sparas men visar ingen länk. Samma textjämförelse som FeatureFlagFrontendParityTests.
+/// Nyckeln får stå med eller utan citattecken: Prettier tar bort dem när de inte behövs.
+/// OBS: frontend/src/lib/provaSjalv.ts måste stå i paths i .github/workflows/ci-backend.yml,
+/// annars körs inte det här testet när bara frontend-filen ändras.
 /// </summary>
 public class ProvaSjalvParityTests
 {
@@ -37,7 +40,7 @@ public class ProvaSjalvParityTests
         var slut = text.IndexOf("\n}", start, StringComparison.Ordinal);
         var block = text[start..slut];
 
-        var frontend = Regex.Matches(block, @"^\s*'([a-z-]+)':\s*\{", RegexOptions.Multiline)
+        var frontend = Regex.Matches(block, @"^\s*'?([a-z-]+)'?:\s*\{", RegexOptions.Multiline)
             .Select(m => m.Groups[1].Value).ToHashSet();
         Assert.True(frontend.Count >= 6, $"Regexen hittade bara {frontend.Count} mål — har formatet ändrats?");
 
