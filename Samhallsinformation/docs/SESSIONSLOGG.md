@@ -28,6 +28,18 @@ inte historik. Sessioner 1–28 arkiverades hit redan 2026-09-12, sessioner
 - Läs Trafikverkets nyhet om ny Situation-version och stäm av mot `TrafikverketApiIngestor`
 - Kvar från session 60: kolla de 50 nya källorna, Sandlådans gräns per källa, U+00AD-rensning, Sandlådegenomgång runt 15 nov
 
+### Session 60b — 2026-11-10
+**What was done:**
+- **Testkatalog i vaulten** (gren `feat/testkatalog`, commit aebaab8, ej pushad): `scripts/testkatalog.mjs` skannar alla xUnit/Vitest-tester, regenererar `backend/Data/test-catalog.json` (837/498 → 907/595, gamla generatorn kapade 64 frontendnamn) och bygger områdesnoter i `docs/vault/Testkatalog/` med bevarade handskrivna beskrivningar. Första området klart: Inloggning och konto (219 testfall, 17 filer). `Otydliga tester.md` i Öppna_tankar: 4 avstängda tester, dubbletten MigrationRawSqlGuardTests/MigrationRawSqlRegelTests, otydliga namn, luckor
+- **`hello.yml`** tillagd (PR #731): enkel workflow som bekräftar att Actions kör
+
+**Problem och lösningar:**
+- YAML-filen saknade indrag. Orsak: Tab i VS Code accepterade editorförslag i stället för att dra in. Tips: Esc före Tab, eller mellanslag
+
+**Next session:**
+- Ok att pusha + PR för `feat/testkatalog`
+- `hello.yml` körs på varje PR (ingen paths-filtrering). Beslut: ta bort eller filtrera
+
 ### Session 60 — 2026-11-08
 **What was done:**
 - **Frågan "simulerad produktionsmiljö innan vi kopplar in källor?" besvarad: behövs inte för källor.** Verifierat i koden att `IsActive=true` + `IsPublished=false` stoppas i `EventsController`, `UserFeedService`, `PlatserController`, `SourcesController` och `PushDispatcher.cs:59` (ingen push), larmar inte (`SourceFailingRule`), och syns bara i Sandlådan. En RSS-källa läser bara, kan inte röra annan data. Separat miljö behövs bara för omergad kod (spår 2 i `Ideer/Testmiljö.md`, fortsatt vilande)
