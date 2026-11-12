@@ -9,6 +9,36 @@ inte historik. Sessioner 1–28 arkiverades hit redan 2026-09-12, sessioner
 
 ---
 
+### Session 62 — 2026-11-12
+**What was done:**
+- **Prettier i frontend (PR #740):** `.prettierrc.json` efter befintlig stil (`semi: false`, `singleQuote`, `printWidth: 100`, `endOfLine: auto`), all frontend-kod formaterad en gång. `ci.yml` → `frontend-ci.yml` med `npm ci`, nytt steg Format check och `setup-node@v7`. Två `eslint-disable-next-line` fick flyttas när Prettier bröt upp raderna
+- **#729 delvis löst (PR #742):** `EventDto` (`Application/Events/`) är en vitlista med de 10 fält frontend läser. `GET /api/events` och `GET /api/events/{id}` skickar DTO:n, och `GetEvent` ger 404 för händelser från opublicerade källor (fanns inte förut). Röda tester först, sedan rättning. Verifierat mot lokalt API (opublicerad SMHI-händelse ger 404)
+- **Paritetstester lagade (PR #743):** Prettier bröt `ProvaSjalvParityTests` (citattecken runt nycklar) och `FeatureFlagFrontendParityTests` (`defaultAktiv` på egen rad). Regexarna tål nu båda formaten. `featureFlags.ts` och `provaSjalv.ts` ligger i `paths` i `ci-backend.yml`
+- **Dependabot:** auto-merge fungerar (patch/minor mergas av workflowen). Majors #738 (Syndication 11, stödjer net10.0) och #739 (jsdom 31) testades lokalt och mergades för hand
+- **Genomgång av endpoints som skickar hela databasrader:** kvar är Mitt flöde/Sparat (rest av #729) och publika `GET /api/faq` (hela `FaqItem` med `FlagKey`). Admin-endpoints medvetet utanför. Övriga använder redan `.Select`-projektion
+
+**Problem och lösningar:**
+- `npm install -D` med lokal npm 11.6 (Windows) skrev om `package-lock.json` och tappade Linux-paket (`libc`-fält, `@emnapi/*`), så `npm ci` failade. Lösning: ta main:s låsfil och lägg bara in det nya paketet
+- **#726 hade fel diagnos i AUDIT:** de 5 testerna failar lokalt p.g.a. `VITE_USE_MOCK=true` i `.env.local`, inte p.g.a. beroenden. Utan filen är alla 616 gröna. AUDIT:s förslag 1 (committa låsfilen från `npm install`) hade brutit CI
+- **AUDIT hade också fel om #729:** listendpointen projicerade inte, den skickade också hela entiteten
+- **Paths-fällan:** #740 ändrade bara frontend, så backend-CI startade aldrig och #740 blev grön fast main fick två röda backend-tester
+- Repot är privat på GitHub Free: inget branch-skydd. En röd PR går att merga (`MERGEABLE`/`UNSTABLE`)
+- `dotnet run --no-launch-profile` startar i Production och stoppas av `StartupSecretsGuard`. Sätt `ASPNETCORE_ENVIRONMENT=Development`
+
+**Etablerat mönster:**
+- Ny npm-dependency: bygg låsfilen från main + paketet, kör `npm ci` lokalt före push
+- Backend-tester som läser frontend-filer: filen måste stå i `paths` i `ci-backend.yml` (kommentar i testfilerna)
+- Publika händelser går ut via `EventDto`, aldrig `CanonicalEvent` direkt
+
+**Next session:**
+- Rest av #729: Mitt flöde (`/api/user/feed`) och Sparat (`/api/user/saved-events`) ska använda `EventDto`, sedan "Fixes #729"
+- `FaqDto` för publika `GET /api/faq`
+- #726: få frontendtesterna att inte påverkas av `.env.local` (t.ex. sätt `VITE_USE_MOCK` i testkonfigen)
+- #727: `.editorconfig` för backend återstår
+- Saknas i `dependabot.yml`: `github-actions` (`checkout@v4`, `fetch-metadata@v2` på utfasade Node 20)
+- `stash@{0}` innehåller `docs/vault/Rutiner/_Kartlaggning.md` (110 rader), finns ingen annanstans
+- Kvar från session 60: de 50 nya källorna, Sandlådans gräns per källa, U+00AD-rensning
+
 ### Session 61 — 2026-11-11
 **What was done:**
 - **Discord-notiser byggda på tre grenar, inget pushat** (se `docs/vault/Funktioner/Discord-notiser.md`):
@@ -27,6 +57,18 @@ inte historik. Sessioner 1–28 arkiverades hit redan 2026-09-12, sessioner
 - Ok till push → `/code-review` på `feat/discord-larm` → en PR per gren → manuell körning av `uptime.yml` och `source-watch.yml`
 - Läs Trafikverkets nyhet om ny Situation-version och stäm av mot `TrafikverketApiIngestor`
 - Kvar från session 60: kolla de 50 nya källorna, Sandlådans gräns per källa, U+00AD-rensning, Sandlådegenomgång runt 15 nov
+
+### Session 60b — 2026-11-10
+**What was done:**
+- **Testkatalog i vaulten** (gren `feat/testkatalog`, commit aebaab8, ej pushad): `scripts/testkatalog.mjs` skannar alla xUnit/Vitest-tester, regenererar `backend/Data/test-catalog.json` (837/498 → 907/595, gamla generatorn kapade 64 frontendnamn) och bygger områdesnoter i `docs/vault/Testkatalog/` med bevarade handskrivna beskrivningar. Första området klart: Inloggning och konto (219 testfall, 17 filer). `Otydliga tester.md` i Öppna_tankar: 4 avstängda tester, dubbletten MigrationRawSqlGuardTests/MigrationRawSqlRegelTests, otydliga namn, luckor
+- **`hello.yml`** tillagd (PR #731): enkel workflow som bekräftar att Actions kör
+
+**Problem och lösningar:**
+- YAML-filen saknade indrag. Orsak: Tab i VS Code accepterade editorförslag i stället för att dra in. Tips: Esc före Tab, eller mellanslag
+
+**Next session:**
+- Ok att pusha + PR för `feat/testkatalog`
+- `hello.yml` körs på varje PR (ingen paths-filtrering). Beslut: ta bort eller filtrera
 
 ### Session 60 — 2026-11-08
 **What was done:**
