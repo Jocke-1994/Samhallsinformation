@@ -10,7 +10,7 @@ import type { MaintenanceBanner } from '../api/maintenanceBanners'
 export function bannerAvtryck(
   b: Pick<MaintenanceBanner, 'message' | 'startUtc' | 'endUtc' | 'stil' | 'rubrik' | 'lankUrl'>,
 ): string {
-  const bas = `${b.message}|${b.startUtc}|${b.endUtc}`
+  const bas   =   `${b.message}|${b.startUtc}|${b.endUtc}`;
   return b.stil === 'Drift' && !b.rubrik && !b.lankUrl
     ? bas
     : `${bas}|${b.stil}|${b.rubrik ?? ''}|${b.lankUrl ?? ''}`
