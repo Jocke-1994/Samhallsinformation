@@ -9,6 +9,36 @@ inte historik. Sessioner 1–28 arkiverades hit redan 2026-09-12, sessioner
 
 ---
 
+### Session 62 — 2026-11-12
+**What was done:**
+- **Prettier i frontend (PR #740):** `.prettierrc.json` efter befintlig stil (`semi: false`, `singleQuote`, `printWidth: 100`, `endOfLine: auto`), all frontend-kod formaterad en gång. `ci.yml` → `frontend-ci.yml` med `npm ci`, nytt steg Format check och `setup-node@v7`. Två `eslint-disable-next-line` fick flyttas när Prettier bröt upp raderna
+- **#729 delvis löst (PR #742):** `EventDto` (`Application/Events/`) är en vitlista med de 10 fält frontend läser. `GET /api/events` och `GET /api/events/{id}` skickar DTO:n, och `GetEvent` ger 404 för händelser från opublicerade källor (fanns inte förut). Röda tester först, sedan rättning. Verifierat mot lokalt API (opublicerad SMHI-händelse ger 404)
+- **Paritetstester lagade (PR #743):** Prettier bröt `ProvaSjalvParityTests` (citattecken runt nycklar) och `FeatureFlagFrontendParityTests` (`defaultAktiv` på egen rad). Regexarna tål nu båda formaten. `featureFlags.ts` och `provaSjalv.ts` ligger i `paths` i `ci-backend.yml`
+- **Dependabot:** auto-merge fungerar (patch/minor mergas av workflowen). Majors #738 (Syndication 11, stödjer net10.0) och #739 (jsdom 31) testades lokalt och mergades för hand
+- **Genomgång av endpoints som skickar hela databasrader:** kvar är Mitt flöde/Sparat (rest av #729) och publika `GET /api/faq` (hela `FaqItem` med `FlagKey`). Admin-endpoints medvetet utanför. Övriga använder redan `.Select`-projektion
+
+**Problem och lösningar:**
+- `npm install -D` med lokal npm 11.6 (Windows) skrev om `package-lock.json` och tappade Linux-paket (`libc`-fält, `@emnapi/*`), så `npm ci` failade. Lösning: ta main:s låsfil och lägg bara in det nya paketet
+- **#726 hade fel diagnos i AUDIT:** de 5 testerna failar lokalt p.g.a. `VITE_USE_MOCK=true` i `.env.local`, inte p.g.a. beroenden. Utan filen är alla 616 gröna. AUDIT:s förslag 1 (committa låsfilen från `npm install`) hade brutit CI
+- **AUDIT hade också fel om #729:** listendpointen projicerade inte, den skickade också hela entiteten
+- **Paths-fällan:** #740 ändrade bara frontend, så backend-CI startade aldrig och #740 blev grön fast main fick två röda backend-tester
+- Repot är privat på GitHub Free: inget branch-skydd. En röd PR går att merga (`MERGEABLE`/`UNSTABLE`)
+- `dotnet run --no-launch-profile` startar i Production och stoppas av `StartupSecretsGuard`. Sätt `ASPNETCORE_ENVIRONMENT=Development`
+
+**Etablerat mönster:**
+- Ny npm-dependency: bygg låsfilen från main + paketet, kör `npm ci` lokalt före push
+- Backend-tester som läser frontend-filer: filen måste stå i `paths` i `ci-backend.yml` (kommentar i testfilerna)
+- Publika händelser går ut via `EventDto`, aldrig `CanonicalEvent` direkt
+
+**Next session:**
+- Rest av #729: Mitt flöde (`/api/user/feed`) och Sparat (`/api/user/saved-events`) ska använda `EventDto`, sedan "Fixes #729"
+- `FaqDto` för publika `GET /api/faq`
+- #726: få frontendtesterna att inte påverkas av `.env.local` (t.ex. sätt `VITE_USE_MOCK` i testkonfigen)
+- #727: `.editorconfig` för backend återstår
+- Saknas i `dependabot.yml`: `github-actions` (`checkout@v4`, `fetch-metadata@v2` på utfasade Node 20)
+- `stash@{0}` innehåller `docs/vault/Rutiner/_Kartlaggning.md` (110 rader), finns ingen annanstans
+- Kvar från session 60: de 50 nya källorna, Sandlådans gräns per källa, U+00AD-rensning
+
 ### Session 61 — 2026-11-11
 **What was done:**
 - **Discord-notiser byggda på tre grenar, inget pushat** (se `docs/vault/Funktioner/Discord-notiser.md`):
