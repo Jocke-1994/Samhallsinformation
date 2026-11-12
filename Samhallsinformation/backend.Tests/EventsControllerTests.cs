@@ -190,4 +190,85 @@ public class EventsControllerTests
 
         Assert.Equal(10, events.Count());
     }
+
+    // ── Publika händelse-endpoints: vad som får gå ut (#729) ──────────────────
+
+    // Vitlistan: exakt de fält frontend läser (CanonicalEvent i frontend/src/types/index.ts).
+    // Ett nytt fält i databasmodellen ska INTE synas utåt förrän någon lägger till det här.
+    private static readonly string[] TillatnaEventFalt =
+        ["content", "eventType", "geography", "id", "isNational", "publishedAt", "severity", "sourceId", "title", "url"];
+
+    // Samma JSON-inställningar som ASP.NET Core använder för svaren (camelCase).
+    private static string[] JsonFalt(object value)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(value, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        return doc.RootElement.EnumerateObject().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal).ToArray();
+    }
+
+    private static void AssertEndastTillatnaFalt(object value)
+    {
+        var falt = JsonFalt(value);
+        var forMycket = falt.Except(TillatnaEventFalt).ToArray();
+        var saknas = TillatnaEventFalt.Except(falt).ToArray();
+        Assert.True(forMycket.Length == 0, $"Fält som inte får gå ut: {string.Join(", ", forMycket)}");
+        Assert.True(saknas.Length == 0, $"Fält som frontend behöver men saknas: {string.Join(", ", saknas)}");
+    }
+
+    [Fact]
+    public async Task GetEvent_UnpublishedSource_ReturnsNotFound()
+    {
+        using var db = NewDb();
+        db.Sources.Add(NewSource(2, "Hemlig", published: false));
+        var hemlig = new CanonicalEvent { SourceId = 2, Title = "Hemlig händelse", Content = "x", Url = "https://hemlig.se/1" };
+        db.Events.Add(hemlig);
+        await db.SaveChangesAsync();
+
+        var result = await NewController(db).GetEvent(hemlig.Id);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task GetEvent_PublishedSource_ReturnsEvent()
+    {
+        using var db = NewDb();
+        db.Sources.Add(NewSource(1, "Polisen"));
+        var evt = new CanonicalEvent { SourceId = 1, Title = "Trafikolycka", Content = "x", Url = "https://polisen.se/1" };
+        db.Events.Add(evt);
+        await db.SaveChangesAsync();
+
+        var result = await NewController(db).GetEvent(evt.Id);
+
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetEvent_Json_HasOnlyAllowedFields()
+    {
+        using var db = NewDb();
+        db.Sources.Add(NewSource(1, "Polisen"));
+        var evt = new CanonicalEvent { SourceId = 1, Title = "Trafikolycka", Content = "x", Url = "https://polisen.se/1", RawData = "{\"intern\":true}", ExternalId = "p-1" };
+        db.Events.Add(evt);
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<OkObjectResult>(await NewController(db).GetEvent(evt.Id));
+
+        AssertEndastTillatnaFalt(result.Value!);
+    }
+
+    [Fact]
+    public async Task GetEvents_Json_EachEventHasOnlyAllowedFields()
+    {
+        using var db = NewDb();
+        db.Sources.Add(NewSource(1, "Polisen"));
+        db.Events.Add(new CanonicalEvent { SourceId = 1, Title = "Trafikolycka", Content = "x", Url = "https://polisen.se/1", RawData = "{\"intern\":true}", ExternalId = "p-1" });
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<OkObjectResult>(await NewController(db).GetEvents(null, null, null, null, null, null));
+        var events = (System.Collections.IEnumerable)result.Value!.GetType().GetProperty("events")!.GetValue(result.Value)!;
+        var evt = Assert.Single(events.Cast<object>());
+
+        AssertEndastTillatnaFalt(evt);
+    }
 }

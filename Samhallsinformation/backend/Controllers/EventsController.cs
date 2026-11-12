@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application;
+using Samhallsinformation.Application.Events;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
 
@@ -85,15 +86,19 @@ public class EventsController : ControllerBase
             .Take(pageSize)
             .ToListAsync();
 
-        return Ok(new { total, page, pageSize, events });
+        return Ok(new { total, page, pageSize, events = events.Select(EventDto.From) });
     }
 
+    // Samma synlighetsregel som listan: en händelse från en opublicerad källa finns
+    // inte utåt. 404, inte 403, så att svaret inte avslöjar att den finns (#729).
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetEvent(Guid id)
     {
-        var evt = await _db.Events.FindAsync(id);
+        var evt = await _db.Events
+            .Where(e => e.Id == id && _db.Sources.Any(s => s.Id == e.SourceId && s.IsPublished))
+            .FirstOrDefaultAsync();
         if (evt is null) return NotFound();
-        return Ok(evt);
+        return Ok(EventDto.From(evt));
     }
 
     // Publik sök-endpoint byggd för kundtjänstbotens "fråga om skarpa
