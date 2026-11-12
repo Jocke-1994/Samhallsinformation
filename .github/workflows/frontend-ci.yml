@@ -1,50 +1,58 @@
-name: CI
+name: Frontend CI
 
 on:
   push:
     branches: [main]
     paths:
       - "Samhallsinformation/frontend/**"
-      - ".github/workflows/ci.yml"
+      - ".github/workflows/frontend-ci.yml"
   pull_request:
     branches: [main]
     paths:
       - "Samhallsinformation/frontend/**"
-      - ".github/workflows/ci.yml"
+      - ".github/workflows/frontend-ci.yml"
 
 jobs:
   build:
     name: Build & Type Check
     runs-on: ubuntu-latest
 
+    # Alla run-steg körs i frontend-mappen, så slipper varje steg upprepa det.
+    defaults:
+      run:
+        working-directory: Samhallsinformation/frontend
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "npm"
           cache-dependency-path: Samhallsinformation/frontend/package-lock.json
 
+      # npm ci installerar exakt det som står i package-lock.json och failar om
+      # filen inte stämmer med package.json. npm install kan i stället uppdatera
+      # låsfilen och ge CI andra versioner än dem du testade lokalt.
       - name: Install dependencies
-        working-directory: Samhallsinformation/frontend
-        run: npm install
+        run: npm ci
 
       # Fel stoppar PR:en, varningar (set-state-in-effect m.fl., se eslint.config.js) gör det inte.
       - name: Lint
-        working-directory: Samhallsinformation/frontend
         run: npm run lint
 
+      # Ändrar inget, failar bara om någon fil inte följer .prettierrc.json.
+      # Rätta lokalt med: npm run format
+      - name: Format check
+        run: npm run format:check
+
       - name: Test
-        working-directory: Samhallsinformation/frontend
         run: npm test
 
       - name: Build
-        working-directory: Samhallsinformation/frontend
         run: npm run build
 
       - name: Security audit
-        working-directory: Samhallsinformation/frontend
         run: npm audit --omit=dev --audit-level=high
