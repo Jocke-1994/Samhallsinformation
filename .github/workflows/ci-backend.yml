@@ -8,6 +8,10 @@ on:
       - "Samhallsinformation/backend.Tests/**"
       - "Samhallsinformation/Samhallsinformation.slnx"
       - ".github/workflows/ci-backend.yml"
+      # Frontend-filer som backend-tester läser (FeatureFlagFrontendParityTests,
+      # ProvaSjalvParityTests). Utan dem blir en frontend-PR grön fast den bryter testerna.
+      - "Samhallsinformation/frontend/src/lib/featureFlags.ts"
+      - "Samhallsinformation/frontend/src/lib/provaSjalv.ts"
   pull_request:
     branches: [main]
     paths:
@@ -15,6 +19,10 @@ on:
       - "Samhallsinformation/backend.Tests/**"
       - "Samhallsinformation/Samhallsinformation.slnx"
       - ".github/workflows/ci-backend.yml"
+      # Frontend-filer som backend-tester läser (FeatureFlagFrontendParityTests,
+      # ProvaSjalvParityTests). Utan dem blir en frontend-PR grön fast den bryter testerna.
+      - "Samhallsinformation/frontend/src/lib/featureFlags.ts"
+      - "Samhallsinformation/frontend/src/lib/provaSjalv.ts"
 
 jobs:
   format:
