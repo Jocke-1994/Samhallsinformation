@@ -1,26 +1,33 @@
-name: Frontend CI
+name: Frontend CI #Namnet på workflowen som visas i GitHub Actions-fliken.
 
-on:
-  push:
-    branches: [main]
+on: #När workflowen ska köras. I detta fall vid PR mot main (när den öppnas och vid varje ny push till den) och vid push till main.
+  push: #När en push sker till main branchen, och ändringarna är i frontend-mappen eller i workflow-filen.
+    branches: [main] #Filter: bara när någon pushar TILL main.
+    # Fråga: Gäller detta om man pushar direkt mot main?
+    # Svar: Ja, och även när en PR mergas, för en merge räknas som en push till main.
+    # Det finns inget "utan branch", man står alltid på någon. OBS: push-triggern
+    # STOPPAR ingenting. Den körs efter att koden redan är i main. Stoppa gör branch-skydd (övning 7).
+    paths: #Vilka filer som ska trigga workflowen. I detta fall ändringar i frontend-mappen eller i workflow-filen.
+      - "Samhallsinformation/frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+  pull_request: #När en PR öppnas, får en ny push eller öppnas igen, och ändringarna är i frontend-mappen eller i workflow-filen.
+    branches: [main] #Branchen PR:en ska mergas IN I, inte branchen du jobbar på.
     paths:
       - "Samhallsinformation/frontend/**"
       - ".github/workflows/frontend-ci.yml"
-  pull_request:
-    branches: [main]
-    paths:
-      - "Samhallsinformation/frontend/**"
-      - ".github/workflows/frontend-ci.yml"
 
-jobs:
+jobs: #Jobben som ska köras i workflowen. I detta fall ett jobb som heter build.
   build:
     name: Build & Type Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest #Körs på en virtuell maskin med Ubuntu som GitHub lånar ut. Ny tom maskin varje körning, slängs efteråt.
 
-    # Alla run-steg körs i frontend-mappen, så slipper varje steg upprepa det.
     defaults:
       run:
-        working-directory: Samhallsinformation/frontend
+        working-directory: Samhallsinformation/frontend # Gäller bara run:-steg. uses:-steg (checkout, setup-node) påverkas inte, därför har cache-dependency-path hela sökvägen.
+        # Fråga: Används working-directory bara när defaults och run används tillsammans?
+        # Svar: Nej. Den kan stå direkt på ett enskilt steg (gäller bara det steget, så såg
+        # gamla ci.yml ut) eller här under defaults: run: (gäller alla run:-steg i jobbet).
+        # Båda sätten påverkar bara run:-steg, aldrig uses:-steg.
 
     steps:
       - name: Checkout
