@@ -9,21 +9,35 @@ import { useSiteSettings } from '../hooks/useSiteSettings'
 // (notif_*-flaggorna är alla av, ersatta av push bakom en egen, ännu
 // avstängd flagga).
 const FEATURES = [
-  { sektion: 'mina-kallor',   icon: '🗂️', label: 'Mina källor',    desc: 'Välj vilka myndigheter som visas i ditt flöde' },
-  { sektion: 'notifieringar', icon: '🔔', label: 'Notifieringar',  desc: 'Få aviseringar via e-post eller SMS' },
-  { sektion: 'konto',         icon: '👤', label: 'Konto',          desc: 'Hantera dina uppgifter och din data' },
-  { sektion: 'support',       icon: '💬', label: 'Support',        desc: 'Skicka ärenden och följ deras status' },
+  {
+    sektion: 'mina-kallor',
+    icon: '🗂️',
+    label: 'Mina källor',
+    desc: 'Välj vilka myndigheter som visas i ditt flöde',
+  },
+  {
+    sektion: 'notifieringar',
+    icon: '🔔',
+    label: 'Notifieringar',
+    desc: 'Få aviseringar via e-post eller SMS',
+  },
+  { sektion: 'konto', icon: '👤', label: 'Konto', desc: 'Hantera dina uppgifter och din data' },
+  {
+    sektion: 'support',
+    icon: '💬',
+    label: 'Support',
+    desc: 'Skicka ärenden och följ deras status',
+  },
 ]
 
 export default function GästProfil() {
   const flaggor = useFlags()
   const { showLoginButton, showRegisterButton } = useSiteSettings()
-  const synligaFeatures = FEATURES.filter(f => isSektionSynlig(f.sektion, flaggor))
+  const synligaFeatures = FEATURES.filter((f) => isSektionSynlig(f.sektion, flaggor))
 
   return (
     <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-10 py-16">
       <div className="w-full max-w-md flex flex-col items-center gap-8">
-
         {/* Avatar */}
         <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-white text-3xl shadow-md">
           👤
@@ -33,7 +47,9 @@ export default function GästProfil() {
         <div className="text-center flex flex-col gap-2">
           <h1 className="text-3xl font-bold text-slate-900">Min profil</h1>
           <p className="text-slate-500 text-sm leading-relaxed">
-            Logga in eller skapa ett konto för att hantera<br />dina inställningar och notifieringar.
+            Logga in eller skapa ett konto för att hantera
+            <br />
+            dina inställningar och notifieringar.
           </p>
         </div>
 
@@ -80,7 +96,6 @@ export default function GästProfil() {
             </div>
           ))}
         </div>
-
       </div>
     </div>
   )

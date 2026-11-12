@@ -56,6 +56,7 @@ export function beraknaRefreshFordrojning(
   if (iat !== null && exp > iat) {
     fordrojning = Math.min(fordrojning, exp - iat - REFRESH_MARGIN_MS)
   }
-  const nyligenErhallen = msSedanSenasteRefresh !== null && msSedanSenasteRefresh < MIN_REFRESH_FORDROJNING_MS
+  const nyligenErhallen =
+    msSedanSenasteRefresh !== null && msSedanSenasteRefresh < MIN_REFRESH_FORDROJNING_MS
   return Math.max(nyligenErhallen ? MIN_REFRESH_FORDROJNING_MS : 0, fordrojning)
 }

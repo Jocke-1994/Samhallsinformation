@@ -17,5 +17,5 @@ export function grupperaKallor(sources: Source[]): Map<string, Source[]> {
 // komplementkällor heter "<ShortName> Efterlysningar"/"<ShortName> Nyheter".
 // Faller tillbaka till första källan om ingen exakt matchning finns.
 export function representant(gruppkallor: Source[]): Source {
-  return gruppkallor.find(k => k.name === k.shortName) ?? gruppkallor[0]
+  return gruppkallor.find((k) => k.name === k.shortName) ?? gruppkallor[0]
 }

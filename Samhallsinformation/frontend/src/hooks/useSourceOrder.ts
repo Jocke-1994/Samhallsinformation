@@ -1,6 +1,11 @@
 import { useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchUserSources, saveUserSources, type SourcePrefUpdate, type UserSourcePref } from '../api/userSources'
+import {
+  fetchUserSources,
+  saveUserSources,
+  type SourcePrefUpdate,
+  type UserSourcePref,
+} from '../api/userSources'
 import { useAuth } from '../context/AuthContext'
 import { useAnvandare } from './useAnvandare'
 import { visaBevakningsToast } from '../components/NewsFeed/bevakningsToastStore'
@@ -15,7 +20,7 @@ export function beraknaOrdningsuppdateringar(
   sourceGroups: Map<string, Source[]>,
   prefs: UserSourcePref[],
 ): SourcePrefUpdate[] {
-  const prefById = new Map(prefs.map(p => [p.sourceId, p]))
+  const prefById = new Map(prefs.map((p) => [p.sourceId, p]))
   const uppdateringar: SourcePrefUpdate[] = []
   let löpnummer = 0
 
@@ -28,8 +33,8 @@ export function beraknaOrdningsuppdateringar(
       // sorteringen sparas, isActive förblir false — en drag-and-drop i
       // sidomenyn ska aldrig räknas som samtycke till notisvolym.
       uppdateringar.push({
-        sourceId:  source.id,
-        isActive:  befintlig?.isActive ?? false,
+        sourceId: source.id,
+        isActive: befintlig?.isActive ?? false,
         sortOrder: nyttSortOrder,
       })
     }
@@ -42,16 +47,24 @@ function tillampaUppdateringar(
   uppdateringar: SourcePrefUpdate[],
   shortNamePerId: Map<number, string>,
 ): UserSourcePref[] {
-  const perId = new Map(prefs.map(p => [p.sourceId, p]))
+  const perId = new Map(prefs.map((p) => [p.sourceId, p]))
   for (const u of uppdateringar) {
     const befintlig = perId.get(u.sourceId)
-    perId.set(u.sourceId, befintlig
-      ? { ...befintlig, sortOrder: u.sortOrder }
-      : { sourceId: u.sourceId, shortName: shortNamePerId.get(u.sourceId) ?? '', isActive: u.isActive, sortOrder: u.sortOrder })
+    perId.set(
+      u.sourceId,
+      befintlig
+        ? { ...befintlig, sortOrder: u.sortOrder }
+        : {
+            sourceId: u.sourceId,
+            shortName: shortNamePerId.get(u.sourceId) ?? '',
+            isActive: u.isActive,
+            sortOrder: u.sortOrder,
+          },
+    )
   }
   // Behåll befintlig radordning; nya rader läggs sist.
-  const resultat = prefs.map(p => perId.get(p.sourceId)!)
-  for (const [id, pref] of perId) if (!prefs.some(p => p.sourceId === id)) resultat.push(pref)
+  const resultat = prefs.map((p) => perId.get(p.sourceId)!)
+  for (const [id, pref] of perId) if (!prefs.some((p) => p.sourceId === id)) resultat.push(pref)
   return resultat
 }
 
@@ -78,33 +91,41 @@ export function useSourceOrder(
   // Delar query-cache med Mina källor (samma nyckel) — ingen extra fetch.
   const { data: prefs = [] } = useQuery({
     queryKey: nyckel,
-    queryFn:  fetchUserSources,
-    enabled:  isLoggedIn,
+    queryFn: fetchUserSources,
+    enabled: isLoggedIn,
   })
 
   const mutation = useMutation({ mutationFn: saveUserSources })
 
   // Sparkön: senaste önskade ordningen som ännu inte skickats, serverns
   // bekräftade läge medan något pågår, och om ett anrop är på väg.
-  const vantandeRef = useRef<{ ordning: string[]; sourceGroups: Map<string, Source[]>; nyckel: readonly unknown[] } | null>(null)
+  const vantandeRef = useRef<{
+    ordning: string[]
+    sourceGroups: Map<string, Source[]>
+    nyckel: readonly unknown[]
+  } | null>(null)
   const bekraftadRef = useRef<UserSourcePref[] | null>(null)
   const skickarRef = useRef(false)
 
   const backendOrder = useMemo(() => {
-    const prefById = new Map(prefs.map(p => [p.sourceId, p]))
+    const prefById = new Map(prefs.map((p) => [p.sourceId, p]))
     const medOrdning: string[] = []
     const utanOrdning: string[] = []
 
     for (const shortName of shortNames) {
       const group = sourceGroups.get(shortName) ?? []
-      const harKäntSortOrder = group.some(s => prefById.has(s.id))
+      const harKäntSortOrder = group.some((s) => prefById.has(s.id))
       if (harKäntSortOrder) medOrdning.push(shortName)
       else utanOrdning.push(shortName)
     }
 
     medOrdning.sort((a, b) => {
-      const minA = Math.min(...(sourceGroups.get(a) ?? []).map(s => prefById.get(s.id)?.sortOrder ?? Infinity))
-      const minB = Math.min(...(sourceGroups.get(b) ?? []).map(s => prefById.get(s.id)?.sortOrder ?? Infinity))
+      const minA = Math.min(
+        ...(sourceGroups.get(a) ?? []).map((s) => prefById.get(s.id)?.sortOrder ?? Infinity),
+      )
+      const minB = Math.min(
+        ...(sourceGroups.get(b) ?? []).map((s) => prefById.get(s.id)?.sortOrder ?? Infinity),
+      )
       return minA - minB
     })
 
@@ -133,7 +154,10 @@ export function useSourceOrder(
           // och täcker det som just misslyckades.
           if (vantandeRef.current) continue
           queryClient.setQueryData(k, bas)
-          visaBevakningsToast({ typ: 'fel', text: visaFel(fel, 'Kunde inte spara källordningen. Försök igen.') })
+          visaBevakningsToast({
+            typ: 'fel',
+            text: visaFel(fel, 'Kunde inte spara källordningen. Försök igen.'),
+          })
           break
         }
       }

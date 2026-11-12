@@ -13,23 +13,42 @@ const flaggor = { uppdateringar_vad_ar_nytt: true }
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }))
 vi.mock('../context/FeatureFlagsContext', () => ({ useFlags: () => flaggor }))
 vi.mock('../api/uppdateringar', async () => {
-  const faktisk = await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
-  return { ...faktisk, fetchVadArNytt: vi.fn(), markeraVadArNyttSett: vi.fn().mockResolvedValue(undefined) }
+  const faktisk =
+    await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
+  return {
+    ...faktisk,
+    fetchVadArNytt: vi.fn(),
+    markeraVadArNyttSett: vi.fn().mockResolvedValue(undefined),
+  }
 })
 
 const api = await import('../api/uppdateringar')
 const { default: VadArNytt } = await import('../components/common/VadArNytt')
 
 const RELEASE = {
-  id: 'r1', titel: 'Logga in och skapa konto', datum: '2026-09-15T00:00:00Z',
-  punkter: [{ id: 'p1', typ: 'ny-funktion' as const, plats: 'Allmänt', text: 'Fortsätt med Google', synlighet: 'alla' as const }],
+  id: 'r1',
+  titel: 'Logga in och skapa konto',
+  datum: '2026-09-15T00:00:00Z',
+  punkter: [
+    {
+      id: 'p1',
+      typ: 'ny-funktion' as const,
+      plats: 'Allmänt',
+      text: 'Fortsätt med Google',
+      synlighet: 'alla' as const,
+    },
+  ],
 }
 
 function rendera(sökväg = '/') {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[sökväg]}><VadArNytt /></MemoryRouter>
+      <MemoryRouter initialEntries={[sökväg]}>
+        <VadArNytt />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
@@ -44,7 +63,9 @@ beforeEach(() => {
 describe('VadArNytt', () => {
   it('visar releasen för en inloggad när flaggan är på', async () => {
     rendera()
-    expect(await screen.findByRole('dialog', { name: 'Logga in och skapa konto' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('dialog', { name: 'Logga in och skapa konto' }),
+    ).toBeInTheDocument()
     expect(screen.getByText('Fortsätt med Google')).toBeInTheDocument()
     expect(screen.getByText('Nytt')).toBeInTheDocument()
   })
@@ -52,7 +73,7 @@ describe('VadArNytt', () => {
   it('hämtar ingenting och visar ingenting när flaggan är av', async () => {
     flaggor.uppdateringar_vad_ar_nytt = false
     rendera()
-    await new Promise(r => setTimeout(r, 20))
+    await new Promise((r) => setTimeout(r, 20))
     expect(api.fetchVadArNytt).not.toHaveBeenCalled()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
@@ -60,7 +81,7 @@ describe('VadArNytt', () => {
   it('hämtar ingenting för utloggade besökare', async () => {
     auth.isLoggedIn = false
     rendera()
-    await new Promise(r => setTimeout(r, 20))
+    await new Promise((r) => setTimeout(r, 20))
     expect(api.fetchVadArNytt).not.toHaveBeenCalled()
   })
 

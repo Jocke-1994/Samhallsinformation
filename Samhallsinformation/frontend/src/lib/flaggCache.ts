@@ -2,7 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 
 // Query-nycklarna för flaggor på ett ställe, så alla mutationsvägar
 // invaliderar exakt samma queries som hooken läser.
-export const FLAGG_QUERY_KEY       = ['feature-flags'] as const
+export const FLAGG_QUERY_KEY = ['feature-flags'] as const
 export const ADMIN_FLAGG_QUERY_KEY = ['admin-feature-flags'] as const
 
 // Efter varje flaggrelaterad mutation: uppdatera både den publika vyn

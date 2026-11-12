@@ -11,7 +11,7 @@ describe('testuppsättning (rök)', () => {
   it('kör en ren funktion (isSektionSynlig)', () => {
     const grupp = FLAG_GRUPPER[0]
     const allaAv = Object.fromEntries(
-      FLAG_GRUPPER.flatMap(g => g.flaggor).map(f => [f.key, false]),
+      FLAG_GRUPPER.flatMap((g) => g.flaggor).map((f) => [f.key, false]),
     ) as FlagState
 
     expect(isSektionSynlig(grupp.key, allaAv)).toBe(false)

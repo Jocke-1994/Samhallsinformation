@@ -9,23 +9,33 @@ import type { AdminUserDto } from '../api/adminUsers'
 // stället för att ett enda fel får hela körningen att se ut som att inget hände.
 
 const DTO = (id: string, name: string, over: Partial<AdminUserDto> = {}): AdminUserDto => ({
-  id, name, email: `${name.toLowerCase()}@example.com`, role: 'Användare', isActive: true,
-  suspendedAt: null, suspendedReason: null, suspensionReminderAt: null, suspensionReminderNote: null,
-  authProvider: 'password', createdAt: '2026-01-01T00:00:00Z', deletedAt: null, deletionScheduledAt: null,
+  id,
+  name,
+  email: `${name.toLowerCase()}@example.com`,
+  role: 'Användare',
+  isActive: true,
+  suspendedAt: null,
+  suspendedReason: null,
+  suspensionReminderAt: null,
+  suspensionReminderNote: null,
+  authProvider: 'password',
+  createdAt: '2026-01-01T00:00:00Z',
+  deletedAt: null,
+  deletionScheduledAt: null,
   ...over,
 })
 
-const ADAM  = DTO('u-adam',  'Adam',  { role: 'Admin' })   // den inloggade adminen
-const EVA   = DTO('u-eva',   'Eva',   { role: 'Admin' })   // ett annat Admin-konto
-const ANNA  = DTO('u-anna',  'Anna')
+const ADAM = DTO('u-adam', 'Adam', { role: 'Admin' }) // den inloggade adminen
+const EVA = DTO('u-eva', 'Eva', { role: 'Admin' }) // ett annat Admin-konto
+const ANNA = DTO('u-anna', 'Anna')
 const BERTIL = DTO('u-bertil', 'Bertil')
 const CECILIA = DTO('u-cecilia', 'Cecilia')
 
 const hämtaAnvändare = vi.fn()
-const sättStatus     = vi.fn()
-const raderaKonto    = vi.fn()
+const sättStatus = vi.fn()
+const raderaKonto = vi.fn()
 
-vi.mock('../api/adminUsers', async importOriginal => {
+vi.mock('../api/adminUsers', async (importOriginal) => {
   const orig = await importOriginal<typeof import('../api/adminUsers')>()
   return {
     ...orig,
@@ -38,10 +48,15 @@ vi.mock('../api/adminUsers', async importOriginal => {
     fetchAdminUserNotificationLog: async () => [],
     fetchAdminUserSettingLog: async () => [],
     fetchAdminUserSources: async () => [],
-    fetchAdminUserPushSettings: async () => ({ pushEnabled: true, pushNyaHandelser: true, pushNyVersion: true, enheter: [] }),
+    fetchAdminUserPushSettings: async () => ({
+      pushEnabled: true,
+      pushNyaHandelser: true,
+      pushNyVersion: true,
+      enheter: [],
+    }),
   }
 })
-vi.mock('../api/support', async importOriginal => {
+vi.mock('../api/support', async (importOriginal) => {
   const orig = await importOriginal<typeof import('../api/support')>()
   return { ...orig, fetchAdminTickets: async () => [] }
 })
@@ -49,7 +64,9 @@ vi.mock('../api/activityLog', () => ({ createActivityLogEntry: vi.fn() }))
 vi.mock('../api/events', () => ({ checkEventLinkStatus: vi.fn() }))
 vi.mock('../api/eventSearch', () => ({ searchEvents: vi.fn() }))
 // Adam är inloggad (versaler i e-posten: jämförelsen ska vara skiftlägesokänslig).
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ aktivVy: 'Admin', email: 'ADAM@example.com' }) }))
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({ aktivVy: 'Admin', email: 'ADAM@example.com' }),
+}))
 
 const { default: Anvandare } = await import('../components/Admin/Anvandare')
 
@@ -62,8 +79,10 @@ function visa() {
   )
 }
 
-const rubrikCheckbox = () => screen.getByRole('checkbox', { name: 'Markera alla' }) as HTMLInputElement
-const radCheckbox = (namn: string) => screen.getByRole('checkbox', { name: `Markera ${namn}` }) as HTMLInputElement
+const rubrikCheckbox = () =>
+  screen.getByRole('checkbox', { name: 'Markera alla' }) as HTMLInputElement
+const radCheckbox = (namn: string) =>
+  screen.getByRole('checkbox', { name: `Markera ${namn}` }) as HTMLInputElement
 const väntaPåLista = () => screen.findByText('Anna')
 // Modalens ruta: rubriken sitter i en header inuti rutan som ligger i den fasta overlayn.
 const modal = (rubrik: string) => screen.getByText(rubrik).closest('.fixed') as HTMLElement
@@ -93,7 +112,7 @@ describe('Markera alla', () => {
     expect(radCheckbox('Bertil').checked).toBe(true)
     expect(radCheckbox('Cecilia').checked).toBe(true)
     expect(radCheckbox('Adam').checked).toBe(false) // egen rad
-    expect(radCheckbox('Eva').checked).toBe(false)  // annat Admin-konto
+    expect(radCheckbox('Eva').checked).toBe(false) // annat Admin-konto
     expect(screen.getByText('3 markerade')).toBeInTheDocument()
   })
 
@@ -233,7 +252,9 @@ describe('Massradering', () => {
 
     öppnaMassModal('Radera')
 
-    expect(screen.getByTestId('radera-namnlista')).toHaveTextContent('Du håller på att radera 3 konton: Anna, Bertil, Cecilia.')
+    expect(screen.getByTestId('radera-namnlista')).toHaveTextContent(
+      'Du håller på att radera 3 konton: Anna, Bertil, Cecilia.',
+    )
     expect(raderaKonto).not.toHaveBeenCalled()
   })
 

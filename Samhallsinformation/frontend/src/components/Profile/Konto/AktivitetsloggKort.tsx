@@ -9,11 +9,23 @@ interface LoggRad {
 }
 
 const LOGG: LoggRad[] = [
-  { id: 1, text: 'Lösenord ändrat',          tid: '2026-03-28 14:32' },
-  { id: 2, text: 'E-postadress uppdaterad',  tid: '2026-03-21 09:14', från: 'joakim@exempel.se', till: 'joakim.rehn@exempel.se' },
-  { id: 3, text: 'Telefonnummer tillagt',    tid: '2026-03-15 18:05', till: '+46 70 123 45 67' },
-  { id: 4, text: 'SPAR-samtycke aktiverat',  tid: '2026-03-10 11:47', från: 'Inaktiverat', till: 'Aktiverat' },
-  { id: 5, text: 'Konto skapat',             tid: '2026-02-01 08:00' },
+  { id: 1, text: 'Lösenord ändrat', tid: '2026-03-28 14:32' },
+  {
+    id: 2,
+    text: 'E-postadress uppdaterad',
+    tid: '2026-03-21 09:14',
+    från: 'joakim@exempel.se',
+    till: 'joakim.rehn@exempel.se',
+  },
+  { id: 3, text: 'Telefonnummer tillagt', tid: '2026-03-15 18:05', till: '+46 70 123 45 67' },
+  {
+    id: 4,
+    text: 'SPAR-samtycke aktiverat',
+    tid: '2026-03-10 11:47',
+    från: 'Inaktiverat',
+    till: 'Aktiverat',
+  },
+  { id: 5, text: 'Konto skapat', tid: '2026-02-01 08:00' },
 ]
 
 export default function AktivitetsloggKort() {
@@ -22,12 +34,12 @@ export default function AktivitetsloggKort() {
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
 
   function handleOpen() {
-    setOpen(prev => !prev)
+    setOpen((prev) => !prev)
     setNytt(false)
   }
 
   function toggle(id: number) {
-    setExpanded(prev => {
+    setExpanded((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
@@ -42,16 +54,26 @@ export default function AktivitetsloggKort() {
         className="w-full px-6 pt-6 pb-5 flex items-center justify-between gap-4 text-left hover:bg-slate-50 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-xl shrink-0">📋</div>
+          <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-xl shrink-0">
+            📋
+          </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-slate-900">Aktivitetslogg</h2>
-              {nytt && <span className="text-xs bg-violet-600 text-white font-semibold px-2 py-0.5 rounded-full">Nytt</span>}
+              {nytt && (
+                <span className="text-xs bg-violet-600 text-white font-semibold px-2 py-0.5 rounded-full">
+                  Nytt
+                </span>
+              )}
             </div>
             <p className="text-sm text-slate-500 mt-0.5">Senaste ändringar på ditt konto</p>
           </div>
         </div>
-        <span className={`text-slate-300 text-sm transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`}>▼</span>
+        <span
+          className={`text-slate-300 text-sm transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`}
+        >
+          ▼
+        </span>
       </button>
 
       {open && (
@@ -74,7 +96,11 @@ export default function AktivitetsloggKort() {
                     </div>
                   </div>
                   {hasDetaljer && (
-                    <span className={`text-slate-300 text-xs transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                    <span
+                      className={`text-slate-300 text-xs transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
+                    >
+                      ▼
+                    </span>
                   )}
                 </button>
 

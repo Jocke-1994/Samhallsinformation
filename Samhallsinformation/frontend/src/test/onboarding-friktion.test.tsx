@@ -19,11 +19,24 @@ vi.mock('../context/AuthContext', () => ({
 vi.mock('../api/sources', () => ({ fetchSources: async () => [] }))
 vi.mock('../api/userSources', () => ({ saveUserSources: vi.fn() }))
 
-const googleMock = vi.hoisted(() => ({ onSuccess: null as null | ((p: { name: string; email: string }, isNewUser: boolean) => void) }))
+const googleMock = vi.hoisted(() => ({
+  onSuccess: null as null | ((p: { name: string; email: string }, isNewUser: boolean) => void),
+}))
 vi.mock('../components/Auth/GoogleSignInButton', () => ({
-  default: ({ onSuccess }: { onSuccess: (p: { name: string; email: string }, isNewUser: boolean) => void }) => {
+  default: ({
+    onSuccess,
+  }: {
+    onSuccess: (p: { name: string; email: string }, isNewUser: boolean) => void
+  }) => {
     googleMock.onSuccess = onSuccess
-    return <button type="button" onClick={() => onSuccess({ name: 'Anna Google', email: 'anna@gmail.com' }, true)}>Fortsätt med Google</button>
+    return (
+      <button
+        type="button"
+        onClick={() => onSuccess({ name: 'Anna Google', email: 'anna@gmail.com' }, true)}
+      >
+        Fortsätt med Google
+      </button>
+    )
   },
 }))
 

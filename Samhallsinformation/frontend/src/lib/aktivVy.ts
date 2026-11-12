@@ -4,9 +4,9 @@ import type { SystemRoll } from '../context/AuthContext'
 // Sidebar och AdminPage visar). Backend avgör alltid själv vad kontot får
 // göra — vyn styr bara vad gränssnittet visar.
 const TILLATNA_VYER: Record<SystemRoll, SystemRoll[]> = {
-  'Admin':     ['Admin', 'Support', 'Användare'],
-  'Support':   ['Support', 'Användare'],
-  'Användare': ['Användare'],
+  Admin: ['Admin', 'Support', 'Användare'],
+  Support: ['Support', 'Användare'],
+  Användare: ['Användare'],
 }
 
 export function arVyTillaten(vy: string | null | undefined, roll: SystemRoll): vy is SystemRoll {

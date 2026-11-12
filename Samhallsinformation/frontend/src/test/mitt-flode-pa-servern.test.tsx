@@ -10,17 +10,33 @@ import type { CanonicalEvent, EventsResponse, Source } from '../types'
 // eller ofullständig lista. Nu ska klienten visa exakt det servern svarar med.
 vi.mock('../api/events')
 vi.mock('../api/savedEvents')
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }) }))
-vi.mock('../context/FeatureFlagsContext', () => ({ useFlags: () => ({ flode_sparat: true, flode_olasta_badge: false }) }))
-vi.mock('react-router', () => ({ useNavigate: () => vi.fn(), useSearchParams: () => [new URLSearchParams()], useLocation: () => ({ key: 'default' }) }))
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }),
+}))
+vi.mock('../context/FeatureFlagsContext', () => ({
+  useFlags: () => ({ flode_sparat: true, flode_olasta_badge: false }),
+}))
+vi.mock('react-router', () => ({
+  useNavigate: () => vi.fn(),
+  useSearchParams: () => [new URLSearchParams()],
+  useLocation: () => ({ key: 'default' }),
+}))
 vi.mock('../components/common/MobilTopBar', () => ({ default: () => null }))
 vi.mock('../components/NewsFeed/NewsItem', () => ({
   default: ({ event }: { event: CanonicalEvent }) => <li data-testid="handelse">{event.title}</li>,
 }))
 
-const sparadeMock = vi.hoisted(() => ({ ids: new Set<string>(), lage: 'klar' as 'klar' | 'laddar' | 'fel' }))
+const sparadeMock = vi.hoisted(() => ({
+  ids: new Set<string>(),
+  lage: 'klar' as 'klar' | 'laddar' | 'fel',
+}))
 vi.mock('../context/SavedEventsContext', () => ({
-  useSavedEvents: () => ({ sparade: sparadeMock.ids, lage: sparadeMock.lage, forsokIgen: vi.fn(), toggleSparad: vi.fn() }),
+  useSavedEvents: () => ({
+    sparade: sparadeMock.ids,
+    lage: sparadeMock.lage,
+    forsokIgen: vi.fn(),
+    toggleSparad: vi.fn(),
+  }),
 }))
 
 import * as eventsApi from '../api/events'
@@ -34,7 +50,17 @@ const api = vi.mocked(eventsApi)
 const sparatApi = vi.mocked(savedApi)
 
 function ev(id: string, sourceId = 1, publishedAt = '2026-09-20T10:00:00Z'): CanonicalEvent {
-  return { id, sourceId, title: `Händelse ${id}`, content: 'x', publishedAt, url: 'https://x.se', geography: null, severity: 'Bra att veta', isNational: false }
+  return {
+    id,
+    sourceId,
+    title: `Händelse ${id}`,
+    content: 'x',
+    publishedAt,
+    url: 'https://x.se',
+    geography: null,
+    severity: 'Bra att veta',
+    isNational: false,
+  }
 }
 
 function sida(events: CanonicalEvent[], page = 1, hasMore = false): EventsResponse {
@@ -47,7 +73,9 @@ const KALLOR: Source[] = [
 ] as unknown as Source[]
 
 function rendera(props: { viewMode?: 'Allt' | 'Mitt' } = {}) {
-  const klient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
+  const klient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+  })
   const ui = render(
     <QueryClientProvider client={klient}>
       <NewsFeed
@@ -62,7 +90,7 @@ function rendera(props: { viewMode?: 'Allt' | 'Mitt' } = {}) {
   return { klient, ...ui }
 }
 
-const titlar = () => screen.queryAllByTestId('handelse').map(e => e.textContent)
+const titlar = () => screen.queryAllByTestId('handelse').map((e) => e.textContent)
 
 beforeEach(() => {
   api.fetchEvents.mockReset().mockResolvedValue({ total: 0, page: 1, pageSize: 50, events: [] })
@@ -118,7 +146,9 @@ describe('Mitt flöde hämtas från servern', () => {
   })
 
   it('"Försök igen" hämtar om och visar listan när servern svarar', async () => {
-    api.fetchMittFlode.mockRejectedValueOnce(new Error('fetchMittFlode: 500')).mockResolvedValue(sida([ev('a')]))
+    api.fetchMittFlode
+      .mockRejectedValueOnce(new Error('fetchMittFlode: 500'))
+      .mockResolvedValue(sida([ev('a')]))
     const user = userEvent.setup()
     rendera()
 
@@ -142,7 +172,9 @@ describe('Mitt flöde hämtas från servern', () => {
 
     rendera()
 
-    expect(await screen.findByText('Inget matchar dina prenumerationer just nu')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Inget matchar dina prenumerationer just nu'),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -203,7 +235,12 @@ describe('Mitt flöde hämtas från servern', () => {
 
 describe('"Alla" är oförändrat', () => {
   it('Alla-läget hämtar fortfarande fönstret via fetchEvents och rör inte Mitt flöde-endpointen', async () => {
-    api.fetchEvents.mockResolvedValue({ total: 2, page: 1, pageSize: 50, events: [ev('x', 5, '2026-09-20T10:00:00Z'), ev('y', 6, '2026-09-21T10:00:00Z')] })
+    api.fetchEvents.mockResolvedValue({
+      total: 2,
+      page: 1,
+      pageSize: 50,
+      events: [ev('x', 5, '2026-09-20T10:00:00Z'), ev('y', 6, '2026-09-21T10:00:00Z')],
+    })
 
     rendera({ viewMode: 'Allt' })
 
@@ -250,7 +287,9 @@ describe('Sparat hämtas från servern', () => {
     rendera()
     await user.click(await screen.findByRole('button', { name: 'Sparat' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Vi kunde inte hämta dina sparade händelser')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Vi kunde inte hämta dina sparade händelser',
+    )
     expect(screen.queryByText('Inget sparat än')).not.toBeInTheDocument()
   })
 
@@ -268,7 +307,10 @@ describe('Sparat hämtas från servern', () => {
 describe('slaIhopSidor', () => {
   it('tom/odefinierad data ger tom lista och dubbletter tas bort i sidordning', () => {
     expect(slaIhopSidor(undefined)).toEqual([])
-    const data = { pages: [sida([ev('a'), ev('b')]), sida([ev('b'), ev('c')], 2)], pageParams: [1, 2] }
-    expect(slaIhopSidor(data).map(e => e.id)).toEqual(['a', 'b', 'c'])
+    const data = {
+      pages: [sida([ev('a'), ev('b')]), sida([ev('b'), ev('c')], 2)],
+      pageParams: [1, 2],
+    }
+    expect(slaIhopSidor(data).map((e) => e.id)).toEqual(['a', 'b', 'c'])
   })
 })

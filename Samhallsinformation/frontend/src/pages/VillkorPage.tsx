@@ -16,8 +16,10 @@ export default function VillkorPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const swipeHandlers = useSwipeable({
-    onSwipedRight: (e) => { if (e.initial[0] < 30) setSidebarOpen(true) },
-    onSwipedLeft:  ()  => setSidebarOpen(false),
+    onSwipedRight: (e) => {
+      if (e.initial[0] < 30) setSidebarOpen(true)
+    },
+    onSwipedLeft: () => setSidebarOpen(false),
     preventScrollOnSwipe: true,
     touchEventOptions: { passive: false },
   })
@@ -35,7 +37,6 @@ export default function VillkorPage() {
       <main {...swipeHandlers} className="flex-1 overflow-y-auto select-none md:select-auto">
         <MobilTopBar onOpenSidebar={() => setSidebarOpen(true)} />
         <div className="max-w-2xl mx-auto px-6 py-12">
-
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-3">
             Användarvillkor och integritetspolicy
           </h1>
@@ -45,27 +46,30 @@ export default function VillkorPage() {
 
           <Section title="Tjänsten">
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              Samhällsinformation samlar och vidareförmedlar offentligt publicerad information
-              från svenska myndigheter. Tjänsten skriver aldrig om, tolkar eller värderar
-              innehållet — varje händelse länkar alltid till sin ursprungliga källa. Att skapa
-              ett konto ger dig möjlighet att välja vilka myndigheter du vill följa och spara
-              dina inställningar mellan besök.
+              Samhällsinformation samlar och vidareförmedlar offentligt publicerad information från
+              svenska myndigheter. Tjänsten skriver aldrig om, tolkar eller värderar innehållet —
+              varje händelse länkar alltid till sin ursprungliga källa. Att skapa ett konto ger dig
+              möjlighet att välja vilka myndigheter du vill följa och spara dina inställningar
+              mellan besök.
             </p>
           </Section>
 
           <Section title="Vilka uppgifter vi samlar in">
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
-              När du skapar ett konto lagrar vi namnet och e-postadressen du anger, samt en
-              säkert hashad version av ditt lösenord (aldrig i klartext). Så länge du använder
-              tjänsten sparar vi också:
+              När du skapar ett konto lagrar vi namnet och e-postadressen du anger, samt en säkert
+              hashad version av ditt lösenord (aldrig i klartext). Så länge du använder tjänsten
+              sparar vi också:
             </p>
             <ul className="space-y-2">
               {[
                 'Vilka källor du valt att följa',
                 'Eventuella filter- och notifieringsinställningar du gör',
                 'Grundläggande kontoaktivitet (t.ex. när inställningar ändras), för att kunna felsöka och stödja dig om något går fel',
-              ].map(item => (
-                <li key={item} className="flex items-start gap-2.5 text-slate-600 dark:text-slate-400">
+              ].map((item) => (
+                <li
+                  key={item}
+                  className="flex items-start gap-2.5 text-slate-600 dark:text-slate-400"
+                >
                   <span className="mt-2 w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
                   <span className="leading-relaxed">{item}</span>
                 </li>
@@ -75,28 +79,28 @@ export default function VillkorPage() {
 
           <Section title="Cookies och analys">
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              Tjänsten använder Google Analytics för att förstå hur sajten används, i aggregerad
-              och anonymiserad form. Analys-cookies aktiveras endast om du godkänner det via
-              cookie-bannern — nödvändiga cookies (t.ex. för att hålla dig inloggad) används
-              alltid, eftersom tjänsten inte fungerar utan dem.
+              Tjänsten använder Google Analytics för att förstå hur sajten används, i aggregerad och
+              anonymiserad form. Analys-cookies aktiveras endast om du godkänner det via
+              cookie-bannern — nödvändiga cookies (t.ex. för att hålla dig inloggad) används alltid,
+              eftersom tjänsten inte fungerar utan dem.
             </p>
           </Section>
 
           <Section title="Hur vi behandlar dina uppgifter">
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              Dina uppgifter delas aldrig med och säljs aldrig till tredje part. De används
-              enbart för att driva tjänsten åt dig. Data lagras hos våra driftleverantörer inom
-              EU. Vi vidtar rimliga tekniska åtgärder för att skydda dina uppgifter, men ingen
-              tjänst kan garantera fullständig säkerhet.
+              Dina uppgifter delas aldrig med och säljs aldrig till tredje part. De används enbart
+              för att driva tjänsten åt dig. Data lagras hos våra driftleverantörer inom EU. Vi
+              vidtar rimliga tekniska åtgärder för att skydda dina uppgifter, men ingen tjänst kan
+              garantera fullständig säkerhet.
             </p>
           </Section>
 
           <Section title="Dina rättigheter">
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              Du har rätt att få veta vilka uppgifter vi har om dig, att rätta felaktiga
-              uppgifter, och att begära att ditt konto och dina uppgifter raderas. Kontakta oss
-              (se nedan) för att utöva någon av dessa rättigheter — vi hanterar förfrågningar
-              manuellt och återkommer så snart vi kan.
+              Du har rätt att få veta vilka uppgifter vi har om dig, att rätta felaktiga uppgifter,
+              och att begära att ditt konto och dina uppgifter raderas. Kontakta oss (se nedan) för
+              att utöva någon av dessa rättigheter — vi hanterar förfrågningar manuellt och
+              återkommer så snart vi kan.
             </p>
           </Section>
 
@@ -112,24 +116,27 @@ export default function VillkorPage() {
                 'Skrapa eller överbelasta tjänstens API automatiserat, utöver normal användning',
                 'Försöka kringgå eller manipulera tjänstens säkerhetsfunktioner',
                 'Använda tjänsten på ett sätt som bryter mot svensk lag',
-              ].map(item => (
-                <li key={item} className="flex items-start gap-2.5 text-slate-600 dark:text-slate-400">
+              ].map((item) => (
+                <li
+                  key={item}
+                  className="flex items-start gap-2.5 text-slate-600 dark:text-slate-400"
+                >
                   <span className="mt-2 w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
                   <span className="leading-relaxed">{item}</span>
                 </li>
               ))}
             </ul>
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              Ditt konto raderas inte automatiskt vid en avstängning — kontakta oss om du tror
-              att det skett av misstag.
+              Ditt konto raderas inte automatiskt vid en avstängning — kontakta oss om du tror att
+              det skett av misstag.
             </p>
           </Section>
 
           <Section title="Ändringar">
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              Vi kan uppdatera de här villkoren över tid. Väsentliga ändringar meddelas i
-              tjänsten. Genom att fortsätta använda tjänsten efter en uppdatering godkänner du
-              de nya villkoren.
+              Vi kan uppdatera de här villkoren över tid. Väsentliga ändringar meddelas i tjänsten.
+              Genom att fortsätta använda tjänsten efter en uppdatering godkänner du de nya
+              villkoren.
             </p>
           </Section>
 
@@ -139,7 +146,6 @@ export default function VillkorPage() {
               feedback-knappen i appen.
             </p>
           </Section>
-
         </div>
       </main>
     </div>

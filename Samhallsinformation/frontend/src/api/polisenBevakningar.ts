@@ -2,14 +2,14 @@ import { adminFetch } from './adminFetch'
 import { felFranSvar } from './hamta'
 
 export interface BevakningDto {
-  id:         string
+  id: string
   kategorier: string[] | null
-  omraden:    string[] | null
+  omraden: string[] | null
 }
 
 export interface BevakningRequest {
   kategorier: string[] | null
-  omraden:    string[] | null
+  omraden: string[] | null
 }
 
 // Backend avvisar ogiltiga bevakningar med 400 och en tydlig svensk text

@@ -1,11 +1,25 @@
 import { useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { type FlagKey, type FlagState, FLAG_DEFINITIONER, effektivaFlaggor } from '../lib/featureFlags'
-import { fetchFeatureFlagOverrides, setFeatureFlagOverride, resetFeatureFlagOverrides } from '../api/featureFlags'
-import { FLAGG_QUERY_KEY, invalideraFlaggor, läsKändaOverrides, sparaKändaOverrides } from '../lib/flaggCache'
+import {
+  type FlagKey,
+  type FlagState,
+  FLAG_DEFINITIONER,
+  effektivaFlaggor,
+} from '../lib/featureFlags'
+import {
+  fetchFeatureFlagOverrides,
+  setFeatureFlagOverride,
+  resetFeatureFlagOverrides,
+} from '../api/featureFlags'
+import {
+  FLAGG_QUERY_KEY,
+  invalideraFlaggor,
+  läsKändaOverrides,
+  sparaKändaOverrides,
+} from '../lib/flaggCache'
 
 function standardvärden(): FlagState {
-  return Object.fromEntries(FLAG_DEFINITIONER.map(f => [f.key, f.defaultAktiv])) as FlagState
+  return Object.fromEntries(FLAG_DEFINITIONER.map((f) => [f.key, f.defaultAktiv])) as FlagState
 }
 
 export type FlaggLäge = 'laddar' | 'klar' | 'fel'
@@ -25,15 +39,18 @@ export function useFeatureFlags() {
   // ett tyst byte som slår på något en admin har stängt av.
   const { data, isPending, isError } = useQuery({
     queryKey: FLAGG_QUERY_KEY,
-    queryFn:  async () => {
+    queryFn: async () => {
       try {
         return await fetchFeatureFlagOverrides()
       } catch (err) {
-        console.warn('Feature flags kunde inte hämtas — behåller senast kända värden och försöker igen.', err)
+        console.warn(
+          'Feature flags kunde inte hämtas — behåller senast kända värden och försöker igen.',
+          err,
+        )
         throw err
       }
     },
-    retry:      FLAGG_OMFORSOK,
+    retry: FLAGG_OMFORSOK,
     retryDelay: flaggRetryDelay,
   })
 
@@ -51,19 +68,23 @@ export function useFeatureFlags() {
   const flaggor: FlagState = effektivaFlaggor(inställda)
 
   const toggleMutation = useMutation({
-    mutationFn: (vars: { key: FlagKey; value: boolean }) => setFeatureFlagOverride(vars.key, vars.value),
-    onSuccess:  () => invalideraFlaggor(queryClient),
+    mutationFn: (vars: { key: FlagKey; value: boolean }) =>
+      setFeatureFlagOverride(vars.key, vars.value),
+    onSuccess: () => invalideraFlaggor(queryClient),
   })
 
   const resetMutation = useMutation({
     mutationFn: resetFeatureFlagOverrides,
-    onSuccess:  () => invalideraFlaggor(queryClient),
+    onSuccess: () => invalideraFlaggor(queryClient),
   })
 
-  const växlaFlagg = useCallback((key: FlagKey) => {
-    toggleMutation.mutate({ key, value: !inställda[key] })
+  const växlaFlagg = useCallback(
+    (key: FlagKey) => {
+      toggleMutation.mutate({ key, value: !inställda[key] })
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inställda])
+    [inställda],
+  )
 
   const återställ = useCallback(() => {
     resetMutation.mutate()
@@ -75,5 +96,14 @@ export function useFeatureFlags() {
   const ändringsFel: unknown = toggleMutation.error ?? resetMutation.error
   const ändringPågår = toggleMutation.isPending || resetMutation.isPending
 
-  return { flaggor, inställda, läge, laddat: läge !== 'laddar', växlaFlagg, återställ, ändringsFel, ändringPågår }
+  return {
+    flaggor,
+    inställda,
+    läge,
+    laddat: läge !== 'laddar',
+    växlaFlagg,
+    återställ,
+    ändringsFel,
+    ändringPågår,
+  }
 }

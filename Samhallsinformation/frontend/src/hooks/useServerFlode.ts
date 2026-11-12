@@ -63,9 +63,13 @@ function useServerFlode(
   return {
     events,
     lage,
-    forsokIgen: () => { void query.refetch() },
+    forsokIgen: () => {
+      void query.refetch()
+    },
     harFler: query.hasNextPage,
-    hamtaFler: () => { void query.fetchNextPage() },
+    hamtaFler: () => {
+      void query.fetchNextPage()
+    },
     hamtarFler: query.isFetchingNextPage,
     merFel: query.isFetchNextPageError,
   }
@@ -80,5 +84,7 @@ export function useMittFlode(aktiv: boolean): ServerFlode {
 // håll (Alla/Mitt flöde) ska finnas med utan att man laddar om sidan.
 export function useSparatFlode(aktiv: boolean): ServerFlode {
   const anvandare = useAnvandare()
-  return useServerFlode(sparatFlodeNyckel(anvandare), fetchSparadeHandelser, aktiv, { staleTime: 0 })
+  return useServerFlode(sparatFlodeNyckel(anvandare), fetchSparadeHandelser, aktiv, {
+    staleTime: 0,
+  })
 }

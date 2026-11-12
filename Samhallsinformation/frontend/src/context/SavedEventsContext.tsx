@@ -21,8 +21,12 @@ interface SavedEventsContextValue {
 const SavedEventsContext = createContext<SavedEventsContextValue | null>(null)
 
 export function SavedEventsProvider({ children }: { children: ReactNode }) {
-  const { data: ids, lage, forsokIgen, uppdatera } =
-    useInloggadHamtning<string[]>('saved-events', fetchSavedEventIds)
+  const {
+    data: ids,
+    lage,
+    forsokIgen,
+    uppdatera,
+  } = useInloggadHamtning<string[]>('saved-events', fetchSavedEventIds)
   const sparade = useMemo(() => new Set(ids ?? []), [ids])
   const pagaende = useRef(new Set<string>())
 
@@ -37,7 +41,7 @@ export function SavedEventsProvider({ children }: { children: ReactNode }) {
     const tarBort = sparade.has(eventId)
 
     const laggTill = (l: string[]) => (l.includes(eventId) ? l : [...l, eventId])
-    const taBortUr = (l: string[]) => l.filter(id => id !== eventId)
+    const taBortUr = (l: string[]) => l.filter((id) => id !== eventId)
     uppdatera(tarBort ? taBortUr : laggTill)
 
     pagaende.current.add(eventId)
@@ -55,7 +59,9 @@ export function SavedEventsProvider({ children }: { children: ReactNode }) {
             : 'Kunde inte spara händelsen. Försök igen.',
         })
       })
-      .finally(() => { pagaende.current.delete(eventId) })
+      .finally(() => {
+        pagaende.current.delete(eventId)
+      })
   }
 
   return (

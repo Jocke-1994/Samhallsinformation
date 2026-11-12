@@ -1,9 +1,18 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { FLAG_GRUPPER, FLAG_DEFINITIONER, type FlagKey, type FlagState } from '../../lib/featureFlags'
+import {
+  FLAG_GRUPPER,
+  FLAG_DEFINITIONER,
+  type FlagKey,
+  type FlagState,
+} from '../../lib/featureFlags'
 import ConfirmDialog from '../common/ConfirmDialog'
 import { MockBadge } from '../common/MockBadge'
-import { fetchAdminFeatureFlags, setFeatureFlagRedo, setFeatureFlagEndastAdmin } from '../../api/featureFlags'
+import {
+  fetchAdminFeatureFlags,
+  setFeatureFlagRedo,
+  setFeatureFlagEndastAdmin,
+} from '../../api/featureFlags'
 import { ADMIN_FLAGG_QUERY_KEY, invalideraFlaggor } from '../../lib/flaggCache'
 import type { FlaggLäge } from '../../hooks/useFeatureFlags'
 import { HamtningsFel, MutationFel } from '../common/HamtningsStatus'
@@ -19,7 +28,14 @@ interface Props {
   ändringPågår?: boolean
 }
 
-export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, läge, ändringsFel, ändringPågår }: Props) {
+export default function FeatureFlagsAdmin({
+  flaggor,
+  onVäxla,
+  onÅterställ,
+  läge,
+  ändringsFel,
+  ändringPågår,
+}: Props) {
   const [öppna, setÖppna] = useState<Set<string>>(new Set())
   const [bekräftaÅterställ, setBekräftaÅterställ] = useState(false)
   const queryClient = useQueryClient()
@@ -28,16 +44,16 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
   // publika flagg-kontexten — hämtas separat bara för den här panelen.
   const adminFråga = useQuery({
     queryKey: ADMIN_FLAGG_QUERY_KEY,
-    queryFn:  fetchAdminFeatureFlags,
+    queryFn: fetchAdminFeatureFlags,
   })
   const adminFlaggor = adminFråga.data ?? []
   // Utan hämtad lista är "redo"-markeringarna okända — inte "ingen är markerad".
   const redoOkänt = adminFråga.data === undefined
   const redoMap: Record<string, boolean> = Object.fromEntries(
-    adminFlaggor.map(f => [f.key, f.redoAttLanseras])
+    adminFlaggor.map((f) => [f.key, f.redoAttLanseras]),
   )
   const endastAdminMap: Record<string, boolean> = Object.fromEntries(
-    adminFlaggor.map(f => [f.key, f.endastAdmin])
+    adminFlaggor.map((f) => [f.key, f.endastAdmin]),
   )
 
   const redoMutation = useMutation({
@@ -49,13 +65,14 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
   // Testmiljö-läget (Beslut 2026-10-19) — begränsar en redan aktiv flagga
   // till bara inloggade Admin, utan att röra på/av-läget (onVäxla).
   const synlighetMutation = useMutation({
-    mutationFn: ({ key, endastAdmin }: { key: string; endastAdmin: boolean }) => setFeatureFlagEndastAdmin(key, endastAdmin),
+    mutationFn: ({ key, endastAdmin }: { key: string; endastAdmin: boolean }) =>
+      setFeatureFlagEndastAdmin(key, endastAdmin),
     onSuccess: () => invalideraFlaggor(queryClient),
   })
   const växlaSynlighet = synlighetMutation.mutate
 
   function växlaGrupp(key: string) {
-    setÖppna(prev => {
+    setÖppna((prev) => {
       const ny = new Set(prev)
       if (ny.has(key)) ny.delete(key)
       else ny.add(key)
@@ -68,14 +85,15 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
 
   // Flaggor vars nuvarande värde avviker från kodens standard — det är dessa
   // som faktiskt ändras för alla besökare när overrides tas bort.
-  const ändras = FLAG_DEFINITIONER.filter(f => flaggor[f.key] !== f.defaultAktiv)
+  const ändras = FLAG_DEFINITIONER.filter((f) => flaggor[f.key] !== f.defaultAktiv)
 
   return (
     <div className="flex flex-col gap-6">
-
       {/* Header */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">{totalAktiva} av {total} funktioner aktiverade</p>
+        <p className="text-sm text-slate-500">
+          {totalAktiva} av {total} funktioner aktiverade
+        </p>
         <button
           onClick={() => setBekräftaÅterställ(true)}
           className="text-sm text-slate-500 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg transition-colors"
@@ -95,21 +113,40 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
       {adminFråga.isError && redoOkänt && läge !== 'fel' && (
         <HamtningsFel
           fel={adminFråga.error}
-          reserv={'Kunde inte hämta "Redo att lanseras"-markeringarna. De visas som omarkerade men är okända.'}
-          onForsokIgen={() => { void adminFråga.refetch() }}
+          reserv={
+            'Kunde inte hämta "Redo att lanseras"-markeringarna. De visas som omarkerade men är okända.'
+          }
+          onForsokIgen={() => {
+            void adminFråga.refetch()
+          }}
           arIgang={adminFråga.isFetching}
           className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4"
         />
       )}
-      <MutationFel fel={ändringsFel} reserv="Ändringen kunde inte sparas. Flaggan är oförändrad — försök igen." className="bg-red-50 border border-red-200 rounded-xl px-5 py-3" />
-      <MutationFel fel={redoMutation.error} reserv={'"Redo att lanseras"-markeringen kunde inte sparas. Försök igen.'} className="bg-red-50 border border-red-200 rounded-xl px-5 py-3" />
-      <MutationFel fel={synlighetMutation.error} reserv="Synligheten kunde inte sparas. Flaggan är oförändrad — försök igen." className="bg-red-50 border border-red-200 rounded-xl px-5 py-3" />
+      <MutationFel
+        fel={ändringsFel}
+        reserv="Ändringen kunde inte sparas. Flaggan är oförändrad — försök igen."
+        className="bg-red-50 border border-red-200 rounded-xl px-5 py-3"
+      />
+      <MutationFel
+        fel={redoMutation.error}
+        reserv={'"Redo att lanseras"-markeringen kunde inte sparas. Försök igen.'}
+        className="bg-red-50 border border-red-200 rounded-xl px-5 py-3"
+      />
+      <MutationFel
+        fel={synlighetMutation.error}
+        reserv="Synligheten kunde inte sparas. Flaggan är oförändrad — försök igen."
+        className="bg-red-50 border border-red-200 rounded-xl px-5 py-3"
+      />
 
       {bekräftaÅterställ && (
         <ConfirmDialog
           rubrik="Återställa standardvärden för alla besökare?"
           bekräftaText="Återställ för alla"
-          onBekräfta={() => { setBekräftaÅterställ(false); onÅterställ() }}
+          onBekräfta={() => {
+            setBekräftaÅterställ(false)
+            onÅterställ()
+          }}
           onAvbryt={() => setBekräftaÅterställ(false)}
         >
           <p>
@@ -120,10 +157,15 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
             <p>Just nu avviker ingen flagga från standardvärdet.</p>
           ) : (
             <>
-              <p><strong>{ändras.length}</strong> {ändras.length === 1 ? 'flagga ändras' : 'flaggor ändras'}:</p>
+              <p>
+                <strong>{ändras.length}</strong>{' '}
+                {ändras.length === 1 ? 'flagga ändras' : 'flaggor ändras'}:
+              </p>
               <ul className="list-disc pl-5 max-h-40 overflow-y-auto">
-                {ändras.map(f => (
-                  <li key={f.key}>{f.label}: {flaggor[f.key] ? 'på' : 'av'} → {f.defaultAktiv ? 'på' : 'av'}</li>
+                {ändras.map((f) => (
+                  <li key={f.key}>
+                    {f.label}: {flaggor[f.key] ? 'på' : 'av'} → {f.defaultAktiv ? 'på' : 'av'}
+                  </li>
                 ))}
               </ul>
             </>
@@ -133,15 +175,17 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
 
       {/* Accordion-kort */}
       <div className="flex flex-col gap-3">
-        {FLAG_GRUPPER.map(grupp => {
+        {FLAG_GRUPPER.map((grupp) => {
           const öppen = öppna.has(grupp.key)
-          const aktivaIGrupp = grupp.flaggor.filter(f => flaggor[f.key]).length
+          const aktivaIGrupp = grupp.flaggor.filter((f) => flaggor[f.key]).length
           const totalIGrupp = grupp.flaggor.length
           const allaAktiva = aktivaIGrupp === totalIGrupp
 
           return (
-            <div key={grupp.key} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-
+            <div
+              key={grupp.key}
+              className="bg-white rounded-xl border border-slate-200 overflow-hidden"
+            >
               {/* Kort-header */}
               <button
                 onClick={() => växlaGrupp(grupp.key)}
@@ -150,13 +194,17 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
                 <div className="flex items-center gap-3">
                   <span className="text-base">{grupp.ikon}</span>
                   <span className="text-sm font-semibold text-slate-800">{grupp.label}</span>
-                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                    allaAktiva ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
+                  <span
+                    className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                      allaAktiva ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
                     {aktivaIGrupp}/{totalIGrupp} aktiva
                   </span>
                 </div>
-                <span className={`text-slate-400 text-xs transition-transform duration-200 ${öppen ? 'rotate-180' : ''}`}>
+                <span
+                  className={`text-slate-400 text-xs transition-transform duration-200 ${öppen ? 'rotate-180' : ''}`}
+                >
                   ▾
                 </span>
               </button>
@@ -164,7 +212,7 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
               {/* Under-flaggor */}
               {öppen && (
                 <div className="border-t border-slate-100 divide-y divide-slate-50">
-                  {grupp.flaggor.map(flagga => {
+                  {grupp.flaggor.map((flagga) => {
                     const aktiv = flaggor[flagga.key]
                     return (
                       <div
@@ -186,7 +234,8 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
                           <span className="text-xs text-slate-400">{flagga.beskrivning}</span>
                           {flagga.mock && (
                             <span className="text-xs text-amber-700">
-                              Mock-UI utan backend — visas aldrig för användare i produktion, inte ens när flaggan är på.
+                              Mock-UI utan backend — visas aldrig för användare i produktion, inte
+                              ens när flaggan är på.
                             </span>
                           )}
                         </div>
@@ -194,7 +243,9 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
                           {/* Också när flaggan bara är på för Admin — den är inte lanserad än */}
                           {(!aktiv || endastAdminMap[flagga.key]) && !flagga.mock && (
                             <button
-                              onClick={() => växlaRedo({ key: flagga.key, redo: !redoMap[flagga.key] })}
+                              onClick={() =>
+                                växlaRedo({ key: flagga.key, redo: !redoMap[flagga.key] })
+                              }
                               disabled={redoOkänt || redoMutation.isPending}
                               className={`text-[11px] font-medium px-2 py-1 rounded-full border transition-colors ${
                                 redoMap[flagga.key]
@@ -208,7 +259,12 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
                           )}
                           {aktiv && !flagga.mock && (
                             <button
-                              onClick={() => växlaSynlighet({ key: flagga.key, endastAdmin: !endastAdminMap[flagga.key] })}
+                              onClick={() =>
+                                växlaSynlighet({
+                                  key: flagga.key,
+                                  endastAdmin: !endastAdminMap[flagga.key],
+                                })
+                              }
                               disabled={redoOkänt || synlighetMutation.isPending}
                               className={`text-[11px] font-medium px-2 py-1 rounded-full border transition-colors ${
                                 endastAdminMap[flagga.key]
@@ -217,7 +273,9 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
                               }`}
                               title="Testa skarpt mot produktionsdata utan att visa funktionen för besökare (Testmiljö-läge)"
                             >
-                              {endastAdminMap[flagga.key] ? '🔒 Endast Admin' : 'Begränsa till Admin?'}
+                              {endastAdminMap[flagga.key]
+                                ? '🔒 Endast Admin'
+                                : 'Begränsa till Admin?'}
                             </button>
                           )}
                           <button
@@ -228,9 +286,11 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
                             }`}
                             aria-label={`${aktiv ? 'Inaktivera' : 'Aktivera'} ${flagga.label}`}
                           >
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
-                              aktiv ? 'translate-x-5' : 'translate-x-0'
-                            }`} />
+                            <span
+                              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                                aktiv ? 'translate-x-5' : 'translate-x-0'
+                              }`}
+                            />
                           </button>
                         </div>
                       </div>
@@ -238,12 +298,10 @@ export default function FeatureFlagsAdmin({ flaggor, onVäxla, onÅterställ, l�
                   })}
                 </div>
               )}
-
             </div>
           )
         })}
       </div>
-
     </div>
   )
 }

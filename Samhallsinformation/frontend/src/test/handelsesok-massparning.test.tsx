@@ -23,22 +23,45 @@ vi.mock('../api/activityLog', () => ({ createActivityLogEntry: vi.fn() }))
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ roll: 'Admin', aktivVy: 'Admin' }) }))
 // NewsItem drar in flera kontexter som inte är relevanta här — en enkel stand-in räcker.
 vi.mock('../components/NewsFeed/NewsItem', () => ({
-  default: ({ event, checkbox }: { event: AdminSearchEvent; checkbox?: { checked: boolean; onChange: () => void } }) => (
+  default: ({
+    event,
+    checkbox,
+  }: {
+    event: AdminSearchEvent
+    checkbox?: { checked: boolean; onChange: () => void }
+  }) => (
     <div>
-      {checkbox && <input type="checkbox" aria-label={`Markera ${event.title}`} checked={checkbox.checked} onChange={checkbox.onChange} />}
+      {checkbox && (
+        <input
+          type="checkbox"
+          aria-label={`Markera ${event.title}`}
+          checked={checkbox.checked}
+          onChange={checkbox.onChange}
+        />
+      )}
       <span>{event.title}</span>
     </div>
   ),
 }))
 
 const { fetchSearchableSources, fetchEventTypes, searchEvents } = await import('../api/eventSearch')
-const { fetchAdminUsers, saveAdminUserEvent, fetchSavedEventsByEvent } = await import('../api/adminUsers')
+const { fetchAdminUsers, saveAdminUserEvent, fetchSavedEventsByEvent } =
+  await import('../api/adminUsers')
 const { createActivityLogEntry } = await import('../api/activityLog')
 const { default: Handelsesok } = await import('../components/Admin/Handelsesok')
 
 const händelse = (id: string, title: string): AdminSearchEvent => ({
-  id, title, content: '', url: 'https://x.se', geography: null, severity: 'Bra att veta',
-  eventType: null, isNational: true, publishedAt: '2026-09-01T10:00:00Z', sourceId: 1, sourceName: 'Polisen',
+  id,
+  title,
+  content: '',
+  url: 'https://x.se',
+  geography: null,
+  severity: 'Bra att veta',
+  eventType: null,
+  isNational: true,
+  publishedAt: '2026-09-01T10:00:00Z',
+  sourceId: 1,
+  sourceName: 'Polisen',
 })
 const ANNA = { id: 'u-anna', name: 'Anna', email: 'anna@example.se' } as AdminUserDto
 
@@ -47,19 +70,28 @@ const B = händelse('e2', 'Inbrott i Malmö')
 const C = händelse('e3', 'Trafikolycka E4')
 
 function rendera() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}><Handelsesok /></QueryClientProvider>)
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <Handelsesok />
+    </QueryClientProvider>,
+  )
 }
 
 async function markeraOchÖppnaVäljaren(titlar: string[]) {
-  for (const t of titlar) await userEvent.click(await screen.findByRole('checkbox', { name: `Markera ${t}` }))
+  for (const t of titlar)
+    await userEvent.click(await screen.findByRole('checkbox', { name: `Markera ${t}` }))
   await userEvent.click(screen.getByRole('button', { name: /Spara till användare/ }))
 }
 
 beforeEach(() => {
   vi.mocked(fetchSearchableSources).mockReset().mockResolvedValue([])
   vi.mocked(fetchEventTypes).mockReset().mockResolvedValue([])
-  vi.mocked(searchEvents).mockReset().mockResolvedValue({ total: 3, page: 1, pageSize: 20, events: [A, B, C] })
+  vi.mocked(searchEvents)
+    .mockReset()
+    .mockResolvedValue({ total: 3, page: 1, pageSize: 20, events: [A, B, C] })
   vi.mocked(fetchAdminUsers).mockReset().mockResolvedValue([ANNA])
   vi.mocked(saveAdminUserEvent).mockReset().mockResolvedValue()
   vi.mocked(fetchSavedEventsByEvent).mockReset().mockResolvedValue({})
@@ -79,7 +111,9 @@ describe('Händelsesök — Spara till användare (mass)', () => {
 
     const sammanfattning = await screen.findByRole('alert')
     expect(sammanfattning).toHaveTextContent('2 av 3 händelser sparades till Anna.')
-    expect(sammanfattning).toHaveTextContent('Misslyckades: "Inbrott i Malmö" (Händelsen finns redan sparad hos användaren.)')
+    expect(sammanfattning).toHaveTextContent(
+      'Misslyckades: "Inbrott i Malmö" (Händelsen finns redan sparad hos användaren.)',
+    )
     // Bara den misslyckade förblir markerad — så att den går att försöka igen.
     expect(screen.getByRole('checkbox', { name: 'Markera Brand i Uppsala' })).not.toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'Markera Inbrott i Malmö' })).toBeChecked()
@@ -87,7 +121,9 @@ describe('Händelsesök — Spara till användare (mass)', () => {
     expect(screen.getByText('1 markerade')).toBeInTheDocument()
     // Bara de två lyckade loggades, och "sparade till"-uppslaget hämtades om.
     expect(createActivityLogEntry).toHaveBeenCalledTimes(2)
-    await waitFor(() => expect(vi.mocked(fetchSavedEventsByEvent).mock.calls.length).toBeGreaterThan(anropFöre))
+    await waitFor(() =>
+      expect(vi.mocked(fetchSavedEventsByEvent).mock.calls.length).toBeGreaterThan(anropFöre),
+    )
   })
 
   it('alla misslyckas: ingen händelse avmarkeras, ingen loggning, tydligt fel (tidigare: obehandlat avslag)', async () => {
@@ -112,7 +148,9 @@ describe('Händelsesök — Spara till användare (mass)', () => {
     await markeraOchÖppnaVäljaren(['Brand i Uppsala', 'Inbrott i Malmö'])
     await userEvent.click(screen.getByRole('button', { name: /Anna/ }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent('2 av 2 händelser sparades till Anna.')
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      '2 av 2 händelser sparades till Anna.',
+    )
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: 'Markera Brand i Uppsala' })).not.toBeChecked()
     expect(screen.getByText('3 träffar')).toBeInTheDocument()
@@ -132,7 +170,9 @@ describe('Händelsesök — Spara till användare (mass)', () => {
   })
 
   it('användarlistan går inte att hämta: fel + Försök igen i väljaren, inte "Inga användare hittades"', async () => {
-    vi.mocked(fetchAdminUsers).mockRejectedValueOnce(new Error('fetchAdminUsers: 500')).mockResolvedValue([ANNA])
+    vi.mocked(fetchAdminUsers)
+      .mockRejectedValueOnce(new Error('fetchAdminUsers: 500'))
+      .mockResolvedValue([ANNA])
     rendera()
 
     await markeraOchÖppnaVäljaren(['Brand i Uppsala'])
@@ -156,7 +196,9 @@ describe('Händelsesök — Spara till användare (mass)', () => {
 
 describe('Händelsesök — sökresultat', () => {
   it('sökfel: felmeddelande + Försök igen (inte "Inga händelser matchade")', async () => {
-    vi.mocked(searchEvents).mockRejectedValueOnce(new Error('searchEvents: 500')).mockResolvedValue({ total: 1, page: 1, pageSize: 20, events: [A] })
+    vi.mocked(searchEvents)
+      .mockRejectedValueOnce(new Error('searchEvents: 500'))
+      .mockResolvedValue({ total: 1, page: 1, pageSize: 20, events: [A] })
     rendera()
 
     const fel = await screen.findByRole('alert')

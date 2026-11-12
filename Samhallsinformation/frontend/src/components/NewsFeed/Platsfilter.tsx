@@ -13,7 +13,7 @@ function läsSparatVal(): string[] {
   try {
     const rå = localStorage.getItem(VALDA_PLATSER_NYCKEL)
     const parsed = rå ? JSON.parse(rå) : []
-    return Array.isArray(parsed) ? parsed.filter(p => typeof p === 'string') : []
+    return Array.isArray(parsed) ? parsed.filter((p) => typeof p === 'string') : []
   } catch {
     return []
   }
@@ -46,10 +46,19 @@ export default function Platsfilter({ sources }: Props) {
   }, [])
 
   useEffect(() => {
-    try { localStorage.setItem(VALDA_PLATSER_NYCKEL, JSON.stringify(valda)) } catch { /* okej att inte spara */ }
+    try {
+      localStorage.setItem(VALDA_PLATSER_NYCKEL, JSON.stringify(valda))
+    } catch {
+      /* okej att inte spara */
+    }
   }, [valda])
 
-  const { data: katalog, isLoading, isError, refetch } = useQuery({
+  const {
+    data: katalog,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['platser-katalog'],
     queryFn: fetchPlatskatalog,
   })
@@ -62,53 +71,56 @@ export default function Platsfilter({ sources }: Props) {
   })
 
   const sourceMap = useMemo(
-    () => Object.fromEntries(sources.map(s => [s.id, s.shortName])),
-    [sources]
+    () => Object.fromEntries(sources.map((s) => [s.id, s.shortName])),
+    [sources],
   )
 
   function togglaPlats(plats: PlatsKatalogPost) {
     if (!plats.aktiv) return
-    setValda(prev => prev.includes(plats.namn) ? prev.filter(p => p !== plats.namn) : [...prev, plats.namn])
+    setValda((prev) =>
+      prev.includes(plats.namn) ? prev.filter((p) => p !== plats.namn) : [...prev, plats.namn],
+    )
   }
 
   const CAP = ärDesktop ? 8 : 6
   const sökTrimmad = sök.trim()
 
-  const aktivaPlatser = useMemo(() => (katalog ?? []).filter(p => p.aktiv), [katalog])
+  const aktivaPlatser = useMemo(() => (katalog ?? []).filter((p) => p.aktiv), [katalog])
   const matchande = sökTrimmad
-    ? (katalog ?? []).filter(p => p.namn.toLowerCase().includes(sökTrimmad.toLowerCase()))
+    ? (katalog ?? []).filter((p) => p.namn.toLowerCase().includes(sökTrimmad.toLowerCase()))
     : aktivaPlatser
-  const synliga = sökTrimmad ? matchande : (expanderad ? matchande : matchande.slice(0, CAP))
+  const synliga = sökTrimmad ? matchande : expanderad ? matchande : matchande.slice(0, CAP)
   const doldaAntal = sökTrimmad ? 0 : matchande.length - synliga.length
-  const visarInaktiva = synliga.some(p => !p.aktiv)
+  const visarInaktiva = synliga.some((p) => !p.aktiv)
 
-  if (isLoading) return (
-    <p className="text-slate-400 text-sm py-6 text-center">Hämtar platser...</p>
-  )
-  if (isError) return (
-    <div role="alert" className="flex flex-col items-center gap-3 py-6 text-center">
-      <p className="text-slate-600 dark:text-slate-300 text-sm">Vi kunde inte hämta platslistan just nu.</p>
-      <button
-        onClick={() => refetch()}
-        className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-colors"
-      >
-        Försök igen
-      </button>
-    </div>
-  )
+  if (isLoading) return <p className="text-slate-400 text-sm py-6 text-center">Hämtar platser...</p>
+  if (isError)
+    return (
+      <div role="alert" className="flex flex-col items-center gap-3 py-6 text-center">
+        <p className="text-slate-600 dark:text-slate-300 text-sm">
+          Vi kunde inte hämta platslistan just nu.
+        </p>
+        <button
+          onClick={() => refetch()}
+          className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-colors"
+        >
+          Försök igen
+        </button>
+      </div>
+    )
 
   return (
     <div className="max-w-3xl mx-auto">
       <input
         type="text"
         value={sök}
-        onChange={e => setSök(e.target.value)}
+        onChange={(e) => setSök(e.target.value)}
         placeholder="Sök plats, t.ex. Kungälv"
         className="w-full max-w-sm px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-300 mb-3"
       />
 
       <div className="flex gap-2 flex-wrap mb-2">
-        {synliga.map(p => (
+        {synliga.map((p) => (
           <button
             key={p.namn}
             disabled={!p.aktiv}
@@ -135,27 +147,34 @@ export default function Platsfilter({ sources }: Props) {
       </div>
 
       {sökTrimmad && matchande.length === 0 && (
-        <p className="text-sm text-slate-400 mb-2">Hittade ingen plats som matchar "{sökTrimmad}".</p>
+        <p className="text-sm text-slate-400 mb-2">
+          Hittade ingen plats som matchar "{sökTrimmad}".
+        </p>
       )}
       {visarInaktiva && (
         <p className="text-sm text-slate-400 mb-4 leading-relaxed">
-          Gråmarkerade orter har inga aktuella händelser just nu — gå tillbaka hit senare om det händer något.
+          Gråmarkerade orter har inga aktuella händelser just nu — gå tillbaka hit senare om det
+          händer något.
         </p>
       )}
 
       {valda.length === 0 && (
-        <p className="text-sm text-slate-400 py-8 text-center">Sök och välj en eller flera platser ovan för att se vad som gäller där.</p>
+        <p className="text-sm text-slate-400 py-8 text-center">
+          Sök och välj en eller flera platser ovan för att se vad som gäller där.
+        </p>
       )}
 
       <div className="flex flex-col gap-6 mt-4">
-        {(sektioner ?? []).map(sek => (
+        {(sektioner ?? []).map((sek) => (
           <div key={sek.plats}>
-            <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-2.5">Gäller {sek.plats}</h2>
+            <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-2.5">
+              Gäller {sek.plats}
+            </h2>
             {sek.handelser.length === 0 && (
               <p className="text-sm text-slate-400">Inga aktuella händelser just nu.</p>
             )}
             <div className="flex flex-col gap-1.5">
-              {sek.handelser.map(event => (
+              {sek.handelser.map((event) => (
                 <div key={event.id}>
                   <NewsItem
                     event={event}

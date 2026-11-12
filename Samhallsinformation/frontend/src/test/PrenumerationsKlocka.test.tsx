@@ -18,15 +18,23 @@ vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: true })
 const mockApi = vi.mocked(api)
 
 const inbrott: api.BevakningDto = { id: 'b1', kategorier: ['Inbrott'], omraden: null }
-const stold:   api.BevakningDto = { id: 'b2', kategorier: ['Stöld'],   omraden: null }
+const stold: api.BevakningDto = { id: 'b2', kategorier: ['Stöld'], omraden: null }
 
-function renderaKlocka(props: { mode: 'allt' | 'mitt'; typ: string | null; omrade: string | null }) {
+function renderaKlocka(props: {
+  mode: 'allt' | 'mitt'
+  typ: string | null
+  omrade: string | null
+}) {
   // Färsk QueryClient per render: kontexten hämtar via react-query
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={queryClient}>
       <PolisenBevakningarProvider>
-        <PrenumerationsKlocka polisenTyp={props.typ} polisenOmrade={props.omrade} mode={props.mode} />
+        <PrenumerationsKlocka
+          polisenTyp={props.typ}
+          polisenOmrade={props.omrade}
+          mode={props.mode}
+        />
         <BevakningsToastHost />
       </PolisenBevakningarProvider>
     </QueryClientProvider>,
@@ -67,7 +75,12 @@ describe('PrenumerationsKlocka — Mitt-läget, borttagning', () => {
 
     await user.click(screen.getByRole('button', { name: 'Ångra' }))
 
-    await waitFor(() => expect(mockApi.createBevakning).toHaveBeenCalledExactlyOnceWith({ kategorier: ['Inbrott'], omraden: null }))
+    await waitFor(() =>
+      expect(mockApi.createBevakning).toHaveBeenCalledExactlyOnceWith({
+        kategorier: ['Inbrott'],
+        omraden: null,
+      }),
+    )
     await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
     // Bevakningen är tillbaka i kontexten, så klockan matchar och visas igen
     expect(await väntaPåKlocka('Hantera bevakning')).toBeInTheDocument()
@@ -85,7 +98,9 @@ describe('PrenumerationsKlocka — Mitt-läget, borttagning', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Kunde inte ta bort bevakningen')
     // UI-tillståndet är återställt: menyn stängd, bevakningen kvar, klockan kvar
-    expect(screen.queryByRole('button', { name: 'Ta bort den här bevakningen' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Ta bort den här bevakningen' }),
+    ).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hantera bevakning' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Ångra' })).not.toBeInTheDocument()
   })
@@ -164,7 +179,11 @@ describe('PrenumerationsKlocka — Allt-läget, skapande', () => {
   it('visar bekräftelse även när båda raderna blir täckta och klockan försvinner', async () => {
     const user = userEvent.setup()
     mockApi.fetchBevakningar.mockResolvedValue([])
-    mockApi.createBevakning.mockResolvedValue({ id: 'n1', kategorier: ['Inbrott'], omraden: ['Uppsala'] })
+    mockApi.createBevakning.mockResolvedValue({
+      id: 'n1',
+      kategorier: ['Inbrott'],
+      omraden: ['Uppsala'],
+    })
 
     renderaKlocka({ mode: 'allt', typ: 'Inbrott', omrade: 'Uppsala' })
 
@@ -172,7 +191,10 @@ describe('PrenumerationsKlocka — Allt-läget, skapande', () => {
     await user.click(screen.getByRole('button', { name: /båda/ }))
 
     expect(await screen.findByRole('status')).toHaveTextContent('Ny bevakning: Inbrott i Uppsala')
-    expect(mockApi.createBevakning).toHaveBeenCalledExactlyOnceWith({ kategorier: ['Inbrott'], omraden: ['Uppsala'] })
+    expect(mockApi.createBevakning).toHaveBeenCalledExactlyOnceWith({
+      kategorier: ['Inbrott'],
+      omraden: ['Uppsala'],
+    })
     // Både typ och område täcks nu, så klockan har avmonterats
     expect(screen.queryByRole('button', { name: 'Skapa bevakning' })).not.toBeInTheDocument()
   })

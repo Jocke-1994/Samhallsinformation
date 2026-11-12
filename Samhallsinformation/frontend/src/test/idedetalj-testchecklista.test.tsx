@@ -29,10 +29,20 @@ const api = await import('../api/featureIdeas')
 const { default: IdeDetaljModal } = await import('../components/Admin/IdeDetaljModal')
 
 const BAS_IDEA: FeatureIdeaDetailDto['idea'] = {
-  id: 'i1', ideaNumber: 7, title: 'Geografiskt platsfilter', stage: 'testas', priority: 0, källaTyp: 'admin',
-  flagKey: null, createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-19T00:00:00Z',
-  description: 'Platsfilter för besökare', triageKanGoras: true, triageBorGoras: true,
-  triageMotivering: null, createdByName: 'Admin',
+  id: 'i1',
+  ideaNumber: 7,
+  title: 'Geografiskt platsfilter',
+  stage: 'testas',
+  priority: 0,
+  källaTyp: 'admin',
+  flagKey: null,
+  createdAt: '2026-10-01T00:00:00Z',
+  updatedAt: '2026-10-19T00:00:00Z',
+  description: 'Platsfilter för besökare',
+  triageKanGoras: true,
+  triageBorGoras: true,
+  triageMotivering: null,
+  createdByName: 'Admin',
 }
 
 function detalj(over: Partial<FeatureIdeaDetailDto> = {}): FeatureIdeaDetailDto {
@@ -46,13 +56,21 @@ function detalj(over: Partial<FeatureIdeaDetailDto> = {}): FeatureIdeaDetailDto 
 }
 
 function rendera() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={qc}><IdeDetaljModal ideaId="i1" onClose={() => {}} /></QueryClientProvider>)
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={qc}>
+      <IdeDetaljModal ideaId="i1" onClose={() => {}} />
+    </QueryClientProvider>,
+  )
 }
 
 describe('IdeDetaljModal — Testchecklista (automatiska + manuella tester)', () => {
   it('syns inte i ett tidigare stadie (Triage)', async () => {
-    vi.mocked(api.fetchFeatureIdea).mockResolvedValue(detalj({ idea: { ...BAS_IDEA, stage: 'triage' } }))
+    vi.mocked(api.fetchFeatureIdea).mockResolvedValue(
+      detalj({ idea: { ...BAS_IDEA, stage: 'triage' } }),
+    )
     rendera()
 
     await waitFor(() => expect(screen.getByText('Geografiskt platsfilter')).toBeInTheDocument())
@@ -61,10 +79,21 @@ describe('IdeDetaljModal — Testchecklista (automatiska + manuella tester)', ()
   })
 
   it('visar kopplade testfiler och manuella testpunkter i stadiet Testar', async () => {
-    vi.mocked(api.fetchFeatureIdea).mockResolvedValue(detalj({
-      testFiles: [{ id: 'tf1', filePath: 'backend.Tests/PlatsMatchareTests.cs', className: 'PlatsMatchareTests', count: 7, names: [], okänd: false }],
-      checklist: [{ id: 'c1', fas: 'testning', label: 'Testa på mobil', done: false }],
-    }))
+    vi.mocked(api.fetchFeatureIdea).mockResolvedValue(
+      detalj({
+        testFiles: [
+          {
+            id: 'tf1',
+            filePath: 'backend.Tests/PlatsMatchareTests.cs',
+            className: 'PlatsMatchareTests',
+            count: 7,
+            names: [],
+            okänd: false,
+          },
+        ],
+        checklist: [{ id: 'c1', fas: 'testning', label: 'Testa på mobil', done: false }],
+      }),
+    )
     rendera()
 
     await waitFor(() => expect(screen.getByText('Automatiska tester')).toBeInTheDocument())
@@ -75,7 +104,13 @@ describe('IdeDetaljModal — Testchecklista (automatiska + manuella tester)', ()
   it('sök efter en testfil och lägg till den', async () => {
     const user = userEvent.setup()
     vi.mocked(api.fetchFeatureIdea).mockResolvedValue(detalj())
-    const träff: TestCatalogFileDto = { path: 'backend.Tests/KommunLanTests.cs', className: 'KommunLanTests', project: 'backend', count: 8, names: [] }
+    const träff: TestCatalogFileDto = {
+      path: 'backend.Tests/KommunLanTests.cs',
+      className: 'KommunLanTests',
+      project: 'backend',
+      count: 8,
+      names: [],
+    }
     vi.mocked(api.fetchTestCatalog).mockResolvedValue({ files: [träff] })
     rendera()
     await waitFor(() => expect(screen.getByText('Automatiska tester')).toBeInTheDocument())

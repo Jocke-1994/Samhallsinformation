@@ -34,10 +34,10 @@ export default function OnboardingPage() {
   }, [isLoggedIn, kontoSkapat, navigate, redirect])
 
   // Steg 1
-  const [name, setName]         = useState('')
-  const [email, setEmail]       = useState('')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirm, setConfirm]   = useState('')
+  const [confirm, setConfirm] = useState('')
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [kontoFel, setKontoFel] = useState<string | null>(null)
   const [epostFel, setEpostFel] = useState<string | null>(null)
@@ -57,15 +57,18 @@ export default function OnboardingPage() {
 
   // Steg 2 — bara lokalt state, inget konto finns att spara mot än
   const [valdaKällor, setValdaKällor] = useState<Set<number>>(new Set())
-  const { data: sources = [] } = useQuery<Source[]>({ queryKey: ['sources'], queryFn: fetchSources })
+  const { data: sources = [] } = useQuery<Source[]>({
+    queryKey: ['sources'],
+    queryFn: fetchSources,
+  })
 
   // Steg 3
-  const [skapar, setSkapar]   = useState(false)
+  const [skapar, setSkapar] = useState(false)
   const [slutFel, setSlutFel] = useState<string | null>(null)
 
   if (isLoggedIn && !kontoSkapat) return null
 
-  const activeSources = sources.filter(s => valdaKällor.has(s.id))
+  const activeSources = sources.filter((s) => valdaKällor.has(s.id))
 
   function handleKontoNasta(e: FormEvent) {
     e.preventDefault()
@@ -76,7 +79,8 @@ export default function OnboardingPage() {
     // namnet) ska inte plötsligt kräva att man hittar på ett lösenord som
     // ändå kastas (se steg='konto'-grenen nedan, som inte ens visar fälten).
     if (!kontoSkapat) {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setKontoFel('Ange en giltig e-postadress')
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        return setKontoFel('Ange en giltig e-postadress')
       if (password !== confirm) return setKontoFel('Lösenorden matchar inte')
       if (password.length < 8) return setKontoFel('Lösenordet måste vara minst 8 tecken')
       if (!acceptedTerms) return setKontoFel('Du måste godkänna användarvillkoren')
@@ -89,11 +93,11 @@ export default function OnboardingPage() {
   }
 
   function handleAdd(ids: number[]) {
-    setValdaKällor(prev => new Set([...prev, ...ids]))
+    setValdaKällor((prev) => new Set([...prev, ...ids]))
   }
 
   function handleRemove(ids: number[]) {
-    setValdaKällor(prev => {
+    setValdaKällor((prev) => {
       const next = new Set(prev)
       for (const id of ids) next.delete(id)
       return next
@@ -109,20 +113,29 @@ export default function OnboardingPage() {
         setKontoSkapat(true)
       } catch (err) {
         setSkapar(false)
-        setSlutFel(visaFel(err, 'Kontot kunde inte skapas just nu. Kontrollera anslutningen och försök igen.'))
+        setSlutFel(
+          visaFel(
+            err,
+            'Kontot kunde inte skapas just nu. Kontrollera anslutningen och försök igen.',
+          ),
+        )
         return
       }
     }
 
     if (valdaKällor.size > 0) {
       const uppdateringar: SourcePrefUpdate[] = [...valdaKällor].map((sourceId, i) => ({
-        sourceId, isActive: true, sortOrder: i,
+        sourceId,
+        isActive: true,
+        sortOrder: i,
       }))
       try {
         await saveUserSources(uppdateringar)
       } catch {
         setSkapar(false)
-        setSlutFel('Kontot skapades, men dina valda källor kunde inte sparas. Försök igen, eller fortsätt och lägg till dem senare under Mina källor.')
+        setSlutFel(
+          'Kontot skapades, men dina valda källor kunde inte sparas. Försök igen, eller fortsätt och lägg till dem senare under Mina källor.',
+        )
         return
       }
     }
@@ -135,16 +148,19 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-full bg-slate-50 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-xl">
-
         {/* Stegindikator */}
         <div className="flex items-center gap-2 mb-6">
           {STEG_ORDNING.map((s, i) => (
             <div key={s} className="flex items-center gap-2">
-              <span className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
-                i === stegIndex ? 'bg-violet-600 text-white'
-                  : i < stegIndex ? 'bg-violet-100 text-violet-700'
-                  : 'bg-slate-100 text-slate-400'
-              }`}>
+              <span
+                className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
+                  i === stegIndex
+                    ? 'bg-violet-600 text-white'
+                    : i < stegIndex
+                      ? 'bg-violet-100 text-violet-700'
+                      : 'bg-slate-100 text-slate-400'
+                }`}
+              >
                 {STEG_LABEL[s]}
               </span>
               {i < STEG_ORDNING.length - 1 && <span className="text-slate-300">→</span>}
@@ -153,7 +169,6 @@ export default function OnboardingPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-8">
-
           {steg === 'konto' && (
             <div>
               <div className="text-center mb-6">
@@ -164,8 +179,11 @@ export default function OnboardingPage() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Namn</label>
                   <input
-                    type="text" value={name} onChange={e => setName(e.target.value)}
-                    placeholder="Ditt namn" required
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ditt namn"
+                    required
                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                   />
                 </div>
@@ -174,7 +192,9 @@ export default function OnboardingPage() {
                   // Källor-steget) — inget lösenord/villkor att fylla i igen, bara
                   // ett bekräftande av vilket konto det gäller.
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">E-post</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      E-post
+                    </label>
                     <p className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 text-sm">
                       {email} · inloggad via Google
                     </p>
@@ -182,39 +202,61 @@ export default function OnboardingPage() {
                 ) : (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">E-post</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        E-post
+                      </label>
                       <input
-                        type="email" value={email} onChange={e => setEmail(e.target.value)}
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         onBlur={hanteraEpostBlur}
-                        placeholder="din@epost.se" required
+                        placeholder="din@epost.se"
+                        required
                         className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                       />
                       {epostFel && <p className="text-xs text-red-600 mt-1">{epostFel}</p>}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Lösenord</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Lösenord
+                      </label>
                       <input
-                        type="password" value={password} onChange={e => setPassword(e.target.value)}
-                        placeholder="Minst 8 tecken" required
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Minst 8 tecken"
+                        required
                         className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Bekräfta lösenord</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Bekräfta lösenord
+                      </label>
                       <input
-                        type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
-                        placeholder="••••••••" required
+                        type="password"
+                        value={confirm}
+                        onChange={(e) => setConfirm(e.target.value)}
+                        placeholder="••••••••"
+                        required
                         className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                       />
                     </div>
                     <label className="flex items-start gap-2.5 text-sm text-slate-600">
                       <input
-                        type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)}
+                        type="checkbox"
+                        checked={acceptedTerms}
+                        onChange={(e) => setAcceptedTerms(e.target.checked)}
                         className="mt-0.5 rounded border-slate-300 text-violet-600 focus:ring-violet-400 shrink-0"
                       />
                       <span>
                         Jag godkänner{' '}
-                        <Link to="/villkor" target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:text-violet-500 font-medium">
+                        <Link
+                          to="/villkor"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-violet-600 hover:text-violet-500 font-medium"
+                        >
                           användarvillkoren och integritetspolicyn
                         </Link>
                       </span>
@@ -222,7 +264,9 @@ export default function OnboardingPage() {
                   </>
                 )}
                 {kontoFel && (
-                  <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3.5 py-2.5">{kontoFel}</p>
+                  <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3.5 py-2.5">
+                    {kontoFel}
+                  </p>
                 )}
                 <button
                   type="submit"
@@ -242,8 +286,14 @@ export default function OnboardingPage() {
               {!kontoSkapat && (
                 <div className="mt-5">
                   <GoogleSignInButton
-                    onStart={() => { setKontoFel(null); setGoogleLoading(true) }}
-                    onError={message => { setKontoFel(message); setGoogleLoading(false) }}
+                    onStart={() => {
+                      setKontoFel(null)
+                      setGoogleLoading(true)
+                    }}
+                    onError={(message) => {
+                      setKontoFel(message)
+                      setGoogleLoading(false)
+                    }}
                     onSuccess={(profile, isNewUser) => {
                       if (!isNewUser) {
                         // Redan ett befintligt konto (lösenords- eller Google-
@@ -261,14 +311,19 @@ export default function OnboardingPage() {
                       setSteg('kallor')
                     }}
                   />
-                  {googleLoading && <p className="text-center text-xs text-slate-400 mt-2">Loggar in…</p>}
+                  {googleLoading && (
+                    <p className="text-center text-xs text-slate-400 mt-2">Loggar in…</p>
+                  )}
                 </div>
               )}
 
               {!kontoSkapat && (
                 <p className="text-center text-sm text-slate-500 mt-5">
                   Har du redan ett konto?{' '}
-                  <Link to={`/login${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`} className="text-violet-600 hover:text-violet-500 font-medium">
+                  <Link
+                    to={`/login${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
+                    className="text-violet-600 hover:text-violet-500 font-medium"
+                  >
                     Logga in här
                   </Link>
                 </p>
@@ -280,9 +335,16 @@ export default function OnboardingPage() {
             <div className="flex flex-col gap-4">
               <div className="text-center">
                 <h1 className="text-lg font-bold text-slate-900">Vilka källor vill du följa?</h1>
-                <p className="text-sm text-slate-500 mt-1">Du kan alltid ändra det här senare under Mina källor.</p>
+                <p className="text-sm text-slate-500 mt-1">
+                  Du kan alltid ändra det här senare under Mina källor.
+                </p>
               </div>
-              <AllaKallorKort sources={sources} activeIds={valdaKällor} onAdd={handleAdd} onRemove={handleRemove} />
+              <AllaKallorKort
+                sources={sources}
+                activeIds={valdaKällor}
+                onAdd={handleAdd}
+                onRemove={handleRemove}
+              />
               <div className="flex items-center justify-between mt-2">
                 <button
                   onClick={() => setSteg('konto')}
@@ -302,20 +364,28 @@ export default function OnboardingPage() {
 
           {steg === 'klart' && (
             <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-violet-100 flex items-center justify-center text-2xl">👋</div>
+              <div className="w-14 h-14 rounded-2xl bg-violet-100 flex items-center justify-center text-2xl">
+                👋
+              </div>
               <h1 className="text-xl font-bold text-slate-900">Redo att skapa ditt konto?</h1>
               <div className="text-sm text-slate-600 bg-slate-50 rounded-xl px-5 py-4 w-full text-left flex flex-col gap-1.5">
-                <p><span className="font-medium">Namn:</span> {name}</p>
-                <p><span className="font-medium">E-post:</span> {email}</p>
+                <p>
+                  <span className="font-medium">Namn:</span> {name}
+                </p>
+                <p>
+                  <span className="font-medium">E-post:</span> {email}
+                </p>
                 <p>
                   <span className="font-medium">Källor:</span>{' '}
                   {activeSources.length > 0
-                    ? activeSources.map(s => s.name).join(', ')
+                    ? activeSources.map((s) => s.name).join(', ')
                     : 'Inga valda än — lägg till närhelst under Mina källor.'}
                 </p>
               </div>
               {slutFel && (
-                <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3.5 py-2.5 w-full">{slutFel}</p>
+                <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3.5 py-2.5 w-full">
+                  {slutFel}
+                </p>
               )}
               <div className="flex flex-col sm:flex-row items-center gap-3 mt-2 w-full">
                 <button
@@ -335,7 +405,6 @@ export default function OnboardingPage() {
               </div>
             </div>
           )}
-
         </div>
       </div>
     </div>

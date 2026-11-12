@@ -10,12 +10,16 @@ describe('createTicket (API-klient, V2-9)', () => {
     vi.stubGlobal('fetch', fetchMock)
     fetchMock.mockReset()
   })
-  afterEach(() => { vi.unstubAllGlobals() })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
 
   it('ger ett begripligt svenskt meddelande vid 429 (rate limit)', async () => {
-    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: 'För många försök.' }), { status: 429 }))
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ error: 'För många försök.' }), { status: 429 }),
+    )
 
-    const err = await createTicket(req).catch(e => e)
+    const err = await createTicket(req).catch((e) => e)
 
     expect(err).toBeInstanceOf(TicketError)
     expect(err.status).toBe(429)
@@ -33,7 +37,9 @@ describe('createTicket (API-klient, V2-9)', () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 500 }))
     await expect(createTicket(req)).rejects.toThrow(/Något gick fel/)
 
-    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ id: 'abc', ticketNumber: 7 }), { status: 200 }))
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'abc', ticketNumber: 7 }), { status: 200 }),
+    )
     await expect(createTicket(req)).resolves.toEqual({ id: 'abc', ticketNumber: 7 })
   })
 })

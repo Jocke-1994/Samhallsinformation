@@ -24,7 +24,11 @@ describe('ErrorBoundary', () => {
   afterEach(() => felLogg.mockRestore())
 
   it('visar en svensk felvy i stället för vit skärm när ett barn kastar (utan providers)', () => {
-    render(<ErrorBoundary><Bomb /></ErrorBoundary>)
+    render(
+      <ErrorBoundary>
+        <Bomb />
+      </ErrorBoundary>,
+    )
 
     const alert = screen.getByRole('alert')
     expect(alert).toHaveTextContent('Något gick fel')
@@ -34,7 +38,11 @@ describe('ErrorBoundary', () => {
   })
 
   it('loggar felet till console.error', () => {
-    render(<ErrorBoundary><Bomb /></ErrorBoundary>)
+    render(
+      <ErrorBoundary>
+        <Bomb />
+      </ErrorBoundary>,
+    )
 
     expect(felLogg).toHaveBeenCalledWith(
       'Renderfel fångades av ErrorBoundary',
@@ -45,28 +53,48 @@ describe('ErrorBoundary', () => {
 
   it('renderar barnen orörda när inget kastar', () => {
     ska_kasta = false
-    render(<ErrorBoundary><Bomb /></ErrorBoundary>)
+    render(
+      <ErrorBoundary>
+        <Bomb />
+      </ErrorBoundary>,
+    )
 
     expect(screen.getByText('allt fungerar')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('återställs när resetKeys ändras (t.ex. vid route-byte)', () => {
-    const { rerender } = render(<ErrorBoundary resetKeys={['a']}><Bomb /></ErrorBoundary>)
+    const { rerender } = render(
+      <ErrorBoundary resetKeys={['a']}>
+        <Bomb />
+      </ErrorBoundary>,
+    )
     expect(screen.getByRole('alert')).toBeInTheDocument()
 
     ska_kasta = false
-    rerender(<ErrorBoundary resetKeys={['b']}><Bomb /></ErrorBoundary>)
+    rerender(
+      <ErrorBoundary resetKeys={['b']}>
+        <Bomb />
+      </ErrorBoundary>,
+    )
 
     expect(screen.getByText('allt fungerar')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('återställs inte när resetKeys är oförändrade', () => {
-    const { rerender } = render(<ErrorBoundary resetKeys={['a']}><Bomb /></ErrorBoundary>)
+    const { rerender } = render(
+      <ErrorBoundary resetKeys={['a']}>
+        <Bomb />
+      </ErrorBoundary>,
+    )
 
     ska_kasta = false
-    rerender(<ErrorBoundary resetKeys={['a']}><Bomb /></ErrorBoundary>)
+    rerender(
+      <ErrorBoundary resetKeys={['a']}>
+        <Bomb />
+      </ErrorBoundary>,
+    )
 
     expect(screen.getByRole('alert')).toBeInTheDocument()
   })

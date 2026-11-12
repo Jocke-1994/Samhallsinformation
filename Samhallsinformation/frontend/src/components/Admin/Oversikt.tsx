@@ -11,18 +11,18 @@ import { TYP_MÄRKE, TYP_IKON, STATUS_PRICK } from './Aktivitetslogg'
 import HamtningsStatus, { HamtningsFel } from '../common/HamtningsStatus'
 
 interface StatKort {
-  label:    string
-  value:    string | number
-  sub?:     string
-  color:    string
-  ikon:     string
+  label: string
+  value: string | number
+  sub?: string
+  color: string
+  ikon: string
   sektion?: AdminSection
   /** Hämtningen misslyckades — kortet visar felet i stället för ett tal. */
-  fel?:     boolean
+  fel?: boolean
 }
 
 function formatTid(iso: string): string {
-  const d    = new Date(iso)
+  const d = new Date(iso)
   const idag = new Date()
   const sammaDag = d.toDateString() === idag.toDateString()
   return sammaDag
@@ -31,8 +31,8 @@ function formatTid(iso: string): string {
 }
 
 interface Props {
-  onNavigate:      (s: AdminSection) => void
-  onÖppnaÄrende?:  (id: string) => void
+  onNavigate: (s: AdminSection) => void
+  onÖppnaÄrende?: (id: string) => void
 }
 
 export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
@@ -43,22 +43,22 @@ export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
   // varje stat-kort visar "—" och "Kunde inte hämtas" när dess källa saknas.
   const källorFråga = useQuery({
     queryKey: ['admin-sources'],
-    queryFn:  fetchAdminSources,
+    queryFn: fetchAdminSources,
   })
   const användareFråga = useQuery({
     queryKey: ['admin-users'],
-    queryFn:  fetchAdminUsers,
+    queryFn: fetchAdminUsers,
   })
   const ärendenFråga = useQuery({
     queryKey: ['admin-tickets'],
-    queryFn:  () => fetchAdminTickets(),
+    queryFn: () => fetchAdminTickets(),
   })
   const sources = källorFråga.data ?? []
-  const users   = användareFråga.data ?? []
+  const users = användareFråga.data ?? []
   const tickets = ärendenFråga.data ?? []
-  const källorOkända    = källorFråga.data === undefined
+  const källorOkända = källorFråga.data === undefined
   const användareOkända = användareFråga.data === undefined
-  const ärendenOkända   = ärendenFråga.data === undefined
+  const ärendenOkända = ärendenFråga.data === undefined
 
   // Filtrerad vy av den enhetliga aktivitetsloggen (#491 wave 1) — de 14
   // senaste admin/system-händelserna, ingen egen härledning längre. Höjt
@@ -67,12 +67,12 @@ export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
   // alltid var fullt av rutinmässiga "inga nya händelser"-rader.
   const aktivitetFråga = useQuery({
     queryKey: ['admin-activity-log', 'oversikt'],
-    queryFn:  () => fetchAdminActivityLog({ gräns: 14 }),
+    queryFn: () => fetchAdminActivityLog({ gräns: 14 }),
   })
   const aktivitetslogg = aktivitetFråga.data
 
-  const aktivaKallor = sources.filter(s => s.isActive)
-  const kallorMedFel  = aktivaKallor.filter(s => s.lastFetchError !== null)
+  const aktivaKallor = sources.filter((s) => s.isActive)
+  const kallorMedFel = aktivaKallor.filter((s) => s.lastFetchError !== null)
   // Hälsoprocenten är "okänd" (null) tills källistan faktiskt hämtats. Utan aktiva
   // källor finns inget att mäta på, det är inte samma sak som 100 %.
   const systemhälsaProcent: number | null =
@@ -81,39 +81,67 @@ export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
       : Math.round(((aktivaKallor.length - kallorMedFel.length) / aktivaKallor.length) * 100)
 
   // Raderade (anonymiserade) konton räknas inte som riktiga användare längre.
-  const riktigaAnvändare = users.filter(u => !u.deletedAt)
-  const sjuDagarSedan    = new Date(nu - 7 * 24 * 60 * 60 * 1000)
-  const nyaSenasteVeckan = riktigaAnvändare.filter(u => new Date(u.createdAt) >= sjuDagarSedan).length
+  const riktigaAnvändare = users.filter((u) => !u.deletedAt)
+  const sjuDagarSedan = new Date(nu - 7 * 24 * 60 * 60 * 1000)
+  const nyaSenasteVeckan = riktigaAnvändare.filter(
+    (u) => new Date(u.createdAt) >= sjuDagarSedan,
+  ).length
 
-  const aktivaÄrenden  = tickets.filter(t => !t.isArchived)
-  const öppnaÄrenden   = aktivaÄrenden.filter(t => t.status === 'Öppet').length
-  const pågåendeÄrenden = aktivaÄrenden.filter(t => t.status === 'Under behandling').length
+  const aktivaÄrenden = tickets.filter((t) => !t.isArchived)
+  const öppnaÄrenden = aktivaÄrenden.filter((t) => t.status === 'Öppet').length
+  const pågåendeÄrenden = aktivaÄrenden.filter((t) => t.status === 'Under behandling').length
 
   const OKÄND = 'Kunde inte hämtas'
   const STAT_KORT: StatKort[] = [
     {
-      label: 'Användare', color: 'text-violet-600', ikon: '👥', sektion: 'anvandare',
+      label: 'Användare',
+      color: 'text-violet-600',
+      ikon: '👥',
+      sektion: 'anvandare',
       value: användareOkända ? '—' : riktigaAnvändare.length,
-      sub: användareOkända ? (användareFråga.isError ? OKÄND : 'Laddar...') : `+${nyaSenasteVeckan} senaste 7 dagarna`,
+      sub: användareOkända
+        ? användareFråga.isError
+          ? OKÄND
+          : 'Laddar...'
+        : `+${nyaSenasteVeckan} senaste 7 dagarna`,
       fel: användareFråga.isError && användareOkända,
     },
     {
-      label: 'Öppna ärenden', color: 'text-amber-600', ikon: '🎫', sektion: 'support-inbox',
+      label: 'Öppna ärenden',
+      color: 'text-amber-600',
+      ikon: '🎫',
+      sektion: 'support-inbox',
       value: ärendenOkända ? '—' : öppnaÄrenden,
-      sub: ärendenOkända ? (ärendenFråga.isError ? OKÄND : 'Laddar...') : `${pågåendeÄrenden} under behandling`,
+      sub: ärendenOkända
+        ? ärendenFråga.isError
+          ? OKÄND
+          : 'Laddar...'
+        : `${pågåendeÄrenden} under behandling`,
       fel: ärendenFråga.isError && ärendenOkända,
     },
     {
-      label: 'Aktiva källor', color: 'text-sky-600', ikon: '📡', sektion: 'kallor',
+      label: 'Aktiva källor',
+      color: 'text-sky-600',
+      ikon: '📡',
+      sektion: 'kallor',
       value: källorOkända ? '—' : aktivaKallor.length,
-      sub: källorOkända ? (källorFråga.isError ? OKÄND : 'Laddar...') : `${kallorMedFel.length} med varningar`,
+      sub: källorOkända
+        ? källorFråga.isError
+          ? OKÄND
+          : 'Laddar...'
+        : `${kallorMedFel.length} med varningar`,
       fel: källorFråga.isError && källorOkända,
     },
     {
-      label: 'Systemhälsa', color: 'text-green-600', ikon: '✅', sektion: 'felsökning',
+      label: 'Systemhälsa',
+      color: 'text-green-600',
+      ikon: '✅',
+      sektion: 'felsökning',
       value: systemhälsaProcent === null ? '—' : `${systemhälsaProcent}%`,
       sub: källorOkända
-        ? (källorFråga.isError ? OKÄND : 'Laddar...')
+        ? källorFråga.isError
+          ? OKÄND
+          : 'Laddar...'
         : aktivaKallor.length === 0
           ? 'Inga aktiva källor att mäta'
           : `${aktivaKallor.length - kallorMedFel.length}/${aktivaKallor.length} källor utan fel`,
@@ -121,13 +149,14 @@ export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
     },
   ]
 
-  const misslyckade = [källorFråga, användareFråga, ärendenFråga].filter(f => f.isError && f.data === undefined)
+  const misslyckade = [källorFråga, användareFråga, ärendenFråga].filter(
+    (f) => f.isError && f.data === undefined,
+  )
 
   const senasteHändelser = aktivitetslogg?.rader ?? []
 
   return (
     <div className="flex flex-col gap-6">
-
       {/* Välkommen */}
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Välkommen, Admin</h2>
@@ -139,13 +168,17 @@ export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
         <HamtningsFel
           fel={misslyckade[0].error}
           reserv="Kunde inte hämta all information till översikten. Siffrorna som saknas är okända, inte noll."
-          onForsokIgen={() => { misslyckade.forEach(f => { void f.refetch() }) }}
-          arIgang={misslyckade.some(f => f.isFetching)}
+          onForsokIgen={() => {
+            misslyckade.forEach((f) => {
+              void f.refetch()
+            })
+          }}
+          arIgang={misslyckade.some((f) => f.isFetching)}
           className="bg-red-50 border border-red-200 rounded-2xl px-6 py-4"
         />
       )}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {STAT_KORT.map(k => (
+        {STAT_KORT.map((k) => (
           <button
             key={k.label}
             onClick={() => k.sektion && onNavigate(k.sektion)}
@@ -153,53 +186,77 @@ export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
           >
             <div className="flex items-center gap-2">
               <span className="text-2xl">{k.ikon}</span>
-              <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">{k.label}</span>
+              <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                {k.label}
+              </span>
             </div>
             <p className={`text-4xl font-bold ${k.fel ? 'text-slate-300' : k.color}`}>{k.value}</p>
-            {k.sub && <p className={`text-xs text-center ${k.fel ? 'text-red-600' : 'text-slate-400'}`}>{k.sub}</p>}
+            {k.sub && (
+              <p className={`text-xs text-center ${k.fel ? 'text-red-600' : 'text-slate-400'}`}>
+                {k.sub}
+              </p>
+            )}
           </button>
         ))}
       </div>
 
       {/* Senaste händelser + Källstatus */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
         {/* Senaste händelser */}
         <div className="lg:col-span-2 lg:row-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <h3 className="text-base font-semibold text-slate-900">Senaste händelser</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Filtrerad vy av aktivitetsloggen — de 14 senaste admin/system-händelserna</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Filtrerad vy av aktivitetsloggen — de 14 senaste admin/system-händelserna
+            </p>
           </div>
-          <HamtningsStatus fraga={aktivitetFråga} felText="Kunde inte hämta aktiviteten." tomt={senasteHändelser.length === 0} tomtText="Ingen aktivitet att visa." className="px-6 py-4">
-          <div className="divide-y divide-slate-50">
-            {senasteHändelser.map(h => (
-              <div key={h.id}>
-                <button
-                  onClick={() => setÖppenId(öppenId === h.id ? null : h.id)}
-                  className="w-full flex items-start gap-3 px-6 py-3 text-left hover:bg-slate-50 transition-colors"
-                >
-                  <span className="text-xs text-slate-400 w-14 shrink-0 whitespace-nowrap pt-0.5">{formatTid(h.tid)}</span>
-                  <span className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${STATUS_PRICK[h.status]}`} title={h.status} />
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap ${TYP_MÄRKE[h.typ]}`}>{TYP_IKON[h.typ]} {h.typ}</span>
-                  <p className="text-sm text-slate-700 min-w-0 truncate flex-1">{h.rubrik}</p>
-                  <span className="text-slate-300 text-xs shrink-0">{öppenId === h.id ? '▲' : '▼'}</span>
-                </button>
-                {öppenId === h.id && (
-                  <div className="px-6 pb-3 pl-[4.75rem] pr-6">
-                    <p className="text-xs text-slate-500 leading-relaxed">{h.detalj}</p>
-                    {h.relateratÄrendeId && onÖppnaÄrende && (
-                      <button
-                        onClick={() => onÖppnaÄrende(h.relateratÄrendeId!)}
-                        className="mt-1.5 text-xs font-medium text-violet-600 hover:text-violet-800 transition-colors"
-                      >
-                        Öppna ärende →
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <HamtningsStatus
+            fraga={aktivitetFråga}
+            felText="Kunde inte hämta aktiviteten."
+            tomt={senasteHändelser.length === 0}
+            tomtText="Ingen aktivitet att visa."
+            className="px-6 py-4"
+          >
+            <div className="divide-y divide-slate-50">
+              {senasteHändelser.map((h) => (
+                <div key={h.id}>
+                  <button
+                    onClick={() => setÖppenId(öppenId === h.id ? null : h.id)}
+                    className="w-full flex items-start gap-3 px-6 py-3 text-left hover:bg-slate-50 transition-colors"
+                  >
+                    <span className="text-xs text-slate-400 w-14 shrink-0 whitespace-nowrap pt-0.5">
+                      {formatTid(h.tid)}
+                    </span>
+                    <span
+                      className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${STATUS_PRICK[h.status]}`}
+                      title={h.status}
+                    />
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap ${TYP_MÄRKE[h.typ]}`}
+                    >
+                      {TYP_IKON[h.typ]} {h.typ}
+                    </span>
+                    <p className="text-sm text-slate-700 min-w-0 truncate flex-1">{h.rubrik}</p>
+                    <span className="text-slate-300 text-xs shrink-0">
+                      {öppenId === h.id ? '▲' : '▼'}
+                    </span>
+                  </button>
+                  {öppenId === h.id && (
+                    <div className="px-6 pb-3 pl-[4.75rem] pr-6">
+                      <p className="text-xs text-slate-500 leading-relaxed">{h.detalj}</p>
+                      {h.relateratÄrendeId && onÖppnaÄrende && (
+                        <button
+                          onClick={() => onÖppnaÄrende(h.relateratÄrendeId!)}
+                          className="mt-1.5 text-xs font-medium text-violet-600 hover:text-violet-800 transition-colors"
+                        >
+                          Öppna ärende →
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </HamtningsStatus>
           <div className="px-6 py-3 border-t border-slate-100">
             <button
@@ -242,23 +299,33 @@ export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <h3 className="text-base font-semibold text-slate-900">Källstatus</h3>
-            <p className="text-xs text-slate-400 mt-0.5">{källorOkända ? 'Antal okänt' : `${aktivaKallor.length} aktiva källor`}</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {källorOkända ? 'Antal okänt' : `${aktivaKallor.length} aktiva källor`}
+            </p>
           </div>
-          <HamtningsStatus fraga={källorFråga} felText="Kunde inte hämta källorna." tomt={aktivaKallor.length === 0} tomtText="Inga aktiva källor." className="px-6 py-4">
-          <div className="divide-y divide-slate-50">
-            {aktivaKallor.map(s => {
-              const status = deriveStatus(s)
-              return (
-                <div key={s.id} className="flex items-center justify-between px-6 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
-                    <span className="text-sm text-slate-700 font-medium">{s.shortName}</span>
+          <HamtningsStatus
+            fraga={källorFråga}
+            felText="Kunde inte hämta källorna."
+            tomt={aktivaKallor.length === 0}
+            tomtText="Inga aktiva källor."
+            className="px-6 py-4"
+          >
+            <div className="divide-y divide-slate-50">
+              {aktivaKallor.map((s) => {
+                const status = deriveStatus(s)
+                return (
+                  <div key={s.id} className="flex items-center justify-between px-6 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
+                      <span className="text-sm text-slate-700 font-medium">{s.shortName}</span>
+                    </div>
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                      {status}
+                    </span>
                   </div>
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{status}</span>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
           </HamtningsStatus>
           <div className="px-6 py-3 border-t border-slate-100">
             <button
@@ -269,7 +336,6 @@ export default function Oversikt({ onNavigate, onÖppnaÄrende }: Props) {
             </button>
           </div>
         </div>
-
       </div>
     </div>
   )

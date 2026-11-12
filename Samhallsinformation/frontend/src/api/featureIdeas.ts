@@ -1,7 +1,8 @@
 import { adminFetch } from './adminFetch'
 import { felFranSvar } from './hamta'
 
-export type IdeaStage = 'brainstorm' | 'triage' | 'byggs' | 'testas' | 'lanseringsklar' | 'lanserad' | 'avfärdad'
+export type IdeaStage =
+  'brainstorm' | 'triage' | 'byggs' | 'testas' | 'lanseringsklar' | 'lanserad' | 'avfärdad'
 
 export interface FeatureIdeaListItemDto {
   id: string
@@ -78,7 +79,9 @@ export async function fetchFeatureIdeas(stage?: string): Promise<FeatureIdeaList
   return res.json()
 }
 
-export async function createFeatureIdea(req: CreateFeatureIdeaRequest): Promise<{ id: string; ideaNumber: number }> {
+export async function createFeatureIdea(
+  req: CreateFeatureIdeaRequest,
+): Promise<{ id: string; ideaNumber: number }> {
   const res = await adminFetch('/api/admin/feature-ideas', {
     method: 'POST',
     body: JSON.stringify(req),
@@ -93,7 +96,10 @@ export async function fetchFeatureIdea(id: string): Promise<FeatureIdeaDetailDto
   return res.json()
 }
 
-export async function updateFeatureIdea(id: string, req: { title?: string; description?: string; flagKey?: string | null }): Promise<void> {
+export async function updateFeatureIdea(
+  id: string,
+  req: { title?: string; description?: string; flagKey?: string | null },
+): Promise<void> {
   const res = await adminFetch(`/api/admin/feature-ideas/${id}`, {
     method: 'PUT',
     body: JSON.stringify(req),
@@ -117,7 +123,12 @@ export async function setIdeaStage(id: string, stage: IdeaStage): Promise<void> 
   if (!res.ok) throw await felFranSvar(res, 'setIdeaStage')
 }
 
-export async function setIdeaTriage(id: string, kanGoras: boolean | null, borGoras: boolean | null, motivering: string | null): Promise<void> {
+export async function setIdeaTriage(
+  id: string,
+  kanGoras: boolean | null,
+  borGoras: boolean | null,
+  motivering: string | null,
+): Promise<void> {
   const res = await adminFetch(`/api/admin/feature-ideas/${id}/triage`, {
     method: 'PUT',
     body: JSON.stringify({ kanGoras, borGoras, motivering }),
@@ -135,11 +146,17 @@ export async function addIdeaTester(id: string, email: string): Promise<FeatureI
 }
 
 export async function removeIdeaTester(id: string, userId: string): Promise<void> {
-  const res = await adminFetch(`/api/admin/feature-ideas/${id}/testers/${userId}`, { method: 'DELETE' })
+  const res = await adminFetch(`/api/admin/feature-ideas/${id}/testers/${userId}`, {
+    method: 'DELETE',
+  })
   if (!res.ok) throw await felFranSvar(res, 'removeIdeaTester')
 }
 
-export async function addChecklistItem(id: string, label: string, fas?: ChecklistFas): Promise<{ id: string }> {
+export async function addChecklistItem(
+  id: string,
+  label: string,
+  fas?: ChecklistFas,
+): Promise<{ id: string }> {
   const res = await adminFetch(`/api/admin/feature-ideas/${id}/checklist`, {
     method: 'POST',
     body: JSON.stringify({ label, fas }),
@@ -148,7 +165,11 @@ export async function addChecklistItem(id: string, label: string, fas?: Checklis
   return res.json()
 }
 
-export async function toggleChecklistItem(id: string, itemId: string, done: boolean): Promise<void> {
+export async function toggleChecklistItem(
+  id: string,
+  itemId: string,
+  done: boolean,
+): Promise<void> {
   const res = await adminFetch(`/api/admin/feature-ideas/${id}/checklist/${itemId}`, {
     method: 'PUT',
     body: JSON.stringify({ done }),
@@ -157,7 +178,9 @@ export async function toggleChecklistItem(id: string, itemId: string, done: bool
 }
 
 export async function removeChecklistItem(id: string, itemId: string): Promise<void> {
-  const res = await adminFetch(`/api/admin/feature-ideas/${id}/checklist/${itemId}`, { method: 'DELETE' })
+  const res = await adminFetch(`/api/admin/feature-ideas/${id}/checklist/${itemId}`, {
+    method: 'DELETE',
+  })
   if (!res.ok) throw await felFranSvar(res, 'removeChecklistItem')
 }
 
@@ -175,7 +198,9 @@ export async function addTestFile(id: string, filePath: string): Promise<void> {
 }
 
 export async function removeTestFile(id: string, testFileId: string): Promise<void> {
-  const res = await adminFetch(`/api/admin/feature-ideas/${id}/test-files/${testFileId}`, { method: 'DELETE' })
+  const res = await adminFetch(`/api/admin/feature-ideas/${id}/test-files/${testFileId}`, {
+    method: 'DELETE',
+  })
   if (!res.ok) throw await felFranSvar(res, 'removeTestFile')
 }
 

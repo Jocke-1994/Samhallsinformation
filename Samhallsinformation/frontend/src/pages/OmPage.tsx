@@ -16,8 +16,10 @@ export default function OmPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const swipeHandlers = useSwipeable({
-    onSwipedRight: (e) => { if (e.initial[0] < 30) setSidebarOpen(true) },
-    onSwipedLeft:  ()  => setSidebarOpen(false),
+    onSwipedRight: (e) => {
+      if (e.initial[0] < 30) setSidebarOpen(true)
+    },
+    onSwipedLeft: () => setSidebarOpen(false),
     preventScrollOnSwipe: true,
     touchEventOptions: { passive: false },
   })
@@ -35,7 +37,6 @@ export default function OmPage() {
       <main {...swipeHandlers} className="flex-1 overflow-y-auto select-none md:select-auto">
         <MobilTopBar onOpenSidebar={() => setSidebarOpen(true)} />
         <div className="max-w-2xl mx-auto px-6 py-12">
-
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-3">
             Om Samhällsinformation
           </h1>
@@ -48,9 +49,8 @@ export default function OmPage() {
           <Section title="Vad tjänsten gör">
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
               Tjänsten hämtar automatiskt publicerat material från anslutna myndigheter och
-              presenterar det i ett samlat flöde. Inget innehåll skapas, omformuleras eller
-              värderas av tjänsten. All information visas exakt som den publicerats av
-              respektive källa.
+              presenterar det i ett samlat flöde. Inget innehåll skapas, omformuleras eller värderas
+              av tjänsten. All information visas exakt som den publicerats av respektive källa.
             </p>
           </Section>
 
@@ -62,8 +62,11 @@ export default function OmPage() {
                 'Tjänsten tar inte ställning i enskilda händelser eller frågor.',
                 'Det är alltid tydligt varifrån en uppgift kommer.',
                 'Alla länkar leder direkt till ursprungskällan — ingen information presenteras utan att originalet är länkat.',
-              ].map(princip => (
-                <li key={princip} className="flex items-start gap-2.5 text-slate-600 dark:text-slate-400">
+              ].map((princip) => (
+                <li
+                  key={princip}
+                  className="flex items-start gap-2.5 text-slate-600 dark:text-slate-400"
+                >
                   <span className="mt-2 w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
                   <span className="leading-relaxed">{princip}</span>
                 </li>
@@ -76,8 +79,18 @@ export default function OmPage() {
               Tjänsten hämtar för närvarande information från:
             </p>
             <ul className="space-y-2">
-              {['Polisen', 'Krisinformation (MSB)', 'Folkhälsomyndigheten', 'Livsmedelsverket', 'Läkemedelsverket', 'Trafikverket'].map(källa => (
-                <li key={källa} className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400">
+              {[
+                'Polisen',
+                'Krisinformation (MSB)',
+                'Folkhälsomyndigheten',
+                'Livsmedelsverket',
+                'Läkemedelsverket',
+                'Trafikverket',
+              ].map((källa) => (
+                <li
+                  key={källa}
+                  className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400"
+                >
                   <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
                   {källa}
                 </li>
@@ -88,12 +101,11 @@ export default function OmPage() {
           <Section title="Integritet &amp; cookies">
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
               Tjänsten använder Google Analytics för att förstå hur sajten används i aggregerad
-              form. Analys-cookies aktiveras endast om du godkänner det via cookie-bannern.
-              Inga personuppgifter säljs eller delas med tredje part. IP-adresser anonymiseras
-              innan lagring.
+              form. Analys-cookies aktiveras endast om du godkänner det via cookie-bannern. Inga
+              personuppgifter säljs eller delas med tredje part. IP-adresser anonymiseras innan
+              lagring.
             </p>
           </Section>
-
         </div>
       </main>
     </div>

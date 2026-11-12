@@ -34,21 +34,27 @@ export default function SupportVisningsnamnKort() {
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-6 pt-6 pb-5 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-xl shrink-0">🎫</div>
+          <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-xl shrink-0">
+            🎫
+          </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900">Visningsnamn för supportsvar</h2>
-            <p className="text-sm text-slate-500 mt-0.5">Visas för användare istället för "Support"</p>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Visas för användare istället för "Support"
+            </p>
           </div>
         </div>
       </div>
 
       <div className="px-6 py-5 flex flex-col gap-3">
-        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Visningsnamn</label>
+        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+          Visningsnamn
+        </label>
         <div className="flex gap-2">
           <input
             type="text"
             value={värde}
-            onChange={e => setVärde(e.target.value)}
+            onChange={(e) => setVärde(e.target.value)}
             placeholder="T.ex. ditt förnamn eller ett smeknamn"
             className={inputClass}
           />
@@ -61,7 +67,8 @@ export default function SupportVisningsnamnKort() {
           </button>
         </div>
         <p className="text-xs text-slate-400">
-          Lämna tomt för att visa den generiska etiketten "Support" istället. Ditt riktiga namn visas aldrig för användaren.
+          Lämna tomt för att visa den generiska etiketten "Support" istället. Ditt riktiga namn
+          visas aldrig för användaren.
         </p>
         {mutation.isError && (
           <p role="alert" className="text-xs text-red-500 font-medium">

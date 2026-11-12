@@ -8,7 +8,10 @@ import type { ActivityLogResponse, LoggPost } from '../api/activityLog'
 // filtret" eller 0 fel), och Ångra har felhantering, dubbelklicksskydd och tydligt
 // halvt resultat (ändringen gjord men raden inte markerad).
 
-vi.mock('../api/activityLog', () => ({ fetchAdminActivityLog: vi.fn(), undoActivityLogEntry: vi.fn() }))
+vi.mock('../api/activityLog', () => ({
+  fetchAdminActivityLog: vi.fn(),
+  undoActivityLogEntry: vi.fn(),
+}))
 vi.mock('../api/adminUsers', () => ({ saveAdminUserEvent: vi.fn(), unsaveAdminUserEvent: vi.fn() }))
 
 const { fetchAdminActivityLog, undoActivityLogEntry } = await import('../api/activityLog')
@@ -16,22 +19,45 @@ const { saveAdminUserEvent, unsaveAdminUserEvent } = await import('../api/adminU
 const { default: Aktivitetslogg } = await import('../components/Admin/Aktivitetslogg')
 
 const post = (over: Partial<LoggPost> = {}): LoggPost => ({
-  id: 'l1', tid: '2026-09-25T10:00:00Z', vem: 'Admin', aktörTyp: 'Admin', typ: 'Kontoåtgärd',
-  rubrik: 'Sparade händelse till Anna', detalj: '"Brand i Uppsala" kopplad till Annas konto.',
-  status: 'OK', ångrad: false, arkiverad: false, test: false,
+  id: 'l1',
+  tid: '2026-09-25T10:00:00Z',
+  vem: 'Admin',
+  aktörTyp: 'Admin',
+  typ: 'Kontoåtgärd',
+  rubrik: 'Sparade händelse till Anna',
+  detalj: '"Brand i Uppsala" kopplad till Annas konto.',
+  status: 'OK',
+  ångrad: false,
+  arkiverad: false,
+  test: false,
   ångraData: {
-    anvandareId: 'u-anna', undoAction: 'ta-bort',
-    handelse: { eventId: 'e1', title: 'Brand i Uppsala', sourceName: 'Polisen', publishedAt: '2026-09-01T10:00:00Z', sparadDatum: '2026-09-25T10:00:00Z' },
+    anvandareId: 'u-anna',
+    undoAction: 'ta-bort',
+    handelse: {
+      eventId: 'e1',
+      title: 'Brand i Uppsala',
+      sourceName: 'Polisen',
+      publishedAt: '2026-09-01T10:00:00Z',
+      sparadDatum: '2026-09-25T10:00:00Z',
+    },
   },
   ...over,
 })
 const svar = (rader: LoggPost[]): ActivityLogResponse => ({
-  rader, totalt: rader.length, sammanfattning: { ingestor: 3, fel: 2, varningar: 1 },
+  rader,
+  totalt: rader.length,
+  sammanfattning: { ingestor: 3, fel: 2, varningar: 1 },
 })
 
 function rendera() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}><Aktivitetslogg /></QueryClientProvider>)
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <Aktivitetslogg />
+    </QueryClientProvider>,
+  )
 }
 
 async function öppnaRaden() {
@@ -60,7 +86,9 @@ describe('Aktivitetslogg — hämtfel är inte "tom logg"', () => {
   })
 
   it('Försök igen hämtar om och visar raderna', async () => {
-    vi.mocked(fetchAdminActivityLog).mockRejectedValueOnce(new Error('fetchAdminActivityLog: 500')).mockResolvedValue(svar([post()]))
+    vi.mocked(fetchAdminActivityLog)
+      .mockRejectedValueOnce(new Error('fetchAdminActivityLog: 500'))
+      .mockResolvedValue(svar([post()]))
     rendera()
 
     await userEvent.click(await screen.findByRole('button', { name: 'Försök igen' }))
@@ -108,7 +136,9 @@ describe('Aktivitetslogg — Ångra', () => {
 
   it('felet i själva ändringen: felmeddelande, raden markeras INTE ångrad, försök igen möjligt', async () => {
     vi.mocked(fetchAdminActivityLog).mockResolvedValue(svar([post()]))
-    vi.mocked(unsaveAdminUserEvent).mockRejectedValueOnce(new Error('Användaren finns inte längre.'))
+    vi.mocked(unsaveAdminUserEvent).mockRejectedValueOnce(
+      new Error('Användaren finns inte längre.'),
+    )
     rendera()
 
     await klickaÅngraOchBekräfta()
@@ -135,7 +165,9 @@ describe('Aktivitetslogg — Ångra', () => {
 
   it('halvt resultat: ändringen gjord men markeringen misslyckas -> tydligt besked, och nytt försök kör BARA markeringen', async () => {
     vi.mocked(fetchAdminActivityLog).mockResolvedValue(svar([post()]))
-    vi.mocked(undoActivityLogEntry).mockRejectedValueOnce(new Error('undoActivityLogEntry: 500')).mockResolvedValue()
+    vi.mocked(undoActivityLogEntry)
+      .mockRejectedValueOnce(new Error('undoActivityLogEntry: 500'))
+      .mockResolvedValue()
     rendera()
 
     await klickaÅngraOchBekräfta()
@@ -156,7 +188,12 @@ describe('Aktivitetslogg — Ångra', () => {
   it('dubbelklick på "Bekräfta ångra?" ger EN ändring och EN markering', async () => {
     vi.mocked(fetchAdminActivityLog).mockResolvedValue(svar([post()]))
     let släpp: () => void = () => {}
-    vi.mocked(unsaveAdminUserEvent).mockImplementation(() => new Promise<void>(res => { släpp = res }))
+    vi.mocked(unsaveAdminUserEvent).mockImplementation(
+      () =>
+        new Promise<void>((res) => {
+          släpp = res
+        }),
+    )
     rendera()
 
     await öppnaRaden()
@@ -173,9 +210,23 @@ describe('Aktivitetslogg — Ångra', () => {
   })
 
   it('"lägg-till"-ångring anropar saveAdminUserEvent', async () => {
-    vi.mocked(fetchAdminActivityLog).mockResolvedValue(svar([post({
-      ångraData: { anvandareId: 'u-anna', undoAction: 'lägg-till', handelse: { eventId: 'e9', title: 'X', sourceName: 'Y', publishedAt: '2026-09-01T10:00:00Z', sparadDatum: '2026-09-25T10:00:00Z' } },
-    })]))
+    vi.mocked(fetchAdminActivityLog).mockResolvedValue(
+      svar([
+        post({
+          ångraData: {
+            anvandareId: 'u-anna',
+            undoAction: 'lägg-till',
+            handelse: {
+              eventId: 'e9',
+              title: 'X',
+              sourceName: 'Y',
+              publishedAt: '2026-09-01T10:00:00Z',
+              sparadDatum: '2026-09-25T10:00:00Z',
+            },
+          },
+        }),
+      ]),
+    )
     rendera()
 
     await klickaÅngraOchBekräfta()

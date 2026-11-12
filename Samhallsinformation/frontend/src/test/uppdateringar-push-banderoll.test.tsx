@@ -10,7 +10,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 // validerar rätt data innan det skickas vidare.
 
 vi.mock('../api/uppdateringar', async () => {
-  const faktisk = await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
+  const faktisk =
+    await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
   return {
     ...faktisk,
     fetchAdminUppdateringar: vi.fn().mockResolvedValue([]),
@@ -27,14 +28,23 @@ const api = await import('../api/uppdateringar')
 const { default: AdminUppdateringar } = await import('../components/Admin/AdminUppdateringar')
 
 function rendera() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={qc}><AdminUppdateringar /></QueryClientProvider>)
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={qc}>
+      <AdminUppdateringar />
+    </QueryClientProvider>,
+  )
 }
 
 async function öppnaOchFyllGrunduppgifter() {
   await userEvent.click(await screen.findByText('+ Ny uppdatering'))
   await userEvent.type(screen.getByPlaceholderText(/Logga in och skapa konto/), 'Titel')
-  await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'En rad text')
+  await userEvent.type(
+    screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+    'En rad text',
+  )
   await userEvent.click(screen.getByText('Schemalägg lansering'))
   const datumFält = document.querySelector('input[type="datetime-local"]') as HTMLInputElement
   fireEvent.change(datumFält, { target: { value: '2026-11-01T10:00' } })
@@ -71,10 +81,15 @@ describe('AdminUppdateringar — push vid lansering', () => {
     await userEvent.clear(screen.getByPlaceholderText('Pushens meddelande'))
     await userEvent.type(screen.getByPlaceholderText('Pushens meddelande'), 'Ett eget meddelande')
 
-    await userEvent.click(screen.getByRole('button', { name: /Schemalägg|Sparas, publiceras automatiskt/ }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /Schemalägg|Sparas, publiceras automatiskt/ }),
+    )
 
     expect(vi.mocked(api.createUppdatering).mock.calls[0][0]).toMatchObject({
-      skickaPush: true, pushVersion: '0.9.0', version: '0.9.0', pushMeddelande: 'Ett eget meddelande',
+      skickaPush: true,
+      pushVersion: '0.9.0',
+      version: '0.9.0',
+      pushMeddelande: 'Ett eget meddelande',
     })
   })
 })
@@ -87,11 +102,17 @@ describe('AdminUppdateringar — banderoll vid lansering', () => {
     await userEvent.click(screen.getByText('Schemalägg lansering'))
 
     // Ingen text i raden ännu — harInnehåll är false.
-    const banderollRuta = screen.getByText('Visa banderoll på sajten').closest('label')!.querySelector('input') as HTMLInputElement
+    const banderollRuta = screen
+      .getByText('Visa banderoll på sajten')
+      .closest('label')!
+      .querySelector('input') as HTMLInputElement
     expect(banderollRuta).toBeDisabled()
     expect(screen.getByText('Kräver minst en ifylld innehållsrad.')).toBeInTheDocument()
 
-    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'En rad text')
+    await userEvent.type(
+      screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+      'En rad text',
+    )
     expect(banderollRuta).not.toBeDisabled()
   })
 
@@ -121,7 +142,9 @@ describe('AdminUppdateringar — banderoll vid lansering', () => {
     await öppnaOchFyllGrunduppgifter()
 
     await userEvent.click(screen.getByText('Visa banderoll på sajten'))
-    await userEvent.click(screen.getByRole('button', { name: /Schemalägg|Sparas, publiceras automatiskt/ }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /Schemalägg|Sparas, publiceras automatiskt/ }),
+    )
 
     expect(vi.mocked(api.createUppdatering).mock.calls[0][0]).toMatchObject({ visaBanderoll: true })
   })
@@ -133,10 +156,16 @@ describe('AdminUppdateringar — Vad är nytt', () => {
     await userEvent.click(await screen.findByText('+ Ny uppdatering'))
     await userEvent.type(screen.getByPlaceholderText(/Logga in och skapa konto/), 'Titel')
 
-    const ruta = screen.getByText('Visa som Vad är nytt').closest('label')!.querySelector('input') as HTMLInputElement
+    const ruta = screen
+      .getByText('Visa som Vad är nytt')
+      .closest('label')!
+      .querySelector('input') as HTMLInputElement
     expect(ruta).toBeDisabled()
 
-    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'En rad text')
+    await userEvent.type(
+      screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+      'En rad text',
+    )
     expect(ruta).not.toBeDisabled()
   })
 
@@ -145,11 +174,17 @@ describe('AdminUppdateringar — Vad är nytt', () => {
     rendera()
     await userEvent.click(await screen.findByText('+ Ny uppdatering'))
     await userEvent.type(screen.getByPlaceholderText(/Logga in och skapa konto/), 'Titel')
-    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'En rad text')
+    await userEvent.type(
+      screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+      'En rad text',
+    )
 
     await userEvent.click(screen.getByText('Visa som Vad är nytt'))
     await userEvent.click(screen.getByRole('button', { name: 'Publicera' }))
 
-    expect(vi.mocked(api.createUppdatering).mock.calls[0][0]).toMatchObject({ visaVadArNytt: true, publicerad: true })
+    expect(vi.mocked(api.createUppdatering).mock.calls[0][0]).toMatchObject({
+      visaVadArNytt: true,
+      publicerad: true,
+    })
   })
 })

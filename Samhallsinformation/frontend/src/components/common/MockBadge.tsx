@@ -17,7 +17,10 @@ export function MockBadge({ titel }: { titel?: string }) {
 /** Bred banderoll överst på en mock-yta. `children` kan förklara vad som saknas. */
 export function MockBanner({ children }: { children?: React.ReactNode }) {
   return (
-    <div role="note" className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 flex items-start gap-2.5">
+    <div
+      role="note"
+      className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 flex items-start gap-2.5"
+    >
       <MockBadge />
       <div className="text-xs text-amber-900 leading-relaxed">
         <p className="font-semibold">MOCK — exempeldata, inte riktig funktion</p>
@@ -32,7 +35,13 @@ export function MockBanner({ children }: { children?: React.ReactNode }) {
  * formulärfält inuti (ett `<fieldset disabled>` gör det åt alla barn), så att
  * inga åtgärdsknappar låtsas att något hände.
  */
-export function MockYta({ förklaring, children }: { förklaring?: React.ReactNode; children: React.ReactNode }) {
+export function MockYta({
+  förklaring,
+  children,
+}: {
+  förklaring?: React.ReactNode
+  children: React.ReactNode
+}) {
   return (
     <div className="flex flex-col">
       <div className="px-6 pt-4">
@@ -46,7 +55,13 @@ export function MockYta({ förklaring, children }: { förklaring?: React.ReactNo
 }
 
 /** Ersätter en yta som tidigare visade mock som om den vore sanning. */
-export function IngetKopplatAn({ rubrik, children }: { rubrik: string; children?: React.ReactNode }) {
+export function IngetKopplatAn({
+  rubrik,
+  children,
+}: {
+  rubrik: string
+  children?: React.ReactNode
+}) {
   return (
     <div className="px-6 py-10 flex flex-col items-center gap-2 text-center">
       <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">

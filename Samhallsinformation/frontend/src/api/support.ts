@@ -48,7 +48,9 @@ export class TicketError extends Error {
   }
 }
 
-export async function createTicket(req: CreateTicketRequest): Promise<{ id: string; ticketNumber: number }> {
+export async function createTicket(
+  req: CreateTicketRequest,
+): Promise<{ id: string; ticketNumber: number }> {
   const res = await adminFetch('/api/support/tickets', {
     method: 'POST',
     body: JSON.stringify(req),
@@ -144,7 +146,10 @@ export async function fetchAgents(): Promise<AdminAgentDto[]> {
   return res.json()
 }
 
-export async function fetchAdminTickets(params?: { userId?: string; status?: string }): Promise<AdminTicketListItemDto[]> {
+export async function fetchAdminTickets(params?: {
+  userId?: string
+  status?: string
+}): Promise<AdminTicketListItemDto[]> {
   const query = new URLSearchParams()
   if (params?.userId) query.set('userId', params.userId)
   if (params?.status) query.set('status', params.status)
@@ -192,7 +197,11 @@ export async function assignTicket(id: string, userId: string | null): Promise<v
   if (!res.ok) throw await felFranSvar(res, 'assignTicket')
 }
 
-export async function setTicketReminder(id: string, reminderAt: string | null, reminderNote: string | null): Promise<void> {
+export async function setTicketReminder(
+  id: string,
+  reminderAt: string | null,
+  reminderNote: string | null,
+): Promise<void> {
   const res = await adminFetch(`/api/admin/support/tickets/${id}/reminder`, {
     method: 'PUT',
     body: JSON.stringify({ reminderAt, reminderNote }),
@@ -208,7 +217,10 @@ export interface AddScheduledActionRequest {
   instruction?: string
 }
 
-export async function addScheduledAction(ticketId: string, req: AddScheduledActionRequest): Promise<{ id: string }> {
+export async function addScheduledAction(
+  ticketId: string,
+  req: AddScheduledActionRequest,
+): Promise<{ id: string }> {
   const res = await adminFetch(`/api/admin/support/tickets/${ticketId}/scheduled-actions`, {
     method: 'POST',
     body: JSON.stringify(req),
@@ -218,7 +230,9 @@ export async function addScheduledAction(ticketId: string, req: AddScheduledActi
 }
 
 export async function cancelScheduledAction(actionId: string): Promise<void> {
-  const res = await adminFetch(`/api/admin/support/scheduled-actions/${actionId}`, { method: 'DELETE' })
+  const res = await adminFetch(`/api/admin/support/scheduled-actions/${actionId}`, {
+    method: 'DELETE',
+  })
   if (!res.ok) throw await felFranSvar(res, 'cancelScheduledAction')
 }
 

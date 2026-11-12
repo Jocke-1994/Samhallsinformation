@@ -65,30 +65,25 @@ export interface PlatsSektion {
 }
 
 // ProfileNav
-export type ProfileSection =
-  | 'mina-kallor'
-  | 'notifieringar'
-  | 'konto'
-  | 'uppdateringar'
-  | 'support'
+export type ProfileSection = 'mina-kallor' | 'notifieringar' | 'konto' | 'uppdateringar' | 'support'
 
 // MinaKallor
-export type KallTyp    = 'Nationell' | 'Regional' | 'Kommunal'
+export type KallTyp = 'Nationell' | 'Regional' | 'Kommunal'
 export type SparFilter = 'Allt' | 'Regionalt' | 'Nationellt'
-export type RekFlik    = 'Alla' | KallTyp
-export type AllaFlik   = RekFlik | 'Nya'
+export type RekFlik = 'Alla' | KallTyp
+export type AllaFlik = RekFlik | 'Nya'
 
 export interface Kalla {
-  id:              number
-  namn:            string
-  typ:             KallTyp
-  region?:         string
-  ort?:            string
-  senasteNyhet:    string
-  deprecated?:     boolean
+  id: number
+  namn: string
+  typ: KallTyp
+  region?: string
+  ort?: string
+  senasteNyhet: string
+  deprecated?: boolean
   deprecatedAnledning?: string
-  url:             string
-  tillagdISystem:  string
+  url: string
+  tillagdISystem: string
 }
 
 // Uppdateringar — changelog-formen (Release/ChangeEntry) flyttad till

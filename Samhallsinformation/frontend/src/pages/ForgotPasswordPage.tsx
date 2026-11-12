@@ -4,9 +4,9 @@ import { Link } from 'react-router'
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail]   = useState('')
-  const [sent, setSent]     = useState(false)
-  const [error, setError]   = useState<string | null>(null)
+  const [email, setEmail] = useState('')
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
@@ -15,9 +15,9 @@ export default function ForgotPasswordPage() {
     setLoading(true)
     try {
       const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ email }),
+        body: JSON.stringify({ email }),
       })
       if (!res.ok) throw new Error('Något gick fel')
       setSent(true)
@@ -31,7 +31,6 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-
         <div className="text-center mb-8">
           <span className="text-2xl font-bold text-violet-600">Samhällsinfo</span>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Återställ lösenord</p>
@@ -44,7 +43,9 @@ export default function ForgotPasswordPage() {
               <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                 Om e-postadressen finns skickas ett återställningsmejl inom kort.
               </p>
-              <p className="text-xs text-slate-400 mt-2">Kolla skräpposten om du inte hittar det.</p>
+              <p className="text-xs text-slate-400 mt-2">
+                Kolla skräpposten om du inte hittar det.
+              </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -52,11 +53,13 @@ export default function ForgotPasswordPage() {
                 Ange din e-postadress så skickar vi en länk för att återställa ditt lösenord.
               </p>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">E-post</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  E-post
+                </label>
                 <input
                   type="email"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="din@epost.se"
                   required
                   className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
@@ -83,7 +86,6 @@ export default function ForgotPasswordPage() {
             Tillbaka till inloggning
           </Link>
         </p>
-
       </div>
     </div>
   )

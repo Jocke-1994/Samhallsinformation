@@ -16,19 +16,33 @@ vi.mock('../api/sources', () => ({
 }))
 
 const { fetchAdminSources, updateAdminSource } = await import('../api/sources')
-const { default: Kallhantering, beräknaKällDelta } = await import('../components/Admin/Kallhantering')
+const { default: Kallhantering, beräknaKällDelta } =
+  await import('../components/Admin/Kallhantering')
 
 const KÄLLA: AdminSource = {
-  id: 7, name: 'Testkällan', shortName: 'TK', baseUrl: 'https://kalla.example', url: 'https://kalla.example/rss',
-  category: 'Nationell', type: 0, isActive: true, isPublished: false, eventCount: 12,
-  lastFetchedAt: null, lastFetchError: null,
+  id: 7,
+  name: 'Testkällan',
+  shortName: 'TK',
+  baseUrl: 'https://kalla.example',
+  url: 'https://kalla.example/rss',
+  category: 'Nationell',
+  type: 0,
+  isActive: true,
+  isPublished: false,
+  eventCount: 12,
+  lastFetchedAt: null,
+  lastFetchError: null,
 }
 
 function renderaMedQuery() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  render(<QueryClientProvider client={queryClient}><Kallhantering /></QueryClientProvider>)
+  render(
+    <QueryClientProvider client={queryClient}>
+      <Kallhantering />
+    </QueryClientProvider>,
+  )
   return queryClient
 }
 
@@ -65,7 +79,8 @@ describe('Källredigering skickar delta (V3-21, E6#15)', () => {
     renderaMedQuery()
     await öppnaRedigering()
     // Växeln är en ren knapp (ingen etikett); hitta den via statustexten bredvid.
-    const växel = screen.getByText(/Opublicerad — osynlig/).parentElement!.previousElementSibling as HTMLElement
+    const växel = screen.getByText(/Opublicerad — osynlig/).parentElement!
+      .previousElementSibling as HTMLElement
     await userEvent.click(växel)
     await userEvent.click(sparaKnapp())
 
@@ -87,7 +102,10 @@ describe('Källredigering skickar delta (V3-21, E6#15)', () => {
     await öppnaRedigering()
 
     // Någon annan (snabbknapp, annan flik/admin) publicerar och pausar medan formuläret är öppet.
-    queryClient.setQueryData<AdminSource[]>(['admin-sources'], [{ ...KÄLLA, isPublished: true, isActive: false }])
+    queryClient.setQueryData<AdminSource[]>(
+      ['admin-sources'],
+      [{ ...KÄLLA, isPublished: true, isActive: false }],
+    )
     await screen.findByText(/Publicerad — synlig/)
 
     await skrivNamn('Nytt namn')
@@ -122,7 +140,7 @@ describe('Snabbknappar skickar bara sitt eget fält (V3-21)', () => {
     const rad = (await screen.findByTitle('https://kalla.example/rss')).closest('tr')!
     const knappar = within(rad).getAllByRole('button')
     // Raden har två växlar (Publicerad, Aktiv) före Synka om/Redigera/Ta bort.
-    const publicera = knappar.find(b => b.getAttribute('title')?.match(/publicer/i))
+    const publicera = knappar.find((b) => b.getAttribute('title')?.match(/publicer/i))
     expect(publicera).toBeTruthy()
     await userEvent.click(publicera!)
 
@@ -147,12 +165,22 @@ describe('Aktiv-växeln (V3-21)', () => {
 
 describe('beräknaKällDelta', () => {
   const aktuell = {
-    id: 1, namn: 'A', url: 'https://a', kategori: 'Nationell' as const, status: 'OK' as const,
-    aktiv: true, publicerad: true, senastKontroll: '—', fetchError: null, händelser: 0,
+    id: 1,
+    namn: 'A',
+    url: 'https://a',
+    kategori: 'Nationell' as const,
+    status: 'OK' as const,
+    aktiv: true,
+    publicerad: true,
+    senastKontroll: '—',
+    fetchError: null,
+    händelser: 0,
   }
 
   it('utelämnar fält som är lika med aktuellt läge och aldrig isActive', () => {
-    expect(beräknaKällDelta(aktuell, { namn: 'A', url: 'https://b', publicerad: true })).toEqual({ url: 'https://b' })
+    expect(beräknaKällDelta(aktuell, { namn: 'A', url: 'https://b', publicerad: true })).toEqual({
+      url: 'https://b',
+    })
     expect(beräknaKällDelta(aktuell, {})).toEqual({})
   })
 })

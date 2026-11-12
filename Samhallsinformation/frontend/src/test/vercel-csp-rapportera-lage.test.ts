@@ -19,20 +19,28 @@ const REPORT_URL = `${BACKEND}/api/csp-report`
 // den enda tillåtna skriptkällan som skript-vakten inte ser.
 const DYNAMISKA_SKRIPTKALLOR = ['https://accounts.google.com']
 
-interface HeaderRad { key: string; value: string }
-interface VercelConfig { headers?: { source: string; headers: HeaderRad[] }[] }
+interface HeaderRad {
+  key: string
+  value: string
+}
+interface VercelConfig {
+  headers?: { source: string; headers: HeaderRad[] }[]
+}
 
 const config = JSON.parse(vercelRaw) as VercelConfig
-const allaHeaders: HeaderRad[] = (config.headers ?? []).flatMap(h => h.headers)
+const allaHeaders: HeaderRad[] = (config.headers ?? []).flatMap((h) => h.headers)
 
 function header(namn: string): string | undefined {
-  return allaHeaders.find(h => h.key.toLowerCase() === namn.toLowerCase())?.value
+  return allaHeaders.find((h) => h.key.toLowerCase() === namn.toLowerCase())?.value
 }
 
 // "script-src 'self' https://a.example" -> { 'script-src': ["'self'", 'https://a.example'] }
 function parsaPolicy(policy: string): Record<string, string[]> {
   const result: Record<string, string[]> = {}
-  for (const del of policy.split(';').map(s => s.trim()).filter(Boolean)) {
+  for (const del of policy
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean)) {
     const [namn, ...kallor] = del.split(/\s+/)
     result[namn] = kallor
   }
@@ -40,7 +48,9 @@ function parsaPolicy(policy: string): Record<string, string[]> {
 }
 
 function origins(kallor: string[]): string[] {
-  return kallor.filter(k => k.startsWith('https://')).map(k => new URL(k.replace('*.', 'x.')).origin)
+  return kallor
+    .filter((k) => k.startsWith('https://'))
+    .map((k) => new URL(k.replace('*.', 'x.')).origin)
 }
 
 // Samma tolkning som skript-vakten: script[src] plus modulepreload/preload as=script,
@@ -49,10 +59,12 @@ function externaSkriptOrigins(html: string): string[] {
   const dok = new DOMParser().parseFromString(html, 'text/html')
   const urls = [
     ...dok.querySelectorAll('script[src]'),
-    ...dok.querySelectorAll('link[rel~="modulepreload"][href], link[rel~="preload"][as="script"][href]'),
-  ].map(el => el.getAttribute('src') ?? el.getAttribute('href') ?? '')
+    ...dok.querySelectorAll(
+      'link[rel~="modulepreload"][href], link[rel~="preload"][as="script"][href]',
+    ),
+  ].map((el) => el.getAttribute('src') ?? el.getAttribute('href') ?? '')
   const egen = 'https://samhallsinformation.se'
-  return [...new Set(urls.map(u => new URL(u, egen).origin).filter(o => o !== egen))].sort()
+  return [...new Set(urls.map((u) => new URL(u, egen).origin).filter((o) => o !== egen))].sort()
 }
 
 const policyText = header('Content-Security-Policy-Report-Only') ?? ''
@@ -61,7 +73,7 @@ const policy = parsaPolicy(policyText)
 describe('vercel.json: CSP i rapportera-läge', () => {
   it('är giltig JSON med en headers-sektion som gäller alla routes', () => {
     expect(Array.isArray(config.headers)).toBe(true)
-    expect(config.headers!.some(h => h.source === '/(.*)')).toBe(true)
+    expect(config.headers!.some((h) => h.source === '/(.*)')).toBe(true)
   })
 
   it('har Content-Security-Policy-Report-Only', () => {
@@ -70,7 +82,7 @@ describe('vercel.json: CSP i rapportera-läge', () => {
   })
 
   it('har INGEN enforcing Content-Security-Policy (bara report-only, får inte kunna blockera något)', () => {
-    const enforcing = allaHeaders.filter(h => h.key.toLowerCase() === 'content-security-policy')
+    const enforcing = allaHeaders.filter((h) => h.key.toLowerCase() === 'content-security-policy')
     expect(enforcing).toEqual([])
     // ...och inte heller via ett meta-tag i index.html
     expect(indexHtml.toLowerCase()).not.toContain('http-equiv="content-security-policy"')
@@ -78,7 +90,9 @@ describe('vercel.json: CSP i rapportera-läge', () => {
 
   it('tillåter exakt de externa skriptkällorna som skript-vakten godkänner (plus Google Identity)', () => {
     const iPolicyn = [...new Set(origins(policy['script-src'] ?? []))].sort()
-    const forvantat = [...new Set([...externaSkriptOrigins(indexHtml), ...DYNAMISKA_SKRIPTKALLOR])].sort()
+    const forvantat = [
+      ...new Set([...externaSkriptOrigins(indexHtml), ...DYNAMISKA_SKRIPTKALLOR]),
+    ].sort()
 
     expect(
       iPolicyn,
@@ -98,7 +112,7 @@ describe('vercel.json: CSP i rapportera-läge', () => {
   })
 
   it('täcker de källtyper sidan faktiskt använder', () => {
-    expect(policy['connect-src']).toContain(BACKEND)                       // API + service workern
+    expect(policy['connect-src']).toContain(BACKEND) // API + service workern
     expect(policy['connect-src']).toContain('https://*.google-analytics.com')
     expect(policy['connect-src']).toContain('https://accounts.google.com/gsi/')
     expect(policy['frame-src']).toContain('https://accounts.google.com/gsi/')

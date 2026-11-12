@@ -10,7 +10,8 @@ import type { Uppdatering } from '../api/uppdateringar'
 // slår på den.
 
 vi.mock('../api/uppdateringar', async () => {
-  const faktisk = await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
+  const faktisk =
+    await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
   return {
     ...faktisk,
     fetchAdminUppdateringar: vi.fn().mockResolvedValue([]),
@@ -28,8 +29,14 @@ const { default: AdminUppdateringar } = await import('../components/Admin/AdminU
 const { UTKAST_NYCKEL } = await import('../lib/nyUppdateringUtkast')
 
 function rendera() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={qc}><AdminUppdateringar /></QueryClientProvider>)
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={qc}>
+      <AdminUppdateringar />
+    </QueryClientProvider>,
+  )
 }
 
 const titelFält = () => screen.getByPlaceholderText(/Logga in och skapa konto/) as HTMLInputElement
@@ -44,7 +51,10 @@ describe('Ny uppdatering — osparat utkast', () => {
     rendera()
     await userEvent.click(await screen.findByText('+ Ny uppdatering'))
     await userEvent.type(titelFält(), 'Platsfilter')
-    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'En rad')
+    await userEvent.type(
+      screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+      'En rad',
+    )
     await userEvent.click(screen.getByRole('button', { name: 'Stäng formuläret' }))
 
     await userEvent.click(await screen.findByText('+ Ny uppdatering'))
@@ -55,11 +65,25 @@ describe('Ny uppdatering — osparat utkast', () => {
   })
 
   it('"Börja om" tömmer formuläret och utkastet', async () => {
-    localStorage.setItem(UTKAST_NYCKEL, JSON.stringify({
-      titel: 'Gammalt', datum: '2026-11-03', punkter: [{ typ: 'ny-funktion', plats: 'Allmänt', text: 'x', synlighet: 'alla' }],
-      schemalagd: false, schemaDatum: '', valdaFlaggor: [], skickaPush: false, pushVersion: '', pushMeddelande: '',
-      visaBanderoll: false, visaVadArNytt: false, annonsera: false, annonseDatum: '', pushSkickaVid: 'Lansering',
-    }))
+    localStorage.setItem(
+      UTKAST_NYCKEL,
+      JSON.stringify({
+        titel: 'Gammalt',
+        datum: '2026-11-03',
+        punkter: [{ typ: 'ny-funktion', plats: 'Allmänt', text: 'x', synlighet: 'alla' }],
+        schemalagd: false,
+        schemaDatum: '',
+        valdaFlaggor: [],
+        skickaPush: false,
+        pushVersion: '',
+        pushMeddelande: '',
+        visaBanderoll: false,
+        visaVadArNytt: false,
+        annonsera: false,
+        annonseDatum: '',
+        pushSkickaVid: 'Lansering',
+      }),
+    )
     rendera()
     await userEvent.click(await screen.findByText('+ Ny uppdatering'))
     expect(titelFält().value).toBe('Gammalt')
@@ -75,7 +99,10 @@ describe('Ny uppdatering — osparat utkast', () => {
     rendera()
     await userEvent.click(await screen.findByText('+ Ny uppdatering'))
     await userEvent.type(titelFält(), 'Klar')
-    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'Text')
+    await userEvent.type(
+      screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+      'Text',
+    )
     expect(localStorage.getItem(UTKAST_NYCKEL)).not.toBeNull()
 
     await userEvent.click(screen.getByRole('button', { name: 'Spara som utkast' }))
@@ -105,7 +132,10 @@ describe('Ny uppdatering — flaggval och checklista', () => {
 
   it('varnar inte för avstängd profilsida när lanseringen själv slår på den', async () => {
     await schemalägg()
-    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'Bara för inloggade')
+    await userEvent.type(
+      screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+      'Bara för inloggade',
+    )
     await userEvent.click(screen.getByText('Endast inloggade'))
     const varning = /Profil → Uppdateringar är avstängd/
     expect(screen.getByText(varning)).toBeInTheDocument()
@@ -117,11 +147,16 @@ describe('Ny uppdatering — flaggval och checklista', () => {
 
   it('fliken Profil visar även "Endast inloggade"-rader, när profilsidan slås på', async () => {
     await schemalägg()
-    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'Bara för inloggade')
+    await userEvent.type(
+      screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+      'Bara för inloggade',
+    )
     await userEvent.click(screen.getByText('Endast inloggade'))
     await userEvent.click(screen.getByRole('tab', { name: 'Profil' }))
     await userEvent.click(screen.getByRole('button', { name: 'Inloggad' }))
-    expect(screen.getByText(/Profil → Uppdateringar är avstängd för användarna/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Profil → Uppdateringar är avstängd för användarna/),
+    ).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'uppdateringar_senaste' }))
 
@@ -131,7 +166,10 @@ describe('Ny uppdatering — flaggval och checklista', () => {
 
   it('varnar när Vad är nytt är ikryssad men rutan inte slås på', async () => {
     await schemalägg()
-    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'Text')
+    await userEvent.type(
+      screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+      'Text',
+    )
     await userEvent.click(screen.getByText('Visa som Vad är nytt'))
     const varning = /själva rutan är avstängd för användarna/
     expect(screen.getByText(varning)).toBeInTheDocument()

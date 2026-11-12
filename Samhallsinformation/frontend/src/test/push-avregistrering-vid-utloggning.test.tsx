@@ -44,20 +44,31 @@ function renderaInloggad(minuter = 15) {
   const token = skapaJwt(Date.now() + minuter * 60_000)
   localStorage.setItem('si_token', token)
   localStorage.setItem('si_refresh_token', 'refresh-1')
-  render(<AuthMedQuery><Panel /></AuthMedQuery>)
+  render(
+    <AuthMedQuery>
+      <Panel />
+    </AuthMedQuery>,
+  )
   return token
 }
 
 const anropTill = (slutPa: string, metod?: string) =>
-  fetchMock.mock.calls.filter(([url, init]) =>
-    String(url).endsWith(slutPa) && (!metod || (init as RequestInit | undefined)?.method === metod))
+  fetchMock.mock.calls.filter(
+    ([url, init]) =>
+      String(url).endsWith(slutPa) &&
+      (!metod || (init as RequestInit | undefined)?.method === metod),
+  )
 
 beforeEach(() => {
   fetchMock.mockReset()
   fetchMock.mockResolvedValue(new Response('{}', { status: 200 }))
   unsubscribeMock.mockReset().mockResolvedValue(true)
-  getSubscriptionMock.mockReset().mockResolvedValue({ endpoint: ENDPOINT, unsubscribe: unsubscribeMock })
-  getRegistrationMock.mockReset().mockResolvedValue({ pushManager: { getSubscription: getSubscriptionMock } })
+  getSubscriptionMock
+    .mockReset()
+    .mockResolvedValue({ endpoint: ENDPOINT, unsubscribe: unsubscribeMock })
+  getRegistrationMock
+    .mockReset()
+    .mockResolvedValue({ pushManager: { getSubscription: getSubscriptionMock } })
   vi.stubGlobal('fetch', fetchMock)
   installeraServiceWorker()
 })
@@ -110,20 +121,37 @@ describe('Utloggning avregistrerar enheten (V3-13)', () => {
   })
 
   it.each([
-    ['nätverksfel', () => fetchMock.mockImplementation((url: string) =>
-      String(url).endsWith('/api/push/subscribe') ? Promise.reject(new TypeError('Failed to fetch')) : Promise.resolve(new Response('{}')))],
-    ['serverfel 500', () => fetchMock.mockImplementation((url: string) =>
-      Promise.resolve(new Response('{}', { status: String(url).endsWith('/api/push/subscribe') ? 500 : 200 })))],
-  ])('%s vid serveravregistreringen blockerar inte utloggningen, och webbläsaren släpper ändå prenumerationen', async (_namn, satt) => {
-    satt()
-    const user = userEvent.setup()
-    renderaInloggad()
+    [
+      'nätverksfel',
+      () =>
+        fetchMock.mockImplementation((url: string) =>
+          String(url).endsWith('/api/push/subscribe')
+            ? Promise.reject(new TypeError('Failed to fetch'))
+            : Promise.resolve(new Response('{}')),
+        ),
+    ],
+    [
+      'serverfel 500',
+      () =>
+        fetchMock.mockImplementation((url: string) =>
+          Promise.resolve(
+            new Response('{}', { status: String(url).endsWith('/api/push/subscribe') ? 500 : 200 }),
+          ),
+        ),
+    ],
+  ])(
+    '%s vid serveravregistreringen blockerar inte utloggningen, och webbläsaren släpper ändå prenumerationen',
+    async (_namn, satt) => {
+      satt()
+      const user = userEvent.setup()
+      renderaInloggad()
 
-    await user.click(screen.getByRole('button', { name: 'Logga ut' }))
+      await user.click(screen.getByRole('button', { name: 'Logga ut' }))
 
-    expect(screen.getByTestId('status')).toHaveTextContent('utloggad')
-    await waitFor(() => expect(unsubscribeMock).toHaveBeenCalledTimes(1))
-  })
+      expect(screen.getByTestId('status')).toHaveTextContent('utloggad')
+      await waitFor(() => expect(unsubscribeMock).toHaveBeenCalledTimes(1))
+    },
+  )
 
   it('getRegistration som kastar blockerar inte utloggningen', async () => {
     getRegistrationMock.mockRejectedValue(new Error('ingen service worker'))
@@ -157,13 +185,19 @@ describe('Sessionsslut vs tillfälliga fel (V3-13)', () => {
   })
 
   async function spolaTillRefresh() {
-    await act(async () => { await vi.advanceTimersByTimeAsync(13 * 60_000 + 1000) })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(13 * 60_000 + 1000)
+    })
   }
 
   function renderaMedFakeTimers() {
     localStorage.setItem('si_token', skapaJwt(NU + 15 * 60_000))
     localStorage.setItem('si_refresh_token', 'refresh-1')
-    render(<AuthMedQuery><Panel /></AuthMedQuery>)
+    render(
+      <AuthMedQuery>
+        <Panel />
+      </AuthMedQuery>,
+    )
   }
 
   it('refresh-token avvisad (401): sessionen slutar och enheten avregistreras i webbläsaren', async () => {
@@ -180,15 +214,18 @@ describe('Sessionsslut vs tillfälliga fel (V3-13)', () => {
     ['429', () => fetchMock.mockResolvedValue(new Response('{}', { status: 429 }))],
     ['500', () => fetchMock.mockResolvedValue(new Response('{}', { status: 500 }))],
     ['nätverksfel', () => fetchMock.mockRejectedValue(new TypeError('Failed to fetch'))],
-  ])('tillfälligt refresh-fel (%s): sessionen består och prenumerationen rörs inte', async (_namn, satt) => {
-    satt()
-    renderaMedFakeTimers()
+  ])(
+    'tillfälligt refresh-fel (%s): sessionen består och prenumerationen rörs inte',
+    async (_namn, satt) => {
+      satt()
+      renderaMedFakeTimers()
 
-    await spolaTillRefresh()
+      await spolaTillRefresh()
 
-    expect(screen.getByTestId('status')).toHaveTextContent('inloggad')
-    expect(getRegistrationMock).not.toHaveBeenCalled()
-    expect(unsubscribeMock).not.toHaveBeenCalled()
-    expect(anropTill('/api/push/subscribe')).toHaveLength(0)
-  })
+      expect(screen.getByTestId('status')).toHaveTextContent('inloggad')
+      expect(getRegistrationMock).not.toHaveBeenCalled()
+      expect(unsubscribeMock).not.toHaveBeenCalled()
+      expect(anropTill('/api/push/subscribe')).toHaveLength(0)
+    },
+  )
 })

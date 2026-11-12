@@ -31,10 +31,20 @@ const { default: IdeDetaljModal } = await import('../components/Admin/IdeDetaljM
 
 const detalj = (over: Partial<FeatureIdeaDetailDto['idea']> = {}): FeatureIdeaDetailDto => ({
   idea: {
-    id: 'i1', ideaNumber: 12, title: 'Dela händelse', stage: 'triage', priority: 0, källaTyp: 'admin',
-    flagKey: null, createdAt: '2026-09-01T00:00:00Z', updatedAt: '2026-09-01T00:00:00Z',
-    description: 'En bra idé', triageKanGoras: true, triageBorGoras: true,
-    triageMotivering: 'Redan efterfrågat av flera användare', createdByName: 'Admin',
+    id: 'i1',
+    ideaNumber: 12,
+    title: 'Dela händelse',
+    stage: 'triage',
+    priority: 0,
+    källaTyp: 'admin',
+    flagKey: null,
+    createdAt: '2026-09-01T00:00:00Z',
+    updatedAt: '2026-09-01T00:00:00Z',
+    description: 'En bra idé',
+    triageKanGoras: true,
+    triageBorGoras: true,
+    triageMotivering: 'Redan efterfrågat av flera användare',
+    createdByName: 'Admin',
     ...over,
   },
   testers: [],
@@ -43,8 +53,14 @@ const detalj = (over: Partial<FeatureIdeaDetailDto['idea']> = {}): FeatureIdeaDe
 })
 
 function rendera() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={qc}><IdeDetaljModal ideaId="i1" onClose={() => {}} /></QueryClientProvider>)
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={qc}>
+      <IdeDetaljModal ideaId="i1" onClose={() => {}} />
+    </QueryClientProvider>,
+  )
 }
 
 beforeEach(() => {
@@ -113,10 +129,15 @@ describe('IdeDetaljModal — flagKey är en begränsad lista, inte fri text (E6#
 
     await userEvent.click(await screen.findByText('Redigera'))
     const select = screen.getByDisplayValue('Ingen koppling') as HTMLSelectElement
-    const giltigNyckel = Array.from(select.options).find(o => o.value !== '')!.value
+    const giltigNyckel = Array.from(select.options).find((o) => o.value !== '')!.value
     await userEvent.selectOptions(select, giltigNyckel)
     await userEvent.click(screen.getByRole('button', { name: 'Spara' }))
 
-    await waitFor(() => expect(api.updateFeatureIdea).toHaveBeenCalledWith('i1', expect.objectContaining({ flagKey: giltigNyckel })))
+    await waitFor(() =>
+      expect(api.updateFeatureIdea).toHaveBeenCalledWith(
+        'i1',
+        expect.objectContaining({ flagKey: giltigNyckel }),
+      ),
+    )
   })
 })

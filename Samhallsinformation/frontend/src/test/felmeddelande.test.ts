@@ -5,7 +5,9 @@ const RESERV = 'Något gick fel. Försök igen.'
 
 describe('visaFel (V3-9)', () => {
   it('visar serverns egna svenska text', () => {
-    expect(visaFel(new Error('E-postadressen används redan'), RESERV)).toBe('E-postadressen används redan')
+    expect(visaFel(new Error('E-postadressen används redan'), RESERV)).toBe(
+      'E-postadressen används redan',
+    )
   })
 
   it('byter tekniska statusfel från API-lagret mot reservtexten', () => {

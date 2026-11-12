@@ -1,6 +1,6 @@
 # Samhällsinformation
 
-[![CI](https://github.com/Jocke-1994/Samhallsinformation/actions/workflows/ci.yml/badge.svg)](https://github.com/Jocke-1994/Samhallsinformation/actions/workflows/ci.yml)
+[![Frontend CI](https://github.com/Jocke-1994/Samhallsinformation/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/Jocke-1994/Samhallsinformation/actions/workflows/frontend-ci.yml)
 [![Backend CI](https://github.com/Jocke-1994/Samhallsinformation/actions/workflows/ci-backend.yml/badge.svg)](https://github.com/Jocke-1994/Samhallsinformation/actions/workflows/ci-backend.yml)
 
 Samhällsinformation samlar offentlig information från svenska myndigheter,

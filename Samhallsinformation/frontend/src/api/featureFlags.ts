@@ -17,7 +17,7 @@ export async function fetchFeatureFlagOverrides(): Promise<Record<string, boolea
 export async function setFeatureFlagOverride(key: string, value: boolean): Promise<void> {
   const res = await adminFetch(`/api/admin/feature-flags/${key}`, {
     method: 'PUT',
-    body:   JSON.stringify({ value }),
+    body: JSON.stringify({ value }),
   })
   if (!res.ok) throw await felFranSvar(res, 'setFeatureFlagOverride')
 }
@@ -28,10 +28,10 @@ export async function resetFeatureFlagOverrides(): Promise<void> {
 }
 
 export interface AdminFeatureFlagOverride {
-  key:             string
-  value:           boolean
+  key: string
+  value: boolean
   redoAttLanseras: boolean
-  endastAdmin:     boolean
+  endastAdmin: boolean
 }
 
 // Adminens fulla vy (inkl. redoAttLanseras) — till skillnad från den
@@ -45,7 +45,7 @@ export async function fetchAdminFeatureFlags(): Promise<AdminFeatureFlagOverride
 export async function setFeatureFlagRedo(key: string, redoAttLanseras: boolean): Promise<void> {
   const res = await adminFetch(`/api/admin/feature-flags/${key}/redo`, {
     method: 'PUT',
-    body:   JSON.stringify({ redoAttLanseras }),
+    body: JSON.stringify({ redoAttLanseras }),
   })
   if (!res.ok) throw await felFranSvar(res, 'setFeatureFlagRedo')
 }
@@ -55,7 +55,7 @@ export async function setFeatureFlagRedo(key: string, redoAttLanseras: boolean):
 export async function setFeatureFlagEndastAdmin(key: string, endastAdmin: boolean): Promise<void> {
   const res = await adminFetch(`/api/admin/feature-flags/${key}/synlighet`, {
     method: 'PUT',
-    body:   JSON.stringify({ endastAdmin }),
+    body: JSON.stringify({ endastAdmin }),
   })
   if (!res.ok) throw await felFranSvar(res, 'setFeatureFlagEndastAdmin')
 }

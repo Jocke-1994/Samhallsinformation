@@ -8,11 +8,20 @@ import type { PunktRequest, PushSkickaVid } from '../api/uppdateringar'
 export const UTKAST_NYCKEL = 'si_ny_uppdatering_utkast'
 
 export interface NyUppdateringUtkast {
-  titel: string; datum: string; punkter: PunktRequest[]
-  schemalagd: boolean; schemaDatum: string; valdaFlaggor: string[]
-  skickaPush: boolean; pushVersion: string; pushMeddelande: string
-  visaBanderoll: boolean; visaVadArNytt: boolean
-  annonsera: boolean; annonseDatum: string; pushSkickaVid: PushSkickaVid
+  titel: string
+  datum: string
+  punkter: PunktRequest[]
+  schemalagd: boolean
+  schemaDatum: string
+  valdaFlaggor: string[]
+  skickaPush: boolean
+  pushVersion: string
+  pushMeddelande: string
+  visaBanderoll: boolean
+  visaVadArNytt: boolean
+  annonsera: boolean
+  annonseDatum: string
+  pushSkickaVid: PushSkickaVid
   /** Saknas i utkast sparade före versionsfältet (2026-11-02). */
   version?: string
 }
@@ -20,8 +29,10 @@ export interface NyUppdateringUtkast {
 export function läsUtkast(): NyUppdateringUtkast | null {
   try {
     const rå = localStorage.getItem(UTKAST_NYCKEL)
-    return rå ? JSON.parse(rå) as NyUppdateringUtkast : null
-  } catch { return null }
+    return rå ? (JSON.parse(rå) as NyUppdateringUtkast) : null
+  } catch {
+    return null
+  }
 }
 
 /** Tomt formulär = inget utkast att spara. */
@@ -29,7 +40,11 @@ export function sparaUtkast(utkast: NyUppdateringUtkast | null) {
   try {
     if (utkast) localStorage.setItem(UTKAST_NYCKEL, JSON.stringify(utkast))
     else localStorage.removeItem(UTKAST_NYCKEL)
-  } catch { /* privat läge m.m. — formuläret fungerar ändå */ }
+  } catch {
+    /* privat läge m.m. — formuläret fungerar ändå */
+  }
 }
 
-export function rensaUtkast() { sparaUtkast(null) }
+export function rensaUtkast() {
+  sparaUtkast(null)
+}

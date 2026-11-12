@@ -21,7 +21,9 @@ async function skickaFormular() {
   await user.click(screen.getByRole('button', { name: 'Spara nytt lösenord' }))
 }
 
-afterEach(() => { vi.unstubAllGlobals() })
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('ResetPasswordPage', () => {
   it('nätverksfel: svensk text i stället för "Failed to fetch"', async () => {
@@ -36,10 +38,13 @@ describe('ResetPasswordPage', () => {
   })
 
   it('serverfel med egen svensk text: texten visas', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: false,
-      json: async () => ({ error: 'Länken har gått ut.' }),
-    }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({ error: 'Länken har gått ut.' }),
+      }),
+    )
     rendera()
 
     await skickaFormular()

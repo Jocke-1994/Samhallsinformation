@@ -59,9 +59,18 @@ const dialog = () => screen.queryByRole('alertdialog')
 // ---------------------------------------------------------------------------
 
 const KÄLLA: AdminSource = {
-  id: 7, name: 'Testkällan', shortName: 'TK', baseUrl: 'https://kalla.example', url: 'https://kalla.example/rss',
-  category: 'Nationell', type: 0, isActive: true, isPublished: true, eventCount: 12,
-  lastFetchedAt: null, lastFetchError: null,
+  id: 7,
+  name: 'Testkällan',
+  shortName: 'TK',
+  baseUrl: 'https://kalla.example',
+  url: 'https://kalla.example/rss',
+  category: 'Nationell',
+  type: 0,
+  isActive: true,
+  isPublished: true,
+  eventCount: 12,
+  lastFetchedAt: null,
+  lastFetchError: null,
 }
 
 describe('Källhantering: Ta bort källa (V2-15, E6#4)', () => {
@@ -129,7 +138,9 @@ describe('Källhantering: Ta bort källa (V2-15, E6#4)', () => {
 // ---------------------------------------------------------------------------
 
 function flaggorMedEnAvvikelse(): { flaggor: FlagState; avvikande: string } {
-  const flaggor = Object.fromEntries(FLAG_DEFINITIONER.map(f => [f.key, f.defaultAktiv])) as FlagState
+  const flaggor = Object.fromEntries(
+    FLAG_DEFINITIONER.map((f) => [f.key, f.defaultAktiv]),
+  ) as FlagState
   const f = FLAG_DEFINITIONER[0]
   flaggor[f.key] = !f.defaultAktiv
   return { flaggor, avvikande: f.label }
@@ -145,10 +156,13 @@ describe('Feature flags: Återställ standardvärden (V2-15, E6#5)', () => {
 
   function rendera() {
     const { flaggor, avvikande } = flaggorMedEnAvvikelse()
-    renderaMedQuery(<FeatureFlagsAdmin flaggor={flaggor} onVäxla={vi.fn()} onÅterställ={onÅterställ} />)
+    renderaMedQuery(
+      <FeatureFlagsAdmin flaggor={flaggor} onVäxla={vi.fn()} onÅterställ={onÅterställ} />,
+    )
     return avvikande
   }
-  const öppnaDialog = () => userEvent.click(screen.getByRole('button', { name: /Återställ standardvärden/ }))
+  const öppnaDialog = () =>
+    userEvent.click(screen.getByRole('button', { name: /Återställ standardvärden/ }))
 
   it('visar en dialog om att alla overrides tas bort, globalt, med antal berörda flaggor', async () => {
     const avvikande = rendera()
@@ -200,7 +214,10 @@ describe('Uppdateringar: Skicka "Ny version"-notis (V2-15, E6#17)', () => {
   async function fylIFormuläretOchKlickaSkicka() {
     renderaMedQuery(<AdminUppdateringar />)
     await userEvent.type(await screen.findByPlaceholderText('T.ex. 0.6.0'), '9.9.9')
-    await userEvent.type(screen.getByPlaceholderText(/Nya källor och en snabbare/), 'Testmeddelande')
+    await userEvent.type(
+      screen.getByPlaceholderText(/Nya källor och en snabbare/),
+      'Testmeddelande',
+    )
     await userEvent.click(screen.getByRole('button', { name: 'Skicka nu' }))
   }
 
@@ -270,12 +287,21 @@ describe('SiteSettingsAdmin (V2-15, E6#21)', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Försök igen' }))
     await waitFor(() => expect(screen.getAllByRole('switch')[0]).toBeEnabled())
     // Läget är nu det verkliga (av), inte en gissning.
-    expect(screen.getByRole('switch', { name: 'Visa Logga in-knappen' })).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByRole('switch', { name: 'Visa Logga in-knappen' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    )
   })
 
   async function renderaMedKäntLäge() {
-    vi.mocked(getSiteSettings).mockResolvedValue({ showLoginButton: true, showRegisterButton: true })
-    vi.mocked(updateSiteSettings).mockResolvedValue({ showLoginButton: false, showRegisterButton: true })
+    vi.mocked(getSiteSettings).mockResolvedValue({
+      showLoginButton: true,
+      showRegisterButton: true,
+    })
+    vi.mocked(updateSiteSettings).mockResolvedValue({
+      showLoginButton: false,
+      showRegisterButton: true,
+    })
     renderaMedQuery(<SiteSettingsAdmin />)
     const knapp = await screen.findByRole('switch', { name: 'Dölj Logga in-knappen' })
     await waitFor(() => expect(knapp).toBeEnabled())

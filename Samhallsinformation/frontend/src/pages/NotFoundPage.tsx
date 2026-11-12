@@ -13,7 +13,9 @@ export default function NotFoundPage() {
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 text-center">
           <div className="text-3xl mb-4">🔍</div>
-          <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Sidan finns inte</h1>
+          <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+            Sidan finns inte
+          </h1>
           <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
             Länken kan vara felstavad eller så har sidan flyttats.
           </p>

@@ -37,7 +37,9 @@ describe('fetchSparadeHandelser', () => {
     adminFetch.mockResolvedValue(svar(200, body))
 
     await expect(fetchSparadeHandelser(1, 50)).resolves.toEqual(body)
-    expect(adminFetch).toHaveBeenCalledExactlyOnceWith('/api/user/saved-events/events?page=1&pageSize=50')
+    expect(adminFetch).toHaveBeenCalledExactlyOnceWith(
+      '/api/user/saved-events/events?page=1&pageSize=50',
+    )
   })
 
   it('kastar vid felsvar', async () => {

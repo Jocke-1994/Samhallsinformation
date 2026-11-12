@@ -6,60 +6,60 @@ export type Synlighet = 'alla' | 'inloggade'
 export type PushSkickaVid = 'Annonsering' | 'Lansering' | 'Båda'
 
 export interface UppdateringsPunkt {
-  id:        string
-  typ:       PunktTyp
-  plats:     string
-  text:      string
+  id: string
+  typ: PunktTyp
+  plats: string
+  text: string
   synlighet: Synlighet
   /** "Prova själv"-mål (lib/provaSjalv.ts), null = ingen länk. Saknas i äldre svar. */
   provaSjalv?: string | null
 }
 
 export interface Uppdatering {
-  id:                        string
-  titel:                     string
-  datum:                     string
-  publicerad:                boolean
-  punkter:                   UppdateringsPunkt[]
-  schemalagdPubliceringUtc:  string | null
-  schemalagdaFlaggor:        string[]
-  skickaPush:                boolean
-  pushVersion:               string | null
-  pushMeddelande:            string | null
-  visaBanderoll:             boolean
-  annonseringUtc:            string | null
-  annonseradUtc:             string | null
-  pushSkickaVid:             PushSkickaVid
-  createdAt:                 string
-  visaVadArNytt:             boolean
+  id: string
+  titel: string
+  datum: string
+  publicerad: boolean
+  punkter: UppdateringsPunkt[]
+  schemalagdPubliceringUtc: string | null
+  schemalagdaFlaggor: string[]
+  skickaPush: boolean
+  pushVersion: string | null
+  pushMeddelande: string | null
+  visaBanderoll: boolean
+  annonseringUtc: string | null
+  annonseradUtc: string | null
+  pushSkickaVid: PushSkickaVid
+  createdAt: string
+  visaVadArNytt: boolean
   /** Versionsnummer, t.ex. "1.1". Saknas i äldre svar och på äldre poster. */
-  version?:                  string | null
+  version?: string | null
 }
 
 export interface PunktRequest {
-  typ:       PunktTyp
-  plats:     string
-  text:      string
+  typ: PunktTyp
+  plats: string
+  text: string
   synlighet: Synlighet
   provaSjalv?: string | null
 }
 
 export interface UppdateringRequest {
-  titel:                     string
-  datum:                     string
-  publicerad:                boolean
-  punkter:                   PunktRequest[]
+  titel: string
+  datum: string
+  publicerad: boolean
+  punkter: PunktRequest[]
   schemalagdPubliceringUtc?: string | null
-  schemalagdaFlaggor?:       string[]
-  skickaPush?:               boolean
-  pushVersion?:              string | null
-  pushMeddelande?:           string | null
-  visaBanderoll?:            boolean
-  annonseringUtc?:           string | null
-  pushSkickaVid?:            PushSkickaVid
-  visaVadArNytt?:            boolean
+  schemalagdaFlaggor?: string[]
+  skickaPush?: boolean
+  pushVersion?: string | null
+  pushMeddelande?: string | null
+  visaBanderoll?: boolean
+  annonseringUtc?: string | null
+  pushSkickaVid?: PushSkickaVid
+  visaVadArNytt?: boolean
   /** "" tar bort versionen; utelämnat behåller den sparade. */
-  version?:                  string
+  version?: string
 }
 
 // Publika endpointen filtrerar på Synlighet i backend: anonym får bara punkter
@@ -90,7 +90,7 @@ export async function fetchAdminUppdateringar(): Promise<Uppdatering[]> {
 export async function createUppdatering(req: UppdateringRequest): Promise<Uppdatering> {
   const res = await adminFetch('/api/admin/uppdateringar', {
     method: 'POST',
-    body:   JSON.stringify(req),
+    body: JSON.stringify(req),
   })
   if (!res.ok) throw await felFranSvar(res, 'createUppdatering')
   return res.json()
@@ -99,7 +99,7 @@ export async function createUppdatering(req: UppdateringRequest): Promise<Uppdat
 export async function updateUppdatering(id: string, req: UppdateringRequest): Promise<Uppdatering> {
   const res = await adminFetch(`/api/admin/uppdateringar/${id}`, {
     method: 'PUT',
-    body:   JSON.stringify(req),
+    body: JSON.stringify(req),
   })
   if (!res.ok) throw await felFranSvar(res, 'updateUppdatering')
   return res.json()
@@ -108,9 +108,9 @@ export async function updateUppdatering(id: string, req: UppdateringRequest): Pr
 // Vad är nytt-rutan — bara för inloggade. Backend svarar 204 när det inte finns
 // något att visa (redan sett, äldre än kontot, inget ikryssat), då blir det null.
 export interface VadArNytt {
-  id:      string
-  titel:   string
-  datum:   string
+  id: string
+  titel: string
+  datum: string
   punkter: UppdateringsPunkt[]
   version?: string | null
 }

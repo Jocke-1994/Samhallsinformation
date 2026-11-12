@@ -14,7 +14,9 @@ describe('changePassword (API-klient, V1-1)', () => {
     localStorage.setItem('si_token', 'access-token')
     localStorage.setItem('si_refresh_token', 'enhetens-refresh')
   })
-  afterEach(() => { vi.unstubAllGlobals() })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
 
   it('gör PUT mot /api/auth/me/password med båda lösenorden och enhetens refresh-token', async () => {
     fetchMock.mockResolvedValue(svar(200, { message: 'ok' }))
@@ -34,7 +36,9 @@ describe('changePassword (API-klient, V1-1)', () => {
 
   it('kastar serverns svenska felmeddelande vid 400', async () => {
     fetchMock.mockResolvedValue(svar(400, { error: 'Nuvarande lösenord stämmer inte' }))
-    await expect(changePassword('fel', 'helt-nytt-losen')).rejects.toThrow('Nuvarande lösenord stämmer inte')
+    await expect(changePassword('fel', 'helt-nytt-losen')).rejects.toThrow(
+      'Nuvarande lösenord stämmer inte',
+    )
   })
 
   it('ger begripliga texter för 401, 429, 5xx och nätverksfel', async () => {

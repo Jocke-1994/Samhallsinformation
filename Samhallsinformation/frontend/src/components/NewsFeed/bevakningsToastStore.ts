@@ -6,9 +6,9 @@ import { useSyncExternalStore } from 'react'
 // egen state dör då med den, och Ångra-knappen hann aldrig visas. Här överlever
 // toasten, och BevakningsToastHost (monterad i App) renderar den.
 export interface BevakningsToast {
-  id:    number
-  text:  string
-  typ:   'info' | 'fel'
+  id: number
+  text: string
+  typ: 'info' | 'fel'
   // Om satt visas en Ångra-knapp som återskapar bevakningen. Bara data, inte
   // en callback — hosten anropar då SIN färska skapa() ur kontexten i stället
   // för en stängd-över-gammalt-tillstånd-funktion (den kunde annars tro att
@@ -21,7 +21,7 @@ let nästaId = 1
 const lyssnare = new Set<() => void>()
 
 function meddela() {
-  lyssnare.forEach(l => l())
+  lyssnare.forEach((l) => l())
 }
 
 export function visaBevakningsToast(toast: Omit<BevakningsToast, 'id'>) {
@@ -37,7 +37,9 @@ export function stängBevakningsToast() {
 
 function prenumerera(l: () => void) {
   lyssnare.add(l)
-  return () => { lyssnare.delete(l) }
+  return () => {
+    lyssnare.delete(l)
+  }
 }
 
 export function useBevakningsToast(): BevakningsToast | null {

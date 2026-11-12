@@ -25,7 +25,12 @@ const EPOST_CLAIM = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/email
 
 // Minimal JWT (osignerad — klienten avkodar bara payloaden).
 function skapaJwt(expMs: number, extra: Record<string, unknown> = {}): string {
-  const payload = { role: 'Användare', exp: Math.floor(expMs / 1000), [EPOST_CLAIM]: 'a@b.se', ...extra }
+  const payload = {
+    role: 'Användare',
+    exp: Math.floor(expMs / 1000),
+    [EPOST_CLAIM]: 'a@b.se',
+    ...extra,
+  }
   return `x.${btoa(JSON.stringify(payload))}.x`
 }
 
@@ -43,7 +48,13 @@ function Sond({ id = 'sond' }: { id?: string }) {
       <div data-testid={`${id}-status`}>{isLoggedIn ? 'inloggad' : 'utloggad'}</div>
       <div data-testid={`${id}-token`}>{accessToken ?? ''}</div>
       <button onClick={logout}>logga-ut</button>
-      <button onClick={() => { void refreshSession() }}>refresha</button>
+      <button
+        onClick={() => {
+          void refreshSession()
+        }}
+      >
+        refresha
+      </button>
     </div>
   )
 }
@@ -78,7 +89,9 @@ function skickaStorageEvent(key: string | null) {
 }
 
 async function spolaTillRefresh() {
-  await act(async () => { await vi.advanceTimersByTimeAsync(13 * 60_000 + 1000) })
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(13 * 60_000 + 1000)
+  })
 }
 
 // Fejkade Web Locks: exklusiv kö per namn, som navigator.locks.request.
@@ -86,7 +99,9 @@ function installeraFejkadeLas() {
   let kedja: Promise<unknown> = Promise.resolve()
   const request = vi.fn((_namn: string, cb: () => Promise<unknown>) => {
     const kor = kedja.then(() => cb())
-    kedja = kor.catch(() => { /* låset släpps även om callbacken kastar */ })
+    kedja = kor.catch(() => {
+      /* låset släpps även om callbacken kastar */
+    })
     return kor
   })
   Object.defineProperty(navigator, 'locks', { value: { request }, configurable: true })
@@ -108,7 +123,11 @@ describe('flikar — storage-synk av sessionen', () => {
 
   it('nya tokens från en annan flik adopteras utan nätanrop, och nästa refresh använder den nya refresh-token', async () => {
     seeda()
-    render(<AuthMedQuery><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery>
+        <Sond />
+      </AuthMedQuery>,
+    )
     const nyAccess = skapaJwt(NU + 28 * 60_000)
 
     annanFlikSkriver(nyAccess, 'refresh-2')
@@ -119,7 +138,9 @@ describe('flikar — storage-synk av sessionen', () => {
     expect(fetchMock).not.toHaveBeenCalled()
 
     fetchMock.mockResolvedValue(tokenSvar(skapaJwt(NU + 40 * 60_000), 'refresh-3'))
-    await act(async () => { screen.getByText('refresha').click() })
+    await act(async () => {
+      screen.getByText('refresha').click()
+    })
     expect(refreshAnrop(fetchMock)).toHaveLength(1)
     expect(refreshBody(fetchMock, 0)).toEqual({ refreshToken: 'refresh-2' })
   })
@@ -127,7 +148,11 @@ describe('flikar — storage-synk av sessionen', () => {
   it('adoption schemalägger nästa refresh utifrån den nya token (inte den gamla)', async () => {
     seeda(15)
     fetchMock.mockResolvedValue(tokenSvar(skapaJwt(NU + 60 * 60_000), 'refresh-9'))
-    render(<AuthMedQuery><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery>
+        <Sond />
+      </AuthMedQuery>,
+    )
 
     annanFlikSkriver(skapaJwt(NU + 60 * 60_000), 'refresh-2')
     skickaStorageEvent('si_refresh_token')
@@ -140,14 +165,20 @@ describe('flikar — storage-synk av sessionen', () => {
   it('adoption nollställer ett väntande omförsök', async () => {
     seeda()
     fetchMock.mockResolvedValueOnce(new Response('{}', { status: 500 }))
-    render(<AuthMedQuery><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery>
+        <Sond />
+      </AuthMedQuery>,
+    )
 
     await spolaTillRefresh() // refresh -> 500 -> omförsök om 10 s
     expect(refreshAnrop(fetchMock)).toHaveLength(1)
 
     annanFlikSkriver(skapaJwt(NU + 60 * 60_000), 'refresh-2')
     skickaStorageEvent('si_token')
-    await act(async () => { await vi.advanceTimersByTimeAsync(30_000) })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000)
+    })
 
     expect(refreshAnrop(fetchMock)).toHaveLength(1)
     expect(status()).toBe('inloggad')
@@ -157,7 +188,11 @@ describe('flikar — storage-synk av sessionen', () => {
     seeda()
     const klient = skapaTestKlient()
     klient.setQueryData(['user-sources', 'a@b.se'], [{ sourceId: 1 }])
-    render(<AuthMedQuery klient={klient}><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery klient={klient}>
+        <Sond />
+      </AuthMedQuery>,
+    )
     expect(status()).toBe('inloggad')
 
     localStorage.removeItem('si_token')
@@ -170,13 +205,19 @@ describe('flikar — storage-synk av sessionen', () => {
     expect(klient.getQueryData(['user-sources', 'a@b.se'])).toBeUndefined()
 
     // Ingen refresh-timer lever kvar för den avslutade sessionen.
-    await act(async () => { await vi.advanceTimersByTimeAsync(30 * 60_000) })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30 * 60_000)
+    })
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('localStorage.clear() i en annan flik (key === null) loggar också ut lokalt', () => {
     seeda()
-    render(<AuthMedQuery><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery>
+        <Sond />
+      </AuthMedQuery>,
+    )
 
     localStorage.clear()
     skickaStorageEvent(null)
@@ -187,7 +228,11 @@ describe('flikar — storage-synk av sessionen', () => {
 
   it('orelaterade localStorage-nycklar påverkar inte sessionen', () => {
     seeda()
-    render(<AuthMedQuery><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery>
+        <Sond />
+      </AuthMedQuery>,
+    )
     const fore = tokenText()
 
     localStorage.setItem('theme', 'dark')
@@ -225,7 +270,11 @@ describe('flikar — 401 när en annan flik hann före', () => {
       return Promise.resolve(tokenSvar(slutligAccess, 'refresh-3'))
     })
     seeda()
-    render(<AuthMedQuery><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery>
+        <Sond />
+      </AuthMedQuery>,
+    )
 
     await spolaTillRefresh()
 
@@ -246,7 +295,11 @@ describe('flikar — 401 när en annan flik hann före', () => {
       return Promise.resolve(new Response('{}', { status: 401 }))
     })
     seeda()
-    render(<AuthMedQuery><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery>
+        <Sond />
+      </AuthMedQuery>,
+    )
 
     await spolaTillRefresh()
 
@@ -260,7 +313,11 @@ describe('flikar — 401 när en annan flik hann före', () => {
     seeda()
     const klient = skapaTestKlient()
     klient.setQueryData(['my-tickets', 'a@b.se'], [{ id: 1 }])
-    render(<AuthMedQuery klient={klient}><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery klient={klient}>
+        <Sond />
+      </AuthMedQuery>,
+    )
 
     await spolaTillRefresh()
 
@@ -293,8 +350,12 @@ describe('flikar — korsflik-lås för refresh', () => {
     // Två providers mot samma localStorage = två flikar (båda laddade samma token, samma timer).
     render(
       <>
-        <AuthMedQuery><Sond id="a" /></AuthMedQuery>
-        <AuthMedQuery><Sond id="b" /></AuthMedQuery>
+        <AuthMedQuery>
+          <Sond id="a" />
+        </AuthMedQuery>
+        <AuthMedQuery>
+          <Sond id="b" />
+        </AuthMedQuery>
       </>,
     )
 
@@ -316,7 +377,11 @@ describe('flikar — korsflik-lås för refresh', () => {
     const nyAccess = skapaJwt(NU + 40 * 60_000)
     fetchMock.mockResolvedValue(tokenSvar(nyAccess, 'refresh-2'))
     seeda()
-    render(<AuthMedQuery><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery>
+        <Sond />
+      </AuthMedQuery>,
+    )
 
     await spolaTillRefresh()
 
@@ -328,18 +393,26 @@ describe('flikar — korsflik-lås för refresh', () => {
   it('en annan flik loggade ut medan vi väntade på låset: ingen /refresh, lokal utloggning', async () => {
     // Låset hålls av "andra fliken" tills vi släpper det.
     let slappLas!: () => void
-    const hallet = new Promise<void>(res => { slappLas = res })
+    const hallet = new Promise<void>((res) => {
+      slappLas = res
+    })
     Object.defineProperty(navigator, 'locks', {
       value: { request: (_n: string, cb: () => Promise<unknown>) => hallet.then(() => cb()) },
       configurable: true,
     })
     seeda()
-    render(<AuthMedQuery><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery>
+        <Sond />
+      </AuthMedQuery>,
+    )
 
     await spolaTillRefresh() // vi väntar nu på låset
     localStorage.removeItem('si_token')
     localStorage.removeItem('si_refresh_token')
-    await act(async () => { slappLas() })
+    await act(async () => {
+      slappLas()
+    })
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(status()).toBe('utloggad')
@@ -370,9 +443,15 @@ describe('react-query-cachen töms vid sessionsslut', () => {
     seeda()
     const klient = skapaTestKlient()
     seedaCache(klient)
-    render(<AuthMedQuery klient={klient}><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery klient={klient}>
+        <Sond />
+      </AuthMedQuery>,
+    )
 
-    act(() => { screen.getByText('logga-ut').click() })
+    act(() => {
+      screen.getByText('logga-ut').click()
+    })
 
     expect(status()).toBe('utloggad')
     expect(klient.getQueryData(anvandarKallorNyckel('a@b.se'))).toBeUndefined()
@@ -385,7 +464,11 @@ describe('react-query-cachen töms vid sessionsslut', () => {
     seeda()
     const klient = skapaTestKlient()
     seedaCache(klient)
-    render(<AuthMedQuery klient={klient}><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery klient={klient}>
+        <Sond />
+      </AuthMedQuery>,
+    )
 
     await spolaTillRefresh()
 
@@ -398,7 +481,11 @@ describe('react-query-cachen töms vid sessionsslut', () => {
     seeda()
     const klient = skapaTestKlient()
     seedaCache(klient)
-    render(<AuthMedQuery klient={klient}><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery klient={klient}>
+        <Sond />
+      </AuthMedQuery>,
+    )
 
     annanFlikSkriver(skapaJwt(NU + 30 * 60_000, { [EPOST_CLAIM]: 'c@d.se' }), 'refresh-c')
     skickaStorageEvent('si_token')
@@ -411,7 +498,11 @@ describe('react-query-cachen töms vid sessionsslut', () => {
     seeda()
     const klient = skapaTestKlient()
     seedaCache(klient)
-    render(<AuthMedQuery klient={klient}><Sond /></AuthMedQuery>)
+    render(
+      <AuthMedQuery klient={klient}>
+        <Sond />
+      </AuthMedQuery>,
+    )
 
     annanFlikSkriver(skapaJwt(NU + 30 * 60_000), 'refresh-2')
     skickaStorageEvent('si_token')
@@ -426,7 +517,7 @@ describe('användar-id i query-nycklar', () => {
       ['user-sources', anvandarKallorNyckel],
       ['me', meNyckel],
       ['my-tickets', minaArendenNyckel],
-      ['my-ticket', a => mittArendeNyckel(a, 'ticket-1')],
+      ['my-ticket', (a) => mittArendeNyckel(a, 'ticket-1')],
       ['user-notifications', kontoNotiserNyckel],
       ['support-notifications', supportNotiserNyckel],
     ]

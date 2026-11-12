@@ -10,12 +10,32 @@ import type { AdminFeatureFlagOverride } from '../api/featureFlags'
 // inte bara ett antal. Inget nytt beteende — FaqItem.FlagKey styr redan
 // visningen (session 42), det här bara synliggör den.
 
-const FLAGGA: AdminFeatureFlagOverride = { key: 'kallor_lan_filter', value: false, redoAttLanseras: true, endastAdmin: false }
-const FAQ_PUBLICERAD: FaqItem = { id: 'f1', kategori: 'Mina källor', publicerad: true, fraga: 'Hur filtrerar jag på län?', svar: '...', flagKey: 'kallor_lan_filter' }
-const FAQ_UTKAST: FaqItem = { id: 'f2', kategori: 'Mina källor', publicerad: false, fraga: 'Vad är ett länsfilter?', svar: '...', flagKey: 'kallor_lan_filter' }
+const FLAGGA: AdminFeatureFlagOverride = {
+  key: 'kallor_lan_filter',
+  value: false,
+  redoAttLanseras: true,
+  endastAdmin: false,
+}
+const FAQ_PUBLICERAD: FaqItem = {
+  id: 'f1',
+  kategori: 'Mina källor',
+  publicerad: true,
+  fraga: 'Hur filtrerar jag på län?',
+  svar: '...',
+  flagKey: 'kallor_lan_filter',
+}
+const FAQ_UTKAST: FaqItem = {
+  id: 'f2',
+  kategori: 'Mina källor',
+  publicerad: false,
+  fraga: 'Vad är ett länsfilter?',
+  svar: '...',
+  flagKey: 'kallor_lan_filter',
+}
 
 vi.mock('../api/uppdateringar', async () => {
-  const faktisk = await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
+  const faktisk =
+    await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
   return {
     ...faktisk,
     fetchAdminUppdateringar: vi.fn().mockResolvedValue([]),
@@ -24,15 +44,25 @@ vi.mock('../api/uppdateringar', async () => {
     deleteUppdatering: vi.fn(),
   }
 })
-vi.mock('../api/featureFlags', () => ({ fetchAdminFeatureFlags: vi.fn().mockResolvedValue([FLAGGA]) }))
-vi.mock('../api/faq', () => ({ fetchAdminFaq: vi.fn().mockResolvedValue([FAQ_PUBLICERAD, FAQ_UTKAST]) }))
+vi.mock('../api/featureFlags', () => ({
+  fetchAdminFeatureFlags: vi.fn().mockResolvedValue([FLAGGA]),
+}))
+vi.mock('../api/faq', () => ({
+  fetchAdminFaq: vi.fn().mockResolvedValue([FAQ_PUBLICERAD, FAQ_UTKAST]),
+}))
 vi.mock('../api/push', () => ({ sendNewVersionNotice: vi.fn() }))
 
 const { default: AdminUppdateringar } = await import('../components/Admin/AdminUppdateringar')
 
 function rendera() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={qc}><AdminUppdateringar /></QueryClientProvider>)
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={qc}>
+      <AdminUppdateringar />
+    </QueryClientProvider>,
+  )
 }
 
 beforeEach(() => vi.clearAllMocks())
@@ -42,7 +72,10 @@ describe('AdminUppdateringar — kopplade FAQ-frågor', () => {
     rendera()
     await userEvent.click(await screen.findByText('+ Ny uppdatering'))
     await userEvent.type(screen.getByPlaceholderText(/Logga in och skapa konto/), 'Titel')
-    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'En rad text')
+    await userEvent.type(
+      screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+      'En rad text',
+    )
     await userEvent.click(screen.getByText('Schemalägg lansering'))
     const datumFält = document.querySelector('input[type="datetime-local"]') as HTMLInputElement
     fireEvent.change(datumFält, { target: { value: '2026-11-01T10:00' } })

@@ -4,9 +4,7 @@ import { exportMyData, deleteMyAccount } from '../../../api/auth'
 import { useAuth } from '../../../context/AuthContext'
 import { visaFel } from '../../../lib/felmeddelande'
 
-export default function Datahantering({ highlightId }: {
-  highlightId: string | null
-}) {
+export default function Datahantering({ highlightId }: { highlightId: string | null }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [exporterar, setExporterar] = useState(false)
   const [exportFel, setExportFel] = useState('')
@@ -24,7 +22,9 @@ export default function Datahantering({ highlightId }: {
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url; a.download = 'min-data.json'; a.click()
+      a.href = url
+      a.download = 'min-data.json'
+      a.click()
       URL.revokeObjectURL(url)
     } catch (err) {
       setExportFel(visaFel(err, 'Kunde inte exportera din data. Försök igen.'))
@@ -39,7 +39,10 @@ export default function Datahantering({ highlightId }: {
     try {
       const { deletionScheduledAt } = await deleteMyAccount()
       setSchemalagd(deletionScheduledAt)
-      setTimeout(() => { logout(); navigate('/') }, 4000)
+      setTimeout(() => {
+        logout()
+        navigate('/')
+      }, 4000)
     } catch (err) {
       setRaderaFel(visaFel(err, 'Kontot kunde inte schemaläggas för radering. Försök igen.'))
       setRaderar(false)
@@ -47,10 +50,15 @@ export default function Datahantering({ highlightId }: {
   }
 
   return (
-    <div id="datahantering" className={`bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden ${highlightId === 'datahantering' ? 'card-highlight' : ''}`}>
+    <div
+      id="datahantering"
+      className={`bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden ${highlightId === 'datahantering' ? 'card-highlight' : ''}`}
+    >
       <div className="px-6 pt-6 pb-5 border-b border-red-100 bg-gradient-to-br from-red-50 to-white">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-xl shrink-0">🗑️</div>
+          <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-xl shrink-0">
+            🗑️
+          </div>
           <div>
             <h2 className="text-lg font-bold text-red-700">Datahantering</h2>
             <p className="text-sm text-red-400 mt-0.5">Export och permanent radering</p>
@@ -59,12 +67,14 @@ export default function Datahantering({ highlightId }: {
       </div>
 
       <div className="px-6 py-5 flex flex-col gap-5">
-
         {schemalagd ? (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-sm font-semibold text-slate-800">Kontot är schemalagt för radering</p>
+            <p className="text-sm font-semibold text-slate-800">
+              Kontot är schemalagt för radering
+            </p>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              Ditt konto raderas automatiskt om 24 timmar. Ångrar du dig — kontakta supporten innan dess. Du loggas ut om en liten stund.
+              Ditt konto raderas automatiskt om 24 timmar. Ångrar du dig — kontakta supporten innan
+              dess. Du loggas ut om en liten stund.
             </p>
           </div>
         ) : (
@@ -76,7 +86,11 @@ export default function Datahantering({ highlightId }: {
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                   Ladda ner all data vi har om dig som JSON-fil (GDPR art. 20).
                 </p>
-                {exportFel && <p role="alert" className="text-xs text-red-500 mt-1.5">{exportFel}</p>}
+                {exportFel && (
+                  <p role="alert" className="text-xs text-red-500 mt-1.5">
+                    {exportFel}
+                  </p>
+                )}
               </div>
               <button
                 onClick={handleExport}
@@ -93,7 +107,8 @@ export default function Datahantering({ highlightId }: {
                 <div>
                   <p className="text-sm font-bold text-slate-800">Radera konto</p>
                   <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                    Kontot spärras direkt och raderas permanent om 24 timmar. Kan inte ångras själv efter det — kontakta supporten under fristen om du ångrar dig.
+                    Kontot spärras direkt och raderas permanent om 24 timmar. Kan inte ångras själv
+                    efter det — kontakta supporten under fristen om du ångrar dig.
                   </p>
                 </div>
                 {!showDeleteConfirm && (
@@ -111,7 +126,11 @@ export default function Datahantering({ highlightId }: {
                   <p className="text-sm font-semibold text-slate-800">
                     Är du helt säker? Kontot spärras omedelbart och raderas permanent om 24 timmar.
                   </p>
-                  {raderaFel && <p role="alert" className="text-xs text-red-600">{raderaFel}</p>}
+                  {raderaFel && (
+                    <p role="alert" className="text-xs text-red-600">
+                      {raderaFel}
+                    </p>
+                  )}
                   <div className="flex gap-2">
                     <button
                       onClick={handleRadera}
@@ -133,7 +152,6 @@ export default function Datahantering({ highlightId }: {
             </div>
           </>
         )}
-
       </div>
     </div>
   )

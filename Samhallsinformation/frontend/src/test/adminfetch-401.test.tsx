@@ -11,7 +11,8 @@ import { AuthMedQuery } from './authMedQuery'
 // utloggning här, andra fel opåverkade.
 
 const svar = (status: number, body: unknown = {}) => new Response(JSON.stringify(body), { status })
-const auth = (init: RequestInit | undefined) => (init?.headers as Record<string, string>).Authorization
+const auth = (init: RequestInit | undefined) =>
+  (init?.headers as Record<string, string>).Authorization
 
 describe('adminFetch — 401-hantering med brobaserad refresh', () => {
   const fetchMock = vi.fn()
@@ -32,10 +33,10 @@ describe('adminFetch — 401-hantering med brobaserad refresh', () => {
   })
 
   it('401 -> refresh -> omförsök med den nya token lyckas', async () => {
-    refresh.mockImplementation(async () => { token = 'ny' })
-    fetchMock
-      .mockResolvedValueOnce(svar(401))
-      .mockResolvedValueOnce(svar(200, { ok: true }))
+    refresh.mockImplementation(async () => {
+      token = 'ny'
+    })
+    fetchMock.mockResolvedValueOnce(svar(401)).mockResolvedValueOnce(svar(200, { ok: true }))
 
     const res = await adminFetch('/api/x', { method: 'POST', body: '{"a":1}' })
 
@@ -48,7 +49,9 @@ describe('adminFetch — 401-hantering med brobaserad refresh', () => {
   })
 
   it('401 -> refresh misslyckas (ingen ny token) -> 401 returneras, inget omförsök', async () => {
-    refresh.mockImplementation(async () => { token = null }) // t.ex. sessionen avslutad av AuthProvider
+    refresh.mockImplementation(async () => {
+      token = null
+    }) // t.ex. sessionen avslutad av AuthProvider
     fetchMock.mockResolvedValue(svar(401))
 
     const res = await adminFetch('/api/x')
@@ -69,7 +72,9 @@ describe('adminFetch — 401-hantering med brobaserad refresh', () => {
   })
 
   it('401 även efter omförsöket -> returneras, exakt ett omförsök och en refresh', async () => {
-    refresh.mockImplementation(async () => { token = 'ny' })
+    refresh.mockImplementation(async () => {
+      token = 'ny'
+    })
     fetchMock.mockResolvedValue(svar(401))
 
     const res = await adminFetch('/api/x')
@@ -81,9 +86,18 @@ describe('adminFetch — 401-hantering med brobaserad refresh', () => {
 
   it('två parallella 401 ger EN refresh (single-flight) och båda anropen lyckas', async () => {
     let klar!: () => void
-    refresh.mockImplementation(() => new Promise<void>(r => { klar = () => { token = 'ny'; r() } }))
+    refresh.mockImplementation(
+      () =>
+        new Promise<void>((r) => {
+          klar = () => {
+            token = 'ny'
+            r()
+          }
+        }),
+    )
     fetchMock.mockImplementation(async (_url: string, init: RequestInit) =>
-      auth(init) === 'Bearer ny' ? svar(200) : svar(401))
+      auth(init) === 'Bearer ny' ? svar(200) : svar(401),
+    )
 
     const a = adminFetch('/api/a')
     const b = adminFetch('/api/b')
@@ -96,7 +110,10 @@ describe('adminFetch — 401-hantering med brobaserad refresh', () => {
   })
 
   it('token redan förnyad av annan (timer) när 401 kommer -> omförsök utan ny refresh', async () => {
-    fetchMock.mockImplementationOnce(async () => { token = 'ny'; return svar(401) })
+    fetchMock.mockImplementationOnce(async () => {
+      token = 'ny'
+      return svar(401)
+    })
     fetchMock.mockResolvedValueOnce(svar(200))
 
     const res = await adminFetch('/api/x')
@@ -129,10 +146,11 @@ describe('adminFetch — 401-hantering med brobaserad refresh', () => {
 
   it('changePassword skickar den NYA refresh-token i omförsöket (body byggs om)', async () => {
     localStorage.setItem('si_refresh_token', 'refresh-1')
-    refresh.mockImplementation(async () => { token = 'ny'; localStorage.setItem('si_refresh_token', 'refresh-2') })
-    fetchMock
-      .mockResolvedValueOnce(svar(401))
-      .mockResolvedValueOnce(svar(200))
+    refresh.mockImplementation(async () => {
+      token = 'ny'
+      localStorage.setItem('si_refresh_token', 'refresh-2')
+    })
+    fetchMock.mockResolvedValueOnce(svar(401)).mockResolvedValueOnce(svar(200))
 
     await changePassword('gammalt', 'helt-nytt-losen')
 
@@ -158,7 +176,9 @@ describe('adminFetch + AuthProvider — en gemensam refresh', () => {
     fetchMock.mockReset()
     vi.stubGlobal('fetch', fetchMock)
   })
-  afterEach(() => { vi.unstubAllGlobals() })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
 
   it('parallella 401 + providerns egen refresh ger exakt ett /api/auth/refresh-anrop', async () => {
     const fornyad = jwt()
@@ -170,17 +190,22 @@ describe('adminFetch + AuthProvider — en gemensam refresh', () => {
     fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
       if (String(url).endsWith('/api/auth/refresh')) {
         refreshAnrop++
-        await new Promise(r => setTimeout(r, 20))
+        await new Promise((r) => setTimeout(r, 20))
         return svar(200, { accessToken: fornyad, refreshToken: 'refresh-2' })
       }
       return auth(init) === `Bearer ${fornyad}` ? svar(200) : svar(401)
     })
 
-    render(<AuthMedQuery><Sond onAuth={() => {}} /></AuthMedQuery>)
+    render(
+      <AuthMedQuery>
+        <Sond onAuth={() => {}} />
+      </AuthMedQuery>,
+    )
     await screen.findByText('ok')
 
     const [a, b, c] = await act(async () =>
-      Promise.all([adminFetch('/api/a'), adminFetch('/api/b'), adminFetch('/api/c')]))
+      Promise.all([adminFetch('/api/a'), adminFetch('/api/b'), adminFetch('/api/c')]),
+    )
 
     expect([a.status, b.status, c.status]).toEqual([200, 200, 200])
     // Providerns startrefresh och 401-vägen delar en och samma refresh.

@@ -30,7 +30,10 @@ interface FelProps {
 
 export function HamtningsFel({ fel, reserv, onForsokIgen, arIgang, className = '' }: FelProps) {
   return (
-    <div role="alert" className={`flex flex-col items-center gap-2 text-center text-sm text-red-600 ${className}`}>
+    <div
+      role="alert"
+      className={`flex flex-col items-center gap-2 text-center text-sm text-red-600 ${className}`}
+    >
       <p>{visaFel(fel, reserv)}</p>
       {onForsokIgen && (
         <button
@@ -47,10 +50,20 @@ export function HamtningsFel({ fel, reserv, onForsokIgen, arIgang, className = '
 }
 
 /** Felruta för en misslyckad mutation (spara, skicka, tilldela ...). Renderar inget om felet saknas. */
-export function MutationFel({ fel, reserv, className = '' }: { fel: unknown; reserv: string; className?: string }) {
+export function MutationFel({
+  fel,
+  reserv,
+  className = '',
+}: {
+  fel: unknown
+  reserv: string
+  className?: string
+}) {
   if (fel == null) return null
   return (
-    <p role="alert" className={`text-sm text-red-600 ${className}`}>{visaFel(fel, reserv)}</p>
+    <p role="alert" className={`text-sm text-red-600 ${className}`}>
+      {visaFel(fel, reserv)}
+    </p>
   )
 }
 
@@ -67,7 +80,13 @@ interface Props {
 }
 
 export default function HamtningsStatus({
-  fraga, felText, tomt = false, tomtText = 'Inget att visa.', laddarText = 'Laddar...', className = 'px-6 py-8', children,
+  fraga,
+  felText,
+  tomt = false,
+  tomtText = 'Inget att visa.',
+  laddarText = 'Laddar...',
+  className = 'px-6 py-8',
+  children,
 }: Props) {
   const harData = fraga.data !== undefined
 
@@ -80,7 +99,9 @@ export default function HamtningsStatus({
       <HamtningsFel
         fel={fraga.error}
         reserv={felText}
-        onForsokIgen={() => { void fraga.refetch() }}
+        onForsokIgen={() => {
+          void fraga.refetch()
+        }}
         arIgang={fraga.isFetching}
         className={className}
       />
@@ -94,14 +115,18 @@ export default function HamtningsStatus({
         <HamtningsFel
           fel={fraga.error}
           reserv={`${felText} Det som visas kan vara inaktuellt.`}
-          onForsokIgen={() => { void fraga.refetch() }}
+          onForsokIgen={() => {
+            void fraga.refetch()
+          }}
           arIgang={fraga.isFetching}
           className="px-6 py-3"
         />
       )}
-      {tomt
-        ? <div className={`${className} text-center text-sm text-slate-400`}>{tomtText}</div>
-        : children}
+      {tomt ? (
+        <div className={`${className} text-center text-sm text-slate-400`}>{tomtText}</div>
+      ) : (
+        children
+      )}
     </>
   )
 }

@@ -1,8 +1,18 @@
 import { type FormField, inputClass } from './kontoTypes'
 
 export default function KontoInfo({
-  namn, epost, pendingEmail, requiresPassword, sparar = false, emailPassword,
-  onUpdateNamn, onUpdateEpost, onSaveNamn, onUpdateEmailPassword, onRequestEmailChange, onCancelEmailChange,
+  namn,
+  epost,
+  pendingEmail,
+  requiresPassword,
+  sparar = false,
+  emailPassword,
+  onUpdateNamn,
+  onUpdateEpost,
+  onSaveNamn,
+  onUpdateEmailPassword,
+  onRequestEmailChange,
+  onCancelEmailChange,
 }: {
   namn: FormField
   epost: FormField
@@ -22,7 +32,9 @@ export default function KontoInfo({
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-6 pt-6 pb-5 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-xl shrink-0">👤</div>
+          <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-xl shrink-0">
+            👤
+          </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900">Kontouppgifter</h2>
             <p className="text-sm text-slate-500 mt-0.5">Namn och e-postadress</p>
@@ -33,12 +45,14 @@ export default function KontoInfo({
       <div className="px-6 py-5 flex flex-col gap-5">
         {/* Namn */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Visningsnamn</label>
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+            Visningsnamn
+          </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
               value={namn.value}
-              onChange={e => onUpdateNamn(e.target.value)}
+              onChange={(e) => onUpdateNamn(e.target.value)}
               placeholder="Förnamn Efternamn"
               className={inputClass}
             />
@@ -50,18 +64,24 @@ export default function KontoInfo({
               {sparar ? 'Sparar…' : 'Spara'}
             </button>
           </div>
-          {namn.error && <p role="alert" className="text-xs text-red-500 font-medium">{namn.error}</p>}
+          {namn.error && (
+            <p role="alert" className="text-xs text-red-500 font-medium">
+              {namn.error}
+            </p>
+          )}
           {namn.saved && <p className="text-xs text-green-600 font-medium">✓ Sparat</p>}
         </div>
 
         {/* E-post */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">E-postadress</label>
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+            E-postadress
+          </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
               value={epost.value}
-              onChange={e => onUpdateEpost(e.target.value)}
+              onChange={(e) => onUpdateEpost(e.target.value)}
               placeholder="din@epost.se"
               className={inputClass}
             />
@@ -80,7 +100,7 @@ export default function KontoInfo({
               <input
                 type="password"
                 value={emailPassword}
-                onChange={e => onUpdateEmailPassword(e.target.value)}
+                onChange={(e) => onUpdateEmailPassword(e.target.value)}
                 placeholder="Nuvarande lösenord"
                 className={inputClass}
               />
@@ -94,13 +114,21 @@ export default function KontoInfo({
             </div>
           )}
           {requiresPassword && (
-            <p className="text-xs text-slate-400">Vi ber om ditt lösenord för att bekräfta att det är du som byter e-post.</p>
+            <p className="text-xs text-slate-400">
+              Vi ber om ditt lösenord för att bekräfta att det är du som byter e-post.
+            </p>
           )}
-          {epost.error && <p role="alert" className="text-xs text-red-500 font-medium">{epost.error}</p>}
+          {epost.error && (
+            <p role="alert" className="text-xs text-red-500 font-medium">
+              {epost.error}
+            </p>
+          )}
           {pendingEmail && (
             <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <p className="text-xs text-amber-800">
-                📧 Bekräftelse skickad till <strong>{pendingEmail}</strong>. Klicka länken i mejlet för att slutföra bytet — giltig i 24 timmar. Din nuvarande adress fungerar som vanligt tills dess.
+                📧 Bekräftelse skickad till <strong>{pendingEmail}</strong>. Klicka länken i mejlet
+                för att slutföra bytet — giltig i 24 timmar. Din nuvarande adress fungerar som
+                vanligt tills dess.
               </p>
               <button
                 onClick={onCancelEmailChange}

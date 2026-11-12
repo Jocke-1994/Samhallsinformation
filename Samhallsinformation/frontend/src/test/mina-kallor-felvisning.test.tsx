@@ -16,13 +16,27 @@ import * as bevakApi from '../api/polisenBevakningar'
 vi.mock('../api/sources')
 vi.mock('../api/userSources')
 // Riktiga BevakningError (V3-17) behålls; bara anropen mockas.
-vi.mock('../api/polisenBevakningar', async importOriginal => {
+vi.mock('../api/polisenBevakningar', async (importOriginal) => {
   const faktisk = await importOriginal<typeof import('../api/polisenBevakningar')>()
-  return { ...faktisk, fetchBevakningar: vi.fn(), createBevakning: vi.fn(), updateBevakning: vi.fn(), deleteBevakning: vi.fn() }
+  return {
+    ...faktisk,
+    fetchBevakningar: vi.fn(),
+    createBevakning: vi.fn(),
+    updateBevakning: vi.fn(),
+    deleteBevakning: vi.fn(),
+  }
 })
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }) }))
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }),
+}))
 vi.mock('../context/FeatureFlagsContext', () => ({
-  useFlags: () => ({ kallor_lagg_till: false, kallor_aktiva: true, kallor_rekommenderade: false, kallor_alla: true, kallor_polisen_filter: false }),
+  useFlags: () => ({
+    kallor_lagg_till: false,
+    kallor_aktiva: true,
+    kallor_rekommenderade: false,
+    kallor_alla: true,
+    kallor_polisen_filter: false,
+  }),
 }))
 
 const kallorApi = vi.mocked(sourcesApi)
@@ -35,7 +49,9 @@ const KALLOR = [
 ] as unknown as Awaited<ReturnType<typeof sourcesApi.fetchSources>>
 
 function renderaMinaKallor() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
@@ -47,9 +63,11 @@ function renderaMinaKallor() {
 
 beforeEach(() => {
   kallorApi.fetchSources.mockReset().mockResolvedValue(KALLOR)
-  anvKallorApi.fetchUserSources.mockReset().mockResolvedValue([
-    { sourceId: 1, shortName: 'Krisinformation', isActive: true, sortOrder: 0 },
-  ])
+  anvKallorApi.fetchUserSources
+    .mockReset()
+    .mockResolvedValue([
+      { sourceId: 1, shortName: 'Krisinformation', isActive: true, sortOrder: 0 },
+    ])
   anvKallorApi.saveUserSources.mockReset()
   bevakningsApi.fetchBevakningar.mockReset()
   bevakningsApi.createBevakning.mockReset()
@@ -97,7 +115,11 @@ describe('Mina källor', () => {
   it('låser kortet under pågående anrop så det inte skickas två gånger', async () => {
     const user = userEvent.setup()
     let avsluta!: () => void
-    anvKallorApi.saveUserSources.mockReturnValue(new Promise<void>(resolve => { avsluta = resolve }))
+    anvKallorApi.saveUserSources.mockReturnValue(
+      new Promise<void>((resolve) => {
+        avsluta = resolve
+      }),
+    )
     renderaMinaKallor()
 
     const knapp = await screen.findByRole('button', { name: /Ta bort/ })
@@ -145,7 +167,9 @@ describe('Polisen-bevakningar (Mina källor)', () => {
   it('visar serverns egen text (BevakningError, V3-17) i modalen som står kvar', async () => {
     const user = userEvent.setup()
     bevakningsApi.fetchBevakningar.mockResolvedValue([])
-    bevakningsApi.createBevakning.mockRejectedValue(new bevakApi.BevakningError('Max 5 bevakningar per användare.'))
+    bevakningsApi.createBevakning.mockRejectedValue(
+      new bevakApi.BevakningError('Max 5 bevakningar per användare.'),
+    )
     renderaBevakningar()
 
     await user.click(await screen.findByRole('button', { name: '+ Ny bevakning' }))
@@ -165,7 +189,9 @@ describe('Polisen-bevakningar (Mina källor)', () => {
     await user.click(await screen.findByRole('button', { name: '+ Ny bevakning' }))
     await user.click(screen.getByRole('button', { name: 'Spara' }))
 
-    await waitFor(() => expect(screen.queryByText(/Vad ska den här bevakningen visa/)).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByText(/Vad ska den här bevakningen visa/)).not.toBeInTheDocument(),
+    )
     expect(screen.getByText(/Alla typer · Alla områden/)).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
@@ -174,7 +200,11 @@ describe('Polisen-bevakningar (Mina källor)', () => {
     const user = userEvent.setup()
     let avsluta!: (b: bevakApi.BevakningDto) => void
     bevakningsApi.fetchBevakningar.mockResolvedValue([])
-    bevakningsApi.createBevakning.mockReturnValue(new Promise(resolve => { avsluta = resolve }))
+    bevakningsApi.createBevakning.mockReturnValue(
+      new Promise((resolve) => {
+        avsluta = resolve
+      }),
+    )
     renderaBevakningar()
 
     await user.click(await screen.findByRole('button', { name: '+ Ny bevakning' }))
@@ -186,7 +216,9 @@ describe('Polisen-bevakningar (Mina källor)', () => {
     expect(bevakningsApi.createBevakning).toHaveBeenCalledTimes(1)
 
     avsluta({ id: 'b9', kategorier: null, omraden: null })
-    await waitFor(() => expect(screen.queryByText(/Vad ska den här bevakningen visa/)).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByText(/Vad ska den här bevakningen visa/)).not.toBeInTheDocument(),
+    )
   })
 
   it('misslyckad borttagning: felmeddelande syns och bevakningen står kvar', async () => {

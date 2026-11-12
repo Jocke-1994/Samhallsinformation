@@ -8,8 +8,12 @@ import { formatSvensktDatumTid, isoTillDatetimeLocal } from '../lib/tid'
 // redan haft en riktig produktionsincident kring UTC vs svensk sommartid
 // (CLAUDE.md, session 36) — värt att låsa fast med en fast TZ, oberoende av
 // vilken tidszon CI/utvecklarmaskinen råkar köra i.
-beforeAll(() => { vi.stubEnv('TZ', 'Europe/Stockholm') })
-afterAll(() => { vi.unstubAllEnvs() })
+beforeAll(() => {
+  vi.stubEnv('TZ', 'Europe/Stockholm')
+})
+afterAll(() => {
+  vi.unstubAllEnvs()
+})
 
 describe('formatSvensktDatumTid', () => {
   it('formaterar UTC-vintertid till svensk lokal tid (CET, +1h)', () => {

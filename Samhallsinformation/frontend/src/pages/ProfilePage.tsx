@@ -15,14 +15,20 @@ import Uppdateringar from '../components/Profile/Uppdateringar'
 import Support from '../components/Profile/Support'
 import ProfileLanding from './ProfileLanding'
 
-const VALID_SECTIONS: ProfileSection[] = ['mina-kallor', 'notifieringar', 'konto', 'uppdateringar', 'support']
+const VALID_SECTIONS: ProfileSection[] = [
+  'mina-kallor',
+  'notifieringar',
+  'konto',
+  'uppdateringar',
+  'support',
+]
 
 const SECTION_LABELS: Record<ProfileSection, string> = {
   'mina-kallor': 'Mina källor',
-  'notifieringar': 'Notifieringar',
-  'konto': 'Konto',
-  'uppdateringar': 'Uppdateringar',
-  'support': 'Support',
+  notifieringar: 'Notifieringar',
+  konto: 'Konto',
+  uppdateringar: 'Uppdateringar',
+  support: 'Support',
 }
 
 export default function ProfilePage() {
@@ -38,9 +44,8 @@ export default function ProfilePage() {
   // en sektion vars samtliga flaggor är avstängda ska inte rendera sektionen —
   // samma spärr som redan gäller landningssidans kort och sökindexet
   // (isSektionSynlig). Fallback: landningssidan (bara synliga kort).
-  const section = requestedSection && isSektionSynlig(requestedSection, flaggor)
-    ? requestedSection
-    : null
+  const section =
+    requestedSection && isSektionSynlig(requestedSection, flaggor) ? requestedSection : null
 
   function setSection(s: ProfileSection | null) {
     if (s === null) setSearchParams({})
@@ -48,8 +53,10 @@ export default function ProfilePage() {
   }
 
   const swipeHandlers = useSwipeable({
-    onSwipedRight: (e) => { if (e.initial[0] < 30) setSidebarOpen(true) },
-    onSwipedLeft:  ()  => setSidebarOpen(false),
+    onSwipedRight: (e) => {
+      if (e.initial[0] < 30) setSidebarOpen(true)
+    },
+    onSwipedLeft: () => setSidebarOpen(false),
     preventScrollOnSwipe: true,
     touchEventOptions: { passive: false },
   })
@@ -57,7 +64,14 @@ export default function ProfilePage() {
   if (!isLoggedIn) {
     return (
       <div className="flex h-full bg-slate-50">
-        <Sidebar selectedShortName={null} onSelectSource={() => {}} viewMode="Allt" onSelectViewMode={() => {}} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar
+          selectedShortName={null}
+          onSelectSource={() => {}}
+          viewMode="Allt"
+          onSelectViewMode={() => {}}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
         <div className="flex flex-1 overflow-hidden" {...swipeHandlers}>
           <div className="flex-1 overflow-y-auto">
             <MobilTopBar onOpenSidebar={() => setSidebarOpen(true)} />
@@ -80,7 +94,6 @@ export default function ProfilePage() {
       />
 
       <div className="flex flex-1 overflow-hidden" {...swipeHandlers}>
-
         {section === null ? (
           <div className="flex-1 overflow-y-auto">
             <MobilTopBar onOpenSidebar={() => setSidebarOpen(true)} />

@@ -3,18 +3,18 @@ import { felFranSvar } from './hamta'
 
 export interface IngestorLogSummaryDto {
   totaltFel: number
-  kritiska:  number
-  perDag:    { date: string; count: number }[]
+  kritiska: number
+  perDag: { date: string; count: number }[]
 }
 
 export interface IngestorLogRowDto {
-  id:                  string
-  runAt:               string
-  success:             boolean
-  eventsInserted:      number
-  errorMessage:        string | null
-  sourceName:          string
-  återförsökLyckades:  boolean | null
+  id: string
+  runAt: string
+  success: boolean
+  eventsInserted: number
+  errorMessage: string | null
+  sourceName: string
+  återförsökLyckades: boolean | null
 }
 
 export async function fetchIngestorLogSummary(days = 7): Promise<IngestorLogSummaryDto> {
@@ -23,9 +23,12 @@ export async function fetchIngestorLogSummary(days = 7): Promise<IngestorLogSumm
   return res.json()
 }
 
-export async function fetchIngestorLogRecent(params?: { limit?: number; onlyErrors?: boolean }): Promise<IngestorLogRowDto[]> {
+export async function fetchIngestorLogRecent(params?: {
+  limit?: number
+  onlyErrors?: boolean
+}): Promise<IngestorLogRowDto[]> {
   const query = new URLSearchParams()
-  if (params?.limit)      query.set('limit', String(params.limit))
+  if (params?.limit) query.set('limit', String(params.limit))
   if (params?.onlyErrors) query.set('onlyErrors', 'true')
   const qs = query.toString()
   const res = await adminFetch(`/api/admin/ingestor-log/recent${qs ? `?${qs}` : ''}`)

@@ -8,18 +8,38 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 // AdminPage båda queryerna (useAdminNotiser) och klockan visar båda listorna oavsett flik.
 
 const auth = vi.hoisted(() => ({
-  värde: { isLoggedIn: true, roll: 'Admin', aktivVy: 'Admin', name: 'Test', email: 'x@example.com', byttVy: () => {} },
+  värde: {
+    isLoggedIn: true,
+    roll: 'Admin',
+    aktivVy: 'Admin',
+    name: 'Test',
+    email: 'x@example.com',
+    byttVy: () => {},
+  },
 }))
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth.värde }))
 vi.mock('../context/FeatureFlagsContext', () => ({
-  useFeatureFlagsAdmin: () => ({ flaggor: {}, inställda: {}, växlaFlagg: () => {}, återställ: () => {} }),
+  useFeatureFlagsAdmin: () => ({
+    flaggor: {},
+    inställda: {},
+    växlaFlagg: () => {},
+    återställ: () => {},
+  }),
 }))
 vi.mock('../hooks/usePwaIdentity', () => ({ usePwaIdentity: () => {}, ADMIN_PWA_IDENTITET: {} }))
 vi.mock('../hooks/usePushSubscription', () => ({
-  usePushSubscription: () => ({ isSubscribed: false, loading: false, subscribe: async () => {}, unsubscribe: async () => {} }),
+  usePushSubscription: () => ({
+    isSubscribed: false,
+    loading: false,
+    subscribe: async () => {},
+    unsubscribe: async () => {},
+  }),
   isPushSupported: () => false,
 }))
-vi.mock('../api/push', () => ({ fetchPushSettings: async () => ({ pushEnabled: true }), savePushSettings: async () => {} }))
+vi.mock('../api/push', () => ({
+  fetchPushSettings: async () => ({ pushEnabled: true }),
+  savePushSettings: async () => {},
+}))
 
 const hämtaÄrendeNotiser = vi.fn()
 const hämtaKontoNotiser = vi.fn()
@@ -34,9 +54,22 @@ function stub(namn: string) {
   return { default: () => <div data-testid="sektion">{namn}</div> }
 }
 for (const sökväg of [
-  'Oversikt', 'Kallhantering', 'Felsökning', 'Anvandare', 'SupportInbox', 'Rapporter', 'Aktivitetslogg',
-  'Impersonation', 'AdminUppdateringar', 'AdminFaq', 'FeatureFlagsAdmin', 'SiteSettingsAdmin',
-  'MaintenanceBannerAdmin', 'FunktionsIdePipeline', 'Sandlada', 'Handelsesok',
+  'Oversikt',
+  'Kallhantering',
+  'Felsökning',
+  'Anvandare',
+  'SupportInbox',
+  'Rapporter',
+  'Aktivitetslogg',
+  'Impersonation',
+  'AdminUppdateringar',
+  'AdminFaq',
+  'FeatureFlagsAdmin',
+  'SiteSettingsAdmin',
+  'MaintenanceBannerAdmin',
+  'FunktionsIdePipeline',
+  'Sandlada',
+  'Handelsesok',
 ]) {
   vi.doMock(`../components/Admin/${sökväg}`, () => stub(sökväg))
 }
@@ -47,16 +80,35 @@ function visaAdminPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter><AdminPage /></MemoryRouter>
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
 
-const ÄRENDE_NOTIS = { ticketId: 't1', amne: 'Förfallen påminnelse i ärende', typ: 'påminnelse', notering: 'Ring tillbaka' }
-const KONTO_NOTIS = { userId: 'u1', namn: 'Bertil Spärrad', epost: 'bertil@example.com', notering: 'Se över spärren' }
+const ÄRENDE_NOTIS = {
+  ticketId: 't1',
+  amne: 'Förfallen påminnelse i ärende',
+  typ: 'påminnelse',
+  notering: 'Ring tillbaka',
+}
+const KONTO_NOTIS = {
+  userId: 'u1',
+  namn: 'Bertil Spärrad',
+  epost: 'bertil@example.com',
+  notering: 'Se över spärren',
+}
 
 beforeEach(() => {
-  auth.värde = { isLoggedIn: true, roll: 'Admin', aktivVy: 'Admin', name: 'Test', email: 'x@example.com', byttVy: () => {} }
+  auth.värde = {
+    isLoggedIn: true,
+    roll: 'Admin',
+    aktivVy: 'Admin',
+    name: 'Test',
+    email: 'x@example.com',
+    byttVy: () => {},
+  }
   hämtaÄrendeNotiser.mockReset().mockResolvedValue([ÄRENDE_NOTIS])
   hämtaKontoNotiser.mockReset().mockResolvedValue([KONTO_NOTIS])
 })

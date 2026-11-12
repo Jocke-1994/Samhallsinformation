@@ -4,7 +4,12 @@ import { MemoryRouter } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import {
-  FLAG_DEFINITIONER, effektivaFlaggor, ärMockFlagga, visaMockUi, type FlagKey, type FlagState,
+  FLAG_DEFINITIONER,
+  effektivaFlaggor,
+  ärMockFlagga,
+  visaMockUi,
+  type FlagKey,
+  type FlagState,
 } from '../lib/featureFlags'
 import { searchIndex } from '../lib/profilSok'
 
@@ -15,30 +20,59 @@ import { searchIndex } from '../lib/profilSok'
 // Flaggor som är mock-UI utan backend (verifierade mot komponenterna: inga API-anrop).
 const MOCK_FLAGGOR: FlagKey[] = [
   'kallor_rekommenderade',
-  'notif_obligatoriska', 'notif_mottagare', 'notif_stor_ej', 'notif_leveranslage', 'notif_historik',
-  'konto_tvafaktor', 'konto_sessioner', 'konto_aktivitetslogg', 'konto_samtycke',
-  'uppdateringar_pagang', 'uppdateringar_kanda_problem',
+  'notif_obligatoriska',
+  'notif_mottagare',
+  'notif_stor_ej',
+  'notif_leveranslage',
+  'notif_historik',
+  'konto_tvafaktor',
+  'konto_sessioner',
+  'konto_aktivitetslogg',
+  'konto_samtycke',
+  'uppdateringar_pagang',
+  'uppdateringar_kanda_problem',
   'support_systemstatus',
 ]
 
 // Levande funktioner (riktig backend) — får aldrig märkas som mock.
 const LEVANDE_FLAGGOR: FlagKey[] = [
-  'flode_olasta_badge', 'flode_sparat', 'flode_dela', 'flode_platsfilter',
-  'kallor_lagg_till', 'kallor_aktiva', 'kallor_alla', 'kallor_polisen_filter',
+  'flode_olasta_badge',
+  'flode_sparat',
+  'flode_dela',
+  'flode_platsfilter',
+  'kallor_lagg_till',
+  'kallor_aktiva',
+  'kallor_alla',
+  'kallor_polisen_filter',
   'notif_push',
-  'konto_info', 'konto_losenord', 'konto_visningsnamn', 'konto_datahantering', 'konto_tema', 'konto_epost_paminnelse',
-  'uppdateringar_senaste', 'uppdateringar_historik', 'uppdateringar_vad_ar_nytt',
-  'support_arenden', 'support_faq',
+  'konto_info',
+  'konto_losenord',
+  'konto_visningsnamn',
+  'konto_datahantering',
+  'konto_tema',
+  'konto_epost_paminnelse',
+  'uppdateringar_senaste',
+  'uppdateringar_historik',
+  'uppdateringar_vad_ar_nytt',
+  'support_arenden',
+  'support_faq',
 ]
 
 // defaultAktiv sådan den var före V3-20 för de levande flaggorna (får inte ändras här).
 const LEVANDE_DEFAULT_PÅ: FlagKey[] = [
-  'kallor_aktiva', 'kallor_alla', 'konto_info', 'konto_losenord', 'konto_visningsnamn',
-  'konto_datahantering', 'konto_tema', 'konto_epost_paminnelse', 'support_faq',
+  'kallor_aktiva',
+  'kallor_alla',
+  'konto_info',
+  'konto_losenord',
+  'konto_visningsnamn',
+  'konto_datahantering',
+  'konto_tema',
+  'konto_epost_paminnelse',
+  'support_faq',
 ]
 
 const alla = (värde: boolean) =>
-  Object.fromEntries(FLAG_DEFINITIONER.map(f => [f.key, värde])) as FlagState
+  Object.fromEntries(FLAG_DEFINITIONER.map((f) => [f.key, värde])) as FlagState
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -47,7 +81,7 @@ afterEach(() => {
 describe('flaggregistret', () => {
   it('varje mock-flagga är märkt mock och har defaultAktiv=false', () => {
     for (const key of MOCK_FLAGGOR) {
-      const def = FLAG_DEFINITIONER.find(f => f.key === key)
+      const def = FLAG_DEFINITIONER.find((f) => f.key === key)
       expect(def, key).toBeDefined()
       expect(def!.mock, `${key} ska vara märkt mock`).toBe(true)
       expect(def!.defaultAktiv, `${key} ska ha defaultAktiv=false`).toBe(false)
@@ -55,14 +89,16 @@ describe('flaggregistret', () => {
   })
 
   it('ingen flagga är märkt mock utöver de verifierade, och ingen mock-flagga har defaultAktiv=true', () => {
-    const märkta = FLAG_DEFINITIONER.filter(f => f.mock).map(f => f.key).sort()
+    const märkta = FLAG_DEFINITIONER.filter((f) => f.mock)
+      .map((f) => f.key)
+      .sort()
     expect(märkta).toEqual([...MOCK_FLAGGOR].sort())
-    expect(FLAG_DEFINITIONER.filter(f => f.mock && f.defaultAktiv)).toEqual([])
+    expect(FLAG_DEFINITIONER.filter((f) => f.mock && f.defaultAktiv)).toEqual([])
   })
 
   it('levande funktioner är inte märkta mock och behåller sitt defaultvärde', () => {
     for (const key of LEVANDE_FLAGGOR) {
-      const def = FLAG_DEFINITIONER.find(f => f.key === key)!
+      const def = FLAG_DEFINITIONER.find((f) => f.key === key)!
       expect(def.mock, `${key} är levande`).toBeUndefined()
       expect(def.defaultAktiv, key).toBe(LEVANDE_DEFAULT_PÅ.includes(key))
     }
@@ -108,7 +144,9 @@ vi.mock('../api/uppdateringar', () => ({
   fetchUppdateringar: async () => [],
   uppdateringarQueryKey: (i: boolean) => ['uppdateringar', i ? 'inloggad' : 'anonym'],
 }))
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: true, roll: 'Användare' }) }))
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({ isLoggedIn: true, roll: 'Användare' }),
+}))
 
 const api = await import('../api/featureFlags')
 const { FeatureFlagsProvider } = await import('../context/FeatureFlagsContext')
@@ -130,7 +168,9 @@ function allaFlaggorPå() {
 function visaMedFlaggor(barn: ReactNode) {
   return render(
     <QueryClientProvider client={nyKlient()}>
-      <MemoryRouter><FeatureFlagsProvider>{barn}</FeatureFlagsProvider></MemoryRouter>
+      <MemoryRouter>
+        <FeatureFlagsProvider>{barn}</FeatureFlagsProvider>
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
@@ -145,7 +185,9 @@ describe('mock-sektioner i medborgarvyn (alla flaggor påslagna av admin)', () =
   it('useFeatureFlags: UI-flaggorna har mock av, admin-vyns inställda visar påslaget', async () => {
     allaFlaggorPå()
     const { result } = renderHook(() => useFeatureFlags(), {
-      wrapper: ({ children }) => <QueryClientProvider client={nyKlient()}>{children}</QueryClientProvider>,
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={nyKlient()}>{children}</QueryClientProvider>
+      ),
     })
     await waitFor(() => expect(result.current.läge).toBe('klar'))
     for (const key of MOCK_FLAGGOR) {
@@ -159,8 +201,14 @@ describe('mock-sektioner i medborgarvyn (alla flaggor påslagna av admin)', () =
     allaFlaggorPå()
     visaMedFlaggor(<Notifieringar />)
     await waitFor(() => expect(api.fetchFeatureFlagOverrides).toHaveBeenCalled())
-    await new Promise(r => setTimeout(r, 30))
-    for (const rubrik of ['Obligatoriska källor', 'Mottagare', 'Stör ej', 'Leveransläge', 'Notifieringshistorik']) {
+    await new Promise((r) => setTimeout(r, 30))
+    for (const rubrik of [
+      'Obligatoriska källor',
+      'Mottagare',
+      'Stör ej',
+      'Leveransläge',
+      'Notifieringshistorik',
+    ]) {
       expect(screen.queryByRole('heading', { name: rubrik }), rubrik).toBeNull()
     }
     expect(screen.queryByText(/mamma@gmail\.com/)).toBeNull()
@@ -170,7 +218,13 @@ describe('mock-sektioner i medborgarvyn (alla flaggor påslagna av admin)', () =
     vi.stubEnv('VITE_SHOW_MOCK_UI', 'true')
     allaFlaggorPå()
     visaMedFlaggor(<Notifieringar />)
-    for (const rubrik of ['Obligatoriska källor', 'Mottagare', 'Stör ej', 'Leveransläge', 'Notifieringshistorik']) {
+    for (const rubrik of [
+      'Obligatoriska källor',
+      'Mottagare',
+      'Stör ej',
+      'Leveransläge',
+      'Notifieringshistorik',
+    ]) {
       expect(await screen.findByRole('heading', { name: rubrik }), rubrik).toBeInTheDocument()
     }
   })
@@ -179,7 +233,7 @@ describe('mock-sektioner i medborgarvyn (alla flaggor påslagna av admin)', () =
     allaFlaggorPå()
     visaMedFlaggor(<Support />)
     await waitFor(() => expect(api.fetchFeatureFlagOverrides).toHaveBeenCalled())
-    await new Promise(r => setTimeout(r, 30))
+    await new Promise((r) => setTimeout(r, 30))
     expect(screen.queryByRole('heading', { name: 'Systemstatus' })).toBeNull()
     expect(screen.queryByText(/Planerat underhåll/)).toBeNull()
   })
@@ -195,7 +249,7 @@ describe('mock-sektioner i medborgarvyn (alla flaggor påslagna av admin)', () =
     allaFlaggorPå()
     visaMedFlaggor(<Uppdateringar />)
     await waitFor(() => expect(api.fetchFeatureFlagOverrides).toHaveBeenCalled())
-    await new Promise(r => setTimeout(r, 30))
+    await new Promise((r) => setTimeout(r, 30))
     expect(screen.queryByRole('heading', { name: 'Kända problem' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Påväg' })).toBeNull()
     expect(screen.queryByText(/Personliga konton med källprenumerationer/)).toBeNull()
@@ -213,7 +267,8 @@ describe('mock-sektioner i medborgarvyn (alla flaggor påslagna av admin)', () =
 describe('sökningen i Min profil', () => {
   it('lovar inga funktioner vars flagga är av (t.ex. Systemstatus, Obligatoriska källor)', () => {
     const effektiva = effektivaFlaggor(alla(true), false)
-    const träffar = (q: string) => [...searchIndex(q, effektiva).values()].flat().map(i => i.label)
+    const träffar = (q: string) =>
+      [...searchIndex(q, effektiva).values()].flat().map((i) => i.label)
     expect(träffar('status')).not.toContain('Systemstatus')
     expect(träffar('msb')).not.toContain('Obligatoriska källor')
     expect(träffar('adress')).not.toContain('Hämta källor via SPAR')

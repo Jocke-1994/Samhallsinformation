@@ -51,10 +51,11 @@ export function FeedbackModal({ open, onClose }: Props) {
   return createPortal(
     <div
       className="fixed inset-0 z-[8500] flex items-end sm:items-center justify-center p-4 pb-28 sm:pb-4 bg-black/40 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget) handleClose() }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose()
+      }}
     >
       <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 flex flex-col gap-4">
-
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
             Lämna feedback
@@ -64,7 +65,13 @@ export function FeedbackModal({ open, onClose }: Props) {
             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
             aria-label="Stäng"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -73,12 +80,22 @@ export function FeedbackModal({ open, onClose }: Props) {
         {status === 'success' ? (
           <div className="py-6 flex flex-col items-center gap-3 text-center">
             <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-              <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg
+                className="w-6 h-6 text-green-600 dark:text-green-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <p className="text-sm font-medium text-slate-800 dark:text-slate-100">Tack för din feedback!</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Vi läser allt och jobbar ständigt på att förbättra tjänsten.</p>
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+              Tack för din feedback!
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Vi läser allt och jobbar ständigt på att förbättra tjänsten.
+            </p>
             <button
               onClick={handleClose}
               className="mt-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:underline"
@@ -97,7 +114,7 @@ export function FeedbackModal({ open, onClose }: Props) {
                 rows={4}
                 maxLength={5000}
                 value={message}
-                onChange={e => setMessage(e.target.value)}
+                onChange={(e) => setMessage(e.target.value)}
                 placeholder="Vad tänker du på? Bugg, förbättringsförslag, eller bara en tanke..."
                 className="w-full text-sm rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
               />
@@ -107,7 +124,7 @@ export function FeedbackModal({ open, onClose }: Props) {
               <input
                 type="checkbox"
                 checked={villHaÅterkoppling}
-                onChange={e => setVillHaÅterkoppling(e.target.checked)}
+                onChange={(e) => setVillHaÅterkoppling(e.target.checked)}
                 className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-violet-600 focus:ring-violet-500"
               />
               <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
@@ -126,7 +143,7 @@ export function FeedbackModal({ open, onClose }: Props) {
                     required
                     maxLength={100}
                     value={name}
-                    onChange={e => setName(e.target.value)}
+                    onChange={(e) => setName(e.target.value)}
                     placeholder="Ditt namn"
                     className="w-full text-sm rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-500"
                   />
@@ -141,7 +158,7 @@ export function FeedbackModal({ open, onClose }: Props) {
                     required
                     maxLength={254}
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="din@email.se"
                     className="w-full text-sm rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-500"
                   />
@@ -150,7 +167,9 @@ export function FeedbackModal({ open, onClose }: Props) {
             )}
 
             {status === 'error' && (
-              <p role="alert" className="text-xs text-red-500">{errorMessage}</p>
+              <p role="alert" className="text-xs text-red-500">
+                {errorMessage}
+              </p>
             )}
 
             <button
@@ -162,9 +181,8 @@ export function FeedbackModal({ open, onClose }: Props) {
             </button>
           </form>
         )}
-
       </div>
     </div>,
-    document.body
+    document.body,
   )
 }

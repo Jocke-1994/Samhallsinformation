@@ -24,7 +24,11 @@ function banner(över: Partial<MaintenanceBanner> = {}): MaintenanceBanner {
 }
 
 function visa(b: MaintenanceBanner) {
-  return render(<MemoryRouter><Banderoll banner={b} /></MemoryRouter>)
+  return render(
+    <MemoryRouter>
+      <Banderoll banner={b} />
+    </MemoryRouter>,
+  )
 }
 
 describe('Banderoll', () => {
@@ -38,7 +42,9 @@ describe('Banderoll', () => {
   })
 
   it('nyhetsbanderoll visar rubrik, meddelande och Läs mer-länk, violett', () => {
-    const { container } = visa(banner({ stil: 'Nyhet', rubrik: 'Nytt på Samhällsinformation', lankUrl: '/uppdateringar' }))
+    const { container } = visa(
+      banner({ stil: 'Nyhet', rubrik: 'Nytt på Samhällsinformation', lankUrl: '/uppdateringar' }),
+    )
     expect(screen.getByText('Nytt på Samhällsinformation')).toBeInTheDocument()
     expect(screen.getByText('Filtrera på plats')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Läs mer' })).toHaveAttribute('href', '/uppdateringar')
@@ -81,10 +87,22 @@ describe('bannerAvtryck', () => {
 })
 
 describe('arInternSokvag', () => {
-  it.each(['/uppdateringar', '/uppdateringar#v0.8:nyheter', '/?tid=12:00'])('godkänner %s', url => {
-    expect(arInternSokvag(url)).toBe(true)
-  })
-  it.each(['https://evil.se', '//evil.se', '/\\evil.se', 'javascript:alert(1)', 'uppdateringar', '/\t/evil.se', '/\n/evil.se', '/ /evil.se'])('nekar %j', url => {
+  it.each(['/uppdateringar', '/uppdateringar#v0.8:nyheter', '/?tid=12:00'])(
+    'godkänner %s',
+    (url) => {
+      expect(arInternSokvag(url)).toBe(true)
+    },
+  )
+  it.each([
+    'https://evil.se',
+    '//evil.se',
+    '/\\evil.se',
+    'javascript:alert(1)',
+    'uppdateringar',
+    '/\t/evil.se',
+    '/\n/evil.se',
+    '/ /evil.se',
+  ])('nekar %j', (url) => {
     expect(arInternSokvag(url)).toBe(false)
   })
 })

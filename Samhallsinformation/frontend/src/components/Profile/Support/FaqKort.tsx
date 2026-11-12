@@ -11,35 +11,40 @@ const FAQ_KATEGORIER: FaqKategori[] = ['Notifieringar', 'Mina källor', 'Konto',
 // döljs om ingen flagga i den sektionen är aktiv — samma mönster som
 // ProfileLanding/Sidebar redan använder för själva profilsektionerna.
 const KATEGORI_SEKTION: Record<FaqKategori, string> = {
-  'Notifieringar': 'notifieringar',
-  'Mina källor':   'mina-kallor',
-  'Konto':         'konto',
-  'Uppdateringar': 'uppdateringar',
+  Notifieringar: 'notifieringar',
+  'Mina källor': 'mina-kallor',
+  Konto: 'konto',
+  Uppdateringar: 'uppdateringar',
 }
 
 export default function FaqKort() {
-  const [openIndex, setOpenIndex]         = useState<number | null>(null)
+  const [openIndex, setOpenIndex] = useState<number | null>(null)
   const [aktivKategori, setAktivKategori] = useState<FaqKategori | 'alla'>('alla')
-  const [sökning, setSökning]             = useState('')
+  const [sökning, setSökning] = useState('')
   const flaggor = useFlags()
 
-  const synligaKategorier = FAQ_KATEGORIER.filter(kat => isSektionSynlig(KATEGORI_SEKTION[kat], flaggor))
+  const synligaKategorier = FAQ_KATEGORIER.filter((kat) =>
+    isSektionSynlig(KATEGORI_SEKTION[kat], flaggor),
+  )
 
   const { data: hämtade = [] } = useQuery({
     queryKey: ['faq'],
-    queryFn:  fetchFaq,
+    queryFn: fetchFaq,
   })
 
   // En fråga kopplad till en avstängd flagga döljs helt, oavsett Publicerad —
   // annars ligger t.ex. en beskrivning av en funktion kvar synlig efter att
   // funktionen själv stängts av (hände med de gamla mail/SMS-FAQ-posterna).
-  const publicerade = hämtade.filter(item => !item.flagKey || flaggor[item.flagKey as FlagKey])
+  const publicerade = hämtade.filter((item) => !item.flagKey || flaggor[item.flagKey as FlagKey])
 
   const söktrim = sökning.trim().toLowerCase()
 
-  const visade = publicerade.filter(item => {
+  const visade = publicerade.filter((item) => {
     const katMatch = aktivKategori === 'alla' || item.kategori === aktivKategori
-    const sökMatch = !söktrim || item.fraga.toLowerCase().includes(söktrim) || item.svar.toLowerCase().includes(söktrim)
+    const sökMatch =
+      !söktrim ||
+      item.fraga.toLowerCase().includes(söktrim) ||
+      item.svar.toLowerCase().includes(söktrim)
     return katMatch && sökMatch
   })
 
@@ -47,21 +52,30 @@ export default function FaqKort() {
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-200">
         <h2 className="text-lg font-semibold text-slate-900 text-center">Vanliga frågor</h2>
-        <p className="text-sm text-slate-400 mt-0.5 text-center">Snabbsvar på de vanligaste frågorna</p>
+        <p className="text-sm text-slate-400 mt-0.5 text-center">
+          Snabbsvar på de vanligaste frågorna
+        </p>
         <div className="relative mt-3">
           <input
             type="text"
             value={sökning}
-            onChange={e => { setSökning(e.target.value); setOpenIndex(null) }}
+            onChange={(e) => {
+              setSökning(e.target.value)
+              setOpenIndex(null)
+            }}
             placeholder="Sök bland frågorna…"
             className="w-full pl-9 pr-8 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
           />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
+            🔍
+          </span>
           {sökning && (
             <button
               onClick={() => setSökning('')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs leading-none"
-            >✕</button>
+            >
+              ✕
+            </button>
           )}
         </div>
       </div>
@@ -75,20 +89,26 @@ export default function FaqKort() {
         className="grid gap-2 px-4 pt-4 pb-3 border-b border-slate-100"
         style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))' }}
       >
-        {(['alla', ...synligaKategorier] as (FaqKategori | 'alla')[]).map(kat => {
-          const count = kat === 'alla' ? publicerade.length : publicerade.filter(i => i.kategori === kat).length
+        {(['alla', ...synligaKategorier] as (FaqKategori | 'alla')[]).map((kat) => {
+          const count =
+            kat === 'alla'
+              ? publicerade.length
+              : publicerade.filter((i) => i.kategori === kat).length
           const isActive = aktivKategori === kat
           const activeStyles: Record<string, string> = {
-            'alla':          'bg-slate-800 text-white',
-            'Notifieringar': 'bg-violet-500 text-white',
-            'Mina källor':   'bg-blue-500 text-white',
-            'Konto':         'bg-amber-400 text-white',
-            'Uppdateringar': 'bg-emerald-500 text-white',
+            alla: 'bg-slate-800 text-white',
+            Notifieringar: 'bg-violet-500 text-white',
+            'Mina källor': 'bg-blue-500 text-white',
+            Konto: 'bg-amber-400 text-white',
+            Uppdateringar: 'bg-emerald-500 text-white',
           }
           return (
             <button
               key={kat}
-              onClick={() => { setAktivKategori(kat); setOpenIndex(null) }}
+              onClick={() => {
+                setAktivKategori(kat)
+                setOpenIndex(null)
+              }}
               className={`rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors ${
                 isActive
                   ? activeStyles[kat]

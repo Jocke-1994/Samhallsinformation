@@ -9,7 +9,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 // knappen ska förbli disabled i stället för att kasta.
 
 vi.mock('../api/uppdateringar', async () => {
-  const faktisk = await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
+  const faktisk =
+    await vi.importActual<typeof import('../api/uppdateringar')>('../api/uppdateringar')
   return {
     ...faktisk,
     fetchAdminUppdateringar: vi.fn().mockResolvedValue([]),
@@ -26,8 +27,14 @@ const api = await import('../api/uppdateringar')
 const { default: AdminUppdateringar } = await import('../components/Admin/AdminUppdateringar')
 
 function rendera() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={qc}><AdminUppdateringar /></QueryClientProvider>)
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={qc}>
+      <AdminUppdateringar />
+    </QueryClientProvider>,
+  )
 }
 
 beforeEach(() => {
@@ -41,7 +48,10 @@ describe('AdminUppdateringar — tömt datumfält', () => {
     await userEvent.click(await screen.findByText('+ Ny uppdatering'))
 
     await userEvent.type(screen.getByPlaceholderText(/Logga in och skapa konto/), 'Titel')
-    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'En rad text')
+    await userEvent.type(
+      screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+      'En rad text',
+    )
 
     const datumFält = document.querySelector('input[type="date"]') as HTMLInputElement
     expect(datumFält).toBeInTheDocument()
@@ -65,7 +75,10 @@ describe('AdminUppdateringar — tömt datumfält', () => {
     await userEvent.click(await screen.findByText('+ Ny uppdatering'))
 
     await userEvent.type(screen.getByPlaceholderText(/Logga in och skapa konto/), 'Titel')
-    await userEvent.type(screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'), 'En rad text')
+    await userEvent.type(
+      screen.getByPlaceholderText('Beskriv ändringen kort och tydligt...'),
+      'En rad text',
+    )
     await userEvent.click(screen.getByText('Schemalägg lansering'))
 
     // datetime-local-fältet är tomt som standard.

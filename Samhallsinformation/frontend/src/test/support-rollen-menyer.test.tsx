@@ -3,7 +3,10 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
-  ADMIN_NAV, effektivAdminRoll, startSektion, tillåtnaSektioner,
+  ADMIN_NAV,
+  effektivAdminRoll,
+  startSektion,
+  tillåtnaSektioner,
 } from '../lib/adminNavigering'
 
 // V3-10 (beslut D1): Support-rollens menyer ska stämma med backend. Support ser bara
@@ -12,13 +15,29 @@ import {
 
 const SUPPORT_MENY = ['Användare', 'Support-inbox', 'Händelsesök']
 const ADMIN_MENY = [
-  'Översikt', 'Källhantering', 'Sandlåda', 'Uppdateringar', 'FAQ-hantering', 'Användare', 'Support-inbox',
-  'Händelsesök', 'Aktivitetslogg', 'Rapporter', 'Felsökning', 'Impersonation', 'Feature flags', 'Funktionsidéer',
+  'Översikt',
+  'Källhantering',
+  'Sandlåda',
+  'Uppdateringar',
+  'FAQ-hantering',
+  'Användare',
+  'Support-inbox',
+  'Händelsesök',
+  'Aktivitetslogg',
+  'Rapporter',
+  'Felsökning',
+  'Impersonation',
+  'Feature flags',
+  'Funktionsidéer',
 ]
 
 describe('adminNavigering', () => {
   it('Support når exakt Användare, Support-inbox och Händelsesök', () => {
-    expect([...tillåtnaSektioner('Support')].sort()).toEqual(['anvandare', 'handelsesok', 'support-inbox'])
+    expect([...tillåtnaSektioner('Support')].sort()).toEqual([
+      'anvandare',
+      'handelsesok',
+      'support-inbox',
+    ])
   })
 
   it('Admin når alla sektioner', () => {
@@ -73,15 +92,32 @@ describe('AdminSidebar', () => {
 // --- AdminPage: startsida och sektionsvakt ----------------------------------------------------------
 
 const auth = vi.hoisted(() => ({
-  värde: { isLoggedIn: true, roll: 'Admin', aktivVy: 'Admin', name: 'Test', email: 'x@example.com', byttVy: () => {} },
+  värde: {
+    isLoggedIn: true,
+    roll: 'Admin',
+    aktivVy: 'Admin',
+    name: 'Test',
+    email: 'x@example.com',
+    byttVy: () => {},
+  },
 }))
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth.värde }))
 vi.mock('../context/FeatureFlagsContext', () => ({
-  useFeatureFlagsAdmin: () => ({ flaggor: {}, inställda: {}, växlaFlagg: () => {}, återställ: () => {} }),
+  useFeatureFlagsAdmin: () => ({
+    flaggor: {},
+    inställda: {},
+    växlaFlagg: () => {},
+    återställ: () => {},
+  }),
 }))
 vi.mock('../hooks/usePwaIdentity', () => ({ usePwaIdentity: () => {}, ADMIN_PWA_IDENTITET: {} }))
 vi.mock('../hooks/usePushSubscription', () => ({
-  usePushSubscription: () => ({ isSubscribed: false, loading: false, subscribe: async () => {}, unsubscribe: async () => {} }),
+  usePushSubscription: () => ({
+    isSubscribed: false,
+    loading: false,
+    subscribe: async () => {},
+    unsubscribe: async () => {},
+  }),
   isPushSupported: () => false,
 }))
 vi.mock('../api/push', () => ({
@@ -129,7 +165,7 @@ function visaAdminPage() {
   )
 }
 
-const sektioner = () => screen.queryAllByTestId('sektion').map(e => e.textContent)
+const sektioner = () => screen.queryAllByTestId('sektion').map((e) => e.textContent)
 const menyNamn = () => {
   const nav = screen.getAllByRole('navigation')[0]
   return within(nav).getAllByRole('button').map(etikett)
@@ -137,7 +173,14 @@ const menyNamn = () => {
 const rubrik = () => screen.getByRole('heading', { level: 1 }).textContent
 
 beforeEach(() => {
-  auth.värde = { isLoggedIn: true, roll: 'Admin', aktivVy: 'Admin', name: 'Test', email: 'x@example.com', byttVy: () => {} }
+  auth.värde = {
+    isLoggedIn: true,
+    roll: 'Admin',
+    aktivVy: 'Admin',
+    name: 'Test',
+    email: 'x@example.com',
+    byttVy: () => {},
+  }
   hämtaÄrendenFörBadge.mockReset().mockResolvedValue([])
 })
 
@@ -150,7 +193,14 @@ describe('AdminPage', () => {
     expect(sektioner()).toEqual(['Inbox-innehåll'])
     expect(menyNamn()).toEqual(SUPPORT_MENY)
     // Ingen admin-only flik finns att klicka på.
-    for (const namn of ['Källhantering', 'Felsökning', 'Aktivitetslogg', 'Feature flags', 'Impersonation', 'Översikt']) {
+    for (const namn of [
+      'Källhantering',
+      'Felsökning',
+      'Aktivitetslogg',
+      'Feature flags',
+      'Impersonation',
+      'Översikt',
+    ]) {
       expect(screen.queryByRole('button', { name: new RegExp(namn) })).toBeNull()
     }
   })

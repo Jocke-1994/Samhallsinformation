@@ -14,7 +14,9 @@ import * as bevakApi from '../api/polisenBevakningar'
 // ska inte skicka ett andra anrop.
 vi.mock('../api/savedEvents')
 vi.mock('../api/polisenBevakningar')
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }) }))
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({ isLoggedIn: true, email: 'a@b.se', accessToken: 't' }),
+}))
 
 const sparatApi = vi.mocked(savedApi)
 const bevakningsApi = vi.mocked(bevakApi)
@@ -22,9 +24,7 @@ const bevakningsApi = vi.mocked(bevakApi)
 function SparaKnapp({ id }: { id: string }) {
   const { sparade, toggleSparad } = useSavedEvents()
   return (
-    <button onClick={() => toggleSparad(id)}>
-      {sparade.has(id) ? 'Sparad' : 'Ej sparad'}
-    </button>
+    <button onClick={() => toggleSparad(id)}>{sparade.has(id) ? 'Sparad' : 'Ej sparad'}</button>
   )
 }
 
@@ -87,14 +87,20 @@ describe('Sparat (toggleSparad)', () => {
     const sparadKnapp = await screen.findByRole('button', { name: 'Sparad' })
     await user.click(sparadKnapp)
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Kunde inte ta bort händelsen ur Sparat')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Kunde inte ta bort händelsen ur Sparat',
+    )
     expect(screen.getByRole('button', { name: 'Sparad' })).toBeInTheDocument()
   })
 
   it('skickar bara ett anrop när man trycker två gånger medan det första pågår', async () => {
     const user = userEvent.setup()
     let avsluta!: () => void
-    sparatApi.saveEvent.mockReturnValue(new Promise<void>(resolve => { avsluta = resolve }))
+    sparatApi.saveEvent.mockReturnValue(
+      new Promise<void>((resolve) => {
+        avsluta = resolve
+      }),
+    )
     rendera()
 
     const knapp = await screen.findByRole('button', { name: 'Ej sparad' })

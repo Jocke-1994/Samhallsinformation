@@ -63,7 +63,10 @@ export async function savePushSettings(settings: Partial<PushSettingsDto>): Prom
   if (!res.ok) throw await felFranSvar(res, 'savePushSettings')
 }
 
-export async function sendNewVersionNotice(version: string, message: string): Promise<{ sent: number }> {
+export async function sendNewVersionNotice(
+  version: string,
+  message: string,
+): Promise<{ sent: number }> {
   const res = await adminFetch('/api/push/new-version', {
     timeoutMs: LANG_TIMEOUT_MS,
     method: 'POST',

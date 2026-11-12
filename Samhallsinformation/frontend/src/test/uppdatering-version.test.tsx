@@ -8,7 +8,8 @@ import type { Uppdatering } from '../api/uppdateringar'
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ isLoggedIn: false }) }))
 vi.mock('../context/FeatureFlagsContext', () => ({ useFlags: () => ({}) }))
 
-const { default: SenasteUppdateringKort } = await import('../components/Uppdateringar/SenasteUppdateringKort')
+const { default: SenasteUppdateringKort } =
+  await import('../components/Uppdateringar/SenasteUppdateringKort')
 const { default: VersionsBricka } = await import('../components/Uppdateringar/VersionsBricka')
 const { VadArNyttInnehall } = await import('../components/common/VadArNytt')
 
@@ -19,15 +20,31 @@ describe('Versionsbrickan', () => {
   })
 
   it('visas inte alls utan version (äldre poster)', () => {
-    const { container } = render(<><VersionsBricka version={null} /><VersionsBricka version="  " /></>)
+    const { container } = render(
+      <>
+        <VersionsBricka version={null} />
+        <VersionsBricka version="  " />
+      </>,
+    )
     expect(container).toBeEmptyDOMElement()
   })
 
   it('syns på Senaste-kortet och i Vad är nytt-rutan', () => {
     render(
       <MemoryRouter>
-        <SenasteUppdateringKort titel="Push-notiser" datum="2026-11-06T00:00:00Z" punkter={[]} version="1.2" />
-        <VadArNyttInnehall titel="Push-notiser" datum="2026-11-06T00:00:00Z" punkter={[]} version="1.2" onStäng={() => {}} />
+        <SenasteUppdateringKort
+          titel="Push-notiser"
+          datum="2026-11-06T00:00:00Z"
+          punkter={[]}
+          version="1.2"
+        />
+        <VadArNyttInnehall
+          titel="Push-notiser"
+          datum="2026-11-06T00:00:00Z"
+          punkter={[]}
+          version="1.2"
+          onStäng={() => {}}
+        />
       </MemoryRouter>,
     )
     expect(screen.getAllByText('v1.2')).toHaveLength(2)

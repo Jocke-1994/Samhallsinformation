@@ -9,17 +9,22 @@ import { getTypConfig } from '../lib/uppdateringTyp'
 import SenasteUppdateringKort from '../components/Uppdateringar/SenasteUppdateringKort'
 import VersionsBricka from '../components/Uppdateringar/VersionsBricka'
 
-
 function formatDatum(iso: string): string {
-  return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('sv-SE', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
 }
 
 export default function UppdateringarPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const swipeHandlers = useSwipeable({
-    onSwipedRight: (e) => { if (e.initial[0] < 30) setSidebarOpen(true) },
-    onSwipedLeft:  ()  => setSidebarOpen(false),
+    onSwipedRight: (e) => {
+      if (e.initial[0] < 30) setSidebarOpen(true)
+    },
+    onSwipedLeft: () => setSidebarOpen(false),
     preventScrollOnSwipe: true,
     touchEventOptions: { passive: false },
   })
@@ -27,7 +32,7 @@ export default function UppdateringarPage() {
   const { isLoggedIn } = useAuth()
   const { data: uppdateringar = [] } = useQuery({
     queryKey: uppdateringarQueryKey(isLoggedIn),
-    queryFn:  fetchUppdateringar,
+    queryFn: fetchUppdateringar,
   })
 
   // Backend filtrerar redan anonyma till "alla" (V2-7); detta filter behålls som
@@ -36,8 +41,8 @@ export default function UppdateringarPage() {
   // Bara punkter märkta "alla" ska synas här. En
   // release utan några synliga punkter kvar visas inte alls.
   const besökarvänliga = uppdateringar
-    .map(u => ({ ...u, punkter: u.punkter.filter(p => p.synlighet === 'alla') }))
-    .filter(u => u.punkter.length > 0)
+    .map((u) => ({ ...u, punkter: u.punkter.filter((p) => p.synlighet === 'alla') }))
+    .filter((u) => u.punkter.length > 0)
 
   const [latest, ...older] = besökarvänliga
 
@@ -55,38 +60,51 @@ export default function UppdateringarPage() {
         <MobilTopBar onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div className="max-w-2xl mx-auto px-6 py-12">
-
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-3">
             Nyheter &amp; uppdateringar
           </h1>
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-10">
-            Vad som är nytt i tjänsten — uppdateras när något som påverkar dig som användare förändras.
+            Vad som är nytt i tjänsten — uppdateras när något som påverkar dig som användare
+            förändras.
           </p>
 
           {latest && (
             <>
               {/* Senaste uppdatering — framhävd (delas med förhandsvisningen i admin) */}
-              <SenasteUppdateringKort titel={latest.titel} datum={latest.datum} punkter={latest.punkter} version={latest.version} />
+              <SenasteUppdateringKort
+                titel={latest.titel}
+                datum={latest.datum}
+                punkter={latest.punkter}
+                version={latest.version}
+              />
 
               {/* Äldre uppdateringar */}
               {older.length > 0 && (
                 <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm divide-y divide-slate-100 dark:divide-slate-700">
-                  {older.map(update => (
+                  {older.map((update) => (
                     <div key={update.id} className="px-8 py-5">
                       <div className="flex items-baseline gap-3 mb-3">
-                        <span className="text-base font-bold text-slate-900 dark:text-slate-100">{update.titel}</span>
+                        <span className="text-base font-bold text-slate-900 dark:text-slate-100">
+                          {update.titel}
+                        </span>
                         <VersionsBricka version={update.version} />
-                        <span className="text-xs text-slate-400 font-medium">{formatDatum(update.datum)}</span>
+                        <span className="text-xs text-slate-400 font-medium">
+                          {formatDatum(update.datum)}
+                        </span>
                       </div>
                       <div className="flex flex-col gap-2">
-                        {update.punkter.map(p => {
+                        {update.punkter.map((p) => {
                           const cfg = getTypConfig(p.typ)
                           return (
                             <div key={p.id} className="flex items-start gap-2.5">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.badge}`}>
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${cfg.badge}`}
+                              >
                                 {cfg.label}
                               </span>
-                              <span className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{p.text}</span>
+                              <span className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                {p.text}
+                              </span>
                             </div>
                           )
                         })}
@@ -97,7 +115,6 @@ export default function UppdateringarPage() {
               )}
             </>
           )}
-
         </div>
       </main>
     </div>

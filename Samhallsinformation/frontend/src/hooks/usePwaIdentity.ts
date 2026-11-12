@@ -10,29 +10,33 @@ interface PwaIdentitet {
 }
 
 const HUVUDAPP_IDENTITET: PwaIdentitet = {
-  manifestHref:       '/manifest.json',
-  faviconHref:         '/favicon.svg',
-  themeColor:          '#7c3aed',
+  manifestHref: '/manifest.json',
+  faviconHref: '/favicon.svg',
+  themeColor: '#7c3aed',
   appleTouchIconHref: '/icons/apple-touch-icon.png',
-  appleTitle:          'Samhällsinfo',
-  title:               'Samhällsinformation — nyheter från svenska myndigheter',
+  appleTitle: 'Samhällsinfo',
+  title: 'Samhällsinformation — nyheter från svenska myndigheter',
 }
 
 export const ADMIN_PWA_IDENTITET: PwaIdentitet = {
-  manifestHref:       '/admin-manifest.json',
-  faviconHref:         '/admin-favicon.svg',
-  themeColor:          '#7c3aed',
+  manifestHref: '/admin-manifest.json',
+  faviconHref: '/admin-favicon.svg',
+  themeColor: '#7c3aed',
   appleTouchIconHref: '/icons/admin-apple-touch-icon.png',
-  appleTitle:          'SI Admin',
-  title:               'Samhällsinfo Admin',
+  appleTitle: 'SI Admin',
+  title: 'Samhällsinfo Admin',
 }
 
 function sättIdentitet(identitet: PwaIdentitet) {
   document.querySelector('link[rel="manifest"]')?.setAttribute('href', identitet.manifestHref)
   document.querySelector('link[rel="icon"]')?.setAttribute('href', identitet.faviconHref)
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', identitet.themeColor)
-  document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute('href', identitet.appleTouchIconHref)
-  document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', identitet.appleTitle)
+  document
+    .querySelector('link[rel="apple-touch-icon"]')
+    ?.setAttribute('href', identitet.appleTouchIconHref)
+  document
+    .querySelector('meta[name="apple-mobile-web-app-title"]')
+    ?.setAttribute('content', identitet.appleTitle)
   document.title = identitet.title
 }
 

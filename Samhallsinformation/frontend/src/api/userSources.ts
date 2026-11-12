@@ -2,15 +2,15 @@ import { adminFetch } from './adminFetch'
 import { felFranSvar } from './hamta'
 
 export interface UserSourcePref {
-  sourceId:  number
+  sourceId: number
   shortName: string
-  isActive:  boolean
+  isActive: boolean
   sortOrder: number
 }
 
 export interface SourcePrefUpdate {
-  sourceId:  number
-  isActive:  boolean
+  sourceId: number
+  isActive: boolean
   sortOrder: number
 }
 

@@ -43,7 +43,9 @@ async function visaExpanderad() {
 const DÖD_TEXT = /finns inte längre/
 
 describe('NewsItem "Läs mer hos källan"', () => {
-  beforeEach(() => { kollaLänk.mockReset() })
+  beforeEach(() => {
+    kollaLänk.mockReset()
+  })
 
   it('är en riktig länk som öppnas i ny flik utan att vänta på länkkollen', async () => {
     kollaLänk.mockReturnValue(new Promise(() => {})) // kollen hänger för evigt
@@ -67,18 +69,21 @@ describe('NewsItem "Läs mer hos källan"', () => {
 
     expect(fireEvent.click(länk)).toBe(true)
     // Ge avvisningen en chans att slå igenom — inget får krascha eller ändra UI:t.
-    await new Promise(r => setTimeout(r, 0))
-    expect(screen.getByRole('link', { name: /Läs mer hos källan/ })).toHaveAttribute('href', HÄNDELSE.url)
+    await new Promise((r) => setTimeout(r, 0))
+    expect(screen.getByRole('link', { name: /Läs mer hos källan/ })).toHaveAttribute(
+      'href',
+      HÄNDELSE.url,
+    )
     expect(screen.queryByText(DÖD_TEXT)).not.toBeInTheDocument()
   })
 
-  it.each(['unknown', 'alive'] as const)('visar ingen varning vid %s', async status => {
+  it.each(['unknown', 'alive'] as const)('visar ingen varning vid %s', async (status) => {
     kollaLänk.mockResolvedValue(status)
     const länk = await visaExpanderad()
 
     fireEvent.click(länk)
     await waitFor(() => expect(kollaLänk).toHaveBeenCalledWith('evt-1'))
-    await new Promise(r => setTimeout(r, 0))
+    await new Promise((r) => setTimeout(r, 0))
 
     expect(screen.queryByText(DÖD_TEXT)).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Läs mer hos källan/ })).toBeInTheDocument()
@@ -91,7 +96,10 @@ describe('NewsItem "Läs mer hos källan"', () => {
     fireEvent.click(länk)
 
     expect(await screen.findByText(DÖD_TEXT)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Läs mer hos källan/ })).toHaveAttribute('href', HÄNDELSE.url)
+    expect(screen.getByRole('link', { name: /Läs mer hos källan/ })).toHaveAttribute(
+      'href',
+      HÄNDELSE.url,
+    )
   })
 })
 
@@ -111,13 +119,14 @@ describe('checkEventLinkStatus (klienten)', () => {
 
   async function kolla() {
     // Riktiga modulen (den ovan är mockad) — hämtas förbi mocken.
-    const { checkEventLinkStatus } = await vi.importActual<typeof import('../api/events')>('../api/events')
+    const { checkEventLinkStatus } =
+      await vi.importActual<typeof import('../api/events')>('../api/events')
     return checkEventLinkStatus('evt-1')
   }
 
   const svar = (ok: boolean, body: unknown) => ({ ok, json: async () => body })
 
-  it.each(['alive', 'dead'] as const)('vidarebefordrar %s', async status => {
+  it.each(['alive', 'dead'] as const)('vidarebefordrar %s', async (status) => {
     fetchMock.mockResolvedValue(svar(true, { status, alive: status === 'alive' }))
     expect(await kolla()).toBe(status)
   })
