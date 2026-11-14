@@ -31,7 +31,7 @@ public class FaqControllerTests
         await db.SaveChangesAsync();
 
         var result = Assert.IsType<OkObjectResult>(await NewController(db).GetFaq());
-        var items = Assert.IsAssignableFrom<IEnumerable<FaqItem>>(result.Value);
+        var items = Assert.IsAssignableFrom<IEnumerable<Samhallsinformation.Application.Faq.FaqDto>>(result.Value);
         Assert.Empty(items);
     }
 
@@ -43,7 +43,7 @@ public class FaqControllerTests
         await db.SaveChangesAsync();
 
         var result = Assert.IsType<OkObjectResult>(await NewController(db).GetFaq());
-        var items = Assert.IsAssignableFrom<IEnumerable<FaqItem>>(result.Value);
+        var items = Assert.IsAssignableFrom<IEnumerable<Samhallsinformation.Application.Faq.FaqDto>>(result.Value);
         Assert.Single(items);
     }
 
@@ -57,7 +57,7 @@ public class FaqControllerTests
         await db.SaveChangesAsync();
 
         var result = Assert.IsType<OkObjectResult>(await NewController(db).GetFaq());
-        var items = Assert.IsAssignableFrom<IEnumerable<FaqItem>>(result.Value);
+        var items = Assert.IsAssignableFrom<IEnumerable<Samhallsinformation.Application.Faq.FaqDto>>(result.Value);
         Assert.Empty(items);
     }
 
@@ -70,7 +70,7 @@ public class FaqControllerTests
         await db.SaveChangesAsync();
 
         var result = Assert.IsType<OkObjectResult>(await NewController(db).GetFaq());
-        var items = Assert.IsAssignableFrom<IEnumerable<FaqItem>>(result.Value);
+        var items = Assert.IsAssignableFrom<IEnumerable<Samhallsinformation.Application.Faq.FaqDto>>(result.Value);
         Assert.Single(items);
     }
 
@@ -85,7 +85,7 @@ public class FaqControllerTests
         await db.SaveChangesAsync();
 
         var result = Assert.IsType<OkObjectResult>(await NewController(db).GetFaq());
-        var items = Assert.IsAssignableFrom<IEnumerable<FaqItem>>(result.Value);
+        var items = Assert.IsAssignableFrom<IEnumerable<Samhallsinformation.Application.Faq.FaqDto>>(result.Value);
         Assert.Single(items);
     }
 
