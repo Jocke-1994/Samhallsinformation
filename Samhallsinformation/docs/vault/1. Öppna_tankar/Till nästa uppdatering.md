@@ -13,4 +13,4 @@ här när den har lagts in i en post.
   - Typ: `buggfix` · Plats: `Notiser` · Synlighet: `inloggade` (push kräver konto)
   - Text: "Fixat en bugg där man kunde få en hel rad notiser i följd efter att ha varit borta en stund. Nu samlas de i en notis per källa."
   - Bakgrund: feedback från en användare på Discord. Ska inte förklaras djupare i patchloggen.
-  - Lägg in först när PR #745 är mergad och driftsatt.
+  - PR #745 mergad 2026-11-14, redo att läggas in i nästa post.
