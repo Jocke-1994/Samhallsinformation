@@ -1,11 +1,15 @@
 namespace Samhallsinformation.Tests;
 
 using System.Linq;
+using System.Net;
+using System.Reflection;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
+using Samhallsinformation.Application.Events;
 using Samhallsinformation.Controllers;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -33,11 +37,20 @@ public class EventsControllerTests
         };
     }
 
+    private static async Task<Guid> SeedEventAsync(AppDbContext db, bool published = true)
+    {
+        db.Sources.Add(NewSource(1, "Polisen", published));
+        var evt = new CanonicalEvent { SourceId = 1, Title = "x", Content = "x", Url = "https://polisen.se/1" };
+        db.Events.Add(evt);
+        await db.SaveChangesAsync();
+        return evt.Id;
+    }
+
     [Fact]
     public async Task LogShare_Anonymous_WritesLogWithNullUserId()
     {
         using var db = NewDb();
-        var eventId = Guid.NewGuid();
+        var eventId = await SeedEventAsync(db);
 
         var result = await NewController(db).LogShare(eventId);
 
@@ -51,13 +64,83 @@ public class EventsControllerTests
     public async Task LogShare_LoggedIn_WritesLogWithUserId()
     {
         using var db = NewDb();
-        var eventId = Guid.NewGuid();
+        var eventId = await SeedEventAsync(db);
         var userId = Guid.NewGuid();
 
         await NewController(db, userId).LogShare(eventId);
 
         var log = Assert.Single(db.EventShareLogs);
         Assert.Equal(userId, log.UserId);
+    }
+
+    // Anonym skrivning: ett påhittat id får inte ge en rad, annars kan vem som
+    // helst fylla EventShareLogs och förstöra delningsstatistiken.
+    [Fact]
+    public async Task LogShare_UnknownEvent_Returns404AndWritesNothing()
+    {
+        using var db = NewDb();
+
+        var result = await NewController(db).LogShare(Guid.NewGuid());
+
+        Assert.IsType<NotFoundResult>(result);
+        Assert.Empty(db.EventShareLogs);
+    }
+
+    // Samma synlighetsregel som GET /api/events/{id} (#729): en händelse från en
+    // opublicerad källa finns inte utåt och kan inte delas.
+    [Fact]
+    public async Task LogShare_UnpublishedSource_Returns404AndWritesNothing()
+    {
+        using var db = NewDb();
+        var eventId = await SeedEventAsync(db, published: false);
+
+        var result = await NewController(db).LogShare(eventId);
+
+        Assert.IsType<NotFoundResult>(result);
+        Assert.Empty(db.EventShareLogs);
+    }
+
+    [Fact]
+    public void LogShare_HasOwnRateLimitPolicy()
+    {
+        var method = typeof(EventsController).GetMethod(nameof(EventsController.LogShare))!;
+
+        Assert.Equal(ShareLogRateLimit.PolicyName, method.GetCustomAttribute<EnableRateLimitingAttribute>()!.PolicyName);
+    }
+
+    private static HttpContext FromIp(string ip)
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Connection.RemoteIpAddress = IPAddress.Parse(ip);
+        return ctx;
+    }
+
+    [Fact]
+    public void ShareLogRateLimit_Allows20PerMinutePerIp()
+    {
+        Assert.Equal(TimeSpan.FromMinutes(1), ShareLogRateLimit.Window);
+
+        var partition = ShareLogRateLimit.GetPartition(FromIp("203.0.113.5"));
+        using var limiter = partition.Factory(partition.PartitionKey);
+        var permitted = 0;
+        for (var i = 0; i < 100; i++)
+        {
+            using var lease = limiter.AttemptAcquire();
+            if (lease.IsAcquired) permitted++;
+        }
+
+        Assert.Equal(20, permitted);
+    }
+
+    [Fact]
+    public void ShareLogRateLimit_PartitionsPerIp_AndNormalizesIpv6To64()
+    {
+        Assert.NotEqual(
+            ShareLogRateLimit.GetPartition(FromIp("203.0.113.5")).PartitionKey,
+            ShareLogRateLimit.GetPartition(FromIp("203.0.113.6")).PartitionKey);
+        Assert.Equal(
+            ShareLogRateLimit.GetPartition(FromIp("2001:db8:1:2::1")).PartitionKey,
+            ShareLogRateLimit.GetPartition(FromIp("2001:db8:1:2:ffff::9")).PartitionKey);
     }
 
     private static Source NewSource(int id, string shortName, bool published = true) => new()

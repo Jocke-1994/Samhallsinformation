@@ -133,6 +133,10 @@ builder.Services.AddRateLimiter(options =>
     // 30/min per IP, se LinkStatusRateLimit.
     options.AddPolicy(LinkStatusRateLimit.PolicyName, LinkStatusRateLimit.GetPartition);
 
+    // POST /api/events/{id}/share — anonym skrivning av delningsstatistik.
+    // 20/min per IP, se ShareLogRateLimit.
+    options.AddPolicy(ShareLogRateLimit.PolicyName, ShareLogRateLimit.GetPartition);
+
     options.OnRejected = async (context, ct) =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
