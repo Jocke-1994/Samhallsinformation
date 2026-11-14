@@ -96,7 +96,11 @@ public static class PushDispatcher
         // fäller ut den). Flera → källans flöde.
         var url = KällUrl(frontendUrl, source, insertedEvents.Count == 1 ? insertedEvents[0] : null);
 
-        await SendToDevicesAsync(db, push, devices, title, body, url, sourceId, ct);
+        // Samma tag per källa, så att flera pushar från källan blir EN notis på
+        // enheten med summerat antal (t.ex. efter att datorn varit avstängd).
+        var grupp = new PushGrupp(KällTag(source), insertedCount, $"från {source.Name}", KällUrl(frontendUrl, source, null));
+
+        await SendToDevicesAsync(db, push, devices, title, body, url, sourceId, ct, grupp);
     }
 
     private static async Task DispatchPolisenEventsAsync(
@@ -144,9 +148,13 @@ public static class PushDispatcher
             }
 
             var url = KällUrl(frontendUrl, source, matchande.Count == 1 ? matchande[0] : null);
-            await SendToDevicesAsync(db, push, devices, title, body, url, source.Id, ct);
+            var grupp = new PushGrupp(KällTag(source), matchande.Count, "matchar dina bevakningar", KällUrl(frontendUrl, source, null));
+            await SendToDevicesAsync(db, push, devices, title, body, url, source.Id, ct, grupp);
         }
     }
+
+    // Notis-tag per källa, se PushGrupp.
+    internal static string KällTag(Source source) => $"kalla-{source.Id}";
 
     // Länken i en händelse-push. Frontend (HomePage) läser shortName för att
     // öppna källans flöde och handelse för att scrolla fram och fälla ut
@@ -266,7 +274,7 @@ public static class PushDispatcher
 
     private static async Task SendToDevicesAsync(
         AppDbContext db, IPushNotificationService push, List<UserDevice> devices,
-        string title, string body, string url, int? sourceId, CancellationToken ct)
+        string title, string body, string url, int? sourceId, CancellationToken ct, PushGrupp? grupp = null)
     {
         // Ett PushDispatchClaim per MOTTAGARE (inte ett delat för hela
         // anropet — devices kan spänna över flera användare, t.ex. alla
@@ -285,7 +293,7 @@ public static class PushDispatcher
         // Parallellt med begränsad grad + timeout per enhet (E3#11). Fan-out rör
         // inte db — loggning och städning sker här, på en tråd, efteråt.
         var items = devices.Select(d => new PushSendItem(d, claimByUser[d.UserId].Id)).ToList();
-        var results = await PushFanOut.SendAsync(push, items, title, body, url, PushFanOutOptions.Default, ct);
+        var results = await PushFanOut.SendAsync(push, items, title, body, url, PushFanOutOptions.Default, ct, grupp);
 
         foreach (var r in results)
         {

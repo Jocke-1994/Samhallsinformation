@@ -27,7 +27,7 @@ public class WebPushNotificationService : IPushNotificationService, IDisposable
         _extraAllowedHosts = configuration[PushEndpointValidator.ExtraHostsConfigKey];
     }
 
-    public Task SendAsync(UserDevice device, string title, string body, string? url, Guid? claimId = null, CancellationToken ct = default)
+    public Task SendAsync(UserDevice device, string title, string body, string? url, Guid? claimId = null, PushGrupp? grupp = null, CancellationToken ct = default)
     {
         // Defensivt SSRF-skydd även vid utskick: prenumerationer sparade innan
         // valideringen infördes (eller manipulerade i databasen) får aldrig
@@ -39,7 +39,7 @@ public class WebPushNotificationService : IPushNotificationService, IDisposable
             return Task.FromException(new InvalidOperationException($"Push-utskick blockerat: {endpointError}"));
 
         var subscription = new PushSubscription(device.Endpoint, device.P256dh, device.Auth);
-        var payload = JsonSerializer.Serialize(new { title, body, url, claimId, deviceId = device.Id });
+        var payload = JsonSerializer.Serialize(new { title, body, url, claimId, deviceId = device.Id, grupp });
         var options = new Dictionary<string, object>
         {
             ["vapidDetails"] = _vapidDetails,

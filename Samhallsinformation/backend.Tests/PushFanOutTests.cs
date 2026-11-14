@@ -14,7 +14,7 @@ public class PushFanOutTests
 {
     private sealed class FakePush(Func<UserDevice, CancellationToken, Task> behavior) : IPushNotificationService
     {
-        public Task SendAsync(UserDevice device, string title, string body, string? url, Guid? claimId = null, CancellationToken ct = default)
+        public Task SendAsync(UserDevice device, string title, string body, string? url, Guid? claimId = null, PushGrupp? grupp = null, CancellationToken ct = default)
             => behavior(device, ct);
     }
 
@@ -204,7 +204,7 @@ public class PushFanOutTests
 
     private sealed class SpyPush(Func<Guid, Task> onSend) : IPushNotificationService
     {
-        public async Task SendAsync(UserDevice device, string title, string body, string? url, Guid? claimId = null, CancellationToken ct = default)
+        public async Task SendAsync(UserDevice device, string title, string body, string? url, Guid? claimId = null, PushGrupp? grupp = null, CancellationToken ct = default)
             => await onSend(claimId!.Value);
     }
 }

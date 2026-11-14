@@ -77,6 +77,7 @@ public class PushDispatcherTests
             Arg.Is<string>(b => b!.Contains('3') && b.Contains("Krisinformation")),
             Arg.Any<string?>(),
             Arg.Any<Guid?>(),
+            Arg.Any<PushGrupp?>(),
             Arg.Any<CancellationToken>());
 
         var log = Assert.Single(db.NotificationDeliveryLogs);
@@ -130,7 +131,7 @@ public class PushDispatcherTests
 
         var subscription = new PushSubscription(device.Endpoint, device.P256dh, device.Auth);
         var goneException = new WebPushException("gone", subscription, new HttpResponseMessage(HttpStatusCode.Gone));
-        push.SendAsync(Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+        push.SendAsync(Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(goneException));
 
         await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: []);
@@ -147,7 +148,7 @@ public class PushDispatcherTests
         var (_, source, device) = SeedSubscriber(db);
         var push = Substitute.For<IPushNotificationService>();
 
-        push.SendAsync(Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+        push.SendAsync(Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new InvalidOperationException("boom")));
 
         await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1, insertedEvents: []);
@@ -245,7 +246,7 @@ public class PushDispatcherTests
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
             Arg.Any<string>(), Arg.Any<string>(),
             Arg.Is<string?>(u => u == $"https://test.local/?shortName=Polisen&handelse={ev.Id}"),
-            Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -262,7 +263,7 @@ public class PushDispatcherTests
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
             Arg.Any<string>(), Arg.Any<string>(),
             Arg.Is<string?>(u => u == "https://test.local/?shortName=Polisen"),
-            Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     // Polisen-vägen: det som räknas är hur många händelser som matchar JUST
@@ -289,7 +290,53 @@ public class PushDispatcherTests
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
             Arg.Any<string>(), Arg.Any<string>(),
             Arg.Is<string?>(u => u!.EndsWith($"&handelse={träff.Id}")),
-            Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
+    }
+
+    // Notisspam efter att datorn varit avstängd (Discord-feedback 2026-11-14):
+    // varje push bär en grupp per källa så att service workern kan slå ihop dem
+    // till EN notis med summerat antal. Länken i gruppen är alltid källflödet,
+    // eftersom en sammanslagen notis gäller fler än en händelse.
+    [Fact]
+    public async Task DispatchNewEventsAsync_Generisk_SkickarGruppPerKälla()
+    {
+        using var db = NewDb();
+        var (_, source, device) = SeedSubscriber(db);
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 1,
+            insertedEvents: [MakeEvent(source.Id, null, null)]);
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(),
+            Arg.Is<PushGrupp?>(g => g == new PushGrupp(
+                $"kalla-{source.Id}", 1, "från Krisinformation", "https://test.local/?shortName=Krisinformation")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DispatchNewEventsAsync_Polisen_GruppensAntalÄrMatchandeInteInfogade()
+    {
+        using var db = NewDb();
+        var (user, source, device) = SeedPolisenSubscriber(db);
+        db.PolisenBevakningar.Add(new PolisenBevakning
+        {
+            UserId = user.Id,
+            KategorierJson = System.Text.Json.JsonSerializer.Serialize(new[] { "Trafikolycka" }),
+            OmradenJson = null,
+        });
+        db.SaveChanges();
+        var push = Substitute.For<IPushNotificationService>();
+
+        await PushDispatcher.DispatchNewEventsAsync(db, push, "https://test.local", source.Id, insertedCount: 3, insertedEvents:
+            [MakeEvent(source.Id, "Göteborg", "Trafikolycka"), MakeEvent(source.Id, "Lund", "Trafikolycka"), MakeEvent(source.Id, "Malmö", "Brand")]);
+
+        await push.Received(1).SendAsync(
+            Arg.Is<UserDevice>(d => d!.Id == device.Id),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(),
+            Arg.Is<PushGrupp?>(g => g!.Tag == $"kalla-{source.Id}" && g.Antal == 2 && g.Etikett == "matchar dina bevakningar"),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -304,7 +351,7 @@ public class PushDispatcherTests
 
         await push.Received(1).SendAsync(
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -328,7 +375,7 @@ public class PushDispatcherTests
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
             Arg.Any<string>(),
             Arg.Is<string>(b => b!.Contains("Trafikolycka") && b.Contains("Göteborg")),
-            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -394,7 +441,7 @@ public class PushDispatcherTests
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
             Arg.Any<string>(),
             Arg.Is<string>(b => b!.Contains("Trafikolycka") && !b.Contains("Sammanfattning")),
-            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -422,7 +469,7 @@ public class PushDispatcherTests
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
             Arg.Any<string>(),
             Arg.Is<string>(b => b!.Contains('2') && b.Contains("bevakningar")),
-            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     // Regressionstest för bevaknings-matchningsbuggen (kodgranskning V4-5,
@@ -460,7 +507,7 @@ public class PushDispatcherTests
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
             Arg.Any<string>(),
             Arg.Is<string>(b => b!.Contains("Polisen Efterlysningar") && !b.Contains("bevakning")),
-            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -479,6 +526,7 @@ public class PushDispatcherTests
             Arg.Is<string>(b => b == "Nya källor och buggfixar"),
             Arg.Any<string?>(),
             Arg.Any<Guid?>(),
+            Arg.Any<PushGrupp?>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -542,7 +590,7 @@ public class PushDispatcherTests
 
         await push.Received(1).SendAsync(
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -581,7 +629,7 @@ public class PushDispatcherTests
         var push = Substitute.For<IPushNotificationService>();
         var claimIds = new System.Collections.Concurrent.ConcurrentBag<Guid?>();
         push.SendAsync(Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(),
-                Arg.Do<Guid?>(id => claimIds.Add(id)), Arg.Any<CancellationToken>())
+                Arg.Do<Guid?>(id => claimIds.Add(id)), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
 
         await PushDispatcher.DispatchNewTicketAsync(db, push, "https://test.local", NewTicket());
@@ -607,7 +655,7 @@ public class PushDispatcherTests
         await push.Received(1).SendAsync(
             Arg.Any<UserDevice>(),
             Arg.Is<string>(t => t!.Contains("feedback", StringComparison.OrdinalIgnoreCase)),
-            Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     // ── V2-4: mottagarfilter (IsActive / DeletedAt / spärr / radering / IsPublished) ──
@@ -690,7 +738,7 @@ public class PushDispatcherTests
 
         await push.Received(1).SendAsync(
             Arg.Is<UserDevice>(d => d!.Id == activeDevice.Id),
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
         await push.ReceivedWithAnyArgs(1).SendAsync(default!, default!, default!, default, default, default);
     }
 
@@ -801,7 +849,7 @@ public class PushDispatcherTests
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
             Arg.Any<string>(),
             Arg.Is<string>(b => b!.Contains("Ny Person") && b.Contains("ny@example.com")),
-            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -815,6 +863,6 @@ public class PushDispatcherTests
 
         await push.Received(1).SendAsync(
             Arg.Is<UserDevice>(d => d!.Id == device.Id),
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 }

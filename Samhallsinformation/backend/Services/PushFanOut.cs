@@ -25,27 +25,27 @@ public static class PushFanOut
 {
     public static async Task<IReadOnlyList<PushSendResult>> SendAsync(
         IPushNotificationService push, IReadOnlyList<PushSendItem> items,
-        string title, string body, string? url, PushFanOutOptions options, CancellationToken ct)
+        string title, string body, string? url, PushFanOutOptions options, CancellationToken ct, PushGrupp? grupp = null)
     {
         var results = new PushSendResult[items.Count];
 
         await Parallel.ForEachAsync(
             Enumerable.Range(0, items.Count),
             new ParallelOptions { MaxDegreeOfParallelism = options.MaxParallelism, CancellationToken = ct },
-            async (i, token) => results[i] = await SendOneAsync(push, items[i], title, body, url, options.SendTimeout, token));
+            async (i, token) => results[i] = await SendOneAsync(push, items[i], title, body, url, grupp, options.SendTimeout, token));
 
         return results;
     }
 
     private static async Task<PushSendResult> SendOneAsync(
         IPushNotificationService push, PushSendItem item,
-        string title, string body, string? url, TimeSpan timeout, CancellationToken ct)
+        string title, string body, string? url, PushGrupp? grupp, TimeSpan timeout, CancellationToken ct)
     {
         using var sendCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         Task? sendTask = null;
         try
         {
-            sendTask = push.SendAsync(item.Device, title, body, url, item.ClaimId, sendCts.Token);
+            sendTask = push.SendAsync(item.Device, title, body, url, item.ClaimId, grupp, sendCts.Token);
             // WaitAsync ger tillbaka kontrollen vid timeout även om implementationen
             // ignorerar sin token (en hängande socket); token-avbrottet nedan stänger
             // sedan det egentliga anropet så det inte ligger kvar i bakgrunden.

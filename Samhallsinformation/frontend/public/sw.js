@@ -3,6 +3,24 @@
 // hemlig i sig.
 const API_BASE = 'https://samhallsinformation-production.up.railway.app'
 
+importScripts('/sw-notisgrupp.js')
+
+// Grupperade notiser visas en i taget: två pushar som kommer samtidigt skulle
+// annars båda läsa "ingen notis visas än" och den ena summan gå förlorad.
+let notisKo = Promise.resolve()
+
+async function visaGrupperad(title, options, data) {
+  const [befintlig] = await self.registration.getNotifications({ tag: data.grupp.tag })
+  const notis = self.byggGrupperadNotis(data, befintlig ? befintlig.data : null, Date.now())
+  await self.registration.showNotification(title, {
+    ...options,
+    tag: notis.tag,
+    body: notis.body,
+    renotify: notis.renotify,
+    data: notis.data,
+  })
+}
+
 self.addEventListener('push', (event) => {
   let data = {}
   try {
@@ -37,6 +55,13 @@ self.addEventListener('push', (event) => {
       } catch {
         // Nätverksfel — fail-open, samma resonemang.
       }
+    }
+    if (data.grupp && data.grupp.tag) {
+      const tur = notisKo.then(() => visaGrupperad(title, options, data))
+      notisKo = tur.catch(() => {})
+      // Fail-open som claim-steget ovan: hellre en ogrupperad notis än ingen.
+      await tur.catch(() => self.registration.showNotification(title, options))
+      return
     }
     await self.registration.showNotification(title, options)
   }

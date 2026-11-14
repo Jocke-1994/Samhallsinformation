@@ -163,7 +163,7 @@ public class ScheduledReleaseBackgroundServiceTests
         await push.Received(1).SendAsync(
             Arg.Any<UserDevice>(), Arg.Is<string>(t => t!.Contains("0.9.0")),
             Arg.Is<string>(b => b == "Nu kan du filtrera på plats"),
-            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class ScheduledReleaseBackgroundServiceTests
 
         await push.DidNotReceive().SendAsync(
             Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -310,7 +310,7 @@ public class ScheduledReleaseBackgroundServiceTests
         // Andra pollen ska INTE skicka push igen — AnnonseradUtc redan satt.
         await push.Received(1).SendAsync(
             Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -326,7 +326,7 @@ public class ScheduledReleaseBackgroundServiceTests
 
         await push.Received(1).SendAsync(
             Arg.Any<UserDevice>(), Arg.Is<string>(t => t!.StartsWith("Kommer ")),
-            Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
 
         // Flytta fram lanseringstiden till nu och köra om — ska INTE skicka
         // ännu en push (PushSkickaVid är bara "Annonsering", inte "Lansering").
@@ -337,7 +337,7 @@ public class ScheduledReleaseBackgroundServiceTests
 
         await push.Received(1).SendAsync( // fortfarande bara 1 — inte 2
             Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -356,7 +356,7 @@ public class ScheduledReleaseBackgroundServiceTests
 
         await push.Received(2).SendAsync(
             Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -414,6 +414,6 @@ public class ScheduledReleaseBackgroundServiceTests
         Assert.Equal(2, db.MaintenanceBanners.Count()); // "Kommande" + "Nyhet"
         await push.Received(2).SendAsync(
             Arg.Any<UserDevice>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+            Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<PushGrupp?>(), Arg.Any<CancellationToken>());
     }
 }
