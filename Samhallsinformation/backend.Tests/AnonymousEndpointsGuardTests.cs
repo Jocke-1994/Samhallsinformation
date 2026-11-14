@@ -53,7 +53,7 @@ public class AnonymousEndpointsGuardTests
         new("PushController", "GetPublicKey",       "GET",  "Publik VAPID-nyckel som webbläsaren behöver för pushManager.subscribe() (publik per design)."),
 
         // --- Publik skrivning / tjänst-till-tjänst ---
-        new("EventsController", "LogShare",         "POST", "Analytics vid klick på Dela (ska funka utloggad). Saknar validering av att händelsen finns och rate limit, se enhet-1 obs. (Publika endpoints)."),
+        new("EventsController", "LogShare",         "POST", "Analytics vid klick på Dela (ska funka utloggad). Bara befintliga händelser från publicerade källor ger en rad (404 annars), egen rate limit-policy (20/min/IP)."),
         new("PushController", "Claim",              "POST", "Service workern har inte pålitligt en färsk JWT; slumpad engångs-Guid är spärren. Ingen rate limit, se enhet-1 obs. och enhet-3 #4."),
         new("SupportController", "Create",          "POST", "Feedback/ärende från utloggade besökare (Hjälp & Feedback-knappen). Saknar rate limit och längdgränser, se enhet-1 #8."),
         new("CspReportController", "Receive",       "POST", "CSP-rapporter (rapportera-läge, V3-22): webbläsaren skickar dem utan inloggning. Skyddad av egen rate limit-policy (30/min/IP), bodygräns 8 KB, sanerad och dedupad lagring; svarar alltid 204."),

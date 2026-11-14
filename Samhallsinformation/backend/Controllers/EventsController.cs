@@ -238,9 +238,18 @@ public class EventsController : ControllerBase
     // delningsmeny. Ingen [Authorize] (delning ska funka utloggad också), men
     // UseAuthentication populerar ändå User-claims om en inloggad användare
     // råkade skicka med sin token — då sparas UserId, annars null.
+    //
+    // Bara en befintlig händelse från en publicerad källa (samma regel som
+    // GetEvent, #729) ger en rad, annars kan vem som helst fylla tabellen med
+    // påhittade id:n. Eget tak per IP, se ShareLogRateLimit.
     [HttpPost("{id:guid}/share")]
+    [EnableRateLimiting(ShareLogRateLimit.PolicyName)]
     public async Task<IActionResult> LogShare(Guid id)
     {
+        var finns = await _db.Events
+            .AnyAsync(e => e.Id == id && _db.Sources.Any(s => s.Id == e.SourceId && s.IsPublished));
+        if (!finns) return NotFound();
+
         Guid? userId = null;
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (claim != null && Guid.TryParse(claim, out var parsed)) userId = parsed;
