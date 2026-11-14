@@ -9,6 +9,42 @@ inte historik. Sessioner 1–28 arkiverades hit redan 2026-09-12, sessioner
 
 ---
 
+### Session 63 — 2026-11-14
+**What was done:**
+- **Claude Code-changelog kollad (2026-11-14):** de 3 senaste uppdateringarna gicks igenom. Inget relevant för vårt arbetssätt
+- **Kundtjänstboten tillfälligt avstängd (PR #744):** script-taggen är bortkommenterad i `index.html` (med instruktion för att slå på den igen), raden är borttagen ur skriptvaktens vitlista och originet är borttaget ur CSP `script-src` i `vercel.json`. `img-src` och `connect-src` är orörda. **För att slå på boten igen måste alla 3 ställen återställas**
+- **Notiser i följd (PR #745), efter feedback från en användare på Discord:** efter att datorn startat kom ~10 notiser i rad ("2 nya händelser från Trafikverket" o.s.v.). Orsaken: ingestorn körs var 5:e min, en push per källa och körning, TTL 24h, och service workern saknade `tag`. Lösning: `PushGrupp(Tag, Antal, Etikett, Url)` i payloaden (tagg `kalla-{id}`) och `sw-notisgrupp.js` som slår ihop med befintlig notis och summerar antalet ("21 nya händelser från Trafikverket"). Inom 2 min uppdateras notisen tyst (`renotify:false`). Bekräftat i produktion att `sw-notisgrupp.js` ger 200
+- **Patchloggpunkt sparad, inte skickad:** `docs/vault/1. Öppna_tankar/Till nästa uppdatering.md` ("Fixat en bugg där man kunde få en hel rad notiser i följd efter att ha varit borta en stund. Nu samlas de i en notis per källa.", buggfix, Notiser, inloggade). Läggs in i nästa uppdateringspost
+- **Felsökningslista för notiserna:** `docs/vault/1. Öppna_tankar/Felsökning - notiser i följd.md` (frågor till användaren, egna kontroller, begränsningar, nästa fixar). Användaren har bett Discord-användaren hålla koll
+- **EventDto i Mitt flöde, Sparat och platsfiltret (PR #746):** #729 (rå EF-entitet i händelse-API:t) är nu stängd. Platsfiltret (`PlatserController.GetHändelserForPlatser`, publik) skickade också hela `CanonicalEvent`, vilket missades i session 62. Delad vitlista i `backend.Tests/EventFaltVitlista.cs`
+- **FaqDto i publika `GET /api/faq` (PR #747):** vitlista enligt kundtjänstbotens kontrakt (`flagKey` är kvar, används av `FaqKort.tsx` och boten). **Riktig lucka fixad:** flaggor med `EndastAdmin` (betatest) räknades som påslagna för besökare och boten. Nu räknas de som avstängda för alla utom admin, samma regel som `GET /api/feature-flags`
+- **IDOR-genomgång** (behörighet per objekt, förklarad för användaren med liknelsen gymskåp och kort): alla icke-admin-endpoints med id eller användardata kontrollerar ägaren (ärenden, bevakningar, Sparat, push, Mina källor, Vad är nytt). Inget fel. Admin-controllers som såg oskyddade ut använder konstanten `AdminRoller.AdminEllerSupport` (falskt larm)
+- **Länkkollen (PR #748):** `link-status` ger 404 för opublicerade källor, utan utgående hämtning, och har fått `LinkStatusRateLimit` (30/min/IP)
+- **Delningsloggen (PR #749):** `share` kräver en befintlig, publicerad händelse (404 annars, ingen rad skrivs) och har fått `ShareLogRateLimit` (20/min/IP). Båda endpointsen var märkta MISSTÄNKT i `AnonymousEndpointsGuardTests` sedan FIXPLAN, men hade aldrig åtgärdats
+- **Ny code review planerad:** `docs/vault/Ideer/Ny code review 2026-11.md` med punkterna som är kvar
+
+**Problem och lösningar:**
+- Python saknas på maskinen. Perl-regexar med `\n` missar CRLF-filer, och perl skrev "ä" som Latin-1 (filen blev ogiltig UTF-8). Edit-verktyget är säkrast för CRLF och svenska tecken
+- Fel påstående i #746: "dotnet format OK" lästes från `tail`s exitkod. Full `dotnet format` failar redan på main, men CI:s `dotnet format whitespace` ger 0. Rättat till användaren. **Läs exitkoden utan pipe**
+- `/code-review low` gav "(none)" flera gånger utan att säga hur mycket som granskades. Rapporterat ärligt, inte som "granskad och ren"
+- Vercel-previewn ligger bakom Vercel Authentication, så verifieringen gjordes mot produktion efter merge
+- #748 och #749 krockade i `Program.cs` (båda reglerna i samma block). Rebase och båda raderna behållna. CI-väntan behöver kontrollera körningens `headSha`, annars visar `gh pr checks` den gamla körningen direkt efter en force-push
+- Bakstreck (`\"`) i en heredoc med `'EOF'` hamnade bokstavligt i PR-texten. Skriv bodyn till fil
+
+**Etablerat mönster:**
+- Ny anonym endpoint: egen `XxxRateLimit`-klass (mönster `CspReportRateLimit`, `ClientIpPartition`), registrerad i Program.cs, plus en uppdaterad rad i `AnonymousEndpointsGuardTests`
+- Publika endpoints med händelse-id filtrerar på `Source.IsPublished` och ger 404 (inte 403)
+- Publika FAQ/flaggor: `EndastAdmin` räknas som avstängd för icke-admin
+
+**Next session:**
+- Ny code review enligt `docs/vault/Ideer/Ny code review 2026-11.md`: Resend-webhooken (Svix, replay, rätt ärende), rate limiting för `push/claim`, stämma av raden för supportärenden i guard-listan, `SqlQueryRaw` i `StartupSchemaGuard.cs:103/:108`, liveverifiering av alla rate limiting-regler
+- Gå igenom dagens session med användaren (användaren vill prata mer om allt som gjordes)
+- Följ upp notisfeedbacken från Discord-användaren (felsökningsnoten)
+- Patchloggpunkten in i nästa uppdateringspost
+- Slå på kundtjänstboten igen när användaren vill (3 ställen). Ta då upp alt C-beslutet (refresh-token i cookie) på nytt
+- Kvar från session 62: #726 (`VITE_USE_MOCK` i testkonfigen), #727 (`.editorconfig`), `github-actions` i `dependabot.yml`, `stash@{0}` med `_Kartlaggning.md`
+- Kvar från session 60: de 50 nya källorna, Sandlådans gräns per källa, U+00AD, Sandlådegenomgång (~15 nov)
+
 ### Session 62 — 2026-11-12
 **What was done:**
 - **Prettier i frontend (PR #740):** `.prettierrc.json` efter befintlig stil (`semi: false`, `singleQuote`, `printWidth: 100`, `endOfLine: auto`), all frontend-kod formaterad en gång. `ci.yml` → `frontend-ci.yml` med `npm ci`, nytt steg Format check och `setup-node@v7`. Två `eslint-disable-next-line` fick flyttas när Prettier bröt upp raderna
