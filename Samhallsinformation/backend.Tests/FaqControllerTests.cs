@@ -1,5 +1,7 @@
 namespace Samhallsinformation.Tests;
 
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
@@ -85,6 +87,71 @@ public class FaqControllerTests
         var result = Assert.IsType<OkObjectResult>(await NewController(db).GetFaq());
         var items = Assert.IsAssignableFrom<IEnumerable<FaqItem>>(result.Value);
         Assert.Single(items);
+    }
+
+    // ── Publika GET /api/faq: vad som får gå ut ──────────────────────────────
+
+    private static FaqController NewController(AppDbContext db, string? roll) => new(db, Substitute.For<IAktivitetsloggService>())
+    {
+        ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = roll == null
+                    ? new ClaimsPrincipal(new ClaimsIdentity())
+                    : new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Role, roll)], "test")),
+            },
+        },
+    };
+
+    // Kontraktet mot kundtjänstboten (docs/vault/Ideer/FAQ-synk-kundtjanstbot.md):
+    // { id, kategori, fraga, svar, flagKey, createdAt, updatedAt }. FaqKort.tsx
+    // filtrerar också på flagKey. Publicerad är alltid true här och ska inte ut.
+    private static readonly string[] TillatnaFaqFalt =
+        ["createdAt", "flagKey", "fraga", "id", "kategori", "svar", "updatedAt"];
+
+    [Fact]
+    public async Task GetFaq_Json_HasOnlyAllowedFields()
+    {
+        using var db = NewDb();
+        db.FaqItems.Add(new FaqItem { Kategori = "Konto", Fraga = "Fråga", Svar = "Svar", Publicerad = true });
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<OkObjectResult>(await NewController(db, roll: null).GetFaq());
+
+        var json = EventFaltVitlista.TillJson(result.Value!);
+        var falt = Assert.Single(json.EnumerateArray().ToList())
+            .EnumerateObject().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal).ToArray();
+        Assert.Equal(TillatnaFaqFalt, falt);
+    }
+
+    // En flagga som bara admin ser (EndastAdmin, betatest) är påslagen men inte
+    // lanserad. Publika /api/faq får då inte visa frågan för besökare eller
+    // kundtjänstboten, på samma sätt som GET /api/feature-flags ger false.
+    [Fact]
+    public async Task GetFaq_EndastAdminFlag_HiddenForVisitor()
+    {
+        using var db = NewDb();
+        db.FaqItems.Add(new FaqItem { Fraga = "Om betafunktionen", Svar = "x", Publicerad = true, FlagKey = "konto_tvafaktor" });
+        db.FeatureFlagOverrides.Add(new FeatureFlagOverride { Key = "konto_tvafaktor", Value = true, EndastAdmin = true });
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<OkObjectResult>(await NewController(db, roll: null).GetFaq());
+
+        Assert.Empty(EventFaltVitlista.TillJson(result.Value!).EnumerateArray());
+    }
+
+    [Fact]
+    public async Task GetFaq_EndastAdminFlag_ShownForAdmin()
+    {
+        using var db = NewDb();
+        db.FaqItems.Add(new FaqItem { Fraga = "Om betafunktionen", Svar = "x", Publicerad = true, FlagKey = "konto_tvafaktor" });
+        db.FeatureFlagOverrides.Add(new FeatureFlagOverride { Key = "konto_tvafaktor", Value = true, EndastAdmin = true });
+        await db.SaveChangesAsync();
+
+        var result = Assert.IsType<OkObjectResult>(await NewController(db, roll: "Admin").GetFaq());
+
+        Assert.Single(EventFaltVitlista.TillJson(result.Value!).EnumerateArray());
     }
 
     [Fact]
