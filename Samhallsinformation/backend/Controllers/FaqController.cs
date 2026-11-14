@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Faq;
 using Samhallsinformation.Application.FeatureFlags;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -30,13 +31,22 @@ public class FaqController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetFaq()
     {
-        var overrides = await _db.FeatureFlagOverrides.ToDictionaryAsync(f => f.Key, f => f.Value);
+        // En flagga som bara admin ser (EndastAdmin, betatest) räknas som
+        // avstängd för alla andra, samma regel som GET /api/feature-flags.
+        // Annars skulle besökare och kundtjänstboten få frågor om funktioner
+        // som inte är lanserade.
+        var ärAdmin = User?.IsInRole("Admin") == true;
+        var overrides = await _db.FeatureFlagOverrides
+            .ToDictionaryAsync(f => f.Key, f => f.EndastAdmin && f.Value && !ärAdmin ? false : f.Value);
         var items = await _db.FaqItems
             .Where(f => f.Publicerad)
             .OrderBy(f => f.CreatedAt)
             .ToListAsync();
 
-        var synliga = items.Where(f => f.FlagKey == null || FeatureFlagDefaults.IsEffectivelyActive(f.FlagKey, overrides));
+        var synliga = items
+            .Where(f => f.FlagKey == null || FeatureFlagDefaults.IsEffectivelyActive(f.FlagKey, overrides))
+            .Select(FaqDto.From)
+            .ToList();
         return Ok(synliga);
     }
 
