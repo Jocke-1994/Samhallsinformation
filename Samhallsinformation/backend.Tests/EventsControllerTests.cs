@@ -193,27 +193,8 @@ public class EventsControllerTests
 
     // ── Publika händelse-endpoints: vad som får gå ut (#729) ──────────────────
 
-    // Vitlistan: exakt de fält frontend läser (CanonicalEvent i frontend/src/types/index.ts).
-    // Ett nytt fält i databasmodellen ska INTE synas utåt förrän någon lägger till det här.
-    private static readonly string[] TillatnaEventFalt =
-        ["content", "eventType", "geography", "id", "isNational", "publishedAt", "severity", "sourceId", "title", "url"];
-
-    // Samma JSON-inställningar som ASP.NET Core använder för svaren (camelCase).
-    private static string[] JsonFalt(object value)
-    {
-        var json = System.Text.Json.JsonSerializer.Serialize(value, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
-        using var doc = System.Text.Json.JsonDocument.Parse(json);
-        return doc.RootElement.EnumerateObject().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal).ToArray();
-    }
-
-    private static void AssertEndastTillatnaFalt(object value)
-    {
-        var falt = JsonFalt(value);
-        var forMycket = falt.Except(TillatnaEventFalt).ToArray();
-        var saknas = TillatnaEventFalt.Except(falt).ToArray();
-        Assert.True(forMycket.Length == 0, $"Fält som inte får gå ut: {string.Join(", ", forMycket)}");
-        Assert.True(saknas.Length == 0, $"Fält som frontend behöver men saknas: {string.Join(", ", saknas)}");
-    }
+    // Vitlistan delas med övriga händelse-endpoints, se EventFaltVitlista.
+    private static void AssertEndastTillatnaFalt(object value) => EventFaltVitlista.AssertEndastTillatnaFalt(value);
 
     [Fact]
     public async Task GetEvent_UnpublishedSource_ReturnsNotFound()
