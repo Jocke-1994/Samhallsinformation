@@ -3,6 +3,7 @@ namespace Samhallsinformation.Controllers;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Samhallsinformation.Application.Events;
 using Samhallsinformation.Application.Feed;
 
 // "Mitt flöde" på servern (V3-11): händelser från användarens aktiva, publicerade
@@ -24,6 +25,6 @@ public class UserFeedController : ControllerBase
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var sida = await _feed.GetMittFlodeAsync(userId, page, pageSize, ct);
-        return Ok(new { total = sida.Total, page = sida.Page, pageSize = sida.PageSize, events = sida.Events, hasMore = sida.HasMore, totalExakt = sida.TotalExakt });
+        return Ok(new { total = sida.Total, page = sida.Page, pageSize = sida.PageSize, events = sida.Events.Select(EventDto.From), hasMore = sida.HasMore, totalExakt = sida.TotalExakt });
     }
 }

@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Events;
 using Samhallsinformation.Application.Feed;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -45,7 +46,7 @@ public class UserSavedEventsController : ControllerBase
     public async Task<IActionResult> GetEvents([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         var sida = await _feed.GetSparatAsync(CurrentUserId, page, pageSize, ct);
-        return Ok(new { total = sida.Total, page = sida.Page, pageSize = sida.PageSize, events = sida.Events, hasMore = sida.HasMore, totalExakt = sida.TotalExakt });
+        return Ok(new { total = sida.Total, page = sida.Page, pageSize = sida.PageSize, events = sida.Events.Select(EventDto.From), hasMore = sida.HasMore, totalExakt = sida.TotalExakt });
     }
 
     [HttpPost]
