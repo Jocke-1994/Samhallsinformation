@@ -197,10 +197,17 @@ public class EventsController : ControllerBase
     //               klienten får aldrig tolka det som "borta".
     // "alive" (bool) behålls bara för äldre klienter (cachade PWA-versioner) som
     // läser det fältet: den är false ENDAST vid "dead", aldrig vid "unknown".
+    //
+    // Samma synlighetsregel som GetEvent (#729): en händelse från en opublicerad
+    // källa finns inte utåt, och ingen utgående hämtning görs för den. Eget tak
+    // per IP eftersom varje anrop hämtar en extern sida, se LinkStatusRateLimit.
     [HttpGet("{id:guid}/link-status")]
+    [EnableRateLimiting(LinkStatusRateLimit.PolicyName)]
     public async Task<IActionResult> GetLinkStatus(Guid id)
     {
-        var evt = await _db.Events.FindAsync(id);
+        var evt = await _db.Events
+            .Where(e => e.Id == id && _db.Sources.Any(s => s.Id == e.SourceId && s.IsPublished))
+            .FirstOrDefaultAsync();
         if (evt is null) return NotFound();
 
         var client = _httpClientFactory.CreateClient("linkcheck");
