@@ -12,9 +12,13 @@ import indexHtml from '../../index.html?raw'
 //
 // Lägg BARA till en ny rad här efter att alt C-bevakningen har stämts av.
 // Nyckel = origin (schema + värd), värde = motivering.
+//
+// Kundtjänstboten är tillfälligt avstängd (2026-11-14, se index.html). Den är
+// redan avstämd mot alt C-bevakningen, så när den slås på igen läggs raden
+// tillbaka utan ny avstämning:
+//   'https://kundtjanstbot-production.up.railway.app':
+//     'Kundtjänstbotens chat.js (egen tjänst på Railway)',
 const TILLATNA_EXTERNA_SKRIPTKALLOR: Record<string, string> = {
-  'https://kundtjanstbot-production.up.railway.app':
-    'Kundtjänstbotens chat.js (egen tjänst på Railway)',
   'https://www.googletagmanager.com':
     'Google Analytics (gtag.js, Consent Mode v2 — analytics nekad tills användaren accepterar)',
 }
