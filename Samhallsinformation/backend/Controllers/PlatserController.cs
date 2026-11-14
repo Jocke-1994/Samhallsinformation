@@ -2,6 +2,7 @@ namespace Samhallsinformation.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Samhallsinformation.Application.Events;
 using Samhallsinformation.Application.Geografi;
 using Samhallsinformation.Data;
 
@@ -98,6 +99,7 @@ public class PlatserController : ControllerBase
             handelser = senasteHändelser
                 .Where(e => PlatsHändelseFiltrerare.GällerPlats(plats, e.Geography, e.IsNational, e.SourceId))
                 .Take(MaxPerSektion)
+                .Select(EventDto.From) // publikt: bara vitlistan, aldrig RawData m.m. (#729)
                 .ToList(),
         });
 
