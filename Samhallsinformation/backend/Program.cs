@@ -129,6 +129,10 @@ builder.Services.AddRateLimiter(options =>
     // Se CspReportRateLimit.
     options.AddPolicy(CspReportRateLimit.PolicyName, CspReportRateLimit.GetPartition);
 
+    // GET /api/events/{id}/link-status — anonym, gör en utgående hämtning per anrop.
+    // 30/min per IP, se LinkStatusRateLimit.
+    options.AddPolicy(LinkStatusRateLimit.PolicyName, LinkStatusRateLimit.GetPartition);
+
     options.OnRejected = async (context, ct) =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;

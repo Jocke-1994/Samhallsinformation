@@ -61,7 +61,7 @@ public class AnonymousEndpointsGuardTests
 
         // --- MISSTÄNKT: ser oavsiktligt öppna ut. Ändras INTE i den här PR:en ---
         new("EventsController", "GetEvent",         "GET",  "MISSTÄNKT — se enhet-1 obs. (Publika endpoints): saknar IsPublished-filter (till skillnad från GetEvents/SearchPublic), läcker händelser från opublicerade sandlådekällor om man har id:t."),
-        new("EventsController", "GetLinkStatus",    "GET",  "MISSTÄNKT — se enhet-1 obs. (Publika endpoints): anonym utan rate limit, gör utgående GET per anrop och saknar IsPublished-filter. Anonymt är avsiktligt för utloggade läsare, skyddet saknas."),
+        new("EventsController", "GetLinkStatus",    "GET",  "Länkkollen för utloggade läsare; bara publicerade källor (404 annars, utan utgående anrop), egen rate limit-policy (30/min/IP) eftersom varje anrop hämtar en extern sida."),
     ];
 
     private static string Key(string controller, string action, string http) => $"{controller}.{action} [{http}]";
