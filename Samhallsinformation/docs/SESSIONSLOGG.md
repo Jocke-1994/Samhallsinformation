@@ -9,6 +9,24 @@ inte historik. Sessioner 1–28 arkiverades hit redan 2026-09-12, sessioner
 
 ---
 
+### Session 64 — 2026-11-16
+**What was done:**
+- **Granskning av opublicerade källor:** besvarat var man ser händelserna per källa innan publicering. **Sandlåda** visar händelser från aktiva, opublicerade källor som samma `NewsItem`-kort som besökarna ser. **Händelsesök** filtrerar på vilken källa som helst. Ingen ny kod
+- **Google Analytics förklarat:** begrepp (användare, sessioner, engagemang, kanaler, GA-"händelser"), plus vad som går att se idag och vad som kräver kod. Vi skickar bara automatiska sidvisningar, och alla sidor har samma titel (`index.html:21`), så *Sidor och skärmar* visar en enda rad. Bara besökare med samtycke räknas, och inloggade märks `traffic_type: internal`
+- **`docs/vault/Rutiner/_Kartlaggning.md` räddad:** inventeringen från 2026-11-09 (scenarion och om det finns en rutin) fanns bara i en gammal stash. Återställd och committad direkt till main (`5d56f3e`)
+- Lokal städning: gammal stash och en mergad lokal branch borttagna
+
+**Problem och lösningar:**
+- Lokal main låg 12 commits efter origin (parallell session). Pushen nekades, löst med `git pull --rebase`. **Kör `git fetch` och kolla `behind` före push till main**
+- Innan en stash tas bort: kör `git stash show --include-untracked`. Utan flaggan såg stashen tom ut, fast den innehöll en ospårad vault-not
+
+**Next session:**
+- Ny code review enligt `docs/vault/Ideer/Ny code review 2026-11.md` (oförändrat från session 63)
+- Möjliga småfixar som diskuterats men inte beslutats: en titel per sida så att GA-rapporterna blir läsbara, en länk från Källhantering till Sandlåda, och att Sandlådans `Take(200)` gäller **sammanlagt**, inte per källa (`TestingController.cs:36`)
+- Fortsätt på `_Kartlaggning.md`: skriv ut några rutiner i taget med `_Mall.md`
+
+---
+
 ### Session 63 — 2026-11-14
 **What was done:**
 - **Claude Code-changelog kollad (2026-11-14):** de 3 senaste uppdateringarna gicks igenom. Inget relevant för vårt arbetssätt
