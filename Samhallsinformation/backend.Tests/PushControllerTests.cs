@@ -1,10 +1,15 @@
 namespace Samhallsinformation.Tests;
 
+using System.Net;
+using System.Reflection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
 using Samhallsinformation.Application.Aktivitetslogg;
+using Samhallsinformation.Application.Push;
 using Samhallsinformation.Controllers;
 using Samhallsinformation.Data;
 using Samhallsinformation.Models;
@@ -121,5 +126,48 @@ public class PushControllerTests
 
         Assert.True(Claimed(result));
         Assert.Empty(db.PushDispatchClaims);
+    }
+
+    [Fact]
+    public void Claim_HasOwnRateLimitPolicy()
+    {
+        var method = typeof(PushController).GetMethod(nameof(PushController.Claim))!;
+
+        Assert.Equal(PushClaimRateLimit.PolicyName, method.GetCustomAttribute<EnableRateLimitingAttribute>()!.PolicyName);
+    }
+
+    private static HttpContext FromIp(string ip)
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Connection.RemoteIpAddress = IPAddress.Parse(ip);
+        return ctx;
+    }
+
+    [Fact]
+    public void PushClaimRateLimit_Allows60PerMinutePerIp()
+    {
+        Assert.Equal(TimeSpan.FromMinutes(1), PushClaimRateLimit.Window);
+
+        var partition = PushClaimRateLimit.GetPartition(FromIp("203.0.113.5"));
+        using var limiter = partition.Factory(partition.PartitionKey);
+        var permitted = 0;
+        for (var i = 0; i < 200; i++)
+        {
+            using var lease = limiter.AttemptAcquire();
+            if (lease.IsAcquired) permitted++;
+        }
+
+        Assert.Equal(60, permitted);
+    }
+
+    [Fact]
+    public void PushClaimRateLimit_PartitionsPerIp_AndNormalizesIpv6To64()
+    {
+        Assert.NotEqual(
+            PushClaimRateLimit.GetPartition(FromIp("203.0.113.5")).PartitionKey,
+            PushClaimRateLimit.GetPartition(FromIp("203.0.113.6")).PartitionKey);
+        Assert.Equal(
+            PushClaimRateLimit.GetPartition(FromIp("2001:db8:1:2::1")).PartitionKey,
+            PushClaimRateLimit.GetPartition(FromIp("2001:db8:1:2:ffff::9")).PartitionKey);
     }
 }

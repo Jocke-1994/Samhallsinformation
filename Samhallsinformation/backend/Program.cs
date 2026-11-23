@@ -12,6 +12,7 @@ using Samhallsinformation.Application.Csp;
 using Samhallsinformation.Application.Events;
 using Samhallsinformation.Application.Faq;
 using Samhallsinformation.Application.Monitoring;
+using Samhallsinformation.Application.Push;
 using Samhallsinformation.Application.RateLimiting;
 using Samhallsinformation.Application.Sources;
 using Samhallsinformation.Application.Support;
@@ -136,6 +137,10 @@ builder.Services.AddRateLimiter(options =>
     // POST /api/events/{id}/share — anonym skrivning av delningsstatistik.
     // 20/min per IP, se ShareLogRateLimit.
     options.AddPolicy(ShareLogRateLimit.PolicyName, ShareLogRateLimit.GetPartition);
+
+    // POST /api/push/claim — anonym, anropas av service workern före varje notis.
+    // 60/min per IP, se PushClaimRateLimit.
+    options.AddPolicy(PushClaimRateLimit.PolicyName, PushClaimRateLimit.GetPartition);
 
     options.OnRejected = async (context, ct) =>
     {
