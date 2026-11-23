@@ -1,0 +1,64 @@
+name: Live rate limiting
+
+# Kör mot PRODUKTION och kontrollerar två saker som enhetstester inte kan se,
+# eftersom de beror på Railways nätverk och inte på vår kod:
+#   1. Inloggningsspärren slår till (429 efter 5 försök per minut och IP).
+#   2. Spärren går inte att kringgå med en falsk X-Forwarded-For-header.
+# Program.cs litar på hela X-Forwarded-For-kedjan. Det som skyddar är att
+# Railways edge skriver över klientens header. Ändrar Railway beteende, eller
+# byts hosting/proxy, blir det här flödet rött och GitHub mejlar.
+#
+# Kostar 7 inloggningsförsök mot ett konto som inte finns (example.invalid).
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # varje natt 03:17 UTC
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "Samhallsinformation/backend/Program.cs"
+      - ".github/workflows/live-rate-limit.yml"
+
+jobs:
+  check:
+    name: Inloggningsspärr och X-Forwarded-For
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      LOGIN_URL: https://samhallsinformation-production.up.railway.app/api/auth/login
+      BODY: '{"email":"live-rate-limit-check@example.invalid","password":"fel"}'
+    steps:
+      - name: Vänta på Railway-deployen
+        if: github.event_name == 'push'
+        run: sleep 420
+
+      - name: Kör kontrollen
+        run: |
+          set -u
+          anrop() {
+            curl -s -o /dev/null -w "%{http_code}" --max-time 20 \
+              -X POST "$LOGIN_URL" -H "Content-Type: application/json" "$@" -d "$BODY"
+          }
+
+          # 1. Spärren ska slå till senast på sjätte försöket.
+          sparrad=false
+          for i in 1 2 3 4 5 6; do
+            kod=$(anrop)
+            echo "Försök $i utan header: $kod"
+            if [ "$kod" = "429" ]; then sparrad=true; break; fi
+          done
+          if [ "$sparrad" != "true" ]; then
+            echo "::error::Inloggningsspärren slog inte till efter 6 försök. Rate limiting fungerar inte i produktion."
+            exit 1
+          fi
+
+          # 2. Med falsk X-Forwarded-For ska svaret fortfarande vara 429.
+          kod=$(anrop -H "X-Forwarded-For: 203.0.113.$((RANDOM % 250 + 1))")
+          echo "Med falsk X-Forwarded-For: $kod"
+          if [ "$kod" != "429" ]; then
+            echo "::error::Falsk X-Forwarded-For gav $kod i stället för 429. Rate limiting per IP går att kringgå, se kommentaren om ForwardedHeaders i Program.cs."
+            exit 1
+          fi
+
+          echo "OK: spärren fungerar och går inte att kringgå med X-Forwarded-For."

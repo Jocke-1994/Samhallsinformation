@@ -254,12 +254,8 @@ var app = builder.Build();
 // i stället för att lägga till på den. Verifierat mot produktion
 // 2026-11-23: efter 5 felaktiga inloggningar gav /api/auth/login 429 även
 // med falsk X-Forwarded-For (en IP, kedja, dubbel header) och X-Real-IP.
-// Byts hosting eller läggs en proxy till (t.ex. Cloudflare) MÅSTE det
-// testas igen, annars går all rate limiting per IP att kringgå:
-//   for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w "%{http_code}\n" \
-//     -X POST <api>/api/auth/login -H "Content-Type: application/json" \
-//     -d '{"email":"x@example.invalid","password":"x"}'; done
-//   curl ... -H "X-Forwarded-For: 203.0.113.1"   # ska ge 429, inte 401
+// Det kontrolleras varje natt av .github/workflows/live-rate-limit.yml,
+// som blir rött om Railway ändrar beteende eller hosting/proxy byts.
 var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor,
