@@ -96,9 +96,18 @@ public static class StartupSchemaGuard
         }
     }
 
+    // Ett tabellnamn kan inte skickas som SQL-parameter, så det måste skrivas in i
+    // strängen. Därför tillåts bara de här namnen, och allt annat kastar innan någon
+    // SQL byggs. Det gör varningen EF1002 (möjlig SQL-injektion) till ett falsklarm.
+    internal static readonly IReadOnlySet<string> AllowedTables =
+        new HashSet<string> { "__EFMigrationsHistory", "Events", "Sources", "Users" };
+
     private static async Task<long> CountIfTableExistsAsync(AppDbContext db, string table, CancellationToken ct)
     {
-        // Tabellnamnen är hårdkodade konstanter ovan, aldrig indata.
+        if (!AllowedTables.Contains(table))
+            throw new ArgumentException($"Tabellen '{table}' finns inte i AllowedTables.", nameof(table));
+
+#pragma warning disable EF1002 // table är kontrollerad mot AllowedTables ovan
         var exists = (await db.Database
             .SqlQueryRaw<bool>($"SELECT to_regclass('\"{table}\"') IS NOT NULL AS \"Value\"")
             .ToListAsync(ct)).Single();
@@ -107,5 +116,6 @@ public static class StartupSchemaGuard
         return (await db.Database
             .SqlQueryRaw<long>($"SELECT count(*) AS \"Value\" FROM \"{table}\"")
             .ToListAsync(ct)).Single();
+#pragma warning restore EF1002
     }
 }
