@@ -42,6 +42,8 @@ public class AnonymousEndpointsGuardTests
         // --- Publik läsning (medborgarflödet, ingen inloggning krävs) ---
         new("EventsController", "GetEvents",        "GET",  "Publikt händelseflöde; filtrerar på publicerade källor."),
         new("EventsController", "SearchPublic",     "GET",  "Publik sök för kundtjänstboten; bara publicerade källor, egen rate limit-policy."),
+        new("EventsController", "GetEvent",         "GET",  "Publik detaljvy; bara händelser från publicerade källor (404 annars, så det går inte att se om ett id finns), svarar med EventDto."),
+        new("EventsController", "GetLinkStatus",    "GET",  "Länkkollen för utloggade läsare; bara publicerade källor (404 annars, utan utgående anrop), egen rate limit-policy (30/min/IP) eftersom varje anrop hämtar en extern sida."),
         new("FaqController", "GetFaq",              "GET",  "Publik FAQ; bara publicerade poster, filtrerade på feature-flaggor."),
         new("FeatureFlagsController", "GetOverrides", "GET", "Globalt flaggtillstånd som alla besökare behöver; innehåller bara admins avvikelser från kodens default."),
         new("MaintenanceBannersController", "GetAll", "GET", "Driftbanderoll som visas för alla besökare."),
@@ -54,14 +56,10 @@ public class AnonymousEndpointsGuardTests
 
         // --- Publik skrivning / tjänst-till-tjänst ---
         new("EventsController", "LogShare",         "POST", "Analytics vid klick på Dela (ska funka utloggad). Bara befintliga händelser från publicerade källor ger en rad (404 annars), egen rate limit-policy (20/min/IP)."),
-        new("PushController", "Claim",              "POST", "Service workern har inte pålitligt en färsk JWT; slumpad engångs-Guid är spärren. Ingen rate limit, se enhet-1 obs. och enhet-3 #4."),
-        new("SupportController", "Create",          "POST", "Feedback/ärende från utloggade besökare (Hjälp & Feedback-knappen). Saknar rate limit och längdgränser, se enhet-1 #8."),
+        new("PushController", "Claim",              "POST", "Service workern har inte pålitligt en färsk JWT; slumpad engångs-Guid är spärren. Egen rate limit-policy (60/min/IP); sw.js är fail-open, så 429 ger i värsta fall en dubblettnotis."),
+        new("SupportController", "Create",          "POST", "Feedback/ärende från utloggade besökare (Hjälp & Feedback-knappen). Egen rate limit-policy (10/h anonymt, 20/h inloggad) och längdgränser i SupportTicketValidator."),
         new("CspReportController", "Receive",       "POST", "CSP-rapporter (rapportera-läge, V3-22): webbläsaren skickar dem utan inloggning. Skyddad av egen rate limit-policy (30/min/IP), bodygräns 8 KB, sanerad och dedupad lagring; svarar alltid 204."),
-        new("WebhooksController", "ResendInbound",  "POST", "Resend inbound-webhook; skyddas av svix-signaturverifiering i metoden, inte av JWT. Hårdgörs i V1-2 (enhet-1 #5/#10)."),
-
-        // --- MISSTÄNKT: ser oavsiktligt öppna ut. Ändras INTE i den här PR:en ---
-        new("EventsController", "GetEvent",         "GET",  "MISSTÄNKT — se enhet-1 obs. (Publika endpoints): saknar IsPublished-filter (till skillnad från GetEvents/SearchPublic), läcker händelser från opublicerade sandlådekällor om man har id:t."),
-        new("EventsController", "GetLinkStatus",    "GET",  "Länkkollen för utloggade läsare; bara publicerade källor (404 annars, utan utgående anrop), egen rate limit-policy (30/min/IP) eftersom varje anrop hämtar en extern sida."),
+        new("WebhooksController", "ResendInbound",  "POST", "Resend inbound-webhook; skyddas av svix-signaturverifiering i metoden (HMAC, konstant-tidsjämförelse, 5 min replay-fönster), inte av JWT."),
     ];
 
     private static string Key(string controller, string action, string http) => $"{controller}.{action} [{http}]";

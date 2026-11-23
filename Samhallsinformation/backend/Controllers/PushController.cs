@@ -3,6 +3,7 @@ namespace Samhallsinformation.Controllers;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Samhallsinformation.Application.Aktivitetslogg;
 using Samhallsinformation.Application.Push;
@@ -125,6 +126,7 @@ public class PushController : ControllerBase
     // PushClaims.TryClaimAsync — se den för resonemanget.
     [HttpPost("claim")]
     [AllowAnonymous]
+    [EnableRateLimiting(PushClaimRateLimit.PolicyName)]
     public async Task<IActionResult> Claim([FromBody] ClaimRequest req)
     {
         var claimed = await PushClaims.TryClaimAsync(_db, req.ClaimId, req.DeviceId);
