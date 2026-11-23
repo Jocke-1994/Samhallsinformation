@@ -246,10 +246,20 @@ var app = builder.Build();
 //     genom att kapsla in middleware:t med egen loggning precis
 //     före/efter och se RemoteIpAddress byta till fel värde i realtid.
 // KnownIPNetworks/KnownProxies rensas medvetet — Railway exponerar ingen
-// publik, stabil proxy-IP-lista att vitlista mot. Ingen risk att en
-// extern anropare spoofar X-Forwarded-For förbi Railways edge, eftersom
-// containern bara är nåbar via Railways eget nät, aldrig direkt från
-// internet.
+// publik, stabil proxy-IP-lista att vitlista mot.
+//
+// VARNING: koden själv litar på HELA X-Forwarded-For-kedjan och tar det
+// första (vänstra) värdet, som en klient i princip kan skriva själv. Det
+// som skyddar är att Railways edge SKRIVER ÖVER klientens X-Forwarded-For
+// i stället för att lägga till på den. Verifierat mot produktion
+// 2026-11-23: efter 5 felaktiga inloggningar gav /api/auth/login 429 även
+// med falsk X-Forwarded-For (en IP, kedja, dubbel header) och X-Real-IP.
+// Byts hosting eller läggs en proxy till (t.ex. Cloudflare) MÅSTE det
+// testas igen, annars går all rate limiting per IP att kringgå:
+//   for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w "%{http_code}\n" \
+//     -X POST <api>/api/auth/login -H "Content-Type: application/json" \
+//     -d '{"email":"x@example.invalid","password":"x"}'; done
+//   curl ... -H "X-Forwarded-For: 203.0.113.1"   # ska ge 429, inte 401
 var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor,
